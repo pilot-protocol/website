@@ -1,5 +1,8 @@
 # website
 
+[![ci](https://github.com/pilot-protocol/website/actions/workflows/ci.yml/badge.svg)](https://github.com/pilot-protocol/website/actions/workflows/ci.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+
 Pilot Protocol marketing and documentation site — deployed at
 [pilotprotocol.network](https://pilotprotocol.network) via Cloudflare
 Pages (Workers Sites; see `wrangler.toml`).
@@ -33,3 +36,7 @@ npm run preview  # serves dist/ locally
 
 Pushed via the `deploy-website` GitHub Action when commits land on
 `main`.
+
+## License
+
+AGPL-3.0-or-later. See [LICENSE](LICENSE).
