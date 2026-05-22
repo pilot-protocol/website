@@ -31,6 +31,20 @@ npm run preview  # serves dist/ locally
 | `astro.config.mjs` | Astro config (sitemap, integrations, output mode). |
 | `wrangler.toml` | Cloudflare Pages deploy config. |
 | `_headers` | Cloudflare custom response headers. |
+| `worker/` | Companion Cloudflare Worker (`pilot-publish`) — TypeScript, vitest, own `wrangler.toml`. Deployed independently of the static site. |
+
+## Worker (`worker/`)
+
+A separate Cloudflare Worker lives in `worker/`. Build, test, and
+deploy from there:
+
+```bash
+cd worker
+npm install
+npm run dev      # wrangler dev
+npm test         # vitest run
+npm run deploy   # wrangler deploy
+```
 
 ## Deploy
 
