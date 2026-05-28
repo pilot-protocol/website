@@ -253,7 +253,7 @@ if [ -n "$TAG" ]; then
                 [ -n "$ACTUAL" ] && echo "  Verified SHA-256"
             fi
         fi
-        tar -xzf "$TMPDIR/$ARCHIVE" -C "$TMPDIR"
+        tar -xzf "$TMPDIR/$ARCHIVE" -C "$TMPDIR" --strip-components=1
     else
         TAG=""
     fi
