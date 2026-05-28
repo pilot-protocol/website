@@ -1,0 +1,116 @@
+---
+import DocLayout from "../../layouts/DocLayout.astro";
+
+const bodyContent = `<h1>SDK Parity</h1>
+  <p class="subtitle">Where each Pilot Protocol SDK stands today and what's planned to close the gap.</p>
+
+  <div class="callout">
+    <p>Three official SDKs ship under one brand: <a href="/docs/python-sdk">Python</a>, Node.js, and Swift (iOS/macOS). They all speak the same wire protocol — but they don't yet expose the same public API surface. This page tracks where they line up and where they don't.</p>
+  </div>
+
+  <div class="toc">
+    <h4>On this page</h4>
+    <ul>
+      <li><a href="#status">Status at a glance</a></li>
+      <li><a href="#summary">Summary by feature category</a></li>
+      <li><a href="#what-counts">What counts as a gap</a></li>
+      <li><a href="#full-matrix">Full method matrix</a></li>
+      <li><a href="#roadmap">Roadmap</a></li>
+    </ul>
+  </div>
+
+  <h2 id="status">Status at a glance</h2>
+  <table>
+    <thead>
+      <tr><th>SDK</th><th>Package</th><th>Coverage</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Node.js</strong></td>
+        <td><code>pilotprotocol</code> on npm</td>
+        <td>Feature complete</td>
+        <td>TypeScript types, <code>using</code> support, <code>Buffer</code> I/O. The reference surface alongside Python.</td>
+      </tr>
+      <tr>
+        <td><strong>Python</strong></td>
+        <td><code>pilotprotocol</code> on PyPI</td>
+        <td>Feature complete</td>
+        <td>Full type hints (<code>py.typed</code>), context managers, snake_case naming.</td>
+      </tr>
+      <tr>
+        <td><strong>Swift</strong></td>
+        <td><code>sdk-swift</code> (SwiftPM)</td>
+        <td>Core trust + datagrams</td>
+        <td>Embedded daemon (XCFramework, no separate process). Streams, networks, managed networks, policy, member tags, high-level services, and most registry admin are not yet exposed.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 id="summary">Summary by feature category</h2>
+  <p>Updated against <code>sdk-node@d02bd00</code>, <code>sdk-python@93584ea</code>, <code>sdk-swift@0d49f87</code> (audited 2026-05-28).</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Feature category</th>
+        <th>Node</th>
+        <th>Python</th>
+        <th>Swift</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Lifecycle (construct, dispose)</td><td>✅</td><td>✅</td><td>✅</td><td>Each SDK uses its native idiom (<code>using</code>, <code>with</code>, <code>deinit</code>).</td></tr>
+      <tr><td>Daemon admin — <code>info</code>, <code>health</code></td><td>✅</td><td>✅</td><td>✅</td><td></td></tr>
+      <tr><td>Daemon admin — <code>rotateKey</code></td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
+      <tr><td>Trust — initiate handshake, list trusted peers</td><td>✅</td><td>✅</td><td>✅</td><td></td></tr>
+      <tr><td>Trust admin — approve/reject/pending/revoke</td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
+      <tr><td>Trust convenience — <code>waitForTrust</code></td><td>—</td><td>—</td><td>✅</td><td>Planned for Node and Python. Currently Swift-only.</td></tr>
+      <tr><td>Datagrams — <code>sendTo</code>, <code>recvFrom</code></td><td>✅</td><td>✅</td><td>✅</td><td>Swift uses <code>send(to:port:data:)</code> and returns a typed <code>Datagram</code>.</td></tr>
+      <tr><td>Datagrams — <code>broadcast</code></td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
+      <tr><td>Streams — <code>dial</code>, <code>listen</code>, <code>Conn</code>, <code>Listener</code></td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
+      <tr><td>Registry admin — hostname / visibility / deregister / tags / webhook</td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
+      <tr><td>Networks — list/join/leave/members/invite/respond</td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
+      <tr><td>Managed networks — score/status/rankings/cycle/reconcile</td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
+      <tr><td>Policy — get/set</td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
+      <tr><td>Member tags — get/set</td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
+      <tr><td>High-level services — <code>sendMessage</code>, <code>sendFile</code>, <code>publishEvent</code>, <code>subscribeEvent</code></td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
+      <tr><td>FFI loader — <code>findLibrary</code> / <code>loadLibrary</code></td><td>✅</td><td>private</td><td>n/a</td><td>Intentional: Swift embeds the library in an XCFramework — no loader needed.</td></tr>
+      <tr><td>Typed response structs (<code>Config</code>, <code>StartResult</code>, <code>Datagram</code>, <code>Error</code>)</td><td>n/a</td><td>n/a</td><td>✅</td><td>Swift idiom. Node/Python return untyped <code>Record&lt;string, unknown&gt;</code> / <code>dict[str, Any]</code> from the same RPCs.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="what-counts">What counts as a gap</h2>
+  <p>Naming differences across languages are <strong>not</strong> gaps. The matrix collapses idiomatic equivalents into a single canonical row:</p>
+  <ul>
+    <li><strong>Constructors:</strong> <code>new Driver()</code> (Node), <code>Driver()</code> (Python), and <code>Pilot.start(config)</code> (Swift) are the same operation expressed in each language's idiom.</li>
+    <li><strong>Cleanup:</strong> <code>driver.close()</code>, <code>pilot.stop()</code>, Python's <code>with</code>, and Node's <code>using</code> all resolve to the same teardown call.</li>
+    <li><strong>Naming convention:</strong> Python's <code>send_message</code> maps to Node/Swift's <code>sendMessage</code> — same method, language-appropriate spelling.</li>
+    <li><strong>Datagram receive:</strong> Node and Python return a <code>dict</code>; Swift returns a typed <code>Datagram</code> struct. Both surface the same underlying RPC.</li>
+  </ul>
+  <p>A real gap is an <em>operation</em> that one SDK does not expose at all. Those are the rows in the matrix marked <code>unintentional</code> — every one of them has a follow-up ticket to close it.</p>
+
+  <h2 id="full-matrix">Full method matrix</h2>
+  <p>The complete row-per-method matrix — including exact signatures and rationale for each gap — lives in the canonical spreadsheet:</p>
+  <p><a href="https://docs.google.com/spreadsheets/d/TODO-SHEET-ID/edit"><strong>SDK Parity Matrix — Google Sheet</strong></a></p>
+  <p>The matrix is generated by a deterministic script in the main protocol repo (<a href="https://github.com/TeoSlayer/pilotprotocol/tree/main/scripts/parity-audit"><code>scripts/parity-audit/</code></a>). Re-running it against newer commits of the three SDKs produces an updated <code>matrix.csv</code> — drop it into the Sheet to refresh.</p>
+
+  <h2 id="roadmap">Roadmap</h2>
+  <p>End-state target: <strong>full parity</strong> across all three SDKs, except for the three intentional rows above (FFI loader, socket-path default, and Swift's typed response structs).</p>
+  <ul>
+    <li><strong>Swift:</strong> the gap-fill work is tracked as a single follow-up ticket covering streams, networks, managed networks, policy, member tags, registry admin, trust admin, and high-level services. Wire protocol support already exists — what's missing is the Swift surface that exposes it.</li>
+    <li><strong>Node and Python:</strong> add <code>waitForTrust(peerId, timeoutMs)</code> — Swift's blocking convenience. Today, Node and Python users have to poll <code>pendingHandshakes</code>.</li>
+  </ul>
+  <p>Cross-SDK versioning is documented in the <a href="https://github.com/TeoSlayer/pilotprotocol/blob/main/GOVERNANCE.md">GOVERNANCE</a> file in the main protocol repo: all three SDKs share the same <code>MAJOR.MINOR</code> line, with coordinated releases when the wire protocol changes.</p>
+`;
+---
+<DocLayout
+  title="SDK Parity"
+  description="Cross-SDK API parity matrix for Pilot Protocol — comparing public surface across Node.js, Python, and Swift SDKs."
+  activePage="sdk-parity"
+  canonicalPath="/docs/sdk-parity"
+  prev={{ label: "Python SDK", href: "/docs/python-sdk" }}
+  next={{ label: "Messaging", href: "/docs/messaging" }}
+>
+  <Fragment set:html={bodyContent} />
+</DocLayout>

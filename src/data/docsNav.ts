@@ -20,6 +20,8 @@ export const docsNav: NavItem[] = [
     icon: '<svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>' },
   { label: 'Python SDK', href: '/docs/python-sdk', slug: 'python-sdk',
     icon: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 4.69 2 8v2c0 3.31 4.48 6 10 6s10-2.69 10-6V8c0-3.31-4.48-6-10-6z"/><path d="M2 14v2c0 3.31 4.48 6 10 6s10-2.69 10-6v-2"/></svg>' },
+  { label: 'SDK Parity', href: '/docs/sdk-parity', slug: 'sdk-parity',
+    icon: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>' },
   // Features
   { section: 'Features', label: 'Messaging', href: '/docs/messaging', slug: 'messaging',
     icon: '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
