@@ -48,8 +48,8 @@ npm run deploy   # wrangler deploy
 
 ## Deploy
 
-Pushed via the `deploy-website` GitHub Action when commits land on
-`main`.
+Pushed to Cloudflare Pages via `wrangler pages deploy --branch=main`.
+See the [docs](https://developers.cloudflare.com/pages/) for details.
 
 ## License
 
