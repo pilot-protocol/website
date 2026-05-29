@@ -68,22 +68,41 @@ try {
 // weeks since launch (title + tick labels)
 const weeksSinceLaunch = Math.max(1, Math.round((Date.now() / 1000 - LAUNCH_TS) / (7 * 86400)));
 
-// Build 10 synthetic ticks on an exponential curve from 0 → finalVal.
-// Labels collapse week count to 10 slots (e.g. 20 weeks → W2, W4, ..., NOW).
-const finalVal = parseInt(liveAgentsExact.replace(/,/g, ''), 10) || 35000;
-const EXP_K = 4.2; // steepness; higher = flatter-then-sharper
-const chartPoints: { label: string; value: number }[] = [];
-for (let i = 0; i < TICKS; i++) {
-  const t = i / (TICKS - 1); // 0..1
-  const v = finalVal * (Math.exp(EXP_K * t) - 1) / (Math.exp(EXP_K) - 1);
-  let label: string;
-  if (i === TICKS - 1) {
-    label = 'NOW';
-  } else {
-    const wk = 1 + Math.round(((weeksSinceLaunch - 1) * i) / (TICKS - 1));
-    label = `W${wk}`;
+// Build chart from real daily data points when available.
+let chartPoints: { label: string; value: number }[] = [];
+if (typeof s !== 'undefined' && Array.isArray(s.daily) && s.daily.length >= 2) {
+  const entries = s.daily;
+  for (let i = 0; i < entries.length; i++) {
+    const val = Number(entries[i]?.online_nodes ?? entries[i]?.total_nodes);
+    if (Number.isFinite(val) && val > 0) {
+      let label: string;
+      if (i === entries.length - 1) {
+        label = 'NOW';
+      } else {
+        const d = new Date(Number(entries[i]?.ts) * 1000);
+        label = `${d.getMonth() + 1}/${d.getDate()}`;
+      }
+      chartPoints.push({ label, value: Math.round(val) });
+    }
   }
-  chartPoints.push({ label, value: Math.round(v) });
+}
+// Fallback: if no daily data, use synthetic exponential
+if (chartPoints.length < 2) {
+  const finalVal = parseInt(liveAgentsExact.replace(/,/g, ''), 10) || 35000;
+  const EXP_K = 4.2;
+  chartPoints = [];
+  for (let i = 0; i < TICKS; i++) {
+    const t = i / (TICKS - 1);
+    const v = finalVal * (Math.exp(EXP_K * t) - 1) / (Math.exp(EXP_K) - 1);
+    let label: string;
+    if (i === TICKS - 1) {
+      label = 'NOW';
+    } else {
+      const wk = 1 + Math.round(((weeksSinceLaunch - 1) * i) / (TICKS - 1));
+      label = `W${wk}`;
+    }
+    chartPoints.push({ label, value: Math.round(v) });
+  }
 }
 
 function numberToWords(n: number): string {
@@ -102,16 +121,11 @@ const xFor = (i: number) => padL + (i / (chartPoints.length - 1)) * plotW;
 const yFor = (v: number) => padT + (1 - v / chartMax) * plotH;
 const coords = chartPoints.map((p, i) => ({ x: xFor(i), y: yFor(p.value), ...p }));
 
-// Sample the exponential function directly (200 points) → smooth, monotonic curve.
-const SAMPLES = 200;
-const expDenom = Math.exp(EXP_K) - 1;
+// Build polyline from real data points (straight segments between them).
 let linePath = '';
-for (let i = 0; i < SAMPLES; i++) {
-  const t = i / (SAMPLES - 1);
-  const x = padL + t * plotW;
-  const v = finalVal * (Math.exp(EXP_K * t) - 1) / expDenom;
-  const y = yFor(v);
-  linePath += (i === 0 ? `M${x.toFixed(1)} ${y.toFixed(1)}` : ` L${x.toFixed(1)} ${y.toFixed(1)}`);
+for (let i = 0; i < coords.length; i++) {
+  const c = coords[i];
+  linePath += (i === 0 ? `M${c.x.toFixed(1)} ${c.y.toFixed(1)}` : ` L${c.x.toFixed(1)} ${c.y.toFixed(1)}`);
 }
 const areaPath = linePath
   ? `${linePath} L ${(padL + plotW).toFixed(1)} ${(padT + plotH).toFixed(1)} L ${padL.toFixed(1)} ${(padT + plotH).toFixed(1)} Z`
@@ -488,7 +502,7 @@ const yTicks = [1.0, 0.5, 0.2, 0.05].map(frac => {
       </div>
       <div>
         <div class="num">Service agents</div>
-        <p>350+ specialized data agents - research papers, FX, availability, SEC filings, flight data, and more…</p>
+        <p>350+ specialized data agents - research papers, FX, availability, SEC filings, flight data, and more...</p>
       </div>
     </div>
   </div>
@@ -944,7 +958,7 @@ const yTicks = [1.0, 0.5, 0.2, 0.05].map(frac => {
 // stay current between site deploys. Build-time values are the fallback.
 (function(){
   var LAUNCH_TS = new Date('2026-02-09T00:00:00Z').getTime() / 1000;
-  var TICKS = 10, EXP_K = 4.2;
+  var TICKS = 10;
   var SVG_W = 1200, PAD_L = 60, PAD_R = 60, PAD_T = 40, PAD_B = 40;
   var SVG_H = 360;
   var PLOT_W = SVG_W - PAD_L - PAD_R;
@@ -990,33 +1004,51 @@ const yTicks = [1.0, 0.5, 0.2, 0.05].map(frac => {
   function setAll(sel, value){
     document.querySelectorAll(sel).forEach(function(el){ el.textContent = value; });
   }
-  function rebuildChart(finalVal){
+  function rebuildChart(finalVal, dailyEntries){
     if (!Number.isFinite(finalVal) || finalVal <= 0) return;
     var svg = document.querySelector('.chart-wrap svg');
     if (!svg) return;
 
-    var weeksSinceLaunch = Math.max(1, Math.round((Date.now() / 1000 - LAUNCH_TS) / (7 * 86400)));
-    var expDenom = Math.exp(EXP_K) - 1;
+    // Build chart from real daily data points.
     var pts = [];
-    for (var i = 0; i < TICKS; i++) {
-      var t = i / (TICKS - 1);
-      var v = finalVal * (Math.exp(EXP_K * t) - 1) / expDenom;
-      var label = i === TICKS - 1 ? 'NOW' : ('W' + (1 + Math.round(((weeksSinceLaunch - 1) * i) / (TICKS - 1))));
-      pts.push({ label: label, value: Math.round(v) });
+    if (Array.isArray(dailyEntries) && dailyEntries.length >= 2) {
+      for (var i = 0; i < dailyEntries.length; i++) {
+        var e = dailyEntries[i];
+        var val = Number((e && (e.online_nodes || e.total_nodes)) || 0);
+        if (!(Number.isFinite(val) && val > 0)) continue;
+        var label;
+        if (i === dailyEntries.length - 1) {
+          label = 'NOW';
+        } else {
+          var dt = new Date(Number((e && e.ts) || 0) * 1000);
+          label = (dt.getMonth() + 1) + '/' + dt.getDate();
+        }
+        pts.push({ label: label, value: Math.round(val) });
+      }
+    }
+    // Fallback: synthetic exponential
+    if (pts.length < 2) {
+      var EXP_K = 4.2;
+      var weeksSinceLaunch = Math.max(1, Math.round((Date.now() / 1000 - LAUNCH_TS) / (7 * 86400)));
+      var expDenom = Math.exp(EXP_K) - 1;
+      pts = [];
+      for (var k = 0; k < TICKS; k++) {
+        var tt = k / (TICKS - 1);
+        var vv2 = finalVal * (Math.exp(EXP_K * tt) - 1) / expDenom;
+        var lbl = k === TICKS - 1 ? 'NOW' : ('W' + (1 + Math.round(((weeksSinceLaunch - 1) * k) / (TICKS - 1))));
+        pts.push({ label: lbl, value: Math.round(vv2) });
+      }
     }
     var chartMax = pts[pts.length - 1].value || 1;
     var xFor = function(i){ return PAD_L + (i / (pts.length - 1)) * PLOT_W; };
     var yFor = function(v){ return PAD_T + (1 - v / chartMax) * PLOT_H; };
     var coords = pts.map(function(p, i){ return { x: xFor(i), y: yFor(p.value), label: p.label, value: p.value }; });
 
-    var SAMPLES = 200;
+    // Polyline through real data points.
     var linePath = '';
-    for (var j = 0; j < SAMPLES; j++) {
-      var tt = j / (SAMPLES - 1);
-      var xx = PAD_L + tt * PLOT_W;
-      var vv = finalVal * (Math.exp(EXP_K * tt) - 1) / expDenom;
-      var yy = yFor(vv);
-      linePath += (j === 0 ? 'M' : ' L') + xx.toFixed(1) + ' ' + yy.toFixed(1);
+    for (var j = 0; j < coords.length; j++) {
+      var c = coords[j];
+      linePath += (j === 0 ? 'M' : ' L') + c.x.toFixed(1) + ' ' + c.y.toFixed(1);
     }
     var areaPath = linePath + ' L ' + (PAD_L + PLOT_W).toFixed(1) + ' ' + (PAD_T + PLOT_H).toFixed(1) + ' L ' + PAD_L.toFixed(1) + ' ' + (PAD_T + PLOT_H).toFixed(1) + ' Z';
 
@@ -1074,7 +1106,7 @@ const yTicks = [1.0, 0.5, 0.2, 0.05].map(frac => {
           document.querySelectorAll('[data-live-chart-label]').forEach(function(el){
             el.textContent = longStr + ' agents';
           });
-          rebuildChart(activeN);
+          rebuildChart(activeN, s.daily);
         }
         if (typeof s.total_requests === 'number') {
           setAll('[data-live="requests"]', fmtRequests(s.total_requests));
