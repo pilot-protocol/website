@@ -16,9 +16,10 @@ interface Props {
   prev?: { label: string; href: string };
   next?: { label: string; href: string };
   hidePageNav?: boolean;
+  ogImage?: string;
 }
 
-const { title, description, activePage, canonicalPath, prev, next, hidePageNav } = Astro.props;
+const { title, description, activePage, canonicalPath, prev, next, hidePageNav , ogImage } = Astro.props;
 const canonicalUrl = canonicalPath ? `https://pilotprotocol.network${canonicalPath}` : undefined;
 
 const breadcrumbItems = [
@@ -32,7 +33,7 @@ if (activePage !== 'index') {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <BaseHead title={title} description={description} canonicalUrl={canonicalUrl} />
+  <BaseHead title={title} description={description} canonicalUrl={canonicalUrl} ogImage={ogImage ?? "https://pilotprotocol.network/og/docs.jpg"} />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
   <script type="application/ld+json" set:html={JSON.stringify({
     "@context": "https://schema.org",
