@@ -6,9 +6,20 @@ set -e
 # Hosted at:  https://pilotprotocol.network/install.sh
 #
 # Usage:
-#   Install:    curl -fsSL https://pilotprotocol.network/install.sh | sh
-#   RC build:   PILOT_RC=1 curl -fsSL https://pilotprotocol.network/install.sh | sh
-#   Uninstall:  curl -fsSL https://pilotprotocol.network/install.sh | sh -s uninstall
+#   Install:        curl -fsSL https://pilotprotocol.network/install.sh | sh
+#   Pin a version:  curl -fsSL https://pilotprotocol.network/install.sh | sh -s -- --version v1.10.5
+#   Edge channel:   curl -fsSL https://pilotprotocol.network/install.sh | sh -s -- --channel edge
+#   Uninstall:      curl -fsSL https://pilotprotocol.network/install.sh | sh -s uninstall
+#
+# Flags:
+#   --version <tag>    Install a specific tag. Warns when older than latest stable.
+#   --channel <name>   stable (default) or edge. Edge tracks the newest prerelease.
+#   --yes / -y         Skip the older-version confirmation prompt.
+#   --no-warn          Suppress the older-version warning entirely.
+#
+# Legacy env vars (still honored, lower precedence than flags):
+#   PILOT_RELEASE_TAG=vX.Y.Z   Same as --version.
+#   PILOT_RC=1                 Same as --channel edge.
 #
 # WHAT THIS SCRIPT DOES (read before piping to sh):
 #   1. Detects OS/arch (Linux/Darwin × amd64/arm64)
@@ -62,6 +73,64 @@ BEACON="${PILOT_BEACON:-34.71.57.205:9001}"
 PILOT_DIR="$HOME/.pilot"
 BIN_DIR="$PILOT_DIR/bin"
 
+# Canonical manifest URL — the single source of truth for "what version is
+# current". Republished by web4 release.yml on every tag. Override only for
+# testing PR-preview manifests.
+MANIFEST_URL="${PILOT_MANIFEST_URL:-https://pilotprotocol.network/.well-known/latest.json}"
+
+# --- Parse CLI flags ---
+# Flags are parsed BEFORE the root check so that `install.sh --yes uninstall`
+# (and similar combinations) still recognize the `uninstall` positional.
+PILOT_REQUESTED_VERSION=""
+PILOT_REQUESTED_CHANNEL=""
+PILOT_YES=0
+PILOT_NO_WARN=0
+PILOT_POSITIONAL=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --version)
+            if [ $# -lt 2 ]; then echo "Error: --version requires a value" >&2; exit 2; fi
+            PILOT_REQUESTED_VERSION="$2"; shift 2 ;;
+        --version=*)
+            PILOT_REQUESTED_VERSION="${1#--version=}"; shift ;;
+        --channel)
+            if [ $# -lt 2 ]; then echo "Error: --channel requires a value" >&2; exit 2; fi
+            PILOT_REQUESTED_CHANNEL="$2"; shift 2 ;;
+        --channel=*)
+            PILOT_REQUESTED_CHANNEL="${1#--channel=}"; shift ;;
+        --yes|-y)
+            PILOT_YES=1; shift ;;
+        --no-warn)
+            PILOT_NO_WARN=1; shift ;;
+        -h|--help)
+            sed -n '4,21p' "$0" 2>/dev/null || echo "See https://pilotprotocol.network/install.sh"
+            exit 0 ;;
+        --)
+            shift
+            while [ $# -gt 0 ]; do PILOT_POSITIONAL="$PILOT_POSITIONAL $1"; shift; done
+            break ;;
+        -*)
+            echo "Error: unknown flag: $1" >&2
+            echo "       Run with --help for usage." >&2
+            exit 2 ;;
+        *)
+            PILOT_POSITIONAL="$PILOT_POSITIONAL $1"; shift ;;
+    esac
+done
+
+# Validate channel value early so we fail fast.
+if [ -n "$PILOT_REQUESTED_CHANNEL" ] \
+   && [ "$PILOT_REQUESTED_CHANNEL" != "stable" ] \
+   && [ "$PILOT_REQUESTED_CHANNEL" != "edge" ]; then
+    echo "Error: --channel must be 'stable' or 'edge' (got: $PILOT_REQUESTED_CHANNEL)" >&2
+    exit 2
+fi
+
+# Restore positional args so the existing uninstall handler still uses $1.
+# shellcheck disable=SC2086 # intentional word-split on PILOT_POSITIONAL
+set -- $PILOT_POSITIONAL
+
 # Refuse to run as root — daemon must run as the invoking user so identity.json
 # and received files land under that user's home, not /root.
 if [ "${1:-}" != "uninstall" ] && [ "$(id -u)" = "0" ] && [ -z "${PILOT_ALLOW_ROOT:-}" ]; then
@@ -70,6 +139,58 @@ if [ "${1:-}" != "uninstall" ] && [ "$(id -u)" = "0" ] && [ -z "${PILOT_ALLOW_RO
     echo "       Set PILOT_ALLOW_ROOT=1 to override (not recommended)."
     exit 1
 fi
+
+# --- Manifest + version helpers ---
+
+# fetch_manifest writes the manifest JSON to $1 and returns 0 on success.
+# Soft-fails (returns 1) so callers fall back to the GitHub-redirect path
+# when the manifest host is unreachable.
+fetch_manifest() {
+    curl -fsSL --max-time 10 "$MANIFEST_URL" -o "$1" 2>/dev/null
+}
+
+# manifest_field "<path>" "<file>" extracts a string field. Supports nested
+# paths like "channels.stable" with a one-level sed slice — POSIX shell only,
+# no jq dependency. Returns empty if the field is absent.
+manifest_field() {
+    _mf_field="$1"; _mf_file="$2"
+    case "$_mf_field" in
+        *.*)
+            _mf_outer="${_mf_field%%.*}"
+            _mf_inner="${_mf_field#*.}"
+            sed -n "/\"${_mf_outer}\"[[:space:]]*:[[:space:]]*{/,/^[[:space:]]*}/p" "$_mf_file" \
+              | grep "\"${_mf_inner}\"" | head -1 \
+              | sed -E "s/.*\"${_mf_inner}\"[[:space:]]*:[[:space:]]*\"([^\"]*)\".*/\\1/"
+            ;;
+        *)
+            grep "\"${_mf_field}\"" "$_mf_file" | head -1 \
+              | sed -E "s/.*\"${_mf_field}\"[[:space:]]*:[[:space:]]*\"([^\"]*)\".*/\\1/"
+            ;;
+    esac
+}
+
+# version_compare a b emits -1 / 0 / 1 for a<b / a==b / a>b.
+# Honors semver: a prerelease tag ("X.Y.Z-rcN") is LOWER than the same base
+# without it ("X.Y.Z"). Plain `sort -V` gets this backwards on hyphenated
+# suffixes, so we split on "-" and compare the base versions first, then
+# break ties on the prerelease suffix.
+version_compare() {
+    _vc_a="${1#v}"; _vc_b="${2#v}"
+    if [ "$_vc_a" = "$_vc_b" ]; then echo 0; return; fi
+    _vc_a_base="${_vc_a%%-*}"; _vc_b_base="${_vc_b%%-*}"
+    if [ "$_vc_a_base" = "$_vc_b_base" ]; then
+        _vc_a_pre=0; case "$_vc_a" in *-*) _vc_a_pre=1 ;; esac
+        _vc_b_pre=0; case "$_vc_b" in *-*) _vc_b_pre=1 ;; esac
+        if [ "$_vc_a_pre" = "1" ] && [ "$_vc_b_pre" = "0" ]; then printf '%s\n' -1; return; fi
+        if [ "$_vc_a_pre" = "0" ] && [ "$_vc_b_pre" = "1" ]; then echo 1; return; fi
+        _vc_a_suf="${_vc_a#*-}"; _vc_b_suf="${_vc_b#*-}"
+        _vc_older=$(printf '%s\n%s\n' "$_vc_a_suf" "$_vc_b_suf" | sort -V | head -1)
+        if [ "$_vc_older" = "$_vc_a_suf" ]; then printf '%s\n' -1; else echo 1; fi
+        return
+    fi
+    _vc_older=$(printf '%s\n%s\n' "$_vc_a_base" "$_vc_b_base" | sort -V | head -1)
+    if [ "$_vc_older" = "$_vc_a_base" ]; then printf '%s\n' -1; else echo 1; fi
+}
 
 # --- Uninstall ---
 
@@ -194,26 +315,38 @@ trap 'rm -rf "$TMPDIR"' EXIT
 
 ARCHIVE="pilot-${OS}-${ARCH}.tar.gz"
 
-# Resolve the release tag.
-# - PILOT_RELEASE_TAG=v1.2.3  : explicit override, no network round-trip.
-# - PILOT_RC=1                : list releases via api.github.com and pick the
-#                               newest (incl. pre-releases). 403 rate-limited
-#                               output is detected and reported instead of
-#                               silently falling through to source-build with
-#                               an unstamped version.
-# - default                   : follow the /releases/latest/download/ redirect,
-#                               which uses the unauthenticated CDN and is not
-#                               subject to the 60/hr api.github.com rate limit.
-if [ -n "${PILOT_RELEASE_TAG:-}" ]; then
+# Resolve the release tag. Precedence (highest to lowest):
+#   1. --version <tag>            explicit pin via flag
+#   2. PILOT_RELEASE_TAG env       legacy explicit pin (back-compat)
+#   3. --channel <name>            manifest channel lookup
+#   4. PILOT_RC=1 env              legacy "edge" channel (back-compat)
+#   5. Manifest "latest_stable"    preferred for the default install
+#   6. GitHub /releases/latest redirect — fallback when the manifest host
+#      is unreachable. Unauthenticated CDN, not subject to the 60/hr
+#      api.github.com rate limit.
+MANIFEST_FILE="$TMPDIR/manifest.json"
+HAVE_MANIFEST=0
+if fetch_manifest "$MANIFEST_FILE"; then
+    HAVE_MANIFEST=1
+fi
+
+if [ -n "$PILOT_REQUESTED_VERSION" ]; then
+    TAG="$PILOT_REQUESTED_VERSION"
+elif [ -n "${PILOT_RELEASE_TAG:-}" ]; then
     TAG="$PILOT_RELEASE_TAG"
+elif [ -n "$PILOT_REQUESTED_CHANNEL" ] && [ "$HAVE_MANIFEST" = "1" ]; then
+    TAG=$(manifest_field "channels.${PILOT_REQUESTED_CHANNEL}" "$MANIFEST_FILE")
+elif [ "${PILOT_RC:-}" = "1" ] && [ "$HAVE_MANIFEST" = "1" ]; then
+    TAG=$(manifest_field "channels.edge" "$MANIFEST_FILE")
 elif [ "${PILOT_RC:-}" = "1" ]; then
+    # Manifest unreachable; fall back to api.github.com for the newest tag.
     API_BODY="$TMPDIR/releases.json"
     API_CODE=$(curl -sSL -o "$API_BODY" -w '%{http_code}' "https://api.github.com/repos/${REPO}/releases" 2>/dev/null || echo "000")
     if [ "$API_CODE" = "403" ]; then
         echo "Error: GitHub API rate-limited (403) while resolving the latest pre-release." >&2
         echo "  Workarounds:" >&2
         echo "    - retry in ~1 hour, OR" >&2
-        echo "    - pin the tag:  PILOT_RELEASE_TAG=vX.Y.Z-rcN curl ... | sh" >&2
+        echo "    - pin the tag:  --version vX.Y.Z-rcN" >&2
         echo "  Refusing to silently source-build an unstamped binary." >&2
         exit 1
     fi
@@ -221,11 +354,39 @@ elif [ "${PILOT_RC:-}" = "1" ]; then
         TAG=$(grep '"tag_name"' "$API_BODY" | head -1 | cut -d'"' -f4 || true)
     fi
     rm -f "$API_BODY"
+elif [ "$HAVE_MANIFEST" = "1" ]; then
+    TAG=$(manifest_field "latest_stable" "$MANIFEST_FILE")
 else
     TAG=$(curl -fsSI "https://github.com/${REPO}/releases/latest/download/${ARCHIVE}" 2>/dev/null \
         | grep -i '^location:' \
         | sed -n 's|.*/releases/download/\([^/]*\)/.*|\1|p' \
         | tr -d '\r' | head -1)
+fi
+
+# Warn when the resolved tag is older than the manifest's latest_stable.
+# A confirmation prompt fires only when stdin is a TTY *and* --yes was not
+# passed; non-interactive pipes (curl | sh) get the warning text without a
+# prompt and proceed, so existing automation does not break.
+if [ -n "$TAG" ] && [ "$HAVE_MANIFEST" = "1" ] && [ "$PILOT_NO_WARN" = "0" ]; then
+    LATEST_STABLE=$(manifest_field "latest_stable" "$MANIFEST_FILE")
+    if [ -n "$LATEST_STABLE" ] && [ "$TAG" != "$LATEST_STABLE" ]; then
+        CMP=$(version_compare "$TAG" "$LATEST_STABLE")
+        if [ "$CMP" = "-1" ]; then
+            echo "" >&2
+            echo "Warning: ${TAG} is older than the latest stable release (${LATEST_STABLE})." >&2
+            echo "         Older versions miss security fixes. To install the latest stable," >&2
+            echo "         re-run without --version, or pass --version ${LATEST_STABLE}." >&2
+            if [ "$PILOT_YES" != "1" ] && [ -t 0 ]; then
+                printf "Continue installing %s anyway? [y/N] " "$TAG" >&2
+                read -r _confirm
+                case "$_confirm" in
+                    y|Y|yes|YES) ;;
+                    *) echo "Aborted." >&2; exit 1 ;;
+                esac
+            fi
+            echo "" >&2
+        fi
+    fi
 fi
 
 if [ -n "$TAG" ]; then

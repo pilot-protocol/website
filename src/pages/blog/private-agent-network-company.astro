@@ -72,13 +72,12 @@ const bodyContent = `<p>Your company is deploying AI agents. They process custom
 
   <p>The rendezvous server runs the registry and beacon as a single process. Choose a machine with a static IP that all agents can reach. This can be a dedicated VM, a bare-metal server, or even a container -- the process uses minimal resources (under 20 MB RSS).</p>
 
-  <pre><code><span class="comment"># Download the latest release</span>
-<span class="cmd">wget https://github.com/TeoSlayer/pilotprotocol/releases/latest/download/pilot-rendezvous-linux-amd64</span>
-<span class="cmd">chmod +x pilot-rendezvous-linux-amd64</span>
+  <pre><code><span class="comment"># Install all Pilot binaries (~/.pilot/bin/{daemon,pilotctl,rendezvous,...})</span>
+<span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
 
 <span class="comment"># Start the rendezvous server</span>
 <span class="comment"># Registry listens on :9000, beacon on :9001</span>
-<span class="cmd">./pilot-rendezvous-linux-amd64 -registry-addr :9000 -beacon-addr :9001</span></code></pre>
+<span class="cmd">~/.pilot/bin/rendezvous -registry-addr :9000 -beacon-addr :9001</span></code></pre>
 
   <p>For production, run the rendezvous server as a systemd service:</p>
 
@@ -113,13 +112,11 @@ WantedBy=multi-user.target</code></pre>
 
   <p>On each machine that will run an agent, deploy the Pilot daemon. The daemon handles tunnel management, encryption, and communication with the rendezvous server.</p>
 
-  <pre><code><span class="comment"># Download the daemon and CLI</span>
-<span class="cmd">wget https://github.com/TeoSlayer/pilotprotocol/releases/latest/download/pilot-daemon-linux-amd64</span>
-<span class="cmd">wget https://github.com/TeoSlayer/pilotprotocol/releases/latest/download/pilotctl-linux-amd64</span>
-<span class="cmd">chmod +x pilot-daemon-linux-amd64 pilotctl-linux-amd64</span>
+  <pre><code><span class="comment"># Install the daemon, CLI, and other Pilot binaries</span>
+<span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
 
 <span class="comment"># Start the daemon, pointing to your private rendezvous server</span>
-<span class="cmd">./pilot-daemon-linux-amd64 -registry 10.0.1.10:9000 -beacon 10.0.1.10:9001</span></code></pre>
+<span class="cmd">~/.pilot/bin/daemon -registry 10.0.1.10:9000 -beacon 10.0.1.10:9001</span></code></pre>
 
   <p>The daemon generates a cryptographic identity (Ed25519 keypair) on first run and stores it at <code>~/.pilot/identity.json</code>. This identity is permanent -- it persists across restarts and is used for all trust operations. Back up this file; losing it means the agent gets a new identity and must re-establish all trust relationships.</p>
 
