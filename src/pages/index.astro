@@ -10,10 +10,6 @@ let liveAgentsExact = '34,812';
 let liveRequests = '5B+';
 let growthPct = '+50%';
 
-// Chart - synthetic exponential curve, W1=0 → NOW=liveAgents. Always 10 ticks.
-const LAUNCH_TS = new Date('2026-02-09T00:00:00Z').getTime() / 1000;
-const TICKS = 10;
-
 try {
   const res = await fetch('https://polo.pilotprotocol.network/api/stats', {
     headers: { 'User-Agent': 'pilotprotocol-web' },
@@ -64,82 +60,6 @@ try {
     }
   }
 } catch {}
-
-// weeks since launch (title + tick labels)
-const weeksSinceLaunch = Math.max(1, Math.round((Date.now() / 1000 - LAUNCH_TS) / (7 * 86400)));
-
-// Build chart from real daily data points when available.
-let chartPoints: { label: string; value: number }[] = [];
-if (typeof s !== 'undefined' && Array.isArray(s.daily) && s.daily.length >= 2) {
-  const entries = s.daily;
-  for (let i = 0; i < entries.length; i++) {
-    const val = Number(entries[i]?.online_nodes ?? entries[i]?.total_nodes);
-    if (Number.isFinite(val) && val > 0) {
-      let label: string;
-      if (i === entries.length - 1) {
-        label = 'NOW';
-      } else {
-        const d = new Date(Number(entries[i]?.ts) * 1000);
-        label = `${d.getMonth() + 1}/${d.getDate()}`;
-      }
-      chartPoints.push({ label, value: Math.round(val) });
-    }
-  }
-}
-// Fallback: if no daily data, use synthetic exponential
-if (chartPoints.length < 2) {
-  const finalVal = parseInt(liveAgentsExact.replace(/,/g, ''), 10) || 35000;
-  const EXP_K = 4.2;
-  chartPoints = [];
-  for (let i = 0; i < TICKS; i++) {
-    const t = i / (TICKS - 1);
-    const v = finalVal * (Math.exp(EXP_K * t) - 1) / (Math.exp(EXP_K) - 1);
-    let label: string;
-    if (i === TICKS - 1) {
-      label = 'NOW';
-    } else {
-      const wk = 1 + Math.round(((weeksSinceLaunch - 1) * i) / (TICKS - 1));
-      label = `W${wk}`;
-    }
-    chartPoints.push({ label, value: Math.round(v) });
-  }
-}
-
-function numberToWords(n: number): string {
-  const words = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen','twenty'];
-  return words[n] || `${n}`;
-}
-const weeksLabel = numberToWords(weeksSinceLaunch);
-
-// build chart geometry
-const svgW = 1200, svgH = 360;
-const padL = 60, padR = 60, padT = 40, padB = 40;
-const plotW = svgW - padL - padR;
-const plotH = svgH - padT - padB;
-const chartMax = Math.max(1, ...chartPoints.map(p => p.value));
-const xFor = (i: number) => padL + (i / (chartPoints.length - 1)) * plotW;
-const yFor = (v: number) => padT + (1 - v / chartMax) * plotH;
-const coords = chartPoints.map((p, i) => ({ x: xFor(i), y: yFor(p.value), ...p }));
-
-// Build polyline from real data points (straight segments between them).
-let linePath = '';
-for (let i = 0; i < coords.length; i++) {
-  const c = coords[i];
-  linePath += (i === 0 ? `M${c.x.toFixed(1)} ${c.y.toFixed(1)}` : ` L${c.x.toFixed(1)} ${c.y.toFixed(1)}`);
-}
-const areaPath = linePath
-  ? `${linePath} L ${(padL + plotW).toFixed(1)} ${(padT + plotH).toFixed(1)} L ${padL.toFixed(1)} ${(padT + plotH).toFixed(1)} Z`
-  : '';
-
-function fmtAxis(v: number): string {
-  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
-  if (v >= 1_000) return `${(v / 1000).toFixed(v >= 10_000 ? 0 : 1).replace(/\.0$/, '')}K`;
-  return `${Math.round(v)}`;
-}
-const yTicks = [1.0, 0.5, 0.2, 0.05].map(frac => {
-  const v = chartMax * frac;
-  return { label: fmtAxis(v), y: yFor(v) };
-});
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -543,46 +463,7 @@ const yTicks = [1.0, 0.5, 0.2, 0.05].map(frac => {
       </div>
     </div>
 
-    <div class="chart-wrap">
-      <div class="chart-head">
-        <div>
-          <div class="num">Agents · weekly</div>
-          <div class="title">The network, <span class="accent"><span data-live="agents-long">{liveAgents}</span> agents</span> in <span data-live="weeks">{weeksLabel}</span> weeks</div>
-        </div>
-        <div class="legend">
-          <span><span class="swatch sw-a"></span>Pilot agents</span>
-        </div>
-      </div>
-      <svg viewBox="0 0 1200 360" width="100%" height="auto">
-        <defs>
-          <linearGradient id="area" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stop-color="currentColor" stop-opacity=".45"/>
-            <stop offset="100%" stop-color="currentColor" stop-opacity="0"/>
-          </linearGradient>
-        </defs>
-        <g class="chart-grid">
-          {yTicks.map(t => <line x1="0" y1={t.y} x2="1200" y2={t.y}/>)}
-        </g>
-        <path class="chart-area" d={areaPath}/>
-        <path class="chart-line" d={linePath}/>
-        <g class="chart-dots">
-          {coords.map((c, i) => (
-            <circle cx={c.x} cy={c.y} r={i === coords.length - 1 ? 4 : 3} class={i === coords.length - 1 ? 'chart-dot-now' : ''}/>
-          ))}
-        </g>
-        <g class="chart-labels">
-          {coords.map((c, i) => (
-            <text x={c.x} y="335" text-anchor={i === 0 ? 'start' : (i === coords.length - 1 ? 'end' : 'middle')}>{c.label}</text>
-          ))}
-        </g>
-        <g class="chart-yaxis">
-          {yTicks.map(t => <text x="12" y={t.y + 4} text-anchor="start">{t.label}</text>)}
-        </g>
-        <g class="chart-final">
-          <text x={coords[coords.length - 1].x - 10} y={coords[coords.length - 1].y - 14} text-anchor="end" data-live-chart-label>{liveAgents} agents</text>
-        </g>
-      </svg>
-    </div>
+
   </div>
 </section>
 
@@ -957,13 +838,6 @@ const yTicks = [1.0, 0.5, 0.2, 0.05].map(frac => {
 // Live stats refresh - fetches live stats on page load and every 60s so numbers
 // stay current between site deploys. Build-time values are the fallback.
 (function(){
-  var LAUNCH_TS = new Date('2026-02-09T00:00:00Z').getTime() / 1000;
-  var TICKS = 10;
-  var SVG_W = 1200, PAD_L = 60, PAD_R = 60, PAD_T = 40, PAD_B = 40;
-  var SVG_H = 360;
-  var PLOT_W = SVG_W - PAD_L - PAD_R;
-  var PLOT_H = SVG_H - PAD_T - PAD_B;
-  var WORDS = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen','twenty'];
 
   function fmtAgentsLong(n){
     if (n >= 1_000_000) return '~' + (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
@@ -975,11 +849,6 @@ const yTicks = [1.0, 0.5, 0.2, 0.05].map(frac => {
     if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(1).replace(/\.0$/, '') + 'B+';
     if (n >= 1_000_000)     return Math.round(n / 1_000_000) + 'M+';
     return String(n);
-  }
-  function fmtAxis(v){
-    if (v >= 1_000_000) return (v / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
-    if (v >= 1_000) return (v / 1000).toFixed(v >= 10_000 ? 0 : 1).replace(/\.0$/, '') + 'K';
-    return String(Math.round(v));
   }
   function growth7d(daily, fallbackTotal){
     if (!Array.isArray(daily) || daily.length < 2) return null;
@@ -1004,94 +873,6 @@ const yTicks = [1.0, 0.5, 0.2, 0.05].map(frac => {
   function setAll(sel, value){
     document.querySelectorAll(sel).forEach(function(el){ el.textContent = value; });
   }
-  function rebuildChart(finalVal, dailyEntries){
-    if (!Number.isFinite(finalVal) || finalVal <= 0) return;
-    var svg = document.querySelector('.chart-wrap svg');
-    if (!svg) return;
-
-    // Build chart from real daily data points.
-    var pts = [];
-    if (Array.isArray(dailyEntries) && dailyEntries.length >= 2) {
-      for (var i = 0; i < dailyEntries.length; i++) {
-        var e = dailyEntries[i];
-        var val = Number((e && (e.online_nodes || e.total_nodes)) || 0);
-        if (!(Number.isFinite(val) && val > 0)) continue;
-        var label;
-        if (i === dailyEntries.length - 1) {
-          label = 'NOW';
-        } else {
-          var dt = new Date(Number((e && e.ts) || 0) * 1000);
-          label = (dt.getMonth() + 1) + '/' + dt.getDate();
-        }
-        pts.push({ label: label, value: Math.round(val) });
-      }
-    }
-    // Fallback: synthetic exponential
-    if (pts.length < 2) {
-      var EXP_K = 4.2;
-      var weeksSinceLaunch = Math.max(1, Math.round((Date.now() / 1000 - LAUNCH_TS) / (7 * 86400)));
-      var expDenom = Math.exp(EXP_K) - 1;
-      pts = [];
-      for (var k = 0; k < TICKS; k++) {
-        var tt = k / (TICKS - 1);
-        var vv2 = finalVal * (Math.exp(EXP_K * tt) - 1) / expDenom;
-        var lbl = k === TICKS - 1 ? 'NOW' : ('W' + (1 + Math.round(((weeksSinceLaunch - 1) * k) / (TICKS - 1))));
-        pts.push({ label: lbl, value: Math.round(vv2) });
-      }
-    }
-    var chartMax = pts[pts.length - 1].value || 1;
-    var xFor = function(i){ return PAD_L + (i / (pts.length - 1)) * PLOT_W; };
-    var yFor = function(v){ return PAD_T + (1 - v / chartMax) * PLOT_H; };
-    var coords = pts.map(function(p, i){ return { x: xFor(i), y: yFor(p.value), label: p.label, value: p.value }; });
-
-    // Polyline through real data points.
-    var linePath = '';
-    for (var j = 0; j < coords.length; j++) {
-      var c = coords[j];
-      linePath += (j === 0 ? 'M' : ' L') + c.x.toFixed(1) + ' ' + c.y.toFixed(1);
-    }
-    var areaPath = linePath + ' L ' + (PAD_L + PLOT_W).toFixed(1) + ' ' + (PAD_T + PLOT_H).toFixed(1) + ' L ' + PAD_L.toFixed(1) + ' ' + (PAD_T + PLOT_H).toFixed(1) + ' Z';
-
-    var yTicks = [1.0, 0.5, 0.2, 0.05].map(function(frac){
-      var v = chartMax * frac;
-      return { label: fmtAxis(v), y: yFor(v) };
-    });
-
-    var grid = svg.querySelector('.chart-grid');
-    if (grid) grid.innerHTML = yTicks.map(function(t){ return '<line x1="0" y1="'+t.y+'" x2="1200" y2="'+t.y+'"></line>'; }).join('');
-
-    var area = svg.querySelector('.chart-area');
-    if (area) area.setAttribute('d', areaPath);
-    var line = svg.querySelector('.chart-line');
-    if (line) line.setAttribute('d', linePath);
-
-    var dots = svg.querySelector('.chart-dots');
-    if (dots) dots.innerHTML = coords.map(function(c, i){
-      var isLast = i === coords.length - 1;
-      return '<circle cx="'+c.x+'" cy="'+c.y+'" r="'+(isLast ? 4 : 3)+'"' + (isLast ? ' class="chart-dot-now"' : '') + '></circle>';
-    }).join('');
-
-    var labels = svg.querySelector('.chart-labels');
-    if (labels) labels.innerHTML = coords.map(function(c, i){
-      var anchor = i === 0 ? 'start' : (i === coords.length - 1 ? 'end' : 'middle');
-      return '<text x="'+c.x+'" y="335" text-anchor="'+anchor+'">'+c.label+'</text>';
-    }).join('');
-
-    var yaxis = svg.querySelector('.chart-yaxis');
-    if (yaxis) yaxis.innerHTML = yTicks.map(function(t){
-      return '<text x="12" y="'+(t.y + 4)+'" text-anchor="start">'+t.label+'</text>';
-    }).join('');
-
-    var finalDot = coords[coords.length - 1];
-    var finalLabel = svg.querySelector('[data-live-chart-label]');
-    if (finalLabel) {
-      finalLabel.setAttribute('x', String(finalDot.x - 10));
-      finalLabel.setAttribute('y', String(finalDot.y - 14));
-    }
-
-    var weeksWord = WORDS[weeksSinceLaunch] || String(weeksSinceLaunch);
-    setAll('[data-live="weeks"]', weeksWord);
-  }
   function refresh(){
     fetch('https://polo.pilotprotocol.network/api/stats', { cache: 'no-store' })
       .then(function(r){ return r.ok ? r.json() : null; })
@@ -1103,10 +884,7 @@ const yTicks = [1.0, 0.5, 0.2, 0.05].map(frac => {
           var longStr = fmtAgentsLong(activeN);
           setAll('[data-live="agents-long"]', longStr);
           setAll('[data-live="agents-exact"]', activeN.toLocaleString('en-US'));
-          document.querySelectorAll('[data-live-chart-label]').forEach(function(el){
-            el.textContent = longStr + ' agents';
-          });
-          rebuildChart(activeN, s.daily);
+
         }
         if (typeof s.total_requests === 'number') {
           setAll('[data-live="requests"]', fmtRequests(s.total_requests));
