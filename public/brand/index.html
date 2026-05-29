@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pilot Protocol — Brand Kit v1.0</title>
+<style>
+/* ============================================================
+   Pilot Protocol Brand Kit — Tokens (synced with website)
+   ============================================================ */
+:root {
+  /* Dark (default) */
+  --bg:        #0b0b0a;
+  --bg-2:      #111110;
+  --bg-deep:   #070706;
+  --ink:       #eceae3;
+  --ink-dim:   #8a8a83;
+  --ink-faint: #3a3a37;
+  --line:      #1d1d1b;
+  --line-2:    #26261f;
+  --accent:        #C5F000;
+  --accent-ink:    #0b0b0a;
+  --accent-dim:    rgba(197, 240, 0, .18);
+  --accent-glow:   rgba(200, 255, 0, 0.12);
+  --term-bg:       #060605;
+
+  --sans:  'Inter Tight', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --mono:  'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --serif: 'Instrument Serif', 'Times New Roman', serif;
+
+  --wrap-max: 1440px;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg:        #fafaf7;
+  --bg-2:      #f0efea;
+  --bg-deep:   #e9e8e2;
+  --ink:       #0b0b0a;
+  --ink-dim:   #5a5a54;
+  --ink-faint: #c7c6be;
+  --line:      #e6e5df;
+  --line-2:    #d8d7d0;
+  --accent:        #82AA14;
+  --accent-ink:    #0b0b0a;
+  --accent-dim:    rgba(130, 170, 20, .14);
+  --accent-glow:   rgba(130, 170, 20, 0.12);
+  --term-bg:       #0b0b0a;
+  color-scheme: light;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.5;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+::selection { background: var(--accent); color: var(--accent-ink); }
+
+/* Typography */
+.display {
+  font-weight: 500;
+  font-size: clamp(44px, 9.2vw, 148px);
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+}
+h1 { font-weight: 500; font-size: clamp(30px, 5.2vw, 72px); line-height: 1.02; letter-spacing: -0.035em; }
+h2 { font-weight: 500; font-size: clamp(24px, 3.4vw, 44px); line-height: 1.15; letter-spacing: -0.025em; }
+h3 { font-weight: 500; font-size: 22px; letter-spacing: -0.015em; }
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.eyebrow::before {
+  content: "";
+  width: 22px;
+  height: 1px;
+  background: var(--ink-dim);
+  display: inline-block;
+}
+
+/* Layout */
+.wrap { max-width: var(--wrap-max); margin: 0 auto; padding: 0 48px; }
+@media (max-width: 900px) { .wrap { padding: 0 28px; } }
+@media (max-width: 520px) { .wrap { padding: 0 20px; } }
+
+.section { padding: 80px 0; border-top: 1px solid var(--line); }
+
+/* Header */
+.header {
+  padding: 32px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+.header .logo { display: flex; align-items: center; gap: 12px; }
+.header .logo img { height: 36px; width: auto; }
+.header .logo span {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.header .theme-toggle {
+  padding: 8px 16px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--ink-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.header .theme-toggle:hover { border-color: var(--ink); color: var(--ink); }
+
+/* Color swatches */
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+.swatch {
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.swatch-preview {
+  height: 80px;
+  position: relative;
+}
+.swatch-preview.accent { height: 100px; }
+.swatch-info {
+  padding: 12px 14px;
+  background: var(--bg-2);
+  border-top: 1px solid var(--line);
+}
+.swatch-name {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin-bottom: 4px;
+}
+.swatch-hex {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--ink);
+}
+.swatch-role {
+  font-size: 12px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+
+/* Typography showcase */
+.type-sample { margin-bottom: 32px; }
+.type-sample .meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 8px;
+}
+.type-sample .meta span { color: var(--accent); }
+
+/* Logo showcase */
+.logo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 24px;
+}
+.logo-card {
+  padding: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  border: 1px solid var(--line);
+}
+.logo-card.dark-bg { background: var(--bg); }
+.logo-card.surface-bg { background: var(--bg-2); }
+.logo-card.light-bg { background: #fafaf7; }
+.logo-card img { max-width: 100%; max-height: 160px; }
+.logo-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* Components showcase */
+.comp-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 24px 0;
+}
+
+/* Button */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn:hover { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+
+/* Code blocks */
+pre {
+  background: var(--term-bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 20px 24px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  line-height: 1.7;
+  color: #eceae3;
+}
+.cmd { color: var(--accent); }
+.comment { color: #8a8a83; }
+
+/* Callout */
+.callout {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--accent);
+  padding: 18px 22px;
+}
+.callout strong { color: var(--accent); }
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin: 24px 0;
+}
+th {
+  text-align: left;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line-2);
+  color: var(--ink-dim);
+  font-weight: 500;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-family: var(--mono);
+}
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-dim);
+}
+
+/* Focus ring demo */
+.focus-demo {
+  display: inline-block;
+  padding: 12px 18px;
+  border: 1px solid var(--line);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+/* Spacing scale */
+.spacing-scale {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.spacing-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 80px;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.spacing-row .px-val {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--accent);
+}
+.spacing-row .bar {
+  height: 24px;
+  background: var(--accent-dim);
+  min-width: 0;
+}
+.spacing-row .label {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-dim);
+  text-align: right;
+}
+
+/* Grid demo */
+.grid-demo {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 24px;
+  margin: 24px 0;
+}
+.grid-col {
+  height: 120px;
+  background: var(--accent-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-dim);
+  letter-spacing: 0.12em;
+}
+
+/* Do/Don't */
+.do-dont {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 24px 0;
+}
+@media (max-width: 640px) { .do-dont { grid-template-columns: 1fr; } }
+.do-dont .col {
+  padding: 28px;
+  border: 1px solid var(--line);
+}
+.do-dont .col.do { border-left: 2px solid #2bd45a; }
+.do-dont .col.dont { border-left: 2px solid #e54b4b; }
+.do-dont h4 {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.do-dont .do h4 { color: #2bd45a; }
+.do-dont .dont h4 { color: #e54b4b; }
+.do-dont li {
+  font-size: 14px;
+  color: var(--ink-dim);
+  margin-bottom: 6px;
+  padding-left: 4px;
+  list-style: none;
+}
+.do-dont li::before { content: "→ "; color: var(--ink-faint); font-family: var(--mono); font-size: 11px; }
+.do-dont .dont li::before { content: "× "; color: #e54b4b; }
+
+/* Asset list */
+.asset-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 8px;
+}
+.asset-list .h { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); padding: 8px 14px; }
+.asset-list .r { padding: 8px 14px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.asset-list .r.fn { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+.asset-list .r.sz { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); }
+.asset-list .r.dl { color: var(--accent); }
+
+/* Footer */
+.footer {
+  padding: 60px 0;
+  border-top: 1px solid var(--line);
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-faint);
+  letter-spacing: 0.12em;
+}
+.footer span { color: var(--accent); }
+
+/* Inline code in body text */
+code {
+  font-family: var(--mono);
+  font-size: 0.84em;
+  background: var(--bg-2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--accent);
+  border: 1px solid var(--line);
+}
+
+a { color: var(--accent); }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="wrap">
+  <div class="header">
+    <div class="logo">
+      <img src="/brand/pilot-logo-dark@1x.png" alt="Pilot Protocol" onerror="this.alt='Pilot Protocol'">
+      <span>Brand Kit v1.0</span>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()">☀ Light / ☾ Dark</button>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="section" style="border-top:none">
+  <div class="wrap">
+    <div class="eyebrow">Brand identity</div>
+    <h1 style="margin-top:24px">
+      Pilot / Protocol<br>
+      <em style="font-family:var(--serif);font-style:italic;font-weight:400">Where agents go</em>
+    </h1>
+    <p style="color:var(--ink-dim); max-width:48ch; margin-top:20px; font-size:18px; line-height:1.55">
+      Complete visual identity system. Dark-mode default. Every token, component, and rule that makes Pilot Protocol recognizable — drawn from the live website CSS.
+    </p>
+  </div>
+</div>
+
+<!-- 01 — COLOR -->
+<div class="section">
+  <div class="wrap">
+    <div class="eyebrow">01</div>
+    <h2 style="margin-top:12px">Color<span style="color:var(--accent)">.</span></h2>
+    <p style="color:var(--ink-dim); margin-bottom:40px; max-width:52ch;">
+      Dark mode is the default. Light mode must also work. Never use pure white <code>#ffffff</code> — use <code>#fafaf7</code> instead. Accent is for CTAs and highlights only.
+    </p>
+
+    <h3 style="margin-bottom:20px">Dark mode <span style="color:var(--ink-faint);font-size:16px;font-weight:400">(default)</span></h3>
+    <div class="color-grid">
+      <div class="swatch">
+        <div class="swatch-preview accent" style="background:#C5F000"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Brand Accent</div>
+          <div class="swatch-hex">#C5F000</div>
+          <div class="swatch-role">CTAs, highlights</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#0b0b0a"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Background</div>
+          <div class="swatch-hex">#0b0b0a</div>
+          <div class="swatch-role">Page bg</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#111110"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Surface</div>
+          <div class="swatch-hex">#111110</div>
+          <div class="swatch-role">Cards, elevated</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#070706"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Deep BG</div>
+          <div class="swatch-hex">#070706</div>
+          <div class="swatch-role">Footer, deepest</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#060605"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Terminal</div>
+          <div class="swatch-hex">#060605</div>
+          <div class="swatch-role">Code blocks</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#eceae3"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Ink</div>
+          <div class="swatch-hex">#eceae3</div>
+          <div class="swatch-role">Primary text</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#8a8a83"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Ink Dim</div>
+          <div class="swatch-hex">#8a8a83</div>
+          <div class="swatch-role">Labels, captions</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#3a3a37"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Ink Faint</div>
+          <div class="swatch-hex">#3a3a37</div>
+          <div class="swatch-role">Placeholders</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#1d1d1b"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Line</div>
+          <div class="swatch-hex">#1d1d1b</div>
+          <div class="swatch-role">Borders</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#26261f"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Line 2</div>
+          <div class="swatch-hex">#26261f</div>
+          <div class="swatch-role">Elevated borders</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:48px;margin-bottom:20px">Light mode</h3>
+    <div class="color-grid">
+      <div class="swatch">
+        <div class="swatch-preview accent" style="background:#82AA14"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Brand Accent</div>
+          <div class="swatch-hex">#82AA14</div>
+          <div class="swatch-role">CTAs, highlights</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#fafaf7;border:1px solid #e6e5df"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Background</div>
+          <div class="swatch-hex">#fafaf7</div>
+          <div class="swatch-role">Page bg</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#f0efea;border:1px solid #e6e5df"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Surface</div>
+          <div class="swatch-hex">#f0efea</div>
+          <div class="swatch-role">Cards, elevated</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#e9e8e2;border:1px solid #e6e5df"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Deep BG</div>
+          <div class="swatch-hex">#e9e8e2</div>
+          <div class="swatch-role">Footer, deepest</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#0b0b0a"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Ink</div>
+          <div class="swatch-hex">#0b0b0a</div>
+          <div class="swatch-role">Primary text</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#5a5a54"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Ink Dim</div>
+          <div class="swatch-hex">#5a5a54</div>
+          <div class="swatch-role">Labels, captions</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#c7c6be;border:1px solid #e6e5df"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Ink Faint</div>
+          <div class="swatch-hex">#c7c6be</div>
+          <div class="swatch-role">Placeholders</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#e6e5df"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Line</div>
+          <div class="swatch-hex">#e6e5df</div>
+          <div class="swatch-role">Borders</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-preview" style="background:#d8d7d0"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Line 2</div>
+          <div class="swatch-hex">#d8d7d0</div>
+          <div class="swatch-role">Elevated borders</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 02 — TYPOGRAPHY -->
+<div class="section">
+  <div class="wrap">
+    <div class="eyebrow">02</div>
+    <h2 style="margin-top:12px">Typography<span style="color:var(--accent)">.</span></h2>
+
+    <h3 style="margin-top:32px;margin-bottom:20px">Typefaces</h3>
+    <table>
+      <thead>
+        <tr><th>Role</th><th>Typeface</th><th>Weights</th><th>CSS variable</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>UI / Body</td><td>Inter Tight</td><td>300, 400, 500, 600, 700</td><td><code>--sans</code></td></tr>
+        <tr><td>Code / Labels</td><td>JetBrains Mono</td><td>400, 500, 600</td><td><code>--mono</code></td></tr>
+        <tr><td>Editorial</td><td>Instrument Serif</td><td>400, 400i</td><td><code>--serif</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:40px;margin-bottom:20px">Type scale</h3>
+
+    <div class="type-sample">
+      <div class="meta">Display · <span>44–148px / 500 / ls −0.045em / lh 0.92</span></div>
+      <div class="display">Pilot Protocol</div>
+    </div>
+
+    <div class="type-sample">
+      <div class="meta">H2 Section · <span>30–72px / 500 / ls −0.035em</span></div>
+      <h1>Network stats.</h1>
+    </div>
+
+    <div class="type-sample">
+      <div class="meta">H3 · <span>22px / 500 / ls −0.015em</span></div>
+      <h3>Peer-to-peer encrypted tunnels</h3>
+    </div>
+
+    <div class="type-sample">
+      <div class="meta">Body · <span>17px / 400 / lh 1.5 / ls −0.005em</span></div>
+      <p style="color:var(--ink-dim);max-width:52ch;">One line of code. No central dependency. Pilot is the network layer for AI agents. Every agent gets a permanent address, encrypted channels, and a trust model — no cloud lock-in, no vendor gateway.</p>
+    </div>
+
+    <div class="type-sample">
+      <div class="meta">Eyebrow · <span>11px Mono / uppercase / ls 0.14em</span></div>
+      <div class="eyebrow">THE BACKBONE</div>
+    </div>
+
+    <h3 style="margin-top:40px;margin-bottom:12px">Usage</h3>
+    <div class="do-dont">
+      <div class="col do">
+        <h4>Do</h4>
+        <ul>
+          <li>Use Mono for all labels, eyebrows, nav, terminal</li>
+          <li>Use Serif only for pull quotes and editorial</li>
+          <li>Stick to weights 400, 500, 600 only</li>
+        </ul>
+      </div>
+      <div class="col dont">
+        <h4>Don't</h4>
+        <ul>
+          <li>Use Serif for UI or documentation</li>
+          <li>Mix weights arbitrarily</li>
+          <li>Set body text above 17px or below 14px</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 03 — LOGO -->
+<div class="section">
+  <div class="wrap">
+    <div class="eyebrow">03</div>
+    <h2 style="margin-top:12px">Logo<span style="color:var(--accent)">.</span></h2>
+
+    <h3 style="margin-top:32px;margin-bottom:20px">Variants</h3>
+    <div class="logo-grid">
+      <div>
+        <div class="logo-card dark-bg">
+          <img src="/brand/pilot-logo-dark@1x.png" alt="Pilot Protocol" style="max-height:100px">
+        </div>
+        <div class="logo-label">Dark variant · on #0b0b0a</div>
+      </div>
+      <div>
+        <div class="logo-card surface-bg">
+          <img src="/brand/pilot-logo-dark@1x.png" alt="Pilot Protocol" style="max-height:100px">
+        </div>
+        <div class="logo-label">On surface · #111110</div>
+      </div>
+      <div>
+        <div class="logo-card light-bg">
+          <img src="/brand/pilot-logo-source.png" alt="Pilot Protocol" style="max-height:100px">
+        </div>
+        <div class="logo-label" style="color:#5a5a54">On light · #fafaf7</div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:40px;margin-bottom:16px">Asset sizes</h3>
+    <div class="asset-list">
+      <div class="h">File</div><div class="h">Dimensions</div><div class="h">Size</div><div class="h">Use</div>
+      <div class="r fn">pilot-logo-dark@1x.png</div><div class="r sz">200×200</div><div class="r sz">49 KB</div><div class="r sz">Small UI, favicon</div>
+      <div class="r fn">pilot-logo-dark@2x.png</div><div class="r sz">400×400</div><div class="r sz">169 KB</div><div class="r sz">Retina, headers</div>
+      <div class="r fn">pilot-logo-dark@3x.png</div><div class="r sz">600×600</div><div class="r sz">348 KB</div><div class="r sz">Hero, marketing</div>
+      <div class="r fn">pilot-logo-source.png</div><div class="r sz">1024×1024</div><div class="r sz">771 KB</div><div class="r sz">Master / derivations</div>
+    </div>
+
+    <h3 style="margin-top:40px;margin-bottom:12px">Guidelines</h3>
+    <div class="do-dont">
+      <div class="col do">
+        <h4>Do</h4>
+        <ul>
+          <li>Use dark variant on dark backgrounds</li>
+          <li>Use light variant on light backgrounds</li>
+          <li>Maintain clear space equal to logo height on all sides</li>
+        </ul>
+      </div>
+      <div class="col dont">
+        <h4>Don't</h4>
+        <ul>
+          <li>Recolor the logo</li>
+          <li>Stretch, rotate, or add effects</li>
+          <li>Separate mark from wordmark without approval</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 04 — COMPONENTS -->
+<div class="section">
+  <div class="wrap">
+    <div class="eyebrow">04</div>
+    <h2 style="margin-top:12px">Components<span style="color:var(--accent)">.</span></h2>
+
+    <h3 style="margin-top:32px;margin-bottom:12px">Buttons</h3>
+    <div class="comp-row">
+      <button class="btn primary">GET STARTED →</button>
+      <button class="btn">READ DOCS →</button>
+    </div>
+    <p style="color:var(--ink-faint);font-size:14px;margin-top:8px;">
+      Primary: accent bg · Ghost: transparent, fills on hover · Mono 12px uppercase · 14px 22px padding
+    </p>
+
+    <h3 style="margin-top:40px;margin-bottom:12px">Code block</h3>
+<pre><span class="comment"># Send a message via the CLI</span>
+<span class="cmd">$</span> pilotctl send-message github-agent \
+  --data <span class="cmd">'/data {"search":"pilot"}'</span> --wait</pre>
+
+    <h3 style="margin-top:40px;margin-bottom:12px">Callout</h3>
+    <div class="callout">
+      <strong>Enterprise features</strong> are in Early Access. Contact us to get access.
+    </div>
+
+    <h3 style="margin-top:40px;margin-bottom:12px">Inline code & selection</h3>
+    <p>
+      Use <code>pilotctl</code> to manage agents. Try selecting this text to see the accent highlight.
+    </p>
+
+    <h3 style="margin-top:40px;margin-bottom:12px">Focus ring</h3>
+    <div class="comp-row">
+      <div class="focus-demo">FOCUSED ELEMENT</div>
+      <div class="eyebrow">EYEBROW LABEL</div>
+    </div>
+    <p style="color:var(--ink-faint);font-size:14px;margin-top:8px;">
+      <code>outline: 2px solid var(--accent)</code> · <code>outline-offset: 2px</code> · Eyebrow: 11px Mono uppercase with leading rule
+    </p>
+
+    <h3 style="margin-top:40px;margin-bottom:12px">Tables</h3>
+    <table>
+      <thead><tr><th>Parameter</th><th>Type</th><th>Default</th></tr></thead>
+      <tbody>
+        <tr><td><code>--wait</code></td><td>bool</td><td>false</td></tr>
+        <tr><td><code>--timeout</code></td><td>duration</td><td>30s</td></tr>
+        <tr><td><code>--format</code></td><td>string</td><td>json</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 05 — SPACING -->
+<div class="section">
+  <div class="wrap">
+    <div class="eyebrow">05</div>
+    <h2 style="margin-top:12px">Spacing<span style="color:var(--accent)">.</span></h2>
+    <p style="color:var(--ink-dim);margin-bottom:32px;max-width:48ch;">
+      All spacing values are multiples of 4px. Max content width: 1440px. Standard component padding: 24px. Section padding: 80px.
+    </p>
+
+    <h3 style="margin-bottom:20px">8pt grid scale</h3>
+    <div class="spacing-scale">
+      <div class="spacing-row">
+        <div class="px-val">4px</div><div class="bar" style="width:4px"></div><div class="label">p-1</div>
+      </div>
+      <div class="spacing-row">
+        <div class="px-val">8px</div><div class="bar" style="width:8px"></div><div class="label">p-2</div>
+      </div>
+      <div class="spacing-row">
+        <div class="px-val">12px</div><div class="bar" style="width:12px"></div><div class="label">p-3</div>
+      </div>
+      <div class="spacing-row">
+        <div class="px-val">16px</div><div class="bar" style="width:16px"></div><div class="label">p-4</div>
+      </div>
+      <div class="spacing-row">
+        <div class="px-val">24px</div><div class="bar" style="width:24px"></div><div class="label">p-6 · component</div>
+      </div>
+      <div class="spacing-row">
+        <div class="px-val">28px</div><div class="bar" style="width:28px"></div><div class="label">p-7</div>
+      </div>
+      <div class="spacing-row">
+        <div class="px-val">32px</div><div class="bar" style="width:32px"></div><div class="label">p-8</div>
+      </div>
+      <div class="spacing-row">
+        <div class="px-val">48px</div><div class="bar" style="width:48px"></div><div class="label">p-12</div>
+      </div>
+      <div class="spacing-row">
+        <div class="px-val">64px</div><div class="bar" style="width:64px"></div><div class="label">p-16</div>
+      </div>
+      <div class="spacing-row">
+        <div class="px-val">80px</div><div class="bar" style="width:80px"></div><div class="label">p-20 · section</div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:40px;margin-bottom:20px">8-column grid</h3>
+    <p style="color:var(--ink-faint);font-size:14px;margin-bottom:12px;">80px column · 24px gutter</p>
+    <div class="grid-demo">
+      <div class="grid-col">Col 1</div>
+      <div class="grid-col">Col 2</div>
+      <div class="grid-col">Col 3</div>
+      <div class="grid-col">Col 4</div>
+      <div class="grid-col">Col 5</div>
+      <div class="grid-col">Col 6</div>
+      <div class="grid-col">Col 7</div>
+      <div class="grid-col">Col 8</div>
+    </div>
+  </div>
+</div>
+
+<!-- 06 — USAGE -->
+<div class="section">
+  <div class="wrap">
+    <div class="eyebrow">06</div>
+    <h2 style="margin-top:12px">Usage<span style="color:var(--accent)">.</span></h2>
+
+    <h3 style="margin-top:32px;margin-bottom:12px">Color</h3>
+    <div class="do-dont">
+      <div class="col do">
+        <h4>Do</h4>
+        <ul>
+          <li>Use accent sparingly — CTAs and key highlights only</li>
+          <li>Use ink-dim for labels and secondary text</li>
+          <li>Keep dark mode as the default experience</li>
+          <li>Use surface for elements above the page</li>
+        </ul>
+      </div>
+      <div class="col dont">
+        <h4>Don't</h4>
+        <ul>
+          <li>Use accent for body text or large fills</li>
+          <li>Introduce blues, purples, or reds</li>
+          <li>Use pure white — use #fafaf7 instead</li>
+          <li>Skip light mode variants</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 style="margin-top:32px;margin-bottom:12px">Spacing & Logo</h3>
+    <div class="do-dont">
+      <div class="col do">
+        <h4>Do</h4>
+        <ul>
+          <li>Use the 8pt grid — multiples of 4px only</li>
+          <li>Use 24px as standard component padding</li>
+          <li>Maintain logo clear space equal to logo height</li>
+        </ul>
+      </div>
+      <div class="col dont">
+        <h4>Don't</h4>
+        <ul>
+          <li>Use arbitrary values (13px, 17px, 22px)</li>
+          <li>Recolor, stretch, or rotate the logo</li>
+          <li>Separate mark from wordmark</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ASSETS INVENTORY -->
+<div class="section">
+  <div class="wrap">
+    <div class="eyebrow">Index</div>
+    <h2 style="margin-top:12px">Deliverables<span style="color:var(--accent)">.</span></h2>
+    <table style="margin-top:24px">
+      <thead><tr><th>File</th><th>Type</th><th>Size</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>brand-kit.html</td><td>HTML</td><td>—</td><td>This document — self-contained brand reference</td></tr>
+        <tr><td>pilot-brand-kit.pdf</td><td>PDF</td><td>1.5 MB</td><td>Original brand kit (Artemii, PILOT-28)</td></tr>
+        <tr><td>pilot-logo-dark@1x.png</td><td>PNG</td><td>49 KB</td><td>Logo 200×200 — small UI, favicon</td></tr>
+        <tr><td>pilot-logo-dark@2x.png</td><td>PNG</td><td>169 KB</td><td>Logo 400×400 — retina, headers</td></tr>
+        <tr><td>pilot-logo-dark@3x.png</td><td>PNG</td><td>348 KB</td><td>Logo 600×600 — hero, marketing</td></tr>
+        <tr><td>pilot-logo-source.png</td><td>PNG</td><td>771 KB</td><td>Logo 1024×1024 — master / derivations</td></tr>
+        <tr><td>tailwind.config.js</td><td>JS</td><td>1 KB</td><td>Tailwind config with all design tokens</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="footer">
+  <span>PILOT / PROTOCOL</span> · Brand Kit v1.0 · 2026 · <a href="https://pilotprotocol.network">pilotprotocol.network</a>
+</div>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'light' ? 'dark' : 'light';
+  html.setAttribute('data-theme', next);
+}
+</script>
+</body>
+</html>
