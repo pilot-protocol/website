@@ -10,6 +10,8 @@ permissions:
   contents: read
   # Required by wrangler-action for OIDC / deployments comment posting.
   deployments: write
+  # Required so the post-deploy step can comment the preview URL on the PR.
+  pull-requests: write
 
 jobs:
   build:
@@ -38,6 +40,7 @@ jobs:
       #   - PR from internal branch → preview (<branch>.pilotprotocol.pages.dev)
       #   - PR from a fork          → skipped (no secret access on forks)
       - name: Deploy to Cloudflare Pages
+        id: deploy
         if: |
           github.event_name == 'push' ||
           (github.event_name == 'pull_request' &&
@@ -53,3 +56,20 @@ jobs:
             --project-name=pilotprotocol
             --branch=${{ github.event_name == 'push' && 'main' || github.head_ref }}
             --commit-dirty=true
+
+      # Sticky comment so subsequent pushes update the same comment
+      # instead of stacking — keeps the PR thread clean. Header value
+      # must be unique per comment kind on this repo.
+      - name: Comment preview URL on PR
+        if: |
+          github.event_name == 'pull_request' &&
+          steps.deploy.outputs.deployment-url
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: cloudflare-pages-preview
+          message: |
+            🚀 **Preview deployed to Cloudflare Pages**
+
+            - Commit deploy URL: ${{ steps.deploy.outputs.deployment-url }}
+            - Branch alias: `https://${{ github.head_ref }}.pilotprotocol.pages.dev` (may take ~30s to propagate)
+            - Commit: `${{ github.event.pull_request.head.sha }}`
