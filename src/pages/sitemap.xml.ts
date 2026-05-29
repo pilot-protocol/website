@@ -24,6 +24,10 @@ export async function GET() {
   urls.push(url('/blog/', today, 0.9, 'weekly'));
   urls.push(url('/llms.txt', '2026-02-28', 0.5));
 
+  // Press / brand
+  urls.push(url('/press', today, 0.7));
+  urls.push(url('/brand/', today, 0.6));
+
   // Legal pages
   urls.push(url('/privacy', today, 0.7));
   urls.push(url('/cookies', today, 0.7));
