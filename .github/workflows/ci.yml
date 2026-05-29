@@ -8,6 +8,8 @@ on:
 
 permissions:
   contents: read
+  # Required by wrangler-action for OIDC / deployments comment posting.
+  deployments: write
 
 jobs:
   build:
@@ -30,3 +32,24 @@ jobs:
           name: site-build
           path: dist/
           retention-days: 7
+
+      # Deploy to Cloudflare Pages:
+      #   - push to main           → production (pilotprotocol.pages.dev)
+      #   - PR from internal branch → preview (<branch>.pilotprotocol.pages.dev)
+      #   - PR from a fork          → skipped (no secret access on forks)
+      - name: Deploy to Cloudflare Pages
+        if: |
+          github.event_name == 'push' ||
+          (github.event_name == 'pull_request' &&
+           github.event.pull_request.head.repo.full_name == github.repository)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Cloudflare treats branch=main as production, anything else
+          # as a preview environment with a branch-keyed subdomain.
+          command: >-
+            pages deploy dist
+            --project-name=pilotprotocol
+            --branch=${{ github.event_name == 'push' && 'main' || github.head_ref }}
+            --commit-dirty=true
