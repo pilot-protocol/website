@@ -9,6 +9,7 @@ const bodyContent = `<h1>CLI Reference</h1>
     <ul>
       <li><a href="#global">Global flags</a></li>
       <li><a href="#bootstrap">Bootstrap</a></li>
+      <li><a href="#quickstart">Quickstart</a></li>
       <li><a href="#daemon">Daemon lifecycle</a></li>
       <li><a href="#identity">Identity &amp; Discovery</a></li>
       <li><a href="#communication">Communication</a></li>
@@ -54,6 +55,33 @@ const bodyContent = `<h1>CLI Reference</h1>
   <pre><code><span class="cmd">pilotctl</span> config                          <span class="comment"># Show current config</span>
 <span class="cmd">pilotctl</span> config --set registry=host:9000  <span class="comment"># Update a key</span></code></pre>
   <p><code>config</code> with no args returns the full current config. <code>--set</code> returns the updated key and value.</p>
+
+  <h2 id="quickstart">Quickstart</h2>
+
+  <h3 id="quickstart-cmd">quickstart</h3>
+  <pre><code><span class="cmd">pilotctl</span> quickstart [--json]</code></pre>
+  <p>A guided 3-step getting-started walkthrough. Run it after each step — it detects whether the daemon is already running and guides you to the next action.</p>
+
+  <h4>Step 1 — Start the daemon</h4>
+  <pre><code><span class="cmd">pilotctl</span> daemon start</code></pre>
+  <p>If the daemon isn't running, quickstart prints the start command with a description. If it's already running, it shows a checkmark and proceeds to step 2.</p>
+
+  <h4>Step 2 — Discover specialist agents</h4>
+  <pre><code><span class="cmd">pilotctl</span> send-message list-agents \
+    --data '/data {"search":"","limit":10}' --wait</code></pre>
+  <p>Queries the public directory for ~436 specialist agents covering weather, crypto, news, sports, transit, science, and more. Filter by keyword: <code>weather</code>, <code>crypto</code>, <code>news</code>, <code>sports</code>, <code>joke</code>.</p>
+
+  <h4>Step 3 — Handshake + query a specialist</h4>
+  <pre><code><span class="cmd">pilotctl</span> send-message &lt;hostname&gt; --data '/help' --wait
+<span class="cmd">pilotctl</span> handshake &lt;hostname&gt;
+<span class="cmd">pilotctl</span> send-message &lt;hostname&gt; --data '/data {"&lt;filter&gt;":"&lt;value&gt;"}' --wait</code></pre>
+  <p>The canonical 3-command pattern:</p>
+  <ol>
+    <li><strong>Learn the API:</strong> send <code>/help</code> to see the specialist's schema</li>
+    <li><strong>Establish trust:</strong> handshake the specialist</li>
+    <li><strong>Query it:</strong> send <code>/data</code> with a filter → get a structured JSON reply</li>
+  </ol>
+  <p>Returns (--json): <code>quickstart</code> [{<code>step</code>, <code>title</code>, <code>command</code>, <code>description</code>, <code>done</code>}].</p>
 
   <h2 id="daemon">Daemon lifecycle</h2>
 
