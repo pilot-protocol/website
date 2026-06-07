@@ -6,14 +6,23 @@ import '../styles/system.css';
 
 // Live stats - graceful fallback at build time.
 //
-// 2026-06-07: switched from /api/stats (now admin-gated as part of the
-// polo public-stats lockdown) to /api/public-stats, which exposes only
-// a curated payload — server_time, uptime_seconds, active_nodes,
-// total_nodes, components{}. No 30-day history, no total_requests
-// counter, so growth-% and lifetime-request-count headline figures
-// were removed from the page.
+// 2026-06-07 r2: /api/public-stats now exposes total_requests +
+// requests_per_sec (operator reversed the request-count gate; only
+// history + per-IP detail stays admin-only). Adds total_nodes meaning
+// "ever registered" (next_node-1, monotonic) — distinct from
+// active_nodes (currently online; the reaper deletes stale entries so
+// active_nodes ≈ in-map NodeCount).
 let liveAgents = '~35,000';
 let liveAgentsExact = '34,812';
+let liveRequests = '~5B';
+
+function fmtCompact(n: number): string {
+  if (n >= 1_000_000_000) return `~${(n / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
+  if (n >= 1_000_000)     return `~${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (n >= 10_000)        return `~${Math.round(n / 1000)},000`;
+  if (n >= 1_000)         return `~${(n / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+  return String(n);
+}
 
 try {
   const res = await fetch('https://polo.pilotprotocol.network/api/public-stats', {
@@ -22,14 +31,16 @@ try {
   if (res.ok) {
     const s: any = await res.json();
 
-    // total nodes → "~X,000" / "~X.YM" (stable, doesn't fluctuate like online)
-    const activeN = typeof s.total_nodes === 'number' ? s.total_nodes : (typeof s.active_nodes === 'number' ? s.active_nodes : null);
-    if (activeN != null) {
-      if (activeN >= 1_000_000) liveAgents = `~${(activeN / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
-      else if (activeN >= 10_000) liveAgents = `~${Math.round(activeN / 1000)},000`;
-      else if (activeN >= 1_000) liveAgents = `~${(activeN / 1000).toFixed(1).replace(/\.0$/, '')}K`;
-      else liveAgents = `${activeN}`;
-      liveAgentsExact = activeN.toLocaleString('en-US');
+    // total_nodes is the cumulative ever-registered count (more stable than
+    // online, doesn't dip when nodes go offline). Fall back to active_nodes
+    // if the field is absent (older registry build).
+    const agentsN = typeof s.total_nodes === 'number' ? s.total_nodes : (typeof s.active_nodes === 'number' ? s.active_nodes : null);
+    if (agentsN != null) {
+      liveAgents = fmtCompact(agentsN);
+      liveAgentsExact = agentsN.toLocaleString('en-US');
+    }
+    if (typeof s.total_requests === 'number') {
+      liveRequests = fmtCompact(s.total_requests);
     }
   }
 } catch {}
@@ -416,6 +427,12 @@ try {
         </div>
       </div>
       <div class="stat">
+        <div class="big" data-live="requests-total">{liveRequests}</div>
+        <div>
+          <div class="lbl">Requests routed</div>
+        </div>
+      </div>
+      <div class="stat">
         <div class="big">350<span class="unit">+</span></div>
         <div>
           <div class="lbl">Specialized service agents</div>
@@ -799,32 +816,32 @@ try {
 // stay current between site deploys. Build-time values are the fallback.
 (function(){
 
-  function fmtAgentsLong(n){
-    if (n >= 1_000_000) return '~' + (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
-    if (n >= 10_000)    return '~' + Math.round(n / 1000) + ',000';
-    if (n >= 1_000)     return '~' + (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  function fmtCompact(n){
+    if (n >= 1_000_000_000) return '~' + (n / 1_000_000_000).toFixed(1).replace(/\.0$/, '') + 'B';
+    if (n >= 1_000_000)     return '~' + (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (n >= 10_000)        return '~' + Math.round(n / 1000) + ',000';
+    if (n >= 1_000)         return '~' + (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
     return String(n);
   }
   function setAll(sel, value){
     document.querySelectorAll(sel).forEach(function(el){ el.textContent = value; });
   }
-  // 2026-06-07: polo public-stats lockdown. /api/stats is now admin-
-  // gated; this page consumes /api/public-stats which carries only the
-  // curated payload (server_time, uptime_seconds, active_nodes,
-  // total_nodes, components{}). Lifetime request count and 30-day
-  // history are deliberately not in the new payload, so the dynamic
-  // "requests" badge and the growth-% widget are no longer updated
-  // client-side. The fallback values rendered at build time are kept.
+  // /api/public-stats payload (2026-06-07 r2): server_time, uptime_seconds,
+  // active_nodes (currently-online), total_nodes (cumulative ever-registered
+  // = next_node-1), total_requests, requests_per_sec, components{}.
   function refresh(){
     fetch('https://polo.pilotprotocol.network/api/public-stats', { cache: 'no-store' })
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(s){
         if (!s) return;
-        var activeN = typeof s.total_nodes === 'number' ? s.total_nodes
+        var agentsN = typeof s.total_nodes === 'number' ? s.total_nodes
                     : typeof s.active_nodes === 'number' ? s.active_nodes : null;
-        if (activeN != null) {
-          setAll('[data-live="agents-long"]', fmtAgentsLong(activeN));
-          setAll('[data-live="agents-exact"]', activeN.toLocaleString('en-US'));
+        if (agentsN != null) {
+          setAll('[data-live="agents-long"]', fmtCompact(agentsN));
+          setAll('[data-live="agents-exact"]', agentsN.toLocaleString('en-US'));
+        }
+        if (typeof s.total_requests === 'number') {
+          setAll('[data-live="requests-total"]', fmtCompact(s.total_requests));
         }
       })
       .catch(function(){});
