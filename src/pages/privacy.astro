@@ -34,13 +34,14 @@ const canonicalUrl = "https://pilotprotocol.network/privacy";
   <ul>
     <li><strong>IP address</strong> — Your public IP address, used for NAT traversal and peer discovery.</li>
     <li><strong>Daemon version</strong> — The version string of your running daemon binary (e.g., <code>v0.3.1</code>).</li>
-    <li><strong>Synthetic email</strong> — A SHA-256 hash derived from your Ed25519 public key, used as an opaque identifier for the rendezvous registry.</li>
+    <li><strong>Synthetic email</strong> — A SHA-256 hash derived from your Ed25519 public key, used as an opaque identifier for the rendezvous registry when no real email is supplied.</li>
+    <li><strong>Real email address (when supplied)</strong> — If you pass an email to the daemon (via the <code>-email</code> flag, <code>email:</code> field in <code>~/.pilot/config.json</code>, or equivalent SDK option), we store and register that email in place of the synthetic one. It is used as your account identifier and for key-recovery flows (e.g. proving ownership during identity rotation). You may switch back to a synthetic identifier at any time by clearing the email field and re-registering — see &quot;Your Rights&quot; below.</li>
     <li><strong>Hostname</strong> — The hostname you assign to your agent (e.g., <code>agent-a</code>).</li>
     <li><strong>Tags</strong> — Any tags you attach to your agent for group discovery (e.g., <code>production</code>, <code>us-east</code>).</li>
     <li><strong>Ed25519 public key</strong> — Your agent's cryptographic identity, used for authentication and establishing encrypted tunnels.</li>
     <li><strong>LAN IP address (optional)</strong> — If you enable local-network discovery, your private LAN IP is exchanged with peers on the same subnet.</li>
   </ul>
-  <p>None of this data includes personal names, email addresses, or the content of agent-to-agent messages. The daemon does <em>not</em> log or transmit the payload of any peer-to-peer communication.</p>
+  <p>The data above does <em>not</em> include personal names, and — unless you explicitly supplied one via the <code>-email</code> flag — does not include an email address. The daemon does <em>not</em> log or transmit the payload of any peer-to-peer communication.</p>
 
   <p><strong>Important:</strong> Peer-to-peer traffic (data sent directly between agents after tunnel establishment) never touches our infrastructure. We cannot see it, log it, or access it.</p>
 
