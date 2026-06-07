@@ -4,14 +4,22 @@ import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import '../styles/system.css';
 
-// Live stats - graceful fallback at build time
+// Live stats - graceful fallback at build time.
+//
+// 2026-06-07: switched from /api/stats (now admin-gated as part of the
+// polo public-stats lockdown) to /api/public-stats, which exposes only
+// a curated payload — server_time, uptime_seconds, active_nodes,
+// total_nodes, components{}. No 30-day history, no total_requests
+// counter, so growth-% and lifetime-request-count headline figures
+// were removed from the page. liveRequests is kept as a static
+// "5B+" fallback purely because the page copy still references it
+// in places; the dynamic figure is no longer fetched.
 let liveAgents = '~35,000';
 let liveAgentsExact = '34,812';
 let liveRequests = '5B+';
-let growthPct = '+50%';
 
 try {
-  const res = await fetch('https://polo.pilotprotocol.network/api/stats', {
+  const res = await fetch('https://polo.pilotprotocol.network/api/public-stats', {
     headers: { 'User-Agent': 'pilotprotocol-web' },
   });
   if (res.ok) {
@@ -25,38 +33,6 @@ try {
       else if (activeN >= 1_000) liveAgents = `~${(activeN / 1000).toFixed(1).replace(/\.0$/, '')}K`;
       else liveAgents = `${activeN}`;
       liveAgentsExact = activeN.toLocaleString('en-US');
-    }
-
-    // total requests → "X.YB+"
-    if (typeof s.total_requests === 'number') {
-      const n = s.total_requests;
-      if (n >= 1_000_000_000) liveRequests = `${(n / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B+`;
-      else if (n >= 1_000_000) liveRequests = `${Math.round(n / 1_000_000)}M+`;
-      else liveRequests = `${n}`;
-    }
-
-    // growth - 7-day: compare the daily[] entry ~7 days ago to the latest
-    if (Array.isArray(s.daily) && s.daily.length >= 2) {
-      const last = s.daily[s.daily.length - 1];
-      const targetTs = Number(last?.ts) - 7 * 86400;
-      let ref = s.daily[Math.max(0, s.daily.length - 8)];
-      let bestDelta = Infinity;
-      for (const e of s.daily) {
-        const d = Math.abs(Number(e?.ts) - targetTs);
-        if (Number.isFinite(d) && d < bestDelta) { bestDelta = d; ref = e; }
-      }
-      // Per-day rows carry `online_nodes` (not `total_nodes`); fall back to
-      // current top-level total_nodes as the latest if the last row is missing it.
-      const aField = (e: any) => Number(e?.online_nodes ?? e?.total_nodes);
-      const a = aField(ref);
-      const bRaw = aField(last);
-      const b = Number.isFinite(bRaw) && bRaw > 0
-        ? bRaw
-        : (typeof s.total_nodes === 'number' ? s.total_nodes : NaN);
-      if (Number.isFinite(a) && Number.isFinite(b) && a > 0) {
-        const pct = ((b - a) / a) * 100;
-        if (Number.isFinite(pct) && pct > 0) growthPct = `+${Math.round(pct)}%`;
-      }
     }
   }
 } catch {}
@@ -120,7 +96,6 @@ try {
 
         <div class="hero-meta">
           <div class="k"><div class="l">Network</div><div class="v"><span data-live="agents-long">{liveAgents}</span> agents · <span data-live="requests">{liveRequests}</span> requests <span class="live-pulse"><span class="pulse-dot"></span>live</span></div></div>
-          <div class="k"><div class="l">Growth</div><div class="v"><span data-live="growth">{growthPct}</span> in the past 7 days</div></div>
           <div class="k ietf-k"><div class="l">Standard</div><div class="v"><a class="ietf-link" href="/blog/ietf-internet-draft-pilot-protocol"><img src="/img/ietf-logo.png" alt="IETF" class="ietf-logo" /> <span>Published as IETF Internet-Draft</span></a></div></div>
         </div>
       </div>
@@ -447,12 +422,6 @@ try {
         <div class="big" data-live="requests">{liveRequests}</div>
         <div>
           <div class="lbl">Requests routed</div>
-        </div>
-      </div>
-      <div class="stat">
-        <div class="big"><span class="accent" data-live="growth">{growthPct}</span></div>
-        <div>
-          <div class="lbl">Growth, past 7 days</div>
         </div>
       </div>
       <div class="stat">
@@ -845,52 +814,27 @@ try {
     if (n >= 1_000)     return '~' + (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
     return String(n);
   }
-  function fmtRequests(n){
-    if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(1).replace(/\.0$/, '') + 'B+';
-    if (n >= 1_000_000)     return Math.round(n / 1_000_000) + 'M+';
-    return String(n);
-  }
-  function growth7d(daily, fallbackTotal){
-    if (!Array.isArray(daily) || daily.length < 2) return null;
-    var last = daily[daily.length - 1];
-    var targetTs = Number(last && last.ts) - 7 * 86400;
-    var ref = daily[Math.max(0, daily.length - 8)];
-    var best = Infinity;
-    for (var i = 0; i < daily.length; i++) {
-      var d = Math.abs(Number(daily[i] && daily[i].ts) - targetTs);
-      if (Number.isFinite(d) && d < best) { best = d; ref = daily[i]; }
-    }
-    // Per-day rows carry `online_nodes` (not `total_nodes`); fall back to
-    // the top-level total_nodes for the latest if the last row is missing it.
-    var fieldOf = function(e){ if (!e) return NaN; var v = e.online_nodes; return Number.isFinite(v) ? Number(v) : Number(e.total_nodes); };
-    var a = fieldOf(ref);
-    var bRaw = fieldOf(last);
-    var b = Number.isFinite(bRaw) && bRaw > 0 ? bRaw : Number(fallbackTotal);
-    if (!Number.isFinite(a) || !Number.isFinite(b) || a <= 0) return null;
-    var pct = ((b - a) / a) * 100;
-    return Number.isFinite(pct) && pct > 0 ? ('+' + Math.round(pct) + '%') : null;
-  }
   function setAll(sel, value){
     document.querySelectorAll(sel).forEach(function(el){ el.textContent = value; });
   }
+  // 2026-06-07: polo public-stats lockdown. /api/stats is now admin-
+  // gated; this page consumes /api/public-stats which carries only the
+  // curated payload (server_time, uptime_seconds, active_nodes,
+  // total_nodes, components{}). Lifetime request count and 30-day
+  // history are deliberately not in the new payload, so the dynamic
+  // "requests" badge and the growth-% widget are no longer updated
+  // client-side. The fallback values rendered at build time are kept.
   function refresh(){
-    fetch('https://polo.pilotprotocol.network/api/stats', { cache: 'no-store' })
+    fetch('https://polo.pilotprotocol.network/api/public-stats', { cache: 'no-store' })
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(s){
         if (!s) return;
         var activeN = typeof s.total_nodes === 'number' ? s.total_nodes
                     : typeof s.active_nodes === 'number' ? s.active_nodes : null;
         if (activeN != null) {
-          var longStr = fmtAgentsLong(activeN);
-          setAll('[data-live="agents-long"]', longStr);
+          setAll('[data-live="agents-long"]', fmtAgentsLong(activeN));
           setAll('[data-live="agents-exact"]', activeN.toLocaleString('en-US'));
-
         }
-        if (typeof s.total_requests === 'number') {
-          setAll('[data-live="requests"]', fmtRequests(s.total_requests));
-        }
-        var g = growth7d(s.daily, s.total_nodes);
-        if (g) setAll('[data-live="growth"]', g);
       })
       .catch(function(){});
   }
