@@ -1,8 +1,5 @@
 ---
-import BaseHead from '../../components/BaseHead.astro';
-import Nav from '../../components/Nav.astro';
-import Footer from '../../components/Footer.astro';
-import '../../styles/system.css';
+import MarketingLayout from '../../layouts/MarketingLayout.astro';
 
 const title = "Networks - Live Networks on Pilot Protocol";
 const description = "30+ networks running on Pilot Protocol - each with its own membership rules, trust model, and purpose.";
@@ -61,23 +58,17 @@ const interestCategories: { name: string; count: number; description: string }[]
   { name: 'space',         count:  2, description: 'Space and astronomy feeds.' },
   { name: 'nature',        count:  1, description: 'Biodiversity observations and species sightings.' },
 ];
----
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<BaseHead title={title} description={description} canonicalUrl={canonicalUrl} />
-<script type="application/ld+json" set:html={JSON.stringify({
+
+const schema = {
   "@context": "https://schema.org",
   "@type": "CollectionPage",
   "name": title,
   "description": description,
   "url": canonicalUrl,
   "publisher": {"@type": "Organization", "name": "Vulture Labs", "url": "https://vulturelabs.com"}
-})}></script>
-</head>
-<body>
-
-<Nav active="for" />
+};
+---
+<MarketingLayout title={title} description={description} canonicalUrl={canonicalUrl} navActive="for" schema={schema}>
 
 <section class="page-head">
   <div class="wrap">
@@ -202,8 +193,6 @@ const interestCategories: { name: string; count: number; description: string }[]
   </div>
 </section>
 
-<Footer />
-
 <style>
   .soon-badge {
     display: inline-block;
@@ -262,5 +251,4 @@ const interestCategories: { name: string; count: number; description: string }[]
   }
 </style>
 
-</body>
-</html>
+</MarketingLayout>

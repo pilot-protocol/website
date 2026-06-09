@@ -4,11 +4,20 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build && node scripts/build-cf-error-pages.mjs",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "perf:weight": "node scripts/check-page-weight.mjs",
+    "perf:layouts": "node scripts/check-layouts.mjs",
+    "perf:lighthouse": "lhci autorun --config=lighthouserc.cjs",
+    "perf:check": "npm run build && npm run perf:weight && npm run perf:layouts && npm run perf:lighthouse",
+    "loadtest:smoke": "K6_PROFILE=smoke k6 run scripts/loadtest.k6.js",
+    "loadtest:spike": "K6_PROFILE=spike k6 run scripts/loadtest.k6.js"
   },
   "dependencies": {
     "astro": "^5.7.10",
     "posthog-js": "^1.372.3",
     "puppeteer": "^24.39.0"
+  },
+  "devDependencies": {
+    "@lhci/cli": "^0.14.0"
   }
 }

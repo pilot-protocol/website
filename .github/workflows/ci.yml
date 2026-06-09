@@ -25,8 +25,30 @@ jobs:
       - name: Build site
         run: npm run build
 
+      # PILOT-32 launch perf bar — these gates fail the PR if any new page
+      # busts the budget or skips an approved layout. See perf-results/BASELINE.md
+      # for the rationale and the current numbers.
+      - name: Page-weight budget
+        run: node scripts/check-page-weight.mjs
+
+      - name: Layout policy
+        run: node scripts/check-layouts.mjs
+
+      - name: Lighthouse CI (perf >= 90 on landing + docs)
+        run: npx lhci autorun --config=lighthouserc.cjs
+        env:
+          # lhci needs Chrome; ubuntu-latest ships Google Chrome stable in /usr/bin.
+          CHROME_PATH: /usr/bin/google-chrome
+
       - uses: actions/upload-artifact@v4
         with:
           name: site-build
           path: dist/
           retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-reports
+          path: perf-results/lighthouse/
+          retention-days: 30

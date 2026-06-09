@@ -1,4 +1,6 @@
 ---
+import { getImage } from 'astro:assets';
+import pilotLogo from '../assets/img/pilot.png';
 import '../styles/global.css';
 
 interface Props {
@@ -16,6 +18,12 @@ const {
   ogImage = 'https://pilotprotocol.network/img/pilot.png',
   ogType = 'website',
 } = Astro.props;
+
+// Generate a small (64×64) PNG favicon from the managed pilot logo so the
+// browser doesn't have to fetch the full 1024×1024 / 754 KB pilot.png just to
+// paint a tab icon. The og:image still points at the full-size public copy
+// for backward compatibility with anywhere the canonical URL is cached.
+const favicon = await getImage({ src: pilotLogo, width: 64, height: 64, format: 'png' });
 ---
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -38,9 +46,11 @@ const {
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+{/* Inter Tight 700 dropped — not referenced anywhere in src/styles. Trims one
+    woff2 from every cold visit. */}
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 
-<link rel="icon" href="/img/pilot.png" type="image/png">
+<link rel="icon" href={favicon.src} type="image/png" sizes="64x64">
 <link rel="alternate" type="application/rss+xml" title="Pilot Protocol Journal" href="/blog/feed.xml">
 
 <script is:inline>
@@ -54,7 +64,10 @@ const {
   })();
 </script>
 
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-EEWEKT0GW5"></script>
+{/* defer (not async) keeps gtag out of the critical path — script downloads
+    in parallel but execution waits for parser finish, which is what we want
+    for an analytics tag that's invisible to UX. */}
+<script defer src="https://www.googletagmanager.com/gtag/js?id=G-EEWEKT0GW5"></script>
 <script is:inline>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}

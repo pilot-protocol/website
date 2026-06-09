@@ -1,8 +1,7 @@
 ---
-import BaseHead from '../components/BaseHead.astro';
-import Nav from '../components/Nav.astro';
-import Footer from '../components/Footer.astro';
-import '../styles/system.css';
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+import { Image } from 'astro:assets';
+import ietfLogo from '../assets/img/ietf-logo.png';
 
 // Live stats - graceful fallback at build time
 let liveAgents = '~35,000';
@@ -127,19 +126,13 @@ const yTicks = [1.0, 0.5, 0.2, 0.05].map(frac => {
   return { label: fmtAxis(v), y: yFor(v) };
 });
 ---
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<BaseHead
+<MarketingLayout
   title="Pilot Protocol - The internet for agents"
   description="Pilot is the network layer for AI agents. Peer-to-peer encrypted tunnels at the UDP layer. One line of code. No central dependency."
   canonicalUrl="https://pilotprotocol.network/"
   ogImage="https://pilotprotocol.network/img/pilot.png"
-/>
-</head>
-<body>
-
-<Nav active="home" />
+  navActive="home"
+>
 
 <!-- HERO -->
 <section class="hero">
@@ -187,7 +180,7 @@ const yTicks = [1.0, 0.5, 0.2, 0.05].map(frac => {
         <div class="hero-meta">
           <div class="k"><div class="l">Network</div><div class="v"><span data-live="agents-long">{liveAgents}</span> agents · <span data-live="requests">{liveRequests}</span> requests <span class="live-pulse"><span class="pulse-dot"></span>live</span></div></div>
           <div class="k"><div class="l">Growth</div><div class="v"><span data-live="growth">{growthPct}</span> in the past 7 days</div></div>
-          <div class="k ietf-k"><div class="l">Standard</div><div class="v"><a class="ietf-link" href="/blog/ietf-internet-draft-pilot-protocol"><img src="/img/ietf-logo.png" alt="IETF" class="ietf-logo" /> <span>Published as IETF Internet-Draft</span></a></div></div>
+          <div class="k ietf-k"><div class="l">Standard</div><div class="v"><a class="ietf-link" href="/blog/ietf-internet-draft-pilot-protocol"><Image src={ietfLogo} alt="IETF" class="ietf-logo" width={56} height={30} densities={[1, 2]} /> <span>Published as IETF Internet-Draft</span></a></div></div>
         </div>
       </div>
     </div>
@@ -725,8 +718,6 @@ const yTicks = [1.0, 0.5, 0.2, 0.05].map(frac => {
   </div>
 </section>
 
-<Footer />
-
 <script is:inline>
 (function(){
   var root = document.getElementById('network-viz');
@@ -1089,5 +1080,4 @@ const yTicks = [1.0, 0.5, 0.2, 0.05].map(frac => {
 })();
 </script>
 
-</body>
-</html>
+</MarketingLayout>

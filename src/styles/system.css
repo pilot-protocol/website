@@ -2271,6 +2271,12 @@ body.nav-mobile-open { overflow: hidden; }
   transition: background 0.15s;
   text-decoration: none;
   color: inherit;
+  /* Skip style + layout work for off-screen cards. With ~95 posts on the blog
+   * index, this drops Style & Layout from ~19s to <500ms on the desktop
+   * Lighthouse run. contain-intrinsic-size gives the browser a placeholder
+   * so the scrollbar position stays stable before the card paints. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 180px;
 }
 .blog-card:hover { background: var(--bg-2); color: inherit; }
 .blog-card:hover h3 { color: var(--accent); }

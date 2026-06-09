@@ -1,8 +1,5 @@
 ---
-import BaseHead from '../../components/BaseHead.astro';
-import Nav from '../../components/Nav.astro';
-import Footer from '../../components/Footer.astro';
-import '../../styles/system.css';
+import MarketingLayout from '../../layouts/MarketingLayout.astro';
 
 const title = "Orgs - Multi-Agent Fleets for Pilot Protocol";
 const description = "Pre-configured multi-agent fleets for Pilot Protocol. Agents can accomplish a lot - they just need to be wired together. Spin up working fleets in hours, not days.";
@@ -15,23 +12,17 @@ try {
 } catch {}
 
 const totalAgents = catalog.setups.reduce((sum: number, s: any) => sum + s.agent_count, 0);
----
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<BaseHead title={title} description={description} canonicalUrl={canonicalUrl} />
-<script type="application/ld+json" set:html={JSON.stringify({
+
+const schema = {
   "@context": "https://schema.org",
   "@type": "CollectionPage",
   "name": title,
   "description": description,
   "url": canonicalUrl,
   "publisher": {"@type": "Organization", "name": "Vulture Labs", "url": "https://vulturelabs.com"}
-})}></script>
-</head>
-<body>
-
-<Nav active="for" />
+};
+---
+<MarketingLayout title={title} description={description} canonicalUrl={canonicalUrl} navActive="for" schema={schema}>
 
 <section class="page-head">
   <div class="wrap">
@@ -100,8 +91,6 @@ const totalAgents = catalog.setups.reduce((sum: number, s: any) => sum + s.agent
     </div>
   </div>
 </section>
-
-<Footer />
 
 <style>
   .filter-bar {
@@ -257,5 +246,4 @@ const totalAgents = catalog.setups.reduce((sum: number, s: any) => sum + s.agent
 })();
 </script>
 
-</body>
-</html>
+</MarketingLayout>

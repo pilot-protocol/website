@@ -1,8 +1,5 @@
 ---
-import BaseHead from '../../components/BaseHead.astro';
-import Nav from '../../components/Nav.astro';
-import Footer from '../../components/Footer.astro';
-import '../../styles/system.css';
+import MarketingLayout from '../../layouts/MarketingLayout.astro';
 
 const title = "Compatibility — Pilot Protocol";
 const description = "Per-environment deployment modes for pilot-daemon. UDP transport vs single-port-443 compat mode across PaaS, serverless, k8s, agent sandboxes, VMs, and corporate networks.";
@@ -110,19 +107,17 @@ const egress = [
   { model: 'Domain-name allowlist',        examples: 'Cursor Cloud Agents, Zscaler PAC',              today: '✓ Works after adding *.pilotprotocol.network + 34.71.57.205',                                 needed: 'doc-only' },
   { model: 'DPI / protocol allowlist',     examples: 'Great Firewall, Iran-style filters',            today: '✗ Blocked — no domain fronting / ECH today',                                                  needed: 'out of scope' },
 ];
----
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<BaseHead title={title} description={description} canonicalUrl={canonicalUrl} />
-<script type="application/ld+json" set:html={JSON.stringify({
+
+const schema = {
   "@context": "https://schema.org",
   "@type": "TechArticle",
   "name": title,
   "description": description,
   "url": canonicalUrl,
   "publisher": {"@type": "Organization", "name": "Vulture Labs", "url": "https://vulturelabs.com"}
-})}></script>
+};
+---
+<MarketingLayout title={title} description={description} canonicalUrl={canonicalUrl} navActive="for" schema={schema}>
 <style>
   /* Match the rest of the site: dark surfaces, ink-dim body, mono accents. */
   .compat-prose { max-width: 70ch; }
@@ -286,10 +281,6 @@ const egress = [
   }
   .compat-example p b { color: var(--ink); font-weight: 500; }
 </style>
-</head>
-<body>
-
-<Nav active="for" />
 
 <section class="page-head">
   <div class="wrap">
@@ -515,7 +506,4 @@ sudo systemctl restart pilot-daemon</pre>
   </div>
 </section>
 
-<Footer />
-
-</body>
-</html>
+</MarketingLayout>

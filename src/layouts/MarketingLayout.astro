@@ -1,0 +1,68 @@
+---
+/**
+ * Shared marketing-page layout.
+ *
+ * Replaces the hand-rolled `BaseHead + Nav + Footer + system.css` skeleton
+ * that was duplicated across `index.astro`, `plans.astro`, `404.astro`,
+ * `500.astro`, and all seven `for/*.astro` files. New marketing pages should
+ * use this layout — never re-import BaseHead/Nav/Footer directly.
+ *
+ * Props mirror BaseHead's plus a `schema` for JSON-LD (single object or
+ * array), and `navActive` to drive the Nav highlight. For page-specific
+ * `<style>` blocks, use Astro scoped `<style>` inside the page itself; for
+ * page-specific `<script>` blocks (e.g. landing's boids animation), put them
+ * in the `body-end` named slot.
+ */
+import BaseHead from '../components/BaseHead.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/system.css';
+
+interface Props {
+  title: string;
+  description: string;
+  canonicalUrl?: string;
+  ogImage?: string;
+  ogType?: string;
+  navActive?: 'home' | 'docs' | 'blog' | 'plans' | 'for';
+  /** JSON-LD payload (object or array). Serialized via set:html. */
+  schema?: Record<string, unknown> | Array<Record<string, unknown>>;
+  /** Hide the global Footer — used by error pages that have their own layout. */
+  hideFooter?: boolean;
+}
+
+const {
+  title,
+  description,
+  canonicalUrl,
+  ogImage,
+  ogType,
+  navActive,
+  schema,
+  hideFooter,
+} = Astro.props;
+
+const schemas = schema ? (Array.isArray(schema) ? schema : [schema]) : [];
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <BaseHead
+    title={title}
+    description={description}
+    canonicalUrl={canonicalUrl}
+    ogImage={ogImage}
+    ogType={ogType}
+  />
+  {schemas.map((s) => (
+    <script type="application/ld+json" set:html={JSON.stringify(s)} />
+  ))}
+  <slot name="head-extra" />
+</head>
+<body>
+  <Nav active={navActive} />
+  <slot />
+  {!hideFooter && <Footer />}
+  <slot name="body-end" />
+</body>
+</html>
