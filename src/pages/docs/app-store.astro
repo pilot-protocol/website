@@ -14,6 +14,7 @@ const bodyContent = `<h1>App Store</h1>
       <li><a href="#building">Building an app</a></li>
       <li><a href="#publishing">Publishing an app</a></li>
       <li><a href="#install-models">Catalogue vs sideload</a></li>
+      <li><a href="#security">Security model &amp; hardening</a></li>
       <li><a href="#example">Worked example: io.pilot.cosift</a></li>
     </ul>
   </div>
@@ -135,7 +136,13 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
   "bundle_sha256": "&lt;sha256 of the tarball&gt;"
 }</code></pre>
 
-  <p>Two integrity layers protect every install, both re-checked at each spawn: the catalogue pins the <em>tarball</em> sha256 (a swapped CDN byte fails), and the manifest pins the <em>binary</em> sha256 under an ed25519 signature.</p>
+  <p>The catalogue itself is signed. After editing <code>catalogue.json</code>, re-sign it so the daemon and <code>pilotctl</code> will trust it:</p>
+
+  <pre><code><span class="cmd">pilotctl</span> appstore sign-catalogue --key catalog-signing.key catalogue/catalogue.json</code></pre>
+
+  <p>This writes a detached <code>catalogue.json.sig</code> (commit both). <code>pilotctl</code> verifies it against the embedded catalogue key before trusting any entry - see <a href="#security">Security model</a>.</p>
+
+  <p>Three integrity layers protect every install: the <em>catalogue</em> carries a detached ed25519 signature (a substituted app list fails), the catalogue pins each <em>tarball</em> sha256 (a swapped CDN byte fails), and the manifest pins the <em>binary</em> sha256 under an ed25519 signature - the last two re-checked at every spawn.</p>
 
   <h2 id="install-models">Catalogue vs sideload</h2>
 
@@ -149,6 +156,40 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
   <div class="callout">
     <p>To stage a release locally before publishing, point <code>$PILOT_APPSTORE_CATALOG_URL</code> at a <code>file://</code> catalogue and install by id - the same code path as production, with your own tarball.</p>
   </div>
+
+  <h2 id="security">Security model &amp; hardening</h2>
+
+  <p>The app store is deny-by-default at every layer. Trust flows from a signed catalogue, through a signed manifest, to a sandboxed and continuously-verified child process.</p>
+
+  <h3>Signed catalogue (fail-closed)</h3>
+
+  <p>The catalogue is signed with a dedicated ed25519 key whose public half is compiled into <code>pilotctl</code> and the daemon. <code>pilotctl</code> fetches both <code>catalogue.json</code> and a detached <code>catalogue.json.sig</code> and verifies the signature <strong>before trusting any entry</strong>. An unsigned, missing-signature, or tampered catalogue is refused - a compromised host or CDN cannot point installs at hostile bundle URLs without forging the signature. The signing key can be rotated at build time:</p>
+
+  <pre><code><span class="cmd">go</span> build -ldflags \
+  "-X .../internal/catalogtrust.publicKeyB64=&lt;new-b64-pubkey&gt;" \
+  ./cmd/pilotctl ./cmd/daemon</code></pre>
+
+  <h3>Broker authorization (exposes + grants)</h3>
+
+  <p>Apps never dial each other's sockets directly - every call goes through the daemon's broker, which enforces two gates before any dispatch:</p>
+  <ul>
+    <li><strong>Exposes gate</strong> - a method is dispatchable only if the target app lists it in its manifest <code>exposes</code> set. That list is the app's entire callable surface; anything else is refused, even for the daemon itself.</li>
+    <li><strong>Grant gate</strong> - when one app calls another, the caller must declare a matching <code>ipc.call</code> grant targeting <code>&lt;app&gt;.&lt;method&gt;</code> (exact, <code>&lt;app&gt;.*</code>, or <code>*</code>). No grant, no call.</li>
+  </ul>
+
+  <h3>Supervisor hardening</h3>
+
+  <p>The supervisor that spawns and watches each app applies defence-in-depth:</p>
+  <ul>
+    <li><strong>Launch-time re-verification (TOCTOU)</strong> - immediately before <code>exec</code>, the binary is re-checked: rejected if it became a symlink, and its sha256 must still match the pinned hash. A binary swapped between install-scan and launch is caught before it runs.</li>
+    <li><strong>Exponential backoff</strong> - a binary that fails verification is retried with capped exponential backoff (not a fixed interval), and a crash-looping app is suspended after too many failures in a window until an operator restarts it.</li>
+    <li><strong>Resource limits</strong> - on Linux each app is spawned with <code>RLIMIT_NOFILE</code> and an <code>RLIMIT_AS</code> address-space cap, bounding fd and memory abuse.</li>
+    <li><strong>Audit log rotation</strong> - every lifecycle event (spawn, exit, verify-fail, suspend, resume) is written to a per-app JSONL audit log that rotates across a bounded number of generations, so a crash-looping app can't fill the disk while recent forensics are retained.</li>
+  </ul>
+
+  <h3>Extension hooks</h3>
+
+  <p>Apps may register hooks on daemon primitives (declared in the manifest), but the hook surface is bounded: per-app rate limiting caps how often the daemon will dispatch into an app's hooks, and the number of dynamic hook registrations per app is capped - so a hostile hook can't become a DoS amplifier.</p>
 
   <h2 id="example">Worked example: io.pilot.cosift</h2>
 
