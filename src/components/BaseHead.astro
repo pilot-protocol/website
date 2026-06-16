@@ -45,7 +45,140 @@ const {
      bytes are unchanged. -->
 <link rel="stylesheet" href="/fonts/fonts.css">
 
+<!-- PILOT-27: consent-check shared module is imported by analytics.ts below. -->
+
 <link rel="icon" href="/img/pilot.png" type="image/png">
+
+<!-- PILOT-27: Consent banner injected at the end of <body> from <head> -->
+<script is:inline>
+  (function() {
+    var bannerHTML = '<div id="pilot-consent-banner" class="consent-banner consent-banner--bottom" role="dialog" aria-label="Cookie consent" style="display:none">' +
+      '<div class="consent-banner__inner">' +
+        '<div class="consent-banner__text">' +
+          '<p>We use analytics cookies to understand how our site is used. No personal data is collected. <a href="/cookies">Learn more</a>.</p>' +
+        '</div>' +
+        '<div class="consent-banner__actions">' +
+          '<button id="pilot-consent-accept" class="btn primary consent-btn" data-consent="accepted">Accept</button>' +
+          '<button id="pilot-consent-reject" class="btn consent-btn" data-consent="rejected">Reject</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+    // Wait for DOM to be ready
+    function injectBanner() {
+      if (document.body) {
+        var wrapper = document.createElement('div');
+        wrapper.innerHTML = bannerHTML;
+        document.body.appendChild(wrapper.firstElementChild);
+
+        var KEY = 'pilot_consent';
+        var banner = document.getElementById('pilot-consent-banner');
+        if (!banner) return;
+
+        function getConsent() {
+          try { return localStorage.getItem(KEY); } catch { return null; }
+        }
+
+        function setConsent(value) {
+          try {
+            localStorage.setItem(KEY, value);
+            window.dispatchEvent(new CustomEvent('pilot-consent-change', { detail: value }));
+          } catch {}
+        }
+
+        document.getElementById('pilot-consent-accept').addEventListener('click', function() {
+          setConsent('accepted');
+          banner.style.display = 'none';
+        });
+
+        document.getElementById('pilot-consent-reject').addEventListener('click', function() {
+          setConsent('rejected');
+          banner.style.display = 'none';
+        });
+
+        var existing = getConsent();
+        if (existing) {
+          banner.style.display = 'none';
+          window.dispatchEvent(new CustomEvent('pilot-consent-change', { detail: existing }));
+        } else {
+          banner.style.display = 'flex';
+        }
+
+        window.__showConsentBanner = function() {
+          if (banner) banner.style.display = 'flex';
+        };
+      } else {
+        setTimeout(injectBanner, 50);
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', injectBanner);
+    } else {
+      injectBanner();
+    }
+  })();
+</script>
+
+<style is:global>
+  .consent-banner {
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    background: var(--bg-2, #111110);
+    border-top: 1px solid var(--line, #1d1d1b);
+    font-family: var(--sans, sans-serif);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink, #eceae3);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .consent-banner__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    max-width: 1200px;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .consent-banner__text { flex: 1; min-width: 240px; }
+  .consent-banner__text p { margin: 0; }
+  .consent-banner__text a { color: var(--accent, #aaff00); text-decoration: underline; }
+  .consent-banner__actions {
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .consent-btn {
+    padding: 10px 24px;
+    font-size: 13px;
+    font-family: var(--mono, monospace);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 500;
+    border: 1px solid var(--line-2, #26261f);
+    border-radius: 6px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--ink, #eceae3);
+    transition: background 0.15s, color 0.15s;
+  }
+  .consent-btn:hover { background: var(--line, #1d1d1b); }
+  .consent-btn.primary {
+    background: var(--accent, #aaff00);
+    color: var(--accent-ink, #0b0b0a);
+    border-color: var(--accent, #aaff00);
+  }
+  .consent-btn.primary:hover { opacity: 0.9; }
+</style>
 <link rel="alternate" type="application/rss+xml" title="Pilot Protocol Journal" href="/blog/feed.xml">
 
 <script is:inline>
@@ -59,12 +192,38 @@ const {
   })();
 </script>
 
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-EEWEKT0GW5"></script>
+<!-- PILOT-27: GA4 loads only after user accepts cookies. -->
 <script is:inline>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-EEWEKT0GW5');
+  (function() {
+    var KEY = 'pilot_consent';
+    function getConsent() {
+      try { return localStorage.getItem(KEY); } catch { return null; }
+    }
+    function loadGA4() {
+      if (document.querySelector('script[src*="gtag/js?id=G-EEWEKT0GW5"]')) return;
+      var s = document.createElement('script');
+      s.async = true;
+      s.src = 'https://www.googletagmanager.com/gtag/js?id=G-EEWEKT0GW5';
+      document.head.appendChild(s);
+
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      window.gtag = gtag;
+      gtag('js', new Date());
+      gtag('config', 'G-EEWEKT0GW5');
+    }
+
+    var consent = getConsent();
+    if (consent === 'accepted') {
+      loadGA4();
+    } else if (!consent) {
+      // No choice made yet — listen for the consent event
+      window.addEventListener('pilot-consent-change', function(e) {
+        if (e.detail === 'accepted') loadGA4();
+      });
+    }
+    // If consent === 'rejected', never load GA4.
+  })();
 </script>
 <script>
   import '../scripts/analytics.ts';
