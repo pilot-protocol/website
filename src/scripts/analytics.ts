@@ -45,14 +45,17 @@ function track(event: string, params: GtagParams = {}): void {
 
 window.pilotTrack = track;
 
-// --- PostHog (heatmaps + session recordings, gated on key only) --------
+// --- PostHog (heatmaps + session recordings, gated on consent) --------
+import { hasConsent, onConsentChange } from './consent-check';
+
 const POSTHOG_KEY = (import.meta as { env?: Record<string, string | undefined> }).env
   ?.PUBLIC_POSTHOG_KEY;
 const POSTHOG_HOST =
   (import.meta as { env?: Record<string, string | undefined> }).env?.PUBLIC_POSTHOG_HOST ||
   'https://us.i.posthog.com';
 
-if (POSTHOG_KEY) {
+function initPostHog() {
+  if (!POSTHOG_KEY) return;
   import('posthog-js')
     .then((mod) => {
       const ph = (mod as { default: typeof mod }).default || mod;
@@ -75,6 +78,15 @@ if (POSTHOG_KEY) {
       // PostHog is additive; failure must not break GA4.
       console.warn('[analytics] posthog init failed', err);
     });
+}
+
+// Gate PostHog on consent
+if (hasConsent()) {
+  initPostHog();
+} else {
+  onConsentChange((value) => {
+    if (value === 'accepted') initPostHog();
+  });
 }
 
 // --- Click delegation (incl. outbound, blog→docs handoff, dead_click) ---
