@@ -1,0 +1,83 @@
+---
+import DocLayout from "../../layouts/DocLayout.astro";
+
+const bodyContent = `<h1>Message of the Day</h1>
+  <p class="subtitle">A short notice from the Pilot Protocol team, shown ahead of every <code>pilotctl</code> command — for one UTC day at a time.</p>
+
+  <div class="toc">
+    <h4>On this page</h4>
+    <ul>
+      <li><a href="#what">What it is</a></li>
+      <li><a href="#how-it-works">How it works</a></li>
+      <li><a href="#output">Output: text vs JSON</a></li>
+      <li><a href="#config">Configuration</a></li>
+      <li><a href="#rules">Rules &amp; semantics</a></li>
+    </ul>
+  </div>
+
+  <h2 id="what">What it is</h2>
+
+  <p>The message of the day (MOTD) is a network-wide banner the Pilot Protocol team can surface for a single UTC calendar day. When a message is active, it is prepended to the output of <strong>every</strong> <code>pilotctl</code> command — used for maintenance windows, incident updates, and breaking-change heads-ups. Messages are managed centrally by the Pilot Protocol team; there is nothing to set up to receive them.</p>
+
+  <pre><code><span class="cmd">pilotctl</span> info
+<span class="comment">Message of the day: overlay maintenance 22:00 UTC — expect ~5min blips</span>
+
+&lt;normal pilotctl info output&gt;</code></pre>
+
+  <p>When no message is active for the current UTC day, output is unchanged.</p>
+
+  <h2 id="how-it-works">How it works</h2>
+
+  <p>Two rules drive the design: <code>pilotctl</code> must stay fast and never hit the network to render the banner, and the daemon must not make an on-demand call when a command runs. So the work is split:</p>
+
+  <ul>
+    <li>The <strong>daemon</strong> is the only component that touches the network. A background loop fetches the central feed every <code>--motd-interval</code> (default 15m), selects the entry dated for the current UTC day, holds it in memory, and mirrors it to <code>~/.pilot/motd.json</code>.</li>
+    <li><strong><code>pilotctl</code></strong> reads only that local mirror — one file read, no network, no IPC — and re-validates the UTC day on read, so a stale mirror (for example, the daemon was offline across midnight) never shows yesterday's message.</li>
+  </ul>
+
+  <pre><code>central feed  ──poll──▶  pilot-daemon  ──mirror──▶  ~/.pilot/motd.json
+ (Pilot team)             (only net I/O)              the local variable
+                                                           │ read (no net, no IPC)
+                                                           ▼
+                              pilotctl &lt;any command&gt;  ──▶  prepends banner</code></pre>
+
+  <p>No new binary ships — the poll is a goroutine inside <code>pilot-daemon</code>, modelled on the existing skill-reconciler loop.</p>
+
+  <h2 id="output">Output: text vs JSON</h2>
+
+  <p><strong>Text mode</strong> prepends a <code>Message of the day: &lt;text&gt;</code> line and a blank line, then the normal command output.</p>
+
+  <p><strong><code>--json</code> mode</strong> does not prepend text (that would break parsing). Instead the standard envelope carries a top-level <code>important_update</code> field:</p>
+
+  <pre><code><span class="cmd">pilotctl</span> --json info
+<span class="comment"># { "status": "ok", "data": { ... }, "important_update": "overlay maintenance 22:00 UTC" }</span></code></pre>
+
+  <p>The same field is added to error envelopes. The daemon also surfaces the current value as <code>motd</code> inside <code>pilotctl info</code>.</p>
+
+  <h2 id="config">Configuration</h2>
+
+  <p>Operators running a daemon can tune or disable polling:</p>
+
+  <pre><code><span class="cmd">pilot-daemon</span> --motd-feed-url &lt;url&gt;     <span class="comment"># feed location; empty disables polling entirely</span>
+<span class="cmd">pilot-daemon</span> --motd-interval 15m       <span class="comment"># how often to re-fetch (default 15m)</span></code></pre>
+
+  <p>The <code>PILOT_MOTD_URL</code> environment variable overrides the feed URL. The mirror lives next to the daemon identity (normally <code>~/.pilot/motd.json</code>), which is where <code>pilotctl</code> looks.</p>
+
+  <h2 id="rules">Rules &amp; semantics</h2>
+
+  <ul>
+    <li><strong>UTC days.</strong> A message is active only on its UTC calendar day. <code>pilotctl</code> re-checks the day on read, so a message never lingers past its UTC day.</li>
+    <li><strong>Self-clearing.</strong> When the active message is withdrawn, the banner disappears on its own within one poll interval — no action needed on your machine.</li>
+    <li><strong>Fail-safe.</strong> Network errors and malformed responses are non-fatal: the daemon keeps its last good mirror and logs at debug level, so a transient fetch failure never blocks a command.</li>
+  </ul>`;
+---
+<DocLayout
+  title="Message of the Day"
+  description="The notice banner shown ahead of every pilotctl command, for one UTC day at a time."
+  activePage="motd"
+  canonicalPath="/docs/motd"
+  prev={{ label: "Configuration", href: "/docs/configuration" }}
+  next={{ label: "Integration", href: "/docs/integration" }}
+>
+  <Fragment set:html={bodyContent} />
+</DocLayout>

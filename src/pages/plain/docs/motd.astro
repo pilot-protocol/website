@@ -1,0 +1,44 @@
+---
+import PlainLayout from '../../../layouts/PlainLayout.astro';
+---
+<PlainLayout title="Message of the Day — Pilot Protocol (plain)" description="The notice banner shown ahead of every pilotctl command, for one UTC day at a time." canonical="https://pilotprotocol.network/plain/docs/motd/">
+
+<p><a href="/plain/docs/">&larr; Docs index</a></p>
+
+<h1>Message of the Day</h1>
+
+<p>The message of the day (MOTD) is a network-wide banner the Pilot Protocol team can surface for a single UTC calendar day. When a message is active, it is prepended to the output of every pilotctl command. Use cases: maintenance windows, incident updates, breaking-change heads-ups. Messages are managed centrally by the Pilot Protocol team; there is nothing to set up to receive them. When no message is active for the current UTC day, output is unchanged.</p>
+
+<pre><code>pilotctl info
+Message of the day: overlay maintenance 22:00 UTC — expect ~5min blips
+
+&lt;normal pilotctl info output&gt;</code></pre>
+
+<h2>How it works</h2>
+<p>The daemon is the only component that touches the network. A background loop fetches the central feed every interval (default 15m), selects the entry dated for the current UTC day, holds it in memory, and mirrors it to ~/.pilot/motd.json. pilotctl reads only that local mirror — one file read, no network, no IPC — and re-validates the UTC day on read, so a stale mirror never shows yesterday's message. No new binary ships; the poll is a goroutine inside pilot-daemon.</p>
+
+<h2>Output: text vs JSON</h2>
+<p>Text mode prepends a "Message of the day: &lt;text&gt;" line, then the normal output. In --json mode the standard envelope carries a top-level important_update field instead (prepending text would break parsing). The same field is added to error envelopes, and the daemon surfaces the current value as motd inside pilotctl info.</p>
+<pre><code>pilotctl --json info
+# &#123; "status": "ok", "data": &#123; ... &#125;, "important_update": "overlay maintenance 22:00 UTC" &#125;</code></pre>
+
+<h2>Configuration</h2>
+<p>Operators running a daemon can tune or disable polling:</p>
+<pre><code>pilot-daemon --motd-feed-url &lt;url&gt;     # feed location; empty disables polling entirely
+pilot-daemon --motd-interval 15m       # how often to re-fetch (default 15m)</code></pre>
+<p>The PILOT_MOTD_URL environment variable overrides the feed URL. The mirror lives next to the daemon identity (normally ~/.pilot/motd.json), which is where pilotctl looks.</p>
+
+<h2>Rules and semantics</h2>
+<ul>
+  <li>UTC days: a message is active only on its UTC calendar day. pilotctl re-checks the day on read, so a message never lingers past its UTC day.</li>
+  <li>Self-clearing: when the active message is withdrawn, the banner disappears on its own within one poll interval — no action needed on your machine.</li>
+  <li>Fail-safe: network errors and malformed responses are non-fatal; the daemon keeps its last good mirror, so a transient fetch failure never blocks a command.</li>
+</ul>
+
+<h2>Related</h2>
+<ul>
+  <li><a href="/docs/configuration">Configuration</a></li>
+  <li><a href="/docs/diagnostics">Diagnostics</a></li>
+</ul>
+
+</PlainLayout>
