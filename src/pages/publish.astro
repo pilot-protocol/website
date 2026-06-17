@@ -1,0 +1,400 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/system.css';
+
+// API base: the submission server on the VM. Override locally via a .env with
+//   PUBLIC_PUBLISH_API=http://<your-lan-ip>:<port>
+const API = import.meta.env.PUBLIC_PUBLISH_API || 'https://api.pilotprotocol.network';
+
+const title = 'Publish an app — Pilot App Store';
+const description = 'Submit your existing API as an agent-first app on the Pilot Protocol app store. We build, sign, and verify the adapter; you describe it once.';
+const canonicalUrl = 'https://pilotprotocol.network/publish';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<BaseHead title={title} description={description} canonicalUrl={canonicalUrl} />
+</head>
+<body>
+<Nav active="for" />
+
+<section class="page-head">
+  <div class="wrap">
+    <div class="eyebrow">Publish</div>
+    <h1>Publish an app.<br/><em>Agents do the rest.</em></h1>
+    <p class="lede">Describe your existing HTTP API once. We build, sign, and verify the adapter on our side — then a reviewer approves it onto the app store. Nothing is compiled in your browser.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap narrow">
+    <div id="publish" data-api={API}>
+      <ol class="stepper" id="stepper"></ol>
+      <div id="stepRoot"></div>
+    </div>
+  </div>
+</section>
+
+<Footer />
+
+<style>
+  .wrap.narrow { max-width: 760px; }
+  #publish { margin-top: 8px; }
+
+  .stepper { display:flex; list-style:none; padding:0; margin:0 0 32px; gap:0; flex-wrap:wrap; }
+  .stepper li { display:flex; align-items:center; gap:8px; flex:1; min-width:120px; color:var(--ink-faint); font-size:12px; position:relative; }
+  .stepper li:not(:last-child)::after { content:""; position:absolute; left:30px; right:8px; top:12px; height:1px; background:var(--line); }
+  .stepper .dot { width:24px;height:24px;border-radius:999px;border:1px solid var(--line-2);display:grid;place-items:center;font-size:12px;background:var(--bg);z-index:1;flex:none; }
+  .stepper .lbl { text-transform:uppercase; letter-spacing:.04em; }
+  .stepper li.done .dot { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .stepper li.done { color:var(--ink-dim); }
+  .stepper li.now .dot { border-color:var(--accent); color:var(--accent); box-shadow:0 0 0 3px color-mix(in oklch, var(--accent) 18%, transparent); }
+  .stepper li.now { color:var(--ink); }
+
+  .stephdr { margin-bottom:18px; }
+  .stephdr .k { font-size:13px; color:var(--ink-dim); }
+  .stephdr h2 { font-size:28px; font-weight:600; margin:4px 0 0; letter-spacing:-0.01em; }
+
+  .card { background:var(--bg); border:1px solid var(--line); border-radius:14px; padding:24px 24px 8px; margin-bottom:18px; }
+  .field { margin-bottom:18px; }
+  .field > label { display:block; font-size:14px; font-weight:500; margin-bottom:6px; }
+  .field .desc { font-size:13px; color:var(--ink-dim); margin:5px 0 0; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  input, select, textarea { width:100%; box-sizing:border-box; font:inherit; font-size:15px; color:var(--ink); background:var(--bg-2); border:1px solid var(--line-2); border-radius:9px; padding:10px 12px; }
+  input:focus, select:focus, textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in oklch, var(--accent) 20%, transparent); }
+  textarea { min-height:90px; resize:vertical; }
+  .prefixed { display:flex; align-items:stretch; }
+  .prefixed .pfx { display:flex; align-items:center; padding:0 10px; background:var(--bg-2); border:1px solid var(--line-2); border-right:0; border-radius:9px 0 0 9px; color:var(--ink-dim); font-family:var(--mono,monospace); font-size:14px; }
+  .prefixed input { border-radius:0 9px 9px 0; }
+  .err { color:oklch(0.55 0.2 28); font-size:13px; margin-top:5px; }
+
+  .info { display:inline-grid; place-items:center; width:15px;height:15px;border-radius:999px;border:1px solid var(--line-2);color:var(--ink-dim);font-size:10px;cursor:help;position:relative;vertical-align:middle;margin-left:5px; }
+  .info:hover::after { content:attr(data-tip); position:absolute; bottom:140%; left:50%; transform:translateX(-50%); width:240px; background:var(--ink); color:var(--bg); font-size:12px; line-height:1.4; padding:8px 10px; border-radius:8px; z-index:20; font-weight:400; text-transform:none; letter-spacing:0; }
+
+  .mcard { border:1px solid var(--line); border-radius:12px; padding:16px 16px 4px; margin-bottom:14px; background:var(--bg); }
+  .mcard .mhead { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .mcard .mhead .mname { font-weight:600; font-family:var(--mono,monospace); font-size:14px; }
+  .grid3 { display:grid; grid-template-columns:1.4fr .7fr 1fr; gap:12px; }
+  .ghead { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-dim); margin-bottom:4px; display:block; }
+  .latref { font-size:12px; color:var(--ink-dim); margin:8px 0 0; }
+  .latref b { color:var(--ink); font-weight:500; }
+  .params { margin-top:12px; }
+  .prow { display:grid; grid-template-columns:1fr .8fr auto 1.4fr auto; gap:8px; align-items:center; margin-bottom:8px; }
+  .prow .req { display:flex; align-items:center; gap:5px; font-size:13px; color:var(--ink-dim); white-space:nowrap; }
+  .iconbtn { background:none; border:1px solid var(--line-2); border-radius:8px; color:var(--ink-dim); cursor:pointer; padding:7px 11px; font:inherit; font-size:13px; width:auto; }
+  .iconbtn:hover { border-color:var(--accent); color:var(--accent); }
+  .iconbtn.danger:hover { border-color:oklch(0.6 0.2 28); color:oklch(0.55 0.2 28); }
+
+  .preview { border:1px solid var(--line); border-radius:12px; background:#0b0b0a; color:#eceae3; padding:16px 18px; margin-top:18px; font-family:var(--mono,monospace); font-size:12.5px; line-height:1.55; overflow-x:auto; }
+  .preview .pk { color:oklch(0.85 0.18 125); }
+  .preview h4 { color:#8a8a83; font-family:inherit; font-size:11px; text-transform:uppercase; letter-spacing:.06em; margin:0 0 8px; font-weight:500; }
+  .preview .cmd { white-space:pre-wrap; word-break:break-all; }
+  .preview .muted { color:#8a8a83; }
+
+  .navrow { display:flex; justify-content:space-between; align-items:center; margin-top:24px; }
+  .navrow .back { color:var(--ink-dim); cursor:pointer; font-size:15px; background:none; border:none; padding:0; }
+  .navrow .back:hover { color:var(--accent); }
+  .btn { background:var(--accent); color:var(--accent-ink); border:none; border-radius:10px; padding:13px 24px; font:inherit; font-weight:600; font-size:16px; cursor:pointer; width:auto; }
+  .btn:hover { filter:brightness(1.05); }
+  .btn[disabled] { opacity:.5; cursor:not-allowed; }
+  .toggle { display:flex; align-items:center; gap:10px; }
+  .toggle input { width:auto; }
+  .pill { display:inline-block; font-size:12px; padding:3px 9px; border-radius:999px; border:1px solid var(--line-2); }
+  .review-tbl { width:100%; border-collapse:collapse; font-size:14px; }
+  .review-tbl th { text-align:left; color:var(--ink-dim); font-weight:500; width:170px; padding:8px 10px; vertical-align:top; border-bottom:1px solid var(--line); }
+  .review-tbl td { padding:8px 10px; vertical-align:top; border-bottom:1px solid var(--line); overflow-wrap:anywhere; }
+  .banner { border-radius:10px; padding:12px 16px; margin-bottom:16px; font-size:14px; }
+  .banner.bad { background:#fdf5f5; border:1px solid #e3b9b9; color:oklch(0.5 0.2 28); }
+  .banner.ok { background:#eef7f0; border:1px solid #b9dcc0; color:oklch(0.45 0.16 145); }
+  .explain { background:var(--bg-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; font-size:13px; color:var(--ink-dim); margin-bottom:16px; }
+  .explain code { color:var(--accent); }
+</style>
+
+<script>
+// ── Pilot publish wizard (client UI; all building/signing happens on the API) ──
+const root = document.getElementById('publish');
+const API = (root && root.dataset.api) || '';
+const LS = 'pilot.publish.draft.v1';
+
+const LAT = { fast: 'under 5 seconds', med: 'up to 15 seconds', slow: 'up to 1 minute' };
+
+const STEPS = ['Identity', 'Backend', 'Methods', 'Listing', 'Vendor', 'Review'];
+let step = 0;
+
+const blankParam = () => ({ name: '', type: 'string', required: false, description: '' });
+const blankMethod = () => ({ name: '', http: { verb: 'GET', path: '' }, latency: '', description: '', params: [blankParam()] });
+const blankHeader = () => ({ name: '', value: '' });
+
+let state = load() || {
+  id: 'io.pilot.', version: '', description: '',
+  backend: { base_url: '', headers: [blankHeader()] },
+  methods: [blankMethod()],
+  listing: { display_name: '', tagline: '', app_description: '', license: '', homepage: '', source_url: '', categories: '', keywords: '', requires_binary: false, binary_url: '' },
+  vendor: { name: '', url: '', contact: '', agent_usage: '', capabilities: '' },
+};
+
+function load() { try { return JSON.parse(localStorage.getItem(LS)); } catch { return null; } }
+function save() { localStorage.setItem(LS, JSON.stringify(state)); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function ns() { const i = state.id.lastIndexOf('.'); return i>=0 ? state.id.slice(i+1) : ''; }
+function info(t){ return `<span class="info" data-tip="${esc(t)}">i</span>`; }
+
+// Build the Submission JSON the API expects.
+function submission() {
+  const csv = s => (s||'').split(',').map(x=>x.trim()).filter(Boolean);
+  return {
+    id: state.id, version: state.version, description: state.description,
+    backend: { base_url: state.backend.base_url, headers: state.backend.headers.filter(h=>h.name.trim()) },
+    methods: state.methods.filter(m=>m.name.trim()).map(m=>({
+      name: m.name, description: m.description, latency: m.latency,
+      http: { verb: m.http.verb, path: m.http.path },
+      params: m.params.filter(p=>p.name.trim()),
+    })),
+    listing: { ...state.listing, categories: csv(state.listing.categories), keywords: csv(state.listing.keywords) },
+    vendor: state.vendor,
+  };
+}
+
+function renderStepper() {
+  document.getElementById('stepper').innerHTML = STEPS.map((s,i)=>
+    `<li class="${i<step?'done':i===step?'now':''}"><span class="dot">${i<step?'✓':i+1}</span><span class="lbl">${s}</span></li>`
+  ).join('');
+}
+
+const root2 = document.getElementById('stepRoot');
+function render() {
+  renderStepper();
+  root2.innerHTML = STEPS_HTML[step]();
+  wire();
+  if (step === 2 || step === 5) refreshPreview();
+}
+
+// ── per-step HTML ──
+const STEPS_HTML = [
+  () => `<div class="stephdr"><span class="k">Step 1 of 6</span><h2>Identity</h2></div>
+    <div class="card">
+      <div class="row2">
+        <div class="field"><label>App ID ${info('Reverse-DNS id under the io.pilot namespace. Lowercase letters, digits, hyphens.')}</label>
+          <div class="prefixed"><span class="pfx">io.pilot.</span><input id="f-idname" placeholder="weather" value="${esc(state.id.replace(/^io\.pilot\./,''))}"></div>
+          <p class="desc">Your app installs as <code>${esc(state.id||'io.pilot.…')}</code>.</p><div class="err" id="e-id"></div></div>
+        <div class="field"><label>Version ${info('Semver. Bump for every new build.')}</label>
+          <input id="f-version" placeholder="0.1.0" value="${esc(state.version)}"><div class="err" id="e-version"></div></div>
+      </div>
+      <div class="field"><label>One-line description ${info('What the app does, shown in the store and to agents.')}</label>
+        <input id="f-description" placeholder="Current weather and forecasts over a public API." value="${esc(state.description)}"><div class="err" id="e-description"></div></div>
+    </div>${nav()}`,
+
+  () => `<div class="stephdr"><span class="k">Step 2 of 6</span><h2>Backend</h2></div>
+    <div class="explain">Your adapter forwards each method to this HTTP API. Add any auth headers it needs.
+      A value like <code>\${WEATHER_API_KEY}</code> is a <b>secret placeholder</b>: the operator who installs the app
+      supplies it at install time (from their environment or a local secrets file) — it is <b>never</b> stored in the published app.</div>
+    <div class="card">
+      <div class="field"><label>Base URL ${info('The production endpoint. Baked in as the default; operators can override.')}</label>
+        <input id="f-baseurl" placeholder="https://api.example.com" value="${esc(state.backend.base_url)}"><div class="err" id="e-baseurl"></div></div>
+      <div class="field"><label>Auth headers <span class="muted">(optional)</span></label>
+        <div id="headers">${state.backend.headers.map((h,i)=>headerRow(h,i)).join('')}</div>
+        <button class="iconbtn" id="add-header" type="button">+ header</button>
+      </div>
+    </div>${nav()}`,
+
+  () => `<div class="stephdr"><span class="k">Step 3 of 6</span><h2>Methods</h2></div>
+    <p class="desc" style="margin:-8px 0 16px">Each method is one call an agent can make. Give it a clear name, the backend route, a latency class, a description, and its parameters. The live preview shows exactly what agents will see and run.</p>
+    <div id="methods">${state.methods.map((m,i)=>methodCard(m,i)).join('')}</div>
+    <button class="iconbtn" id="add-method" type="button">+ method</button>
+    <div class="err" id="e-methods"></div>
+    <div class="preview" id="preview"></div>${nav()}`,
+
+  () => `<div class="stephdr"><span class="k">Step 4 of 6</span><h2>Listing</h2></div>
+    <p class="desc" style="margin:-8px 0 16px">How the app appears in the store.</p>
+    <div class="card">
+      <div class="row2">
+        <div class="field"><label>Display name</label><input id="f-l-display_name" placeholder="Weather" value="${esc(state.listing.display_name)}"></div>
+        <div class="field"><label>License (SPDX) ${info('e.g. MIT, Apache-2.0, AGPL-3.0-or-later')}</label><input id="f-l-license" placeholder="Apache-2.0" value="${esc(state.listing.license)}"></div>
+      </div>
+      <div class="field"><label>Tagline</label><input id="f-l-tagline" placeholder="One-line pitch for the store card" value="${esc(state.listing.tagline)}"></div>
+      <div class="field"><label>App description ${info('Long-form description (markdown ok), shown on the app store page.')}</label>
+        <textarea id="f-l-app_description" placeholder="What the app does, who it is for, what makes it useful…">${esc(state.listing.app_description)}</textarea></div>
+      <div class="row2">
+        <div class="field"><label>Homepage</label><input id="f-l-homepage" placeholder="https://example.com" value="${esc(state.listing.homepage)}"></div>
+        <div class="field"><label>Source URL</label><input id="f-l-source_url" placeholder="https://github.com/org/app" value="${esc(state.listing.source_url)}"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Categories ${info('Comma-separated, e.g. search, weather')}</label><input id="f-l-categories" placeholder="weather, data" value="${esc(state.listing.categories)}"></div>
+        <div class="field"><label>Keywords</label><input id="f-l-keywords" placeholder="weather, forecast" value="${esc(state.listing.keywords)}"></div>
+      </div>
+      <div class="field"><label class="toggle"><input type="checkbox" id="f-l-requires_binary" ${state.listing.requires_binary?'checked':''}> This app ships a binary that must be downloaded to the host ${info('For native/CLI apps: the store delivers a real binary. Provide where it is hosted (per-OS/arch). Native delivery is in preview.')}</label>
+        <div id="binwrap" style="${state.listing.requires_binary?'':'display:none'};margin-top:10px">
+          <input id="f-l-binary_url" placeholder="https://dl.example.com/app-{os}-{arch}" value="${esc(state.listing.binary_url)}">
+          <p class="desc">Download URL for the binary (we pin its checksum at review). <span class="pill">preview</span></p></div></div>
+    </div>${nav()}`,
+
+  () => `<div class="stephdr"><span class="k">Step 5 of 6</span><h2>Vendor</h2></div>
+    <p class="desc" style="margin:-8px 0 16px">About you, and how agents should use this app.</p>
+    <div class="card">
+      <div class="row2">
+        <div class="field"><label>Vendor name</label><input id="f-v-name" placeholder="Acme Inc." value="${esc(state.vendor.name)}"></div>
+        <div class="field"><label>Vendor URL</label><input id="f-v-url" placeholder="https://acme.example" value="${esc(state.vendor.url)}"></div>
+      </div>
+      <div class="field"><label>Contact ${info('Email or URL a reviewer can reach you at.')}</label><input id="f-v-contact" placeholder="apps@acme.example" value="${esc(state.vendor.contact)}"></div>
+      <div class="field"><label>How will autonomous AI agents use this app? ${info('Include package details, whether methods must be called in a specific order, auth/setup, and anything an agent needs to use it correctly.')}</label>
+        <textarea id="f-v-agent_usage" placeholder="e.g. Call search first to get a result id, then fetch with that id. No human steps required…">${esc(state.vendor.agent_usage)}</textarea></div>
+      <div class="field"><label>List of all capabilities ${info('Everything this app can do, in plain language — one per line is fine.')}</label>
+        <textarea id="f-v-capabilities" placeholder="- Search the web&#10;- Fetch page contents&#10;- Summarize a URL">${esc(state.vendor.capabilities)}</textarea></div>
+    </div>${nav()}`,
+
+  () => `<div class="stephdr"><span class="k">Step 6 of 6</span><h2>Review &amp; submit</h2></div>
+    <div id="submit-banner"></div>
+    <div class="card"><table class="review-tbl" id="review-tbl"></table></div>
+    <div class="preview" id="preview"></div>
+    <div class="navrow"><button class="back" id="back" type="button">← Back</button><button class="btn" id="submit" type="button">Submit for review</button></div>`,
+];
+
+function nav() {
+  return `<div class="navrow">${step>0?'<button class="back" id="back" type="button">← Back</button>':'<span></span>'}<button class="btn" id="next" type="button">${step===STEPS.length-2?'Review →':'Next →'}</button></div>`;
+}
+function headerRow(h,i){
+  return `<div class="prow" data-hi="${i}" style="grid-template-columns:1fr 1.4fr auto">
+    <input class="h-name" placeholder="x-api-key" value="${esc(h.name)}">
+    <input class="h-value" placeholder="\${WEATHER_API_KEY}" value="${esc(h.value)}">
+    <button class="iconbtn danger h-del" type="button">✕</button></div>`;
+}
+function methodCard(m,i){
+  return `<div class="mcard" data-mi="${i}">
+    <div class="mhead"><span class="mname">${esc(m.name||ns()+'.method')}</span>${state.methods.length>1?'<button class="iconbtn danger m-del" type="button">remove</button>':''}</div>
+    <div class="grid3">
+      <div><span class="ghead">Method name ${info('Prefixed with your namespace, e.g. '+esc(ns()||'app')+'.search')}</span><input class="m-name" placeholder="${esc(ns()||'app')}.search" value="${esc(m.name)}"></div>
+      <div><span class="ghead">Verb</span><select class="m-verb"><option ${m.http.verb==='GET'?'selected':''}>GET</option><option ${m.http.verb==='POST'?'selected':''}>POST</option></select></div>
+      <div><span class="ghead">Path ${info('Backend route. GET → params become the query string; POST → JSON body.')}</span><input class="m-path" placeholder="/search" value="${esc(m.http.path)}"></div>
+    </div>
+    <div class="field" style="margin-top:12px"><span class="ghead">Latency ${info('How long a typical call takes. Agents use this to choose the cheapest method that fits.')}</span>
+      <select class="m-latency"><option value="">Select…</option>${['fast','med','slow'].map(l=>`<option value="${l}" ${m.latency===l?'selected':''}>${l[0].toUpperCase()+l.slice(1)} — ${LAT[l]}</option>`).join('')}</select>
+      <p class="latref"><b>Fast</b> under 5s · <b>Medium</b> up to 15s · <b>Slow</b> up to 1 min</p></div>
+    <div class="field"><span class="ghead">Description ${info('Shown in the help doc agents read. Be specific about what it returns.')}</span>
+      <textarea class="m-description" placeholder="Search the web corpus; returns ranked results with url, title, score.">${esc(m.description)}</textarea></div>
+    <div class="params"><span class="ghead">Parameters</span>
+      <div class="prow" style="font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.04em"><span>Name</span><span>Type</span><span>Req</span><span>Description</span><span></span></div>
+      ${m.params.map((p,pi)=>paramRow(p,pi)).join('')}
+      <button class="iconbtn p-add" type="button">+ parameter</button></div></div>`;
+}
+function paramRow(p,pi){
+  return `<div class="prow" data-pi="${pi}">
+    <input class="p-name" placeholder="q" value="${esc(p.name)}">
+    <select class="p-type">${['string','int','number','bool'].map(t=>`<option ${p.type===t?'selected':''}>${t}</option>`).join('')}</select>
+    <label class="req"><input type="checkbox" class="p-req" ${p.required?'checked':''}> req</label>
+    <input class="p-desc" placeholder="search query" value="${esc(p.description)}">
+    <button class="iconbtn danger p-del" type="button">✕</button></div>`;
+}
+
+// ── event wiring (per render) ──
+function bindVal(id, set){ const el=document.getElementById(id); if(el) el.addEventListener('input',()=>{ set(el.value); save(); }); }
+function wire() {
+  const back=document.getElementById('back'); if(back) back.onclick=()=>{ step=Math.max(0,step-1); render(); };
+  const next=document.getElementById('next'); if(next) next.onclick=()=>{ if(validateStep()) { step++; render(); } };
+
+  if (step===0){
+    const idn=document.getElementById('f-idname'); if(idn) idn.addEventListener('input',()=>{ state.id='io.pilot.'+idn.value.trim(); document.querySelector('#publish .prefixed + .desc')?.replaceChildren(); save(); const d=idn.closest('.field').querySelector('.desc'); if(d) d.innerHTML='Your app installs as <code>'+esc(state.id)+'</code>.'; });
+    bindVal('f-version',v=>state.version=v); bindVal('f-description',v=>state.description=v);
+  }
+  if (step===1){
+    bindVal('f-baseurl',v=>state.backend.base_url=v);
+    document.getElementById('add-header').onclick=()=>{ state.backend.headers.push(blankHeader()); save(); render(); };
+    document.querySelectorAll('#headers .prow').forEach(rowEl=>{ const i=+rowEl.dataset.hi;
+      rowEl.querySelector('.h-name').addEventListener('input',e=>{state.backend.headers[i].name=e.target.value;save();});
+      rowEl.querySelector('.h-value').addEventListener('input',e=>{state.backend.headers[i].value=e.target.value;save();});
+      rowEl.querySelector('.h-del').onclick=()=>{ state.backend.headers.splice(i,1); if(!state.backend.headers.length)state.backend.headers.push(blankHeader()); save(); render(); };
+    });
+  }
+  if (step===2){
+    document.getElementById('add-method').onclick=()=>{ state.methods.push(blankMethod()); save(); render(); };
+    document.querySelectorAll('#methods .mcard').forEach(cardEl=>{ const i=+cardEl.dataset.mi; const m=state.methods[i];
+      const on=(sel,fn)=>{ const el=cardEl.querySelector(sel); if(el) el.addEventListener('input',()=>{fn(el);save();schedulePreview();}); };
+      on('.m-name',el=>{m.name=el.value; cardEl.querySelector('.mname').textContent=el.value||ns()+'.method';});
+      on('.m-verb',el=>m.http.verb=el.value); on('.m-path',el=>m.http.path=el.value);
+      on('.m-latency',el=>m.latency=el.value); on('.m-description',el=>m.description=el.value);
+      const del=cardEl.querySelector('.m-del'); if(del) del.onclick=()=>{ state.methods.splice(i,1); if(!state.methods.length)state.methods.push(blankMethod()); save(); render(); };
+      cardEl.querySelector('.p-add').onclick=()=>{ m.params.push(blankParam()); save(); render(); };
+      cardEl.querySelectorAll('.params .prow[data-pi]').forEach(pr=>{ const pi=+pr.dataset.pi; const p=m.params[pi];
+        pr.querySelector('.p-name').addEventListener('input',e=>{p.name=e.target.value;save();schedulePreview();});
+        pr.querySelector('.p-type').addEventListener('input',e=>{p.type=e.target.value;save();schedulePreview();});
+        pr.querySelector('.p-req').addEventListener('change',e=>{p.required=e.target.checked;save();});
+        pr.querySelector('.p-desc').addEventListener('input',e=>{p.description=e.target.value;save();});
+        pr.querySelector('.p-del').onclick=()=>{ m.params.splice(pi,1); if(!m.params.length)m.params.push(blankParam()); save(); render(); };
+      });
+    });
+  }
+  if (step===3){
+    ['display_name','tagline','app_description','license','homepage','source_url','categories','keywords','binary_url'].forEach(k=>bindVal('f-l-'+k,v=>state.listing[k]=v));
+    const rb=document.getElementById('f-l-requires_binary'); if(rb) rb.addEventListener('change',()=>{ state.listing.requires_binary=rb.checked; document.getElementById('binwrap').style.display=rb.checked?'':'none'; save(); });
+  }
+  if (step===4){ ['name','url','contact','agent_usage','capabilities'].forEach(k=>bindVal('f-v-'+k,v=>state.vendor[k]=v)); }
+  if (step===5){ renderReview(); document.getElementById('submit').onclick=doSubmit; }
+}
+
+// ── validation (client mirror of the server's; server is authoritative) ──
+function show(id,msg){ const el=document.getElementById(id); if(el) el.textContent=msg||''; }
+function validateStep(){
+  let ok=true; const bad=(id,m)=>{show(id,m); ok=false;};
+  if (step===0){
+    if(!/^io\.pilot\.[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(state.id)) bad('e-id','Must be io.pilot.<name> (lowercase, digits, hyphens)'); else show('e-id','');
+    if(!/^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/.test(state.version)) bad('e-version','Semver, e.g. 0.1.0'); else show('e-version','');
+    if(!state.description.trim()) bad('e-description','Required'); else show('e-description','');
+  }
+  if (step===1){ if(!/^https?:\/\/[^\s/]+/.test(state.backend.base_url)) bad('e-baseurl','Absolute http(s) URL'); else show('e-baseurl',''); }
+  if (step===2){
+    const ms=state.methods.filter(m=>m.name.trim());
+    if(!ms.length) bad('e-methods','Add at least one method');
+    else { const badm=ms.find(m=>!m.latency||!m.description.trim()||!/^\//.test(m.http.path)||!m.name.startsWith(ns()+'.'));
+      if(badm) bad('e-methods','Each method needs a '+ns()+'.-prefixed name, path starting with /, a latency, and a description'); else show('e-methods',''); }
+  }
+  return ok;
+}
+
+// ── live help / pilotctl preview (server-generated) ──
+let pvTimer=null;
+function schedulePreview(){ clearTimeout(pvTimer); pvTimer=setTimeout(refreshPreview,400); }
+async function refreshPreview(){
+  const el=document.getElementById('preview'); if(!el) return;
+  try {
+    const r=await fetch(API+'/api/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(submission())});
+    const d=await r.json();
+    const methods=(d.help.methods||[]).map(m=>`  <span class="pk">${esc(m.method)}</span>  <span class="muted">[${esc(m.duration)}]</span>  ${esc(m.summary||'')}`).join('\n');
+    const cmds=(d.commands||[]).map(c=>esc(c)).join('\n');
+    el.innerHTML=`<h4>${esc(ns()||'app')}.help (what agents discover)</h4><div class="cmd">${methods||'<span class="muted">add a method…</span>'}</div>`+
+      `<h4 style="margin-top:16px">pilotctl commands</h4><div class="cmd">${cmds}</div>`;
+  } catch(e){ el.innerHTML=`<span class="muted">preview unavailable (${esc(e.message)})</span>`; }
+}
+
+function renderReview(){
+  const s=submission();
+  const rows=[
+    ['App ID',s.id],['Version',s.version],['Description',s.description],
+    ['Backend',s.backend.base_url],
+    ...(s.backend.headers.map(h=>['Header',h.name+': '+h.value])),
+    ['Methods',s.methods.map(m=>`${m.name} (${m.http.verb} ${m.http.path}, ${m.latency})`).join('<br>')||'—'],
+    ['Display name',s.listing.display_name],['License',s.listing.license],
+    ['App description',s.listing.app_description],['Categories',(s.listing.categories||[]).join(', ')],
+    ['Requires binary',s.listing.requires_binary?('yes — '+s.listing.binary_url):'no'],
+    ['Vendor',s.vendor.name+(s.vendor.url?' · '+s.vendor.url:'')],['Contact',s.vendor.contact],
+    ['Agent usage',s.vendor.agent_usage],['Capabilities',s.vendor.capabilities],
+  ];
+  document.getElementById('review-tbl').innerHTML=rows.map(([k,v])=>`<tr><th>${esc(k)}</th><td>${v||'<span style="color:var(--ink-faint)">—</span>'}</td></tr>`).join('');
+}
+
+async function doSubmit(){
+  const btn=document.getElementById('submit'); const banner=document.getElementById('submit-banner');
+  btn.disabled=true; banner.innerHTML='<div class="banner">Building, signing, and verifying on the server…</div>';
+  try {
+    const r=await fetch(API+'/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(submission())});
+    const d=await r.json();
+    if(r.ok){ banner.innerHTML=`<div class="banner ok"><b>Submitted ✓</b> — case <code>${esc(d.case_id)}</code> is now <b>pending</b> review. The server built, signed, and verified your adapter.</div>`; localStorage.removeItem(LS); }
+    else { const errs=(d.errors||[d.error||'submission failed']); banner.innerHTML=`<div class="banner bad"><b>Fix these:</b><ul>${errs.map(e=>`<li>${esc(e)}</li>`).join('')}</ul></div>`; btn.disabled=false; }
+  } catch(e){ banner.innerHTML=`<div class="banner bad">Could not reach the API: ${esc(e.message)}</div>`; btn.disabled=false; }
+}
+
+render();
+</script>
+</body>
+</html>
