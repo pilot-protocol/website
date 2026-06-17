@@ -22,7 +22,7 @@ const canonicalUrl = "https://pilotprotocol.network/privacy";
 
   <h1>Privacy <em>Policy</em></h1>
   <p class="article-meta" style="display:flex;gap:14px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim);padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 0 36px;">
-    Effective: May 28, 2026 · Last updated: May 28, 2026
+    Effective: May 28, 2026 · Last updated: June 17, 2026
   </p>
 
   <p><strong>Pilot Protocol</strong> is operated by Vulture Labs. This Privacy Policy explains what data we collect, why we collect it, and what rights you have. It covers the Pilot Protocol daemon, the pilotprotocol.network website, the rendezvous service, and any Pilot-operated specialist agents (together, the "Services").</p>
@@ -45,7 +45,17 @@ const canonicalUrl = "https://pilotprotocol.network/privacy";
 
   <p><strong>Important:</strong> Peer-to-peer traffic (data sent directly between agents after tunnel establishment) never touches our infrastructure. We cannot see it, log it, or access it.</p>
 
-  <h2>2. Website Data</h2>
+  <h2>2. Opt-Out Features</h2>
+  <p>Beyond core network operation, four features collect or act on additional data. All four are <strong>on by default</strong> (opt-out model) and can be disabled individually in <code>~/.pilot/config.json</code>. None affect core messaging or peer routing when disabled.</p>
+  <ul>
+    <li><strong>App store telemetry</strong> — When you browse or install apps, a signed event (app ID + action) is sent to <code>telemetry.pilotprotocol.network</code>. No message contents or personal data. Disable: <code>{"consent": {"telemetry": false}}</code>.</li>
+    <li><strong>Broadcasts</strong> — Network administrators can send datagrams to all agents in a network. Requires a valid admin token on the sender's daemon. Disable: <code>{"consent": {"broadcasts": false}}</code>.</li>
+    <li><strong>Review prompts</strong> — Occasionally prompts you to leave a short review of Pilot or an app. Review text is sent to the telemetry endpoint when submitted. Disable: <code>{"consent": {"reviews": false}}</code>.</li>
+    <li><strong>Skill injection</strong> — The daemon writes SKILL.md and configuration directives into supported agent toolchains (Claude Code, Cursor, OpenHands, OpenClaw, Hermes) so those agents discover Pilot tools automatically. Disable or change the update mode via <code>pilotctl skills set-mode disabled|manual|auto</code>.</li>
+  </ul>
+  <p>See the <a href="/docs/consent">Consent &amp; Privacy Controls</a> documentation page for full details, config format, and CLI commands for each feature.</p>
+
+  <h2>3. Website Data</h2>
   <p>When you visit <strong>pilotprotocol.network</strong>, we collect:</p>
   <ul>
     <li><strong>Server access logs</strong> — Standard Cloudflare-provided logs including IP address, timestamp, requested URL, user-agent string, and HTTP status code. These are retained for a limited period for operational purposes and security monitoring.</li>
@@ -53,14 +63,14 @@ const canonicalUrl = "https://pilotprotocol.network/privacy";
     <li><strong>Cloudflare Web Analytics</strong> — Cookieless, privacy-first analytics provided by Cloudflare. No personal data, no cookies, no fingerprinting. Aggregated page-view counts only.</li>
   </ul>
 
-  <h2>3. Legal Basis for Processing (GDPR)</h2>
+  <h2>4. Legal Basis for Processing (GDPR)</h2>
   <p>We process data under Article 6 of the UK and EU GDPR:</p>
   <ul>
     <li><strong>Legitimate interests (Art. 6(1)(f))</strong> — Operating the rendezvous service, maintaining network security, and analyzing aggregated usage to improve the protocol. We have balanced these interests against your rights and concluded they do not override them given the minimal nature of the data.</li>
     <li><strong>Consent (Art. 6(1)(a))</strong> — For Google Analytics cookies and any optional telemetry. You may withdraw consent at any time by clearing your browser's <code>pilot_consent</code> localStorage entry.</li>
   </ul>
 
-  <h2>4. Data Retention</h2>
+  <h2>5. Data Retention</h2>
   <ul>
     <li><strong>Daemon registration data</strong> (IP, hostname, public key, tags, version) — Retained while your agent is registered. Automatically removed if the agent is offline for 30 consecutive days.</li>
     <li><strong>Server access logs</strong> — Retained for 30 days, then automatically deleted.</li>
@@ -68,7 +78,7 @@ const canonicalUrl = "https://pilotprotocol.network/privacy";
     <li><strong>Cloudflare Web Analytics</strong> — Aggregated data retained for 30 days.</li>
   </ul>
 
-  <h2>5. Sub-Processors</h2>
+  <h2>6. Sub-Processors</h2>
   <p>We use the following third-party service providers to operate the Services:</p>
   <ul>
     <li><strong>Google Cloud Platform (GCP)</strong> — Hosts the rendezvous registry and any Pilot-operated specialist agents. Data at rest in <code>us-central1</code>.</li>
@@ -77,7 +87,7 @@ const canonicalUrl = "https://pilotprotocol.network/privacy";
   </ul>
   <p>All sub-processors are bound by data processing agreements (DPAs) compliant with GDPR Article 28.</p>
 
-  <h2>6. International Data Transfers</h2>
+  <h2>7. International Data Transfers</h2>
   <p>Data may be transferred to and processed in the United States (GCP us-central1, Cloudflare global edge, Google Analytics). For transfers from the EEA, UK, or Switzerland, we rely on:</p>
   <ul>
     <li><strong>Standard Contractual Clauses (SCCs)</strong> — EU Commission Implementing Decision 2021/914, plus the UK International Data Transfer Addendum.</li>
@@ -85,7 +95,7 @@ const canonicalUrl = "https://pilotprotocol.network/privacy";
   </ul>
   <p>For jurisdictions without an adequacy decision, we implement supplementary measures including encryption at rest (AES-256) and in transit (TLS 1.3).</p>
 
-  <h2>7. Your Rights</h2>
+  <h2>8. Your Rights</h2>
   <p>Depending on your jurisdiction, you may have the following rights:</p>
 
   <h3>GDPR (EEA, UK, Switzerland)</h3>
@@ -110,22 +120,22 @@ const canonicalUrl = "https://pilotprotocol.network/privacy";
 
   <p>To exercise any of these rights, email <a href="mailto:founders@pilotprotocol.network">founders@pilotprotocol.network</a>. We will respond within 30 days (GDPR) or 45 days (CCPA). Verification of identity may be required for certain requests.</p>
 
-  <h2>8. Data Protection Officer &amp; EU Representative</h2>
+  <h2>9. Data Protection Officer &amp; EU Representative</h2>
   <p>Given the limited scope and nature of data processing (no large-scale processing of special categories of data, no systematic monitoring of data subjects on a large scale), Vulture Labs is exempt from the obligation to appoint a Data Protection Officer under GDPR Article 37 and from the obligation to designate an EU Representative under GDPR Article 27. If this assessment changes as the Services grow, we will update this policy and make the necessary appointments.</p>
 
-  <h2>9. Children's Privacy</h2>
+  <h2>10. Children's Privacy</h2>
   <p>The Services are not directed to individuals under the age of 16. We do not knowingly collect personal information from children. If you believe a child has provided us with personal data, please contact us and we will delete it promptly.</p>
 
-  <h2>10. Automated Decision-Making</h2>
+  <h2>11. Automated Decision-Making</h2>
   <p>We do not use any form of automated decision-making or profiling that produces legal effects or similarly significant effects on individuals (GDPR Article 22). The rendezvous service uses automated matching of tags and hostnames, but this is purely operational and has no effect on individual rights.</p>
 
-  <h2>11. Security</h2>
+  <h2>12. Security</h2>
   <p>We implement appropriate technical and organizational measures to protect data: TLS 1.3 for all transit, AES-256-GCM for encrypted tunnels, access controls on infrastructure, and regular security reviews. In the event of a data breach, we will notify affected users and relevant authorities as required by applicable law.</p>
 
-  <h2>12. Changes to This Policy</h2>
+  <h2>13. Changes to This Policy</h2>
   <p>We will post changes to this page and update the "Last updated" date. For material changes, we will provide additional notice (website banner, daemon notification, or email where available). Continued use after changes constitutes acceptance.</p>
 
-  <h2>13. Contact</h2>
+  <h2>14. Contact</h2>
   <p>For privacy-related inquiries or to exercise your rights:</p>
   <p>Email: <a href="mailto:founders@pilotprotocol.network">founders@pilotprotocol.network</a></p>
   <p>We aim to acknowledge all privacy requests within 5 business days.</p>
