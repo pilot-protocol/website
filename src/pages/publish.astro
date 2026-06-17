@@ -65,8 +65,10 @@ const canonicalUrl = 'https://pilotprotocol.network/publish';
   #intro .req-list li { padding-left:28px; position:relative; line-height:1.55; font-size:16px; }
   #intro .req-list li::before { content:"✓"; position:absolute; left:0; top:1px; color:var(--accent); font-weight:700; }
   #intro .how { margin-top:26px; color:var(--ink-dim); font-size:15px; max-width:660px; }
-  #intro .cta { margin-top:30px; background:var(--accent); color:var(--accent-ink); border:none; border-radius:12px; padding:16px 32px; font:inherit; font-weight:600; font-size:17px; cursor:pointer; }
-  #intro .cta:hover { filter:brightness(1.06); }
+  /* Green buttons match the site's primary button (the cookie "Accept"): mono, uppercase, accent. */
+  #intro .cta, #publish .btn { margin-top:0; padding:11px 26px; font-family:var(--mono,monospace); font-size:13px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; background:var(--accent); color:var(--accent-ink); border:1px solid var(--accent); border-radius:6px; cursor:pointer; width:auto; transition:opacity .15s; }
+  #intro .cta { margin-top:30px; }
+  #intro .cta:hover, #publish .btn:hover { opacity:.9; }
 
   /* ── form view: light, large, fills the screen ── */
   .pub-section { background:#f7f6f1; min-height:100vh; padding:44px 0 96px; }
@@ -108,7 +110,7 @@ const canonicalUrl = 'https://pilotprotocol.network/publish';
   #publish .prefixed { display:flex; align-items:stretch; }
   #publish .prefixed .pfx { display:flex; align-items:center; padding:0 13px; background:#eceae1; border:1px solid var(--c-line2); border-right:0; border-radius:10px 0 0 10px; color:var(--c-dim); font-size:16px; }
   #publish .prefixed input { border-radius:0 10px 10px 0; }
-  #publish .field .desc code { font-family:inherit; color:inherit; }
+  #publish .field .desc code { font-family:inherit; color:var(--c-ink); background:#eceae1; padding:2px 7px; border-radius:5px; }
   #publish .err { color:oklch(0.55 0.2 28); font-size:14px; margin-top:6px; }
 
   #publish .info { display:inline-grid; place-items:center; width:17px;height:17px;border-radius:999px;border:1px solid var(--c-line2);color:var(--c-dim);font-size:11px;cursor:help;position:relative;vertical-align:middle;margin-left:6px;font-style:normal;font-weight:600; }
@@ -117,13 +119,20 @@ const canonicalUrl = 'https://pilotprotocol.network/publish';
   #publish .mcard { border:1px solid var(--c-line); border-radius:14px; padding:22px 22px 8px; margin-bottom:18px; background:var(--c-card); }
   #publish .mcard .mhead { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
   #publish .mcard .mhead .mname { font-weight:650; font-family:var(--mono,monospace); font-size:16px; }
-  #publish .grid3 { display:grid; grid-template-columns:1.5fr .7fr 1fr; gap:14px; }
+  #publish .mgrid { display:grid; grid-template-columns:1.7fr .7fr 1.1fr 1fr; gap:14px; }
+  #publish .mgrid .field { margin-bottom:0; }
   #publish .ghead { font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--c-dim); margin-bottom:6px; display:block; font-weight:600; }
-  #publish .latref { font-size:13px; color:var(--c-dim); margin:9px 0 0; }
+  #publish .latref { font-size:13px; color:var(--c-dim); margin:8px 0 18px; }
   #publish .latref b { color:var(--c-ink); font-weight:600; }
-  #publish .params { margin-top:14px; }
-  #publish .prow { display:grid; grid-template-columns:1fr .8fr auto 1.5fr auto; gap:10px; align-items:center; margin-bottom:9px; }
-  #publish .prow .req { display:flex; align-items:center; gap:6px; font-size:14px; color:var(--c-dim); white-space:nowrap; }
+  #publish .params { margin-top:18px; padding-top:18px; border-top:1px solid var(--c-line); }
+  #publish .phead { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  #publish .ptable .prow { display:grid; grid-template-columns:1.2fr .9fr 56px 1.7fr 40px; gap:10px; align-items:center; margin-bottom:8px; }
+  #publish .ptable .prow.phdr { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--c-dim); font-weight:600; margin-bottom:8px; }
+  #publish .reqcell { display:flex; justify-content:center; align-items:center; }
+  #publish .reqcell input { width:auto; }
+  #publish .ptable .p-del { padding:9px 0; }
+  /* generic .prow fallback (auth-header rows override columns inline) */
+  #publish .prow { display:grid; gap:10px; align-items:center; margin-bottom:9px; }
   #publish .iconbtn { background:none; border:1px solid var(--c-line2); border-radius:9px; color:var(--c-dim); cursor:pointer; padding:9px 14px; font:inherit; font-size:14px; width:auto; }
   #publish .iconbtn:hover { border-color:var(--c-acc); color:var(--c-acc); }
   #publish .iconbtn.danger:hover { border-color:oklch(0.6 0.2 28); color:oklch(0.55 0.2 28); }
@@ -137,8 +146,6 @@ const canonicalUrl = 'https://pilotprotocol.network/publish';
   #publish .navrow { display:flex; justify-content:space-between; align-items:center; margin-top:32px; }
   #publish .navrow .back { color:var(--c-dim); cursor:pointer; font-size:16px; background:none; border:none; padding:0; }
   #publish .navrow .back:hover { color:var(--c-acc); }
-  #publish .btn { background:var(--c-acc); color:var(--c-accink); border:none; border-radius:11px; padding:15px 30px; font:inherit; font-weight:600; font-size:17px; cursor:pointer; width:auto; }
-  #publish .btn:hover { filter:brightness(1.06); }
   #publish .btn[disabled] { opacity:.5; cursor:not-allowed; }
   #publish .toggle { display:flex; align-items:center; gap:11px; font-weight:500; }
   #publish .toggle input { width:auto; }
@@ -210,6 +217,14 @@ function render() {
   root2.innerHTML = STEPS_HTML[step]();
   wire();
   if (step === 2 || step === 5) refreshPreview();
+  persistUI();
+}
+
+// Persist which view + step we're on, so a reload keeps you in place (the draft
+// fields are already saved separately).
+const UIK = 'pilot.publish.ui.v1';
+function persistUI() {
+  try { localStorage.setItem(UIK, JSON.stringify({ step: step, entered: !document.getElementById('form-view').hidden })); } catch (e) {}
 }
 
 // ── per-step HTML ──
@@ -303,29 +318,32 @@ function headerRow(h,i){
 }
 function methodCard(m,i){
   return `<div class="mcard" data-mi="${i}">
-    <div class="mhead"><span class="mname">${esc(m.name||ns()+'.method')}</span>${state.methods.length>1?'<button class="iconbtn danger m-del" type="button">remove</button>':''}</div>
-    <div class="grid3">
-      <div><span class="ghead">Method name ${info('Prefixed with your namespace, e.g. '+esc(ns()||'app')+'.search')}</span><input class="m-name" placeholder="${esc(ns()||'app')}.search" value="${esc(m.name)}"></div>
-      <div><span class="ghead">Verb</span><select class="m-verb"><option ${m.http.verb==='GET'?'selected':''}>GET</option><option ${m.http.verb==='POST'?'selected':''}>POST</option></select></div>
-      <div><span class="ghead">Path ${info('Backend route. GET → params become the query string; POST → JSON body.')}</span><input class="m-path" placeholder="/search" value="${esc(m.http.path)}"></div>
+    <div class="mhead"><span class="mname">${esc(m.name||ns()+'.method')}</span>${state.methods.length>1?'<button class="iconbtn danger m-del" type="button">Remove</button>':''}</div>
+    <div class="mgrid">
+      <div class="field"><span class="ghead">Method name ${info('Prefixed with your namespace, e.g. '+esc(ns()||'app')+'.search')}</span><input class="m-name" placeholder="${esc(ns()||'app')}.search" value="${esc(m.name)}"></div>
+      <div class="field"><span class="ghead">Verb</span><select class="m-verb"><option ${m.http.verb==='GET'?'selected':''}>GET</option><option ${m.http.verb==='POST'?'selected':''}>POST</option></select></div>
+      <div class="field"><span class="ghead">Path ${info('Backend route. GET → params become the query string; POST → JSON body.')}</span><input class="m-path" placeholder="/search" value="${esc(m.http.path)}"></div>
+      <div class="field"><span class="ghead">Latency ${info('How long a typical call takes. Agents use this to pick the cheapest method that fits.')}</span><select class="m-latency"><option value="">Select…</option>${['fast','med','slow'].map(l=>`<option value="${l}" ${m.latency===l?'selected':''}>${l==='med'?'Medium':l[0].toUpperCase()+l.slice(1)}</option>`).join('')}</select></div>
     </div>
-    <div class="field" style="margin-top:12px"><span class="ghead">Latency ${info('How long a typical call takes. Agents use this to choose the cheapest method that fits.')}</span>
-      <select class="m-latency"><option value="">Select…</option>${['fast','med','slow'].map(l=>`<option value="${l}" ${m.latency===l?'selected':''}>${l[0].toUpperCase()+l.slice(1)} — ${LAT[l]}</option>`).join('')}</select>
-      <p class="latref"><b>Fast</b> under 5s · <b>Medium</b> up to 15s · <b>Slow</b> up to 1 min</p></div>
+    <p class="latref"><b>Fast</b> under 5s &nbsp;·&nbsp; <b>Medium</b> up to 15s &nbsp;·&nbsp; <b>Slow</b> up to 1 min</p>
     <div class="field"><span class="ghead">Description ${info('Shown in the help doc agents read. Be specific about what it returns.')}</span>
-      <textarea class="m-description" placeholder="Search the web corpus; returns ranked results with url, title, score.">${esc(m.description)}</textarea></div>
-    <div class="params"><span class="ghead">Parameters</span>
-      <div class="prow" style="font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.04em"><span>Name</span><span>Type</span><span>Req</span><span>Description</span><span></span></div>
-      ${m.params.map((p,pi)=>paramRow(p,pi)).join('')}
-      <button class="iconbtn p-add" type="button">+ parameter</button></div></div>`;
+      <textarea class="m-description" placeholder="Search the corpus; returns ranked results with url, title, score.">${esc(m.description)}</textarea></div>
+    <div class="params">
+      <div class="phead"><span class="ghead" style="margin:0">Parameters</span><button class="iconbtn p-add" type="button">+ parameter</button></div>
+      <div class="ptable">
+        <div class="prow phdr"><span>Name</span><span>Type</span><span>Req</span><span>Description</span><span></span></div>
+        ${m.params.map((p,pi)=>paramRow(p,pi)).join('')}
+      </div>
+    </div>
+  </div>`;
 }
 function paramRow(p,pi){
   return `<div class="prow" data-pi="${pi}">
     <input class="p-name" placeholder="q" value="${esc(p.name)}">
     <select class="p-type">${['string','int','number','bool'].map(t=>`<option ${p.type===t?'selected':''}>${t}</option>`).join('')}</select>
-    <label class="req"><input type="checkbox" class="p-req" ${p.required?'checked':''}> req</label>
-    <input class="p-desc" placeholder="search query" value="${esc(p.description)}">
-    <button class="iconbtn danger p-del" type="button">✕</button></div>`;
+    <label class="reqcell"><input type="checkbox" class="p-req" ${p.required?'checked':''}></label>
+    <input class="p-desc" placeholder="what this parameter is" value="${esc(p.description)}">
+    <button class="iconbtn danger p-del" type="button" title="Remove">✕</button></div>`;
 }
 
 // ── event wiring (per render) ──
@@ -434,13 +452,14 @@ async function doSubmit(){
   } catch(e){ banner.innerHTML=`<div class="banner bad">Could not reach the API: ${esc(e.message)}</div>`; btn.disabled=false; }
 }
 
-render();
-
-// intro ⇄ form view
+// intro ⇄ form view (+ restore the last view/step on reload)
 var elStart=document.getElementById('start'), elExit=document.getElementById('exit');
 var elIntro=document.getElementById('intro'), elForm=document.getElementById('form-view');
-if(elStart) elStart.onclick=function(){ elIntro.hidden=true; elForm.hidden=false; window.scrollTo(0,0); };
-if(elExit) elExit.onclick=function(){ elForm.hidden=true; elIntro.hidden=false; window.scrollTo(0,0); };
+if(elStart) elStart.onclick=function(){ elIntro.hidden=true; elForm.hidden=false; persistUI(); window.scrollTo(0,0); };
+if(elExit) elExit.onclick=function(){ elForm.hidden=true; elIntro.hidden=false; persistUI(); window.scrollTo(0,0); };
+try { var ui=JSON.parse(localStorage.getItem(UIK)||'{}'); if(ui && ui.entered){ step=Math.min(ui.step||0, STEPS.length-1); elIntro.hidden=true; elForm.hidden=false; } } catch(e){}
+
+render();
 </script>
 </body>
 </html>
