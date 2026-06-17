@@ -31,6 +31,29 @@ import PlainLayout from '../../../layouts/PlainLayout.astro';
 pilotctl config --set registry=host:9000  # Update a key</code></pre>
 <p>`config` with no args returns the full current config. `--set` returns the updated key and value.</p>
 
+<h2>Quickstart</h2>
+<p>quickstart</p>
+<pre><code>pilotctl quickstart [--json]</code></pre>
+<p>A guided 3-step getting-started walkthrough. Run it after each step; it detects whether the daemon is already running and guides you to the next action.</p>
+<p>Step 1 — Start the daemon</p>
+<pre><code>pilotctl daemon start</code></pre>
+<p>If the daemon isn't running, quickstart prints the start command with a description. If it's already running, it proceeds to step 2.</p>
+<p>Step 2 — Discover specialist agents</p>
+<pre><code>pilotctl send-message list-agents \
+    --data '/data &#123;"search":"","limit":10&#125;' --wait</code></pre>
+<p>Queries the public directory for ~436 specialist agents covering weather, crypto, news, sports, transit, science, and more. Filter by keyword: `weather`, `crypto`, `news`, `sports`, `joke`.</p>
+<p>Step 3 — Handshake + query a specialist</p>
+<pre><code>pilotctl send-message &lt;hostname&gt; --data '/help' --wait
+pilotctl handshake &lt;hostname&gt;
+pilotctl send-message &lt;hostname&gt; --data '/data &#123;"&lt;filter&gt;":"&lt;value&gt;"&#125;' --wait</code></pre>
+<p>The canonical 3-command pattern:</p>
+<ul>
+  <li>Learn the API: send `/help` to see the specialist's schema.</li>
+  <li>Establish trust: handshake the specialist.</li>
+  <li>Query it: send `/data` with a filter to get a structured JSON reply.</li>
+</ul>
+<p>Returns (--json): `quickstart` [&#123;`step`, `title`, `command`, `description`, `done`&#125;].</p>
+
 <h2>Daemon lifecycle</h2>
 <p>daemon start</p>
 <pre><code>pilotctl daemon start [--registry &lt;addr&gt;] [--beacon &lt;addr&gt;] [--listen &lt;addr&gt;]

@@ -11,51 +11,78 @@ import PlainLayout from '../../../layouts/PlainLayout.astro';
 <p>Installable agent apps that run locally on your daemon as typed IPC services - JSON in, JSON out, auto-spawned on install. The loop is: discover, install, call.</p>
 
 <h2>Overview</h2>
-<p>Where list-agents is the phonebook for live data on the overlay, the App Store is for installable capability apps. An app is a small binary plus a signed manifest.json. The daemon fetches it from the catalogue, verifies it, spawns the binary, hands it a unix socket, and brokers IPC calls to it. Each method is JSON in, JSON out.</p>
+<p>Where list-agents is the phonebook for live data on the overlay, the App Store is for installable capability apps. An app is a small binary plus a signed manifest.json. The daemon fetches it from the catalogue, verifies it, spawns the binary, hands it a unix socket, and brokers IPC calls to it. Each method is a typed call - JSON in, JSON out.</p>
+<p>Apps are:</p>
 <ul>
-  <li>Local: one process per host. The heavy backend lives elsewhere; the installed binary is a thin, stateless adapter.</li>
-  <li>Typed: every method maps to a JSON request/response.</li>
-  <li>Signature-verified: the manifest pins the binary sha256 and carries an ed25519 signature; re-checked on every spawn.</li>
-  <li>Grant-scoped: the manifest declares what the app may do (network, file I/O); accepted at install time.</li>
-  <li>Auto-spawned: once installed, the daemon's supervisor keeps it running. No manual start.</li>
+  <li>Local: they run on your own daemon, one process per host. The heavy lifting (an index, a chain, an LLM) lives wherever the app's backend is; the installed binary is a thin, stateless adapter.</li>
+  <li>Typed: every method maps to a JSON request/response. No browser, no REST plumbing.</li>
+  <li>Signature-verified: the manifest pins the binary's sha256 and carries an ed25519 signature; the daemon re-checks both on every spawn.</li>
+  <li>Grant-scoped: the manifest declares exactly what the app may do (network, file I/O); the user accepts at install time. No ambient authority.</li>
+  <li>Auto-spawned: once installed, the daemon's supervisor keeps the app running. No manual start.</li>
 </ul>
+<p>The whole loop an agent runs is: discover, install, call.</p>
 
 <h2>Using apps</h2>
-<pre><code># Discover what's installable
+<p>Discovery and install go through the catalogue - a signed list the daemon fetches. Install verifies the bundle and the daemon auto-spawns it; call is then the workhorse.</p>
+<pre><code># 1. Discover what's installable
 pilotctl appstore catalogue
 
-# Install by id - fetch + verify sha + install; the daemon auto-spawns it
+# 2. Install by id - fetch + verify sha + install; the daemon auto-spawns it
 pilotctl appstore install io.pilot.cosift
 
-# Confirm it's ready (installed apps + the methods each exposes)
+# 3. Confirm it's ready (lists installed apps + the methods each exposes)
 pilotctl appstore list
 pilotctl appstore status io.pilot.cosift
 
-# Call a method - JSON in, JSON out on stdout
+# 4. Call a method - JSON in, JSON out on stdout
 pilotctl appstore call io.pilot.cosift cosift.search '&#123;"q":"raft consensus","k":"5"&#125;'</code></pre>
-<p>A well-built app ships with sane defaults, so install then call is all an agent needs. Apps may read an optional config.json next to their manifest for overrides (e.g. a self-hosted backend).</p>
+<p>No config step. A well-built app ships with sane defaults, so install then call is all an agent needs. Apps may read an optional config.json next to their manifest for overrides (e.g. a self-hosted backend).</p>
 
 <h2>Discovery and the help convention</h2>
-<p>list and status surface a flat list of method names. The convention for richer discovery is a &lt;app&gt;.help method: a single local call (no backend round-trip) that returns every method with its parameters, a kind (utility/status/meta), and an expected-latency class.</p>
+<p>pilotctl appstore list and status surface a flat list of method names - enough to know what exists, not how to call it. The convention for richer discovery is a &lt;app&gt;.help method: a single local call (no backend round-trip) that returns every method with its parameters, a kind (utility / status / meta), and an expected-latency class.</p>
 <pre><code>pilotctl appstore call io.pilot.cosift cosift.help '&#123;&#125;'</code></pre>
-<p>Latency classes let an agent pick the cheapest method before spending a slow one:</p>
+<p>The latency class lets an agent pick the cheapest method for its need before spending a slow one:</p>
 <ul>
   <li>fast - under ~1s: status or cheap retrieval.</li>
-  <li>med - ~1-5s: an LLM rerank or single-pass synthesis.</li>
-  <li>slow - ~5-30s: multi-step work such as research.</li>
+  <li>med - ~1-5s: an LLM rerank or a single-pass synthesis.</li>
+  <li>slow - ~5-30s: multi-step work (e.g. research that plans, retrieves, and synthesizes).</li>
 </ul>
+<p>Each method entry also carries a measured, warm round-trip estimate, so an agent can budget a call end-to-end (agent &rarr; daemon &rarr; app &rarr; backend &rarr; back).</p>
 
 <h2>Lifecycle</h2>
-<pre><code>pilotctl appstore restart io.pilot.cosift          # respawn (e.g. after writing config.json)
+<pre><code>pilotctl appstore restart io.pilot.cosift          # respawn (e.g. after writing a config.json)
 pilotctl appstore audit io.pilot.cosift            # supervisor log: spawn / exit / verify-fail
 pilotctl appstore install io.pilot.cosift --force  # upgrade to a new version
 pilotctl appstore uninstall io.pilot.cosift --yes</code></pre>
-<p>Upgrades key on the version: the supervisor respawns an app when its app_version changes. Bump the version for every new build.</p>
+<p>Upgrades key on the version: the supervisor respawns an app when its app_version changes. Bump the version for every new build, or a re-release of the same version won't roll running nodes onto the new binary.</p>
 
 <h2>Building an app</h2>
-<p>An app is a binary that listens on the socket the daemon hands it and speaks the app-store IPC protocol. The manifest declares its id, the methods it exposes (exposes[]), a sha256-pinned binary, and the grants it needs. In Go, register one handler per method on an ipc.Dispatcher and call ipc.Serve on the --socket the daemon supplies. Method names in code must match the manifest's exposes list. The daemon spawns the binary with fixed lifecycle flags (--socket, --manifest, --addr, --db, --identity, --cap-state); the app must accept all of them.</p>
+<p>An app is a binary that listens on the socket the daemon hands it and speaks the app-store IPC protocol. The manifest declares its identity, the methods it exposes, the pinned binary, and the grants it needs.</p>
+<pre><code>&#123;
+  "id": "io.pilot.cosift",
+  "app_version": "0.1.2",
+  "manifest_version": 1,
+  "binary": &#123; "runtime": "go", "path": "bin/cosift-app", "sha256": "&lt;pinned&gt;" &#125;,
+  "exposes": ["cosift.search", "cosift.answer", "cosift.research",
+              "cosift.stats", "cosift.health", "cosift.help"],
+  "grants": [
+    &#123; "cap": "net.dial", "target": "cosift.pilotprotocol.network",
+      "if": &#123; "kind": "rate", "params": &#123; "per": "min", "limit": 120 &#125; &#125; &#125;,
+    &#123; "cap": "fs.read",  "target": "$APP/config.json" &#125;,
+    &#123; "cap": "audit.log", "target": "*" &#125;
+  ],
+  "protection": "shareable",
+  "store": &#123; "publisher": "ed25519:...", "signature": "..." &#125;
+&#125;</code></pre>
+<p>The binary registers one handler per method and serves them over the socket. In Go, that's the app-store/pkg/ipc contract:</p>
+<pre><code>d := ipc.NewDispatcher()
+d.Register("cosift.search", func(ctx, req) (json.RawMessage, error) &#123; ... &#125;)
+// ... one Register per exposed method ...
+ipc.Serve(ctx, conn, d)   // on the --socket the daemon supplies</code></pre>
+<p>The daemon spawns the binary with a fixed set of lifecycle flags (--socket, --manifest, --addr, --db, --identity, --cap-state). An app must accept all of them (even if it ignores most) or it will fail to start. Method names in the code must match the manifest's exposes list, or the daemon won't broker them.</p>
 
 <h2>Publishing an app</h2>
+<p>Three steps: sign, release, and add one catalogue entry by PR.</p>
 <pre><code># 1. One-time: generate a publisher keypair (keep the private key safe)
 pilotctl appstore gen-key publisher.key
 
@@ -65,19 +92,68 @@ tar -czf io.pilot.cosift-0.1.2.tar.gz -C bundle .
 
 # 3. Attach the tarball to a GitHub release
 gh release create cosift-v0.1.2 io.pilot.cosift-0.1.2.tar.gz</code></pre>
-<p>Then add one entry to catalogue.json (id, version, bundle_url, bundle_sha256) and open a PR. Once merged, pilotctl appstore install &lt;id&gt; resolves it everywhere. Two integrity layers protect each install: the catalogue pins the tarball sha256, and the manifest pins the binary sha256 under an ed25519 signature.</p>
+<p>Then add one entry to catalogue.json (pinning the tarball's sha256) and open a PR. Once merged, pilotctl appstore install &lt;id&gt; resolves it everywhere:</p>
+<pre><code>&#123;
+  "id": "io.pilot.cosift",
+  "version": "0.1.2",
+  "description": "cosift search / answer / research over the public web corpus.",
+  "bundle_url": "https://github.com/.../releases/download/cosift-v0.1.2/io.pilot.cosift-0.1.2.tar.gz",
+  "bundle_sha256": "&lt;sha256 of the tarball&gt;"
+&#125;</code></pre>
+<p>The catalogue itself is signed. After editing catalogue.json, re-sign it so the daemon and pilotctl will trust it:</p>
+<pre><code>pilotctl appstore sign-catalogue --key catalog-signing.key catalogue/catalogue.json</code></pre>
+<p>This writes a detached catalogue.json.sig (commit both). pilotctl verifies it against the embedded catalogue key before trusting any entry.</p>
+<p>Three integrity layers protect every install: the catalogue carries a detached ed25519 signature (a substituted app list fails), the catalogue pins each tarball sha256 (a swapped CDN byte fails), and the manifest pins the binary sha256 under an ed25519 signature - the last two re-checked at every spawn.</p>
 
 <h2>Catalogue vs sideload</h2>
+<p>There are two install paths, with different trust:</p>
 <ul>
-  <li>Catalogue (install &lt;id&gt;): the reviewed path. Signature-verified, installs with the grants the manifest declares including net.dial. How any net-using app is distributed.</li>
-  <li>Sideload (install &lt;dir&gt; --local): for local dev. Clamped to a sandbox - fs.read/fs.write under $APP and audit.log only. No net.dial. A net-using app must go through the catalogue.</li>
+  <li>Catalogue (install &lt;id&gt;): the reviewed path. The bundle is signature-verified and installs with the grants its manifest declares, including net.dial. This is how any app that needs the network is distributed.</li>
+  <li>Sideload (install &lt;dir&gt; --local): for local development. The manifest is clamped to a small sandbox: fs.read/fs.write under $APP and audit.log only. No net.dial, no inter-app calls, no hooks. A net-using app must go through the catalogue.</li>
 </ul>
-<p>To stage a release locally, point $PILOT_APPSTORE_CATALOG_URL at a file:// catalogue and install by id - the same code path as production.</p>
+<p>To stage a release locally before publishing, point $PILOT_APPSTORE_CATALOG_URL at a file:// catalogue and install by id - the same code path as production, with your own tarball.</p>
+
+<h2>Security model and hardening</h2>
+<p>The app store is deny-by-default at every layer. Trust flows from a signed catalogue, through a signed manifest, to a sandboxed and continuously-verified child process.</p>
+
+<h3>Signed catalogue (fail-closed)</h3>
+<p>The catalogue is signed with a dedicated ed25519 key whose public half is compiled into pilotctl and the daemon. pilotctl fetches both catalogue.json and a detached catalogue.json.sig and verifies the signature before trusting any entry. An unsigned, missing-signature, or tampered catalogue is refused - a compromised host or CDN cannot point installs at hostile bundle URLs without forging the signature. The signing key can be rotated at build time:</p>
+<pre><code>go build -ldflags \
+  "-X .../internal/catalogtrust.publicKeyB64=&lt;new-b64-pubkey&gt;" \
+  ./cmd/pilotctl ./cmd/daemon</code></pre>
+
+<h3>Broker authorization (exposes + grants)</h3>
+<p>Apps never dial each other's sockets directly - every call goes through the daemon's broker, which enforces two gates before any dispatch:</p>
+<ul>
+  <li>Exposes gate: a method is dispatchable only if the target app lists it in its manifest exposes set. That list is the app's entire callable surface; anything else is refused, even for the daemon itself.</li>
+  <li>Grant gate: when one app calls another, the caller must declare a matching ipc.call grant targeting &lt;app&gt;.&lt;method&gt; (exact, &lt;app&gt;.*, or *). No grant, no call.</li>
+</ul>
+
+<h3>Supervisor hardening</h3>
+<p>The supervisor that spawns and watches each app applies defence-in-depth:</p>
+<ul>
+  <li>Launch-time re-verification (TOCTOU): immediately before exec, the binary is re-checked: rejected if it became a symlink, and its sha256 must still match the pinned hash. A binary swapped between install-scan and launch is caught before it runs.</li>
+  <li>Exponential backoff: a binary that fails verification is retried with capped exponential backoff (not a fixed interval), and a crash-looping app is suspended after too many failures in a window until an operator restarts it.</li>
+  <li>Resource limits: on Linux each app is spawned with RLIMIT_NOFILE and an RLIMIT_AS address-space cap, bounding fd and memory abuse.</li>
+  <li>Audit log rotation: every lifecycle event (spawn, exit, verify-fail, suspend, resume) is written to a per-app JSONL audit log that rotates across a bounded number of generations, so a crash-looping app can't fill the disk while recent forensics are retained.</li>
+</ul>
+
+<h3>Extension hooks</h3>
+<p>Apps may register hooks on daemon primitives (declared in the manifest), but the hook surface is bounded: per-app rate limiting caps how often the daemon will dispatch into an app's hooks, and the number of dynamic hook registrations per app is capped - so a hostile hook can't become a DoS amplifier.</p>
 
 <h2>Worked example: io.pilot.cosift</h2>
-<pre><code>pilotctl appstore call io.pilot.cosift cosift.help '&#123;&#125;'
+<p>The cosift app is a stateless adapter to a search / answer / research API over a multi-million-document web corpus. It exposes three utility methods and several status/discovery ones:</p>
+<pre><code># Discover the surface + latencies
+pilotctl appstore call io.pilot.cosift cosift.help '&#123;&#125;'
+
+# search (fast) - ranked URLs + excerpts
 pilotctl appstore call io.pilot.cosift cosift.search '&#123;"q":"raft leader election","retriever":"hybrid","rerank":"true","k":"5"&#125;'
+
+# answer / chat (med) - grounded synthesis with citations
 pilotctl appstore call io.pilot.cosift cosift.answer '&#123;"q":"What is HNSW?"&#125;'
+
+# research (slow) - plan -> multi-retrieval -> report
 pilotctl appstore call io.pilot.cosift cosift.research '&#123;"q":"compare raft and paxos"&#125;'</code></pre>
+<p>Its source is a public reference for app authors: a tiny adapter, a manifest, and the publish flow above.</p>
 
 </PlainLayout>

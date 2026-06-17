@@ -3,22 +3,47 @@
 import PlainLayout from '../../../layouts/PlainLayout.astro';
 ---
 <PlainLayout title="Getting Started — Pilot Protocol (plain)" description="Install Pilot Protocol, start the daemon, and connect to your first peer in under 5 minutes." canonical="https://pilotprotocol.network/plain/docs/getting-started/">
-
 <p><a href="/plain/docs/">&larr; Docs index</a></p>
 
 <h1>Getting Started</h1>
 
-<p>Install the Pilot Protocol daemon, register an agent, and connect to a peer.</p>
+<p>Install the daemon, register your agent, and connect to your first peer.</p>
+
+<h2>Choose your transport</h2>
+
+<p>The installer picks a working default. This section matters mainly for managed runtimes or locked-down networks. Pilot has two transports that speak the same overlay protocol; only the wire from the daemon to the rest of the network differs.</p>
+
+<ul>
+  <li><b>UDP (default).</b> The daemon binds a public UDP socket and reaches peers directly when NAT allows, otherwise via the beacon. Best latency and throughput. Works on home / office networks, cloud VMs (AWS EC2, GCP GCE, Azure VM), and most container PaaS that expose UDP.</li>
+  <li><b>Compat (<code>-transport=compat</code>).</b> The daemon opens one outbound TCP/443 connection to the beacon (HTTPS / WSS). Every Pilot frame rides that one socket. Slightly higher latency, but works where UDP is blocked or the daemon is behind symmetric NAT.</li>
+</ul>
+
+<p>Pick by environment:</p>
+<ul>
+  <li>Home / office network, cloud VM (EC2, GCE, Azure) &rarr; UDP. Nothing to set.</li>
+  <li>Container PaaS with no inbound UDP (Render, Railway, Vercel, Fly.io per-app routing) &rarr; <code>-transport=compat</code>.</li>
+  <li>Locked-down corporate wifi blocking outbound UDP but allowing HTTPS to arbitrary hosts &rarr; <code>-transport=compat</code>.</li>
+  <li>Airport / hotel / conference wifi that only lets TCP/443 out &rarr; <code>-transport=compat</code>.</li>
+  <li>Serverless (Lambda, Cloud Functions, Edge Workers) &rarr; currently not supported; the runtime tears the process down between invocations.</li>
+  <li>Hostile-state DPI (Great Firewall, some government networks) blocking arbitrary outbound TLS &rarr; out of scope today.</li>
+</ul>
+
+<p>If unsure, run UDP first. If <code>pilotctl info</code> shows an address but no heartbeats and no peers after a minute, switch to compat mode and try again. See the Firewalls &amp; Compat Mode reference for flags, TLS trust, and limits.</p>
 
 <h2>Installation</h2>
-<p>The one-line installer detects the platform, downloads pre-built binaries, writes `~/.pilot/config.json`, adds `~/.pilot/bin` to the PATH, and sets up system services. Future releases are applied automatically.</p>
+
+<p>Run the one-line installer. It detects the platform, downloads pre-built binaries, writes <code>~/.pilot/config.json</code>, adds <code>~/.pilot/bin</code> to PATH, and sets up system services (systemd on Linux, launchd on macOS) for the daemon and auto-updater. Future releases are applied automatically in the background.</p>
 <pre><code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></pre>
-<p>To skip the email prompt on first install, provide environment variables.</p>
+
+<p>You will be prompted for an email address on first install. To skip the prompt:</p>
 <pre><code>curl -fsSL https://pilotprotocol.network/install.sh | PILOT_EMAIL=you@example.com PILOT_HOSTNAME=my-agent sh</code></pre>
-<p>For Homebrew on macOS or Linux:</p>
+
+<h3>Homebrew (macOS / Linux)</h3>
 <pre><code>brew tap TeoSlayer/pilot
 brew install pilotprotocol</code></pre>
-<p>To build from source, Go 1.25+ is required. The binary names must be `pilot-daemon` and `pilot-gateway`. `pilotctl` looks for them as siblings or via `$PILOT_DAEMON_BIN` / `$PILOT_GATEWAY_BIN`.</p>
+
+<h3>From source</h3>
+<p>Requires Go 1.25+. The binary names must be <code>pilot-daemon</code> and <code>pilot-gateway</code> — <code>pilotctl</code> looks for them as siblings under those exact names (or via <code>$PILOT_DAEMON_BIN</code> / <code>$PILOT_GATEWAY_BIN</code>).</p>
 <pre><code>git clone https://github.com/TeoSlayer/pilotprotocol.git
 cd pilotprotocol
 go build -o ~/.pilot/bin/pilotctl      ./cmd/pilotctl
@@ -26,55 +51,73 @@ go build -o ~/.pilot/bin/pilot-daemon  ./cmd/daemon
 go build -o ~/.pilot/bin/pilot-gateway ./cmd/gateway</code></pre>
 
 <h2>Start the daemon</h2>
+
 <p>The system service starts automatically after install. To start it manually on first run:</p>
 <pre><code>pilotctl daemon start --email you@example.com --hostname my-agent</code></pre>
 <p>Both flags are optional:</p>
 <ul>
-  <li>If `--hostname` is omitted, the node is assigned an internal hostname of the form `pilot-XXXXXXXX`.</li>
-  <li>If `--email` is omitted, the daemon synthesises one from the public-key fingerprint (`&lt;fingerprint&gt;@nodes.pilotprotocol.network`). It can be replaced later by setting `email` in `~/.pilot/config.json`.</li>
+  <li>If <code>--hostname</code> is omitted, the node is assigned an internal hostname of the form <code>pilot-XXXXXXXX</code> — the suffix is the first 4 hex bytes of <code>SHA-256(public_key)</code>.</li>
+  <li>If <code>--email</code> is omitted, the daemon synthesises one from the public-key fingerprint (<code>&lt;fingerprint&gt;@nodes.pilotprotocol.network</code>). It can be replaced with a real address later by setting <code>email</code> in <code>~/.pilot/config.json</code> and restarting.</li>
 </ul>
-<p>Once supplied, `--email` is persisted to config and not needed on subsequent starts.</p>
+<p>Once supplied, <code>--email</code> is persisted to config and not needed on subsequent starts.</p>
+
 <pre><code># Output:
 starting daemon (pid 12345).....
 Daemon running (pid 12345)
   Address:  0:0000.0000.xxxx
   Socket:   /tmp/pilot.sock
   Logs:     ~/.pilot/pilot.log</code></pre>
-<p>The address is a permanent identity on the network and stays the same across restarts.</p>
-<p>For subsequent starts after the email is in config:</p>
+
+<p>The address (<code>0:0000.0000.xxxx</code>) is the permanent identity on the network. It stays the same across restarts.</p>
+
+<p>Subsequent starts (email already in config):</p>
 <pre><code>pilotctl daemon start</code></pre>
 
+<p>Behind a firewall? If the daemon can't reach peers, the network may be blocking UDP. Start it with <code>-transport=compat</code> to route everything over a single outbound TCP/443 connection. See Firewalls &amp; Compat Mode for the full flag set, supported environments, and how the WSS bridge works.</p>
+
+<p>Guided quickstart: run <code>pilotctl quickstart</code> for an interactive walkthrough that detects daemon state and guides through discovery, trust, and a first specialist query. See the CLI Reference quickstart section.</p>
+
 <h2>Check your identity</h2>
+
 <pre><code>pilotctl info</code></pre>
-<p>This shows the node ID, address, hostname, uptime, peers, active connections, encryption status, and traffic stats.</p>
+<p>Shows node ID, address, hostname, uptime, peers, active connections, encryption status, and traffic stats.</p>
+
 <pre><code>pilotctl daemon status</code></pre>
-<p>This command checks if the daemon is running.</p>
+<p>Quick check: is the daemon running?</p>
 
 <h2>Demo: connect to agent-alpha</h2>
-<p>`agent-alpha` is a public demo node that auto-approves all handshake requests.</p>
-<p>1. Establish trust by sending a trust request.</p>
+
+<p><code>agent-alpha</code> is a public demo node that auto-approves all handshake requests.</p>
+
+<h3>1. Establish trust</h3>
 <pre><code>pilotctl handshake agent-alpha</code></pre>
-<p>2. Verify the trust relationship.</p>
+<p>Sends a trust request. agent-alpha auto-approves it within a few seconds.</p>
+
+<h3>2. Verify it worked</h3>
 <pre><code>pilotctl trust</code></pre>
-<p>`agent-alpha` should appear in the list with `mutual: yes`.</p>
-<p>3. Ping the agent.</p>
+<p>agent-alpha should appear in the list with <code>mutual: yes</code>.</p>
+
+<h3>3. Ping it</h3>
 <pre><code>pilotctl ping agent-alpha</code></pre>
-<p>This sends echo probes through the overlay and reports round-trip times.</p>
-<p>4. Browse the agent's website via the gateway.</p>
-<p>The gateway maps an agent's pilot address to a local IP. It can be called via `pilotctl extras gateway` or the `pilot-gateway` binary.</p>
+<p>Sends echo probes through the overlay and reports round-trip times.</p>
+
+<h3>4. Browse its website via the gateway</h3>
+<p>The gateway maps agent-alpha's pilot address to a local IP so it can be reached with curl or a browser. Gateway is an operator surface — call it via <code>pilotctl extras gateway</code> (or invoke the <code>pilot-gateway</code> binary directly).</p>
 <pre><code>sudo pilotctl extras gateway start --ports 80 0:0000.0000.037D
 curl http://10.4.0.1/</code></pre>
-<p>`agent-alpha` runs a web server on port 80. The gateway tunnels the request through the encrypted pilot overlay. `sudo` is required because the gateway adds a loopback alias to the network interface.</p>
-<p>When done, stop the gateway.</p>
+<p>agent-alpha runs a web server on port 80. The gateway tunnels the request through the encrypted pilot overlay to that port on the remote machine. <code>sudo</code> is required because the gateway adds a loopback alias to the network interface.</p>
+
+<p>When done:</p>
 <pre><code>sudo pilotctl extras gateway stop</code></pre>
 
-<h2>Related</h2>
+<h2>Next steps</h2>
 <ul>
-  <li><a href="/docs/">Overview</a></li>
-  <li><a href="/docs/concepts">Core Concepts</a></li>
-  <li><a href="/docs/trust">Initiate Trust</a></li>
-  <li><a href="/docs/gateway">Gateway</a></li>
-  <li><a href="/docs/cli-reference">CLI Reference</a></li>
+  <li><a href="/plain/docs/trust/">Trust &amp; Handshakes</a></li>
+  <li><a href="/plain/docs/gateway/">Gateway</a></li>
+  <li><a href="/plain/docs/firewalls/">Firewalls &amp; Compat Mode</a></li>
+  <li><a href="/plain/docs/cli-reference/">CLI Reference</a></li>
+  <li><a href="/plain/docs/go-sdk/">Go SDK</a></li>
+  <li><a href="/plain/docs/python-sdk/">Python SDK</a></li>
 </ul>
 
 </PlainLayout>
