@@ -9,7 +9,7 @@ import '../styles/system.css';
 const API = import.meta.env.PUBLIC_PUBLISH_API || 'https://api.pilotprotocol.network';
 
 const title = 'Publish an app — Pilot App Store';
-const description = 'Submit your existing API as an agent-first app on the Pilot Protocol app store. We build, sign, and verify the adapter; you describe it once.';
+const description = 'Publish your app on the Pilot Protocol app store. We build, sign, and verify an agent-first adapter; you describe it once.';
 const canonicalUrl = 'https://pilotprotocol.network/publish';
 ---
 
@@ -26,18 +26,18 @@ const canonicalUrl = 'https://pilotprotocol.network/publish';
     <div class="wrap">
       <div class="eyebrow">Publish</div>
       <h1>Publish an app.<br/><em>Agents do the rest.</em></h1>
-      <p class="lede">Bring your existing HTTP API. Describe it once and we generate, sign, and verify an agent-first adapter for it — then our team reviews it onto the Pilot app store, one command for any agent to install.</p>
+      <p class="lede">Bring your existing app. Describe it once and we generate, sign, and verify an agent-first adapter for it — then our team reviews it onto the Pilot app store, one command for any agent to install.</p>
 
       <ul class="req-list">
         <li><b>A valid email is required.</b> We send a one-time code to verify it before you can submit.</li>
-        <li><b>You don't upload any code.</b> You describe your API's methods; we build and sign the adapter for you.</li>
-        <li><b>Your API keys stay yours.</b> Secrets are never collected here — operators supply them at install time.</li>
+        <li><b>You don't upload any code.</b> You describe your app's methods; we build and sign the adapter for you.</li>
+        <li><b>Your keys stay yours.</b> Secrets are never collected here — operators supply them at install time.</li>
         <li><b>Every submission is reviewed</b> by our team before it appears in the store.</li>
         <li><b>We'll keep you posted by email</b> — a confirmation when you submit, and again when your app is approved or needs changes.</li>
-        <li>By submitting you confirm you have the right to publish this API and agree to the <a href="/terms">Terms</a> and <a href="/aup">Acceptable Use Policy</a>.</li>
+        <li>By submitting you confirm you have the right to publish this app and agree to the <a href="/terms">Terms</a> and <a href="/aup">Acceptable Use Policy</a>.</li>
       </ul>
 
-      <p class="how">How it works: <b>describe your API → verify your email → we build &amp; verify the adapter → our team reviews → it's live in the app store.</b></p>
+      <p class="how">How it works: <b>describe your app → verify your email → we build &amp; verify the adapter → our team reviews → it's live in the app store.</b></p>
 
       <button id="start" class="cta" type="button">Publish your app now →</button>
     </div>
@@ -106,8 +106,9 @@ const canonicalUrl = 'https://pilotprotocol.network/publish';
   #publish input:focus, #publish select:focus, #publish textarea:focus { outline:none; border-color:var(--c-acc); box-shadow:0 0 0 3px color-mix(in oklch, var(--c-acc) 20%, transparent); background:#fff; }
   #publish textarea { min-height:104px; resize:vertical; }
   #publish .prefixed { display:flex; align-items:stretch; }
-  #publish .prefixed .pfx { display:flex; align-items:center; padding:0 13px; background:#eceae1; border:1px solid var(--c-line2); border-right:0; border-radius:10px 0 0 10px; color:var(--c-dim); font-family:var(--mono,monospace); font-size:15px; }
+  #publish .prefixed .pfx { display:flex; align-items:center; padding:0 13px; background:#eceae1; border:1px solid var(--c-line2); border-right:0; border-radius:10px 0 0 10px; color:var(--c-dim); font-size:16px; }
   #publish .prefixed input { border-radius:0 10px 10px 0; }
+  #publish .field .desc code { font-family:inherit; color:inherit; }
   #publish .err { color:oklch(0.55 0.2 28); font-size:14px; margin-top:6px; }
 
   #publish .info { display:inline-grid; place-items:center; width:17px;height:17px;border-radius:999px;border:1px solid var(--c-line2);color:var(--c-dim);font-size:11px;cursor:help;position:relative;vertical-align:middle;margin-left:6px;font-style:normal;font-weight:600; }
@@ -223,12 +224,12 @@ const STEPS_HTML = [
           <input id="f-version" placeholder="0.1.0" value="${esc(state.version)}"><div class="err" id="e-version"></div></div>
       </div>
       <div class="field"><label>One-line description ${info('What the app does, shown in the store and to agents.')}</label>
-        <input id="f-description" placeholder="Current weather and forecasts over a public API." value="${esc(state.description)}"><div class="err" id="e-description"></div></div>
+        <input id="f-description" placeholder="Current weather and forecasts." value="${esc(state.description)}"><div class="err" id="e-description"></div></div>
     </div>${nav()}`,
 
   () => `<div class="stephdr"><span class="k">Step 2 of 6</span><h2>Backend</h2></div>
-    <div class="explain">Your adapter forwards each method to this HTTP API. Add any auth headers it needs.
-      A value like <code>\${WEATHER_API_KEY}</code> is a <b>secret placeholder</b>: the operator who installs the app
+    <div class="explain">Your adapter forwards each method to your app. Add any auth headers it needs.
+      A value like <code>\${WEATHER_TOKEN}</code> is a <b>secret placeholder</b>: the operator who installs the app
       supplies it at install time (from their environment or a local secrets file) — it is <b>never</b> stored in the published app.</div>
     <div class="card">
       <div class="field"><label>Base URL ${info('The production endpoint. Baked in as the default; operators can override.')}</label>
@@ -297,7 +298,7 @@ function nav() {
 function headerRow(h,i){
   return `<div class="prow" data-hi="${i}" style="grid-template-columns:1fr 1.4fr auto">
     <input class="h-name" placeholder="x-api-key" value="${esc(h.name)}">
-    <input class="h-value" placeholder="\${WEATHER_API_KEY}" value="${esc(h.value)}">
+    <input class="h-value" placeholder="\${WEATHER_TOKEN}" value="${esc(h.value)}">
     <button class="iconbtn danger h-del" type="button">✕</button></div>`;
 }
 function methodCard(m,i){
