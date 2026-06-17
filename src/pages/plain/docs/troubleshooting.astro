@@ -8,133 +8,147 @@ import PlainLayout from '../../../layouts/PlainLayout.astro';
 
 <h1>Troubleshooting</h1>
 
-<p>This document lists common issues and their solutions.</p>
+<p>Common issues and how to fix them.</p>
 
-<h2>Daemon won’t start</h2>
-<p>Symptom: “address already in use”</p>
-<p>Another process is holding the tunnel port or the IPC socket. The daemon binds an OS-assigned UDP port by default, or the port passed to --listen.</p>
+<h2>Daemon won't start</h2>
+
+<h3>Symptom: "address already in use"</h3>
+<p>Another process is holding the tunnel port (the daemon binds an OS-assigned UDP port by default, or the port passed to <code>--listen</code>) or the IPC socket.</p>
 <ul>
-  <li>Check for existing daemon: `pilotctl daemon status`</li>
-  <li>Stop it: `pilotctl daemon stop`</li>
-  <li>If the socket is stale: `rm -f /tmp/pilot.sock`</li>
-  <li>Try again: `pilotctl daemon start`</li>
+  <li>Check for an existing daemon: <code>pilotctl daemon status</code></li>
+  <li>Stop it: <code>pilotctl daemon stop</code></li>
+  <li>If the socket is stale: <code>rm -f /tmp/pilot.sock</code></li>
+  <li>Try again: <code>pilotctl daemon start</code></li>
 </ul>
-<p>Symptom: “invalid email” on startup</p>
-<p>If --email is passed with a malformed address, the daemon will not start. The --email flag is optional. If omitted, the daemon synthesizes `&lt;fingerprint&gt;@nodes.pilotprotocol.network` from the public-key fingerprint.</p>
+
+<h3>Symptom: "invalid email" on startup</h3>
+<p>Passing <code>--email</code> with a malformed address makes the daemon refuse to start. Email is otherwise optional; omitting <code>--email</code> causes the daemon to synthesise <code>&lt;fingerprint&gt;@nodes.pilotprotocol.network</code> from the public-key fingerprint.</p>
 <pre><code>pilotctl daemon start --email you@example.com</code></pre>
-<p>It can also be set in `~/.pilot/config.json`:</p>
+<p>Or set it in <code>~/.pilot/config.json</code>:</p>
 <pre><code>&#123; "email": "you@example.com" &#125;</code></pre>
 
 <h2>Cannot reach the registry</h2>
-<p>Symptom: “cannot reach registry” or “connection refused”</p>
+
+<h3>Symptom: "cannot reach registry" or "connection refused"</h3>
 <ul>
-  <li>Check the registry address: `pilotctl config`</li>
-  <li>Test connectivity: `nc -zv 34.71.57.205 9000`</li>
-  <li>Override if needed: `export PILOT_REGISTRY=host:9000`</li>
-  <li>Check firewall rules. Outbound TCP port 9000 must be open.</li>
+  <li>Check the registry address: <code>pilotctl config</code></li>
+  <li>Test connectivity: <code>nc -zv 34.71.57.205 9000</code></li>
+  <li>Override if needed: <code>export PILOT_REGISTRY=host:9000</code></li>
+  <li>Check firewall rules - outbound TCP port 9000 must be open</li>
 </ul>
 
 <h2>Connection timeouts</h2>
-<p>Symptom: connections to peers time out.</p>
+
+<h3>Symptom: connections to peers time out</h3>
 <ul>
-  <li>Verify the peer is online: `pilotctl ping &lt;hostname&gt;`</li>
-  <li>Check that the peer’s tunnel UDP port is reachable. Check `pilotctl info` on the peer for the exact port.</li>
-  <li>If both peers are behind NAT, ensure the beacon is reachable on UDP port 9001.</li>
-  <li>Check for mutual trust or shared network: `pilotctl trust`</li>
+  <li>Verify the peer is online: <code>pilotctl ping &lt;hostname&gt;</code></li>
+  <li>Check that the peer's tunnel UDP port is reachable (check <code>pilotctl info</code> on the peer for the exact port)</li>
+  <li>If both peers are behind NAT, ensure the beacon is reachable on UDP port 9001</li>
+  <li>Check for mutual trust or shared network: <code>pilotctl trust</code></li>
 </ul>
-<p>If `ping` works but connections fail, the target may be dropping SYN packets because trust is not established. Run `pilotctl handshake &lt;hostname&gt;` or add both agents to the same network with `pilotctl network invite`.</p>
+<p>If <code>ping</code> works but connections fail, the target may be dropping SYN packets because trust is not established. Run <code>pilotctl handshake &lt;hostname&gt;</code> or add both agents to the same network with <code>pilotctl network invite</code>.</p>
 
 <h2>NAT traversal failures</h2>
-<p>Full Cone NAT</p>
-<p>Direct connections should work. If they do not, check that the STUN discovery succeeded in the daemon logs.</p>
-<p>Restricted / Port-Restricted Cone NAT</p>
-<p>This requires the beacon for hole-punching. Verify the following:</p>
+
+<h3>Full Cone NAT</h3>
+<p>Direct connections should work. If they don't, check that STUN discovery succeeded (visible in daemon logs).</p>
+
+<h3>Restricted / Port-Restricted Cone NAT</h3>
+<p>Requires the beacon for hole-punching. Verify:</p>
 <ul>
-  <li>Beacon is reachable: `nc -zuv 34.71.57.205 9001`</li>
-  <li>The daemon's tunnel UDP port is not blocked by a local firewall. Run `pilotctl info` to see the port in use.</li>
-  <li>Both peers can reach the beacon.</li>
+  <li>Beacon is reachable: <code>nc -zuv 34.71.57.205 9001</code></li>
+  <li>The daemon's tunnel UDP port is not blocked by a local firewall (run <code>pilotctl info</code> to see the port in use)</li>
+  <li>Both peers can reach the beacon</li>
 </ul>
-<p>Symmetric NAT</p>
+
+<h3>Symmetric NAT</h3>
 <p>Direct connections are not possible. Pilot automatically falls back to relay through the beacon. If relay fails:</p>
 <ul>
-  <li>Ensure both peers can reach the beacon on UDP 9001.</li>
-  <li>Check daemon logs for “relay” messages.</li>
-  <li>If using a fixed endpoint (`--endpoint`), verify the address and port are correct.</li>
+  <li>Ensure both peers can reach the beacon on UDP 9001</li>
+  <li>Check daemon logs for "relay" messages</li>
+  <li>If using a fixed endpoint (<code>--endpoint</code>), verify the address and port are correct</li>
 </ul>
 
 <h2>Trust and handshake issues</h2>
-<p>Symptom: handshake times out</p>
-<p>The target must approve the handshake. Check the following:</p>
+
+<h3>Symptom: handshake times out</h3>
+<p>The target must approve the handshake. Check:</p>
 <ul>
-  <li>Is the target online? `pilotctl find &lt;hostname&gt;`</li>
-  <li>Does the target have pending requests? `pilotctl pending` (on the target)</li>
-  <li>Auto-approve may be off. The target must run `pilotctl approve &lt;node_id&gt;`.</li>
+  <li>Is the target online? <code>pilotctl find &lt;hostname&gt;</code></li>
+  <li>Does the target have pending requests? <code>pilotctl pending</code> (on the target)</li>
+  <li>Auto-approve may be off - the target must run <code>pilotctl approve &lt;node_id&gt;</code></li>
 </ul>
-<p>Symptom: “connection refused” despite trust</p>
-<p>Trust may have been revoked. Check the following:</p>
+
+<h3>Symptom: "connection refused" despite trust</h3>
+<p>Trust may have been revoked. Check:</p>
 <ul>
-  <li>`pilotctl trust` - verify the peer is listed.</li>
-  <li>If missing, re-establish: `pilotctl handshake &lt;peer&gt;`</li>
+  <li><code>pilotctl trust</code> - verify the peer is listed</li>
+  <li>If missing, re-establish: <code>pilotctl handshake &lt;peer&gt;</code></li>
 </ul>
 
 <h2>Network membership issues</h2>
-<p>Symptom: “free networks are limited to 3 agents”</p>
-<p>The free tier allows up to 3 agents per network. Options include:</p>
+
+<h3>Symptom: "free networks are limited to 3 agents"</h3>
+<p>The free tier allows up to 3 agents per network. Options:</p>
 <ul>
-  <li>Remove an existing agent with `pilotctl network kick`.</li>
-  <li>Upgrade to a Private Network plan.</li>
+  <li>Remove an existing agent with <code>pilotctl network kick</code></li>
+  <li>Upgrade to a Private Network plan</li>
 </ul>
-<p>Symptom: agents can’t communicate despite being in the same network</p>
+
+<h3>Symptom: agents can't communicate despite being in the same network</h3>
 <ul>
-  <li>Verify membership: `pilotctl network members &lt;network_id&gt;`</li>
-  <li>Check that both agents are online: `pilotctl find &lt;hostname&gt;`</li>
-  <li>Test basic connectivity: `pilotctl ping &lt;hostname&gt;`</li>
-  <li>If using invite-only, ensure the invite was accepted.</li>
+  <li>Verify membership: <code>pilotctl network members &lt;network_id&gt;</code></li>
+  <li>Check that both agents are online: <code>pilotctl find &lt;hostname&gt;</code></li>
+  <li>Test basic connectivity: <code>pilotctl ping &lt;hostname&gt;</code></li>
+  <li>If using invite-only, ensure the invite was accepted</li>
 </ul>
 
 <h2>IPC socket errors</h2>
-<p>Symptom: “daemon is not running” but it is</p>
+
+<h3>Symptom: "daemon is not running" but it is</h3>
 <p>The IPC socket path may be wrong or stale.</p>
 <ul>
-  <li>Check the socket: `ls -la /tmp/pilot.sock`</li>
-  <li>Remove stale socket: `rm -f /tmp/pilot.sock`</li>
-  <li>Restart the daemon: `pilotctl daemon stop &amp;&amp; pilotctl daemon start`</li>
-  <li>If using a custom socket, set: `export PILOT_SOCKET=/path/to/socket`</li>
+  <li>Check the socket: <code>ls -la /tmp/pilot.sock</code></li>
+  <li>Remove stale socket: <code>rm -f /tmp/pilot.sock</code></li>
+  <li>Restart the daemon: <code>pilotctl daemon stop &amp;&amp; pilotctl daemon start</code></li>
+  <li>If using a custom socket, set: <code>export PILOT_SOCKET=/path/to/socket</code></li>
 </ul>
-<p>Symptom: “text file busy” when updating binaries</p>
+
+<h3>Symptom: "text file busy" when updating binaries</h3>
 <p>The daemon is still running and holding the binary open.</p>
 <ul>
-  <li>Stop the daemon: `pilotctl daemon stop`</li>
-  <li>Remove old binary: `rm -f ~/.pilot/bin/pilot-daemon`</li>
-  <li>Install new version: `curl -fsSL https://pilotprotocol.network/install.sh | sh`</li>
+  <li>Stop the daemon: <code>pilotctl daemon stop</code></li>
+  <li>Remove old binary: <code>rm -f ~/.pilot/bin/pilot-daemon</code></li>
+  <li>Install new version: <code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></li>
 </ul>
 
 <h2>Encryption key issues</h2>
-<p>Symptom: “encrypted packet but no key”</p>
+
+<h3>Symptom: "encrypted packet but no key"</h3>
 <p>Keys can desynchronize after multiple restarts of both peers.</p>
 <ul>
-  <li>Restart the daemon on both sides.</li>
-  <li>Re-establish trust: `pilotctl untrust &lt;node_id&gt;` then `pilotctl handshake &lt;hostname&gt;`</li>
-  <li>If in a network, remove and re-add the agents with `pilotctl network kick` then `pilotctl network invite`.</li>
+  <li>Restart the daemon on both sides</li>
+  <li>Re-establish trust: <code>pilotctl untrust &lt;node_id&gt;</code> then <code>pilotctl handshake &lt;hostname&gt;</code></li>
+  <li>If in a network, remove and re-add the agents with <code>pilotctl network kick</code> then <code>pilotctl network invite</code></li>
 </ul>
 
 <h2>General diagnostic steps</h2>
-<p>When an issue occurs, follow this checklist:</p>
+<p>When something isn't working, follow this checklist:</p>
 <ul>
-  <li>Check daemon status: `pilotctl daemon status`</li>
-  <li>Check identity: `pilotctl info`</li>
-  <li>Check registry: `pilotctl peers`</li>
-  <li>Check connectivity: `pilotctl ping &lt;peer&gt;`</li>
-  <li>Check trust: `pilotctl trust`</li>
-  <li>Check networks: `pilotctl network list`</li>
-  <li>Check logs: `cat ~/.pilot/pilot.log`</li>
-  <li>Test echo port: `pilotctl connect &lt;peer&gt; 7`</li>
+  <li>Check daemon status: <code>pilotctl daemon status</code> - is it running?</li>
+  <li>Check identity: <code>pilotctl info</code> - do you have a node ID and address?</li>
+  <li>Check registry: <code>pilotctl peers</code> - can you see other nodes?</li>
+  <li>Check connectivity: <code>pilotctl ping &lt;peer&gt;</code> - can you reach the peer?</li>
+  <li>Check trust: <code>pilotctl trust</code> - is the peer in your trust list?</li>
+  <li>Check networks: <code>pilotctl network list</code> - are you in the right network?</li>
+  <li>Check logs: <code>cat ~/.pilot/pilot.log</code> - look for error messages</li>
+  <li>Test echo port: <code>pilotctl connect &lt;peer&gt; 7</code> - the echo server should respond</li>
 </ul>
 
 <h2>Related</h2>
 <ul>
-  <li><a href="/docs/error-codes">Error Codes</a></li>
-  <li><a href="/docs/diagnostics">Diagnostics</a></li>
+  <li><a href="/plain/docs/error-codes/">Error Codes</a></li>
+  <li><a href="/plain/docs/diagnostics/">Diagnostics</a></li>
 </ul>
 
 </PlainLayout>
