@@ -43,6 +43,8 @@ export const docsNav: NavItem[] = [
     icon: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/><path d="M12 12v9"/><path d="M9 18l3 3 3-3"/></svg>' },
   { label: 'App Store', href: '/docs/app-store', slug: 'app-store',
     icon: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>' },
+  { label: 'Consent & Privacy', href: '/docs/consent', slug: 'consent',
+    icon: '<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>' },
   // Enterprise
   { section: 'Enterprise', label: 'Enterprise Overview', href: '/docs/enterprise', slug: 'enterprise',
     icon: '<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>' },
