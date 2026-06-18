@@ -1,0 +1,505 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/system.css';
+
+// API base: the submission server on the VM. Override locally via a .env with
+//   PUBLIC_PUBLISH_API=http://<your-lan-ip>:<port>
+const API = import.meta.env.PUBLIC_PUBLISH_API || 'https://api.pilotprotocol.network';
+
+const title = 'Publish an app — Pilot App Store';
+const description = 'Publish your app on the Pilot Protocol app store. We build, sign, and verify an agent-first adapter; you describe it once.';
+const canonicalUrl = 'https://pilotprotocol.network/publish';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<BaseHead title={title} description={description} canonicalUrl={canonicalUrl} />
+</head>
+<body>
+<Nav active="for" />
+
+<main id="intro">
+  <section class="page-head">
+    <div class="wrap">
+      <div class="eyebrow">Publish</div>
+      <h1>Publish an app.<br/><em>Agents do the rest.</em></h1>
+      <p class="lede">Bring your existing app. Describe it once and we generate, sign, and verify an agent-first adapter for it — then our team reviews it onto the Pilot app store, one command for any agent to install.</p>
+
+      <ul class="req-list">
+        <li><b>A valid email is required.</b> We send a one-time code to verify it before you can submit.</li>
+        <li><b>You don't upload any code.</b> You describe your app's methods; we build and sign the adapter for you.</li>
+        <li><b>Your keys stay yours.</b> Secrets are never collected here — operators supply them at install time.</li>
+        <li><b>Every submission is reviewed</b> by our team before it appears in the store.</li>
+        <li><b>We'll keep you posted by email</b> — a confirmation when you submit, and again when your app is approved or needs changes.</li>
+        <li>By submitting you confirm you have the right to publish this app and agree to the <a href="/terms">Terms</a> and <a href="/aup">Acceptable Use Policy</a>.</li>
+      </ul>
+
+      <p class="how">How it works: <b>describe your app → verify your email → we build &amp; verify the adapter → our team reviews → it's live in the app store.</b></p>
+
+      <button id="start" class="cta" type="button">Publish your app now →</button>
+    </div>
+  </section>
+</main>
+
+<section id="form-view" class="pub-section" hidden>
+  <div class="pub-wrap">
+    <button id="exit" class="exit" type="button">← Back to overview</button>
+    <div id="publish" data-api={API}>
+      <ol class="stepper" id="stepper"></ol>
+      <div id="stepRoot"></div>
+    </div>
+  </div>
+</section>
+
+<Footer />
+
+<style is:global>
+  /* GLOBAL (the wizard DOM is JS-injected, so Astro-scoped styles can't reach it),
+     namespaced under #publish, and forced LIGHT + large regardless of the site theme. */
+
+  /* ── intro / presentation (site-themed hero) ── */
+  #intro .req-list { list-style:none; padding:0; margin:26px 0 0; display:grid; gap:11px; max-width:660px; }
+  #intro .req-list li { padding-left:28px; position:relative; line-height:1.55; font-size:16px; }
+  #intro .req-list li::before { content:"✓"; position:absolute; left:0; top:1px; color:var(--accent); font-weight:700; }
+  #intro .how { margin-top:26px; color:var(--ink-dim); font-size:15px; max-width:660px; }
+  /* Green buttons match the site's primary button (the cookie "Accept"): mono, uppercase, accent. */
+  #intro .cta, #publish .btn { margin-top:0; padding:11px 26px; font-family:var(--mono,monospace); font-size:13px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; background:var(--accent); color:var(--accent-ink); border:1px solid var(--accent); border-radius:6px; cursor:pointer; width:auto; transition:opacity .15s; }
+  #intro .cta { margin-top:30px; }
+  #intro .cta:hover, #publish .btn:hover { opacity:.9; }
+
+  /* ── form view: light, large, fills the screen ── */
+  .pub-section { background:#f7f6f1; min-height:100vh; padding:44px 0 96px; }
+  .pub-wrap { max-width:1060px; margin:0 auto; padding:0 28px; }
+  .exit { background:none; border:none; color:#5d5d54; cursor:pointer; font-size:15px; padding:0; margin-bottom:26px; }
+  .exit:hover { color:oklch(0.58 0.17 142); }
+
+  #publish {
+    --c-card:#ffffff; --c-field:#f3f2ec; --c-ink:#15150f; --c-dim:#5d5d54; --c-faint:#b6b5aa;
+    --c-line:#e6e5dd; --c-line2:#d6d5cb; --c-acc:oklch(0.66 0.17 142); --c-accink:#ffffff;
+    color:var(--c-ink); font-size:16.5px; line-height:1.5;
+  }
+
+  #publish .stepper { display:flex; list-style:none; padding:0; margin:0 0 40px; gap:4px; }
+  #publish .stepper li { display:flex; align-items:center; gap:9px; flex:1 1 0; min-width:0; color:var(--c-faint); font-size:13px; position:relative; }
+  #publish .stepper li:not(:last-child)::after { content:""; position:absolute; left:34px; right:6px; top:15px; height:2px; background:var(--c-line2); }
+  #publish .stepper .dot { width:30px;height:30px;border-radius:999px;border:1.5px solid var(--c-line2);display:grid;place-items:center;font-size:13px;background:#fff;z-index:1;flex:none; }
+  #publish .stepper .lbl { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase; letter-spacing:.03em; font-weight:500; }
+  #publish .stepper li.done .dot { background:var(--c-acc); border-color:var(--c-acc); color:#fff; }
+  #publish .stepper li.done { color:var(--c-dim); }
+  #publish .stepper li.done:not(:last-child)::after { background:var(--c-acc); }
+  #publish .stepper li.now .dot { border-color:var(--c-acc); color:var(--c-acc); box-shadow:0 0 0 4px color-mix(in oklch, var(--c-acc) 20%, transparent); }
+  #publish .stepper li.now { color:var(--c-ink); }
+
+  #publish .stephdr { margin-bottom:24px; }
+  #publish .stephdr .k { font-size:14px; color:var(--c-dim); }
+  #publish .stephdr h2 { font-size:34px; font-weight:650; margin:6px 0 0; letter-spacing:-0.015em; color:var(--c-ink); }
+  #publish > div > p.desc, #publish .lede2 { color:var(--c-dim); font-size:16px; max-width:760px; }
+
+  #publish .card { background:var(--c-card); border:1px solid var(--c-line); border-radius:16px; padding:30px 30px 12px; margin-bottom:20px; }
+  #publish .field { margin-bottom:22px; }
+  #publish .field > label { display:block; font-size:15px; font-weight:600; margin-bottom:8px; color:var(--c-ink); }
+  #publish .field .desc { font-size:14px; color:var(--c-dim); margin:6px 0 0; }
+  #publish .row2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  #publish input, #publish select, #publish textarea { width:100%; box-sizing:border-box; font:inherit; font-size:16px; color:var(--c-ink); background:var(--c-field); border:1px solid var(--c-line2); border-radius:10px; padding:13px 15px; }
+  #publish input::placeholder, #publish textarea::placeholder { color:#a9a89e; }
+  #publish input:focus, #publish select:focus, #publish textarea:focus { outline:none; border-color:var(--c-acc); box-shadow:0 0 0 3px color-mix(in oklch, var(--c-acc) 20%, transparent); background:#fff; }
+  #publish textarea { min-height:104px; resize:vertical; }
+  #publish .prefixed { display:flex; align-items:stretch; }
+  #publish .prefixed .pfx { display:flex; align-items:center; padding:0 13px; background:#eceae1; border:1px solid var(--c-line2); border-right:0; border-radius:10px 0 0 10px; color:var(--c-dim); font-size:16px; }
+  #publish .prefixed input { border-radius:0 10px 10px 0; }
+  #publish .field .desc code { font-family:inherit; color:var(--c-ink); background:#eceae1; padding:2px 7px; border-radius:5px; }
+  #publish .err { color:oklch(0.55 0.2 28); font-size:14px; margin-top:6px; }
+
+  #publish .info { display:inline-grid; place-items:center; width:17px;height:17px;border-radius:999px;border:1px solid var(--c-line2);color:var(--c-dim);font-size:11px;cursor:help;position:relative;vertical-align:middle;margin-left:6px;font-style:normal;font-weight:600; }
+  #publish .info:hover::after { content:attr(data-tip); position:absolute; bottom:150%; left:50%; transform:translateX(-50%); width:260px; background:#15150f; color:#fff; font-size:13px; line-height:1.45; padding:10px 12px; border-radius:9px; z-index:30; font-weight:400; text-transform:none; letter-spacing:0; white-space:normal; box-shadow:0 6px 24px rgba(0,0,0,.18); }
+
+  #publish .mcard { border:1px solid var(--c-line); border-radius:14px; padding:22px 22px 8px; margin-bottom:18px; background:var(--c-card); }
+  #publish .mcard .mhead { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  #publish .mcard .mhead .mname { font-weight:650; font-family:var(--mono,monospace); font-size:16px; }
+  #publish .mgrid { display:grid; grid-template-columns:1.7fr .7fr 1.1fr 1fr; gap:14px; }
+  #publish .mgrid .field { margin-bottom:0; }
+  #publish .ghead { font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--c-dim); margin-bottom:6px; display:block; font-weight:600; }
+  #publish .latref { font-size:13px; color:var(--c-dim); margin:8px 0 18px; }
+  #publish .latref b { color:var(--c-ink); font-weight:600; }
+  #publish .params { margin-top:18px; padding-top:18px; border-top:1px solid var(--c-line); }
+  #publish .phead { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  #publish .ptable .prow { display:grid; grid-template-columns:1.2fr .9fr 56px 1.7fr 40px; gap:10px; align-items:center; margin-bottom:8px; }
+  #publish .ptable .prow.phdr { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--c-dim); font-weight:600; margin-bottom:8px; }
+  #publish .reqcell { display:flex; justify-content:center; align-items:center; }
+  #publish .reqcell input { width:auto; }
+  #publish .ptable .p-del { padding:9px 0; }
+  /* generic .prow fallback (auth-header rows override columns inline) */
+  #publish .prow { display:grid; gap:10px; align-items:center; margin-bottom:9px; }
+  #publish .iconbtn { background:none; border:1px solid var(--c-line2); border-radius:9px; color:var(--c-dim); cursor:pointer; padding:9px 14px; font:inherit; font-size:14px; width:auto; }
+  #publish .iconbtn:hover { border-color:var(--c-acc); color:var(--c-acc); }
+  #publish .iconbtn.danger:hover { border-color:oklch(0.6 0.2 28); color:oklch(0.55 0.2 28); }
+
+  #publish .preview { border:1px solid #26261f; border-radius:14px; background:#0b0b0a; color:#eceae3; padding:20px 22px; margin-top:22px; font-family:var(--mono,monospace); font-size:13.5px; line-height:1.6; overflow-x:auto; }
+  #publish .preview .pk { color:oklch(0.85 0.18 125); }
+  #publish .preview h4 { color:#9a9a90; font-family:inherit; font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; margin:0 0 10px; font-weight:600; }
+  #publish .preview .cmd { white-space:pre-wrap; word-break:break-all; }
+  #publish .preview .muted { color:#8a8a83; }
+
+  #publish .navrow { display:flex; justify-content:space-between; align-items:center; margin-top:32px; }
+  #publish .navrow .back { color:var(--c-dim); cursor:pointer; font-size:16px; background:none; border:none; padding:0; }
+  #publish .navrow .back:hover { color:var(--c-acc); }
+  #publish .choices { display:grid; gap:12px; margin-bottom:20px; }
+  #publish .choice { display:flex; gap:14px; align-items:flex-start; background:var(--c-card); border:1px solid var(--c-line2); border-radius:14px; padding:18px 20px; cursor:pointer; transition:border-color .12s, box-shadow .12s; }
+  #publish .choice:hover { border-color:var(--c-acc); }
+  #publish .choice input { width:auto; margin:3px 0 0; accent-color:var(--c-acc); }
+  #publish .choice.sel { border-color:var(--c-acc); box-shadow:0 0 0 3px color-mix(in oklch, var(--c-acc) 18%, transparent); }
+  #publish .choice b { display:block; font-size:16px; margin-bottom:3px; }
+  #publish .choice span { color:var(--c-dim); font-size:14px; }
+  #publish .choice.disabled { opacity:.65; cursor:not-allowed; background:#f1f0ea; }
+  #publish .choice.disabled:hover { border-color:var(--c-line2); }
+  #publish .badge { display:inline-block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--c-dim); border:1px solid var(--c-line2); border-radius:999px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
+  #publish .badge.ok { color:#3f6b00; border-color:#bce08a; background:#eef7e0; }
+  #publish .btn[disabled] { opacity:.5; cursor:not-allowed; }
+  #publish .toggle { display:flex; align-items:center; gap:11px; font-weight:500; }
+  #publish .toggle input { width:auto; }
+  #publish .pill { display:inline-block; font-size:12px; padding:3px 10px; border-radius:999px; border:1px solid var(--c-line2); color:var(--c-dim); }
+  #publish .review-tbl { width:100%; border-collapse:collapse; font-size:15px; }
+  #publish .review-tbl th { text-align:left; color:var(--c-dim); font-weight:600; width:190px; padding:11px 12px; vertical-align:top; border-bottom:1px solid var(--c-line); }
+  #publish .review-tbl td { padding:11px 12px; vertical-align:top; border-bottom:1px solid var(--c-line); overflow-wrap:anywhere; }
+  #publish .banner { border-radius:11px; padding:14px 18px; margin-bottom:18px; font-size:15px; }
+  #publish .banner.bad { background:#fdf5f5; border:1px solid #e3b9b9; color:oklch(0.5 0.2 28); }
+  #publish .banner.ok { background:#eef7f0; border:1px solid #b9dcc0; color:oklch(0.42 0.16 145); }
+  #publish .explain { background:#f3f2ec; border:1px solid var(--c-line); border-radius:11px; padding:14px 16px; font-size:14px; color:var(--c-dim); margin-bottom:18px; line-height:1.5; }
+  #publish .explain code { color:oklch(0.5 0.17 142); font-family:var(--mono,monospace); }
+</style>
+
+<script>
+// ── Pilot publish wizard (client UI; all building/signing happens on the API) ──
+const root = document.getElementById('publish');
+const API = (root && root.dataset.api) || '';
+const LS = 'pilot.publish.draft.v1';
+
+const LAT = { fast: 'under 5 seconds', med: 'up to 15 seconds', slow: 'up to 1 minute' };
+
+const STEPS = ['Email', 'Identity', 'Backend', 'Methods', 'Listing', 'Vendor', 'Review'];
+let step = 0;
+
+
+const blankParam = () => ({ name: '', type: 'string', required: false, description: '' });
+const blankMethod = () => ({ name: '', http: { verb: 'GET', path: '' }, latency: '', description: '', params: [blankParam()] });
+const blankHeader = () => ({ name: '', value: '' });
+
+let state = load() || {
+  email: '',
+  id: 'io.pilot.', version: '', description: '',
+  app_type: 'api', // 'api' (available) | 'cli' (coming soon)
+  backend: { base_url: '', headers: [blankHeader()] },
+  methods: [blankMethod()],
+  listing: { display_name: '', tagline: '', app_description: '', license: '', homepage: '', source_url: '', categories: '', keywords: '', requires_binary: false, binary_url: '' },
+  vendor: { name: '', url: '', agent_usage: '', capabilities: '' },
+};
+
+function load() { try { return JSON.parse(localStorage.getItem(LS)); } catch { return null; } }
+function save() { localStorage.setItem(LS, JSON.stringify(state)); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function ns() { const i = state.id.lastIndexOf('.'); return i>=0 ? state.id.slice(i+1) : ''; }
+function info(t){ return `<span class="info" data-tip="${esc(t)}">i</span>`; }
+
+// Build the Submission JSON the API expects.
+function submission() {
+  const csv = s => (s||'').split(',').map(x=>x.trim()).filter(Boolean);
+  return {
+    id: state.id, version: state.version, description: state.description,
+    email: state.email,
+    backend: { base_url: state.backend.base_url, headers: state.backend.headers.filter(h=>h.name.trim()) },
+    methods: state.methods.filter(m=>m.name.trim()).map(m=>({
+      name: m.name, description: m.description, latency: m.latency,
+      http: { verb: m.http.verb, path: m.http.path },
+      params: m.params.filter(p=>p.name.trim()),
+    })),
+    listing: { ...state.listing, categories: csv(state.listing.categories), keywords: csv(state.listing.keywords) },
+    vendor: { ...state.vendor, contact: state.email },
+  };
+}
+
+// ── Email step (preliminary): collect → send code → verify ──
+function emailStepHTML(){
+  return `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Your email</h2></div>
+    <p class="lede2">We'll use this to send you a submission confirmation and the review decision.</p>
+    <div class="card">
+      <div class="field"><label>Email ${info('Where we send your submission confirmation and the approval/rejection notice.')}</label>
+        <input id="f-email" type="email" autocomplete="email" placeholder="you@company.com" value="${esc(state.email)}">
+        <div class="err" id="e-email"></div></div>
+    </div>${nav()}`;
+}
+
+function renderStepper() {
+  document.getElementById('stepper').innerHTML = STEPS.map((s,i)=>
+    `<li class="${i<step?'done':i===step?'now':''}"><span class="dot">${i<step?'✓':i+1}</span><span class="lbl">${s}</span></li>`
+  ).join('');
+}
+
+const root2 = document.getElementById('stepRoot');
+function render() {
+  renderStepper();
+  root2.innerHTML = STEPS_HTML[step]();
+  wire();
+  if (STEPS[step] === 'Methods' || STEPS[step] === 'Review') refreshPreview();
+  persistUI();
+}
+
+// Persist which view + step we're on, so a reload keeps you in place (the draft
+// fields are already saved separately).
+const UIK = 'pilot.publish.ui.v1';
+function persistUI() {
+  try { localStorage.setItem(UIK, JSON.stringify({ step: step, entered: !document.getElementById('form-view').hidden })); } catch (e) {}
+}
+
+// ── per-step HTML ──
+const STEPS_HTML = [
+  () => emailStepHTML(),
+
+  () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Identity</h2></div>
+    <div class="card">
+      <div class="row2">
+        <div class="field"><label>App ID ${info('Reverse-DNS id under the io.pilot namespace. Lowercase letters, digits, hyphens.')}</label>
+          <div class="prefixed"><span class="pfx">io.pilot.</span><input id="f-idname" placeholder="weather" value="${esc(state.id.replace(/^io\.pilot\./,''))}"></div>
+          <p class="desc">Your app installs as <code>${esc(state.id||'io.pilot.…')}</code>.</p><div class="err" id="e-id"></div></div>
+        <div class="field"><label>Version ${info('Semver. Bump for every new build.')}</label>
+          <input id="f-version" placeholder="0.1.0" value="${esc(state.version)}"><div class="err" id="e-version"></div></div>
+      </div>
+      <div class="field"><label>One-line description ${info('What the app does, shown in the store and to agents.')}</label>
+        <input id="f-description" placeholder="Current weather and forecasts." value="${esc(state.description)}"><div class="err" id="e-description"></div></div>
+    </div>${nav()}`,
+
+  () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Backend</h2></div>
+    <p class="desc" style="margin:-8px 0 16px">What kind of app are you publishing?</p>
+    <div class="choices">
+      <label class="choice sel">
+        <input type="radio" name="apptype" value="api" checked>
+        <div><b>HTTP API <span class="badge ok">available</span></b><span>Your app is reachable over HTTP. We generate, sign, and verify an adapter that forwards each method to it.</span></div>
+      </label>
+      <label class="choice disabled">
+        <input type="radio" name="apptype" value="cli" disabled>
+        <div><b>CLI / binary <span class="badge">coming soon</span></b><span>Ship a real command-line binary to the host. Native delivery is in the works — not available yet.</span></div>
+      </label>
+    </div>
+    <div class="explain">Your adapter forwards each method to your app. Add any auth headers it needs.
+      A value like <code>\${WEATHER_TOKEN}</code> is a <b>secret placeholder</b>: the operator who installs the app
+      supplies it at install time (from their environment or a local secrets file) — it is <b>never</b> stored in the published app.</div>
+    <div class="card">
+      <div class="field"><label>Base URL ${info('The production endpoint. Baked in as the default; operators can override.')}</label>
+        <input id="f-baseurl" placeholder="https://api.example.com" value="${esc(state.backend.base_url)}"><div class="err" id="e-baseurl"></div></div>
+      <div class="field"><label>Auth headers <span class="muted">(optional)</span></label>
+        <div id="headers">${state.backend.headers.map((h,i)=>headerRow(h,i)).join('')}</div>
+        <button class="iconbtn" id="add-header" type="button">+ header</button>
+      </div>
+    </div>${nav()}`,
+
+  () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Methods</h2></div>
+    <p class="desc" style="margin:-8px 0 16px">Each method is one call an agent can make. Give it a clear name, the backend route, a latency class, a description, and its parameters. The live preview shows exactly what agents will see and run.</p>
+    <div id="methods">${state.methods.map((m,i)=>methodCard(m,i)).join('')}</div>
+    <button class="iconbtn" id="add-method" type="button">+ method</button>
+    <div class="err" id="e-methods"></div>
+    <div class="preview" id="preview"></div>${nav()}`,
+
+  () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Listing</h2></div>
+    <p class="desc" style="margin:-8px 0 16px">How the app appears in the store.</p>
+    <div class="card">
+      <div class="row2">
+        <div class="field"><label>Display name</label><input id="f-l-display_name" placeholder="Weather" value="${esc(state.listing.display_name)}"></div>
+        <div class="field"><label>License (SPDX) ${info('e.g. MIT, Apache-2.0, AGPL-3.0-or-later')}</label><input id="f-l-license" placeholder="Apache-2.0" value="${esc(state.listing.license)}"></div>
+      </div>
+      <div class="field"><label>Tagline</label><input id="f-l-tagline" placeholder="One-line pitch for the store card" value="${esc(state.listing.tagline)}"></div>
+      <div class="field"><label>App description ${info('Long-form description (markdown ok), shown on the app store page.')}</label>
+        <textarea id="f-l-app_description" placeholder="What the app does, who it is for, what makes it useful…">${esc(state.listing.app_description)}</textarea></div>
+      <div class="row2">
+        <div class="field"><label>Homepage</label><input id="f-l-homepage" placeholder="https://example.com" value="${esc(state.listing.homepage)}"></div>
+        <div class="field"><label>Source URL</label><input id="f-l-source_url" placeholder="https://github.com/org/app" value="${esc(state.listing.source_url)}"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Categories ${info('Comma-separated, e.g. search, weather')}</label><input id="f-l-categories" placeholder="weather, data" value="${esc(state.listing.categories)}"></div>
+        <div class="field"><label>Keywords</label><input id="f-l-keywords" placeholder="weather, forecast" value="${esc(state.listing.keywords)}"></div>
+      </div>
+    </div>${nav()}`,
+
+  () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Vendor</h2></div>
+    <p class="desc" style="margin:-8px 0 16px">About you, and how agents should use this app.</p>
+    <div class="card">
+      <div class="row2">
+        <div class="field"><label>Vendor name</label><input id="f-v-name" placeholder="Acme Inc." value="${esc(state.vendor.name)}"></div>
+        <div class="field"><label>Vendor URL</label><input id="f-v-url" placeholder="https://acme.example" value="${esc(state.vendor.url)}"></div>
+      </div>
+      <p class="desc" style="margin:-6px 0 18px">We'll reach you at your verified email: <b>${esc(state.email)}</b>.</p>
+      <div class="field"><label>How will autonomous AI agents use this app? ${info('Include package details, whether methods must be called in a specific order, auth/setup, and anything an agent needs to use it correctly.')}</label>
+        <textarea id="f-v-agent_usage" placeholder="e.g. Call search first to get a result id, then fetch with that id. No human steps required…">${esc(state.vendor.agent_usage)}</textarea></div>
+      <div class="field"><label>List of all capabilities ${info('Everything this app can do, in plain language — one per line is fine.')}</label>
+        <textarea id="f-v-capabilities" placeholder="- Search the web&#10;- Fetch page contents&#10;- Summarize a URL">${esc(state.vendor.capabilities)}</textarea></div>
+    </div>${nav()}`,
+
+  () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Review &amp; submit</h2></div>
+    <div id="submit-banner"></div>
+    <div class="card"><table class="review-tbl" id="review-tbl"></table></div>
+    <div class="preview" id="preview"></div>
+    <div class="navrow"><button class="back" id="back" type="button">← Back</button><button class="btn" id="submit" type="button">Submit for review</button></div>`,
+];
+
+function nav() {
+  return `<div class="navrow">${step>0?'<button class="back" id="back" type="button">← Back</button>':'<span></span>'}<button class="btn" id="next" type="button">${step===STEPS.length-2?'Review →':'Next →'}</button></div>`;
+}
+function headerRow(h,i){
+  return `<div class="prow" data-hi="${i}" style="grid-template-columns:1fr 1.4fr auto">
+    <input class="h-name" placeholder="x-api-key" value="${esc(h.name)}">
+    <input class="h-value" placeholder="\${WEATHER_TOKEN}" value="${esc(h.value)}">
+    <button class="iconbtn danger h-del" type="button">✕</button></div>`;
+}
+function methodCard(m,i){
+  return `<div class="mcard" data-mi="${i}">
+    <div class="mhead"><span class="mname">${esc(m.name||ns()+'.method')}</span>${state.methods.length>1?'<button class="iconbtn danger m-del" type="button">Remove</button>':''}</div>
+    <div class="mgrid">
+      <div class="field"><span class="ghead">Method name ${info('Prefixed with your namespace, e.g. '+esc(ns()||'app')+'.search')}</span><input class="m-name" placeholder="${esc(ns()||'app')}.search" value="${esc(m.name)}"></div>
+      <div class="field"><span class="ghead">Verb</span><select class="m-verb"><option ${m.http.verb==='GET'?'selected':''}>GET</option><option ${m.http.verb==='POST'?'selected':''}>POST</option></select></div>
+      <div class="field"><span class="ghead">Path ${info('Backend route. GET → params become the query string; POST → JSON body.')}</span><input class="m-path" placeholder="/search" value="${esc(m.http.path)}"></div>
+      <div class="field"><span class="ghead">Latency ${info('How long a typical call takes — agents use it to pick the cheapest method that fits. Fast: under 5s · Medium: up to 15s · Slow: up to 1 min.')}</span><select class="m-latency"><option value="">Select…</option>${['fast','med','slow'].map(l=>`<option value="${l}" ${m.latency===l?'selected':''}>${l==='med'?'Medium':l[0].toUpperCase()+l.slice(1)}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><span class="ghead">Description ${info('Shown in the help doc agents read. Be specific about what it returns.')}</span>
+      <textarea class="m-description" placeholder="Search the corpus; returns ranked results with url, title, score.">${esc(m.description)}</textarea></div>
+    <div class="params">
+      <div class="phead"><span class="ghead" style="margin:0">Parameters</span><button class="iconbtn p-add" type="button">+ parameter</button></div>
+      <div class="ptable">
+        <div class="prow phdr"><span>Name</span><span>Type</span><span>Req</span><span>Description</span><span></span></div>
+        ${m.params.map((p,pi)=>paramRow(p,pi)).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+function paramRow(p,pi){
+  return `<div class="prow" data-pi="${pi}">
+    <input class="p-name" placeholder="q" value="${esc(p.name)}">
+    <select class="p-type">${['string','int','number','bool'].map(t=>`<option ${p.type===t?'selected':''}>${t}</option>`).join('')}</select>
+    <label class="reqcell"><input type="checkbox" class="p-req" ${p.required?'checked':''}></label>
+    <input class="p-desc" placeholder="what this parameter is" value="${esc(p.description)}">
+    <button class="iconbtn danger p-del" type="button" title="Remove">✕</button></div>`;
+}
+
+// ── event wiring (per render) ──
+function bindVal(id, set){ const el=document.getElementById(id); if(el) el.addEventListener('input',()=>{ set(el.value); save(); }); }
+function scrollTop(){ var s=document.getElementById('form-view'); window.scrollTo({ top: s? s.offsetTop-12 : 0, behavior:'smooth' }); }
+function wire() {
+  const cur=STEPS[step];
+  const back=document.getElementById('back'); if(back) back.onclick=()=>{ step=Math.max(0,step-1); render(); scrollTop(); };
+  const next=document.getElementById('next'); if(next) next.onclick=()=>{ if(validateStep()) { step++; render(); scrollTop(); } };
+
+  if (cur==='Email'){
+    const em=document.getElementById('f-email'); if(em) em.addEventListener('input',()=>{ state.email=em.value.trim(); save(); });
+  }
+  if (cur==='Identity'){
+    const idn=document.getElementById('f-idname'); if(idn) idn.addEventListener('input',()=>{ state.id='io.pilot.'+idn.value.trim(); document.querySelector('#publish .prefixed + .desc')?.replaceChildren(); save(); const d=idn.closest('.field').querySelector('.desc'); if(d) d.innerHTML='Your app installs as <code>'+esc(state.id)+'</code>.'; });
+    bindVal('f-version',v=>state.version=v); bindVal('f-description',v=>state.description=v);
+  }
+  if (cur==='Backend'){
+    bindVal('f-baseurl',v=>state.backend.base_url=v);
+    document.getElementById('add-header').onclick=()=>{ state.backend.headers.push(blankHeader()); save(); render(); };
+    document.querySelectorAll('#headers .prow').forEach(rowEl=>{ const i=+rowEl.dataset.hi;
+      rowEl.querySelector('.h-name').addEventListener('input',e=>{state.backend.headers[i].name=e.target.value;save();});
+      rowEl.querySelector('.h-value').addEventListener('input',e=>{state.backend.headers[i].value=e.target.value;save();});
+      rowEl.querySelector('.h-del').onclick=()=>{ state.backend.headers.splice(i,1); if(!state.backend.headers.length)state.backend.headers.push(blankHeader()); save(); render(); };
+    });
+  }
+  if (cur==='Methods'){
+    document.getElementById('add-method').onclick=()=>{ state.methods.push(blankMethod()); save(); render(); };
+    document.querySelectorAll('#methods .mcard').forEach(cardEl=>{ const i=+cardEl.dataset.mi; const m=state.methods[i];
+      const on=(sel,fn)=>{ const el=cardEl.querySelector(sel); if(el) el.addEventListener('input',()=>{fn(el);save();schedulePreview();}); };
+      on('.m-name',el=>{m.name=el.value; cardEl.querySelector('.mname').textContent=el.value||ns()+'.method';});
+      on('.m-verb',el=>m.http.verb=el.value); on('.m-path',el=>m.http.path=el.value);
+      on('.m-latency',el=>m.latency=el.value); on('.m-description',el=>m.description=el.value);
+      const del=cardEl.querySelector('.m-del'); if(del) del.onclick=()=>{ state.methods.splice(i,1); if(!state.methods.length)state.methods.push(blankMethod()); save(); render(); };
+      cardEl.querySelector('.p-add').onclick=()=>{ m.params.push(blankParam()); save(); render(); };
+      cardEl.querySelectorAll('.params .prow[data-pi]').forEach(pr=>{ const pi=+pr.dataset.pi; const p=m.params[pi];
+        pr.querySelector('.p-name').addEventListener('input',e=>{p.name=e.target.value;save();schedulePreview();});
+        pr.querySelector('.p-type').addEventListener('input',e=>{p.type=e.target.value;save();schedulePreview();});
+        pr.querySelector('.p-req').addEventListener('change',e=>{p.required=e.target.checked;save();});
+        pr.querySelector('.p-desc').addEventListener('input',e=>{p.description=e.target.value;save();});
+        pr.querySelector('.p-del').onclick=()=>{ m.params.splice(pi,1); if(!m.params.length)m.params.push(blankParam()); save(); render(); };
+      });
+    });
+  }
+  if (cur==='Listing'){
+    ['display_name','tagline','app_description','license','homepage','source_url','categories','keywords'].forEach(k=>bindVal('f-l-'+k,v=>state.listing[k]=v));
+  }
+  if (cur==='Vendor'){ ['name','url','agent_usage','capabilities'].forEach(k=>bindVal('f-v-'+k,v=>state.vendor[k]=v)); }
+  if (cur==='Review'){ renderReview(); document.getElementById('submit').onclick=doSubmit; }
+}
+
+// ── validation (client mirror of the server's; server is authoritative) ──
+function show(id,msg){ const el=document.getElementById(id); if(el) el.textContent=msg||''; }
+function validateStep(){
+  let ok=true; const bad=(id,m)=>{show(id,m); ok=false;};
+  const cur=STEPS[step];
+  if (cur==='Email'){ if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(state.email||'')) bad('e-email','Enter a valid email'); else show('e-email',''); }
+  if (cur==='Identity'){
+    if(!/^io\.pilot\.[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(state.id)) bad('e-id','Must be io.pilot.<name> (lowercase, digits, hyphens)'); else show('e-id','');
+    if(!/^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/.test(state.version)) bad('e-version','Semver, e.g. 0.1.0'); else show('e-version','');
+    if(!state.description.trim()) bad('e-description','Required'); else show('e-description','');
+  }
+  if (cur==='Backend'){ if(!/^https?:\/\/[^\s/]+/.test(state.backend.base_url)) bad('e-baseurl','Absolute http(s) URL'); else show('e-baseurl',''); }
+  if (cur==='Methods'){
+    const ms=state.methods.filter(m=>m.name.trim());
+    if(!ms.length) bad('e-methods','Add at least one method');
+    else { const badm=ms.find(m=>!m.latency||!m.description.trim()||!/^\//.test(m.http.path)||!m.name.startsWith(ns()+'.'));
+      if(badm) bad('e-methods','Each method needs a '+ns()+'.-prefixed name, path starting with /, a latency, and a description'); else show('e-methods',''); }
+  }
+  return ok;
+}
+
+// ── live help / pilotctl preview (server-generated) ──
+let pvTimer=null;
+function schedulePreview(){ clearTimeout(pvTimer); pvTimer=setTimeout(refreshPreview,400); }
+async function refreshPreview(){
+  const el=document.getElementById('preview'); if(!el) return;
+  try {
+    const r=await fetch(API+'/api/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(submission())});
+    const d=await r.json();
+    const methods=(d.help.methods||[]).map(m=>`  <span class="pk">${esc(m.method)}</span>  <span class="muted">[${esc(m.duration)}]</span>  ${esc(m.summary||'')}`).join('\n');
+    const cmds=(d.commands||[]).map(c=>esc(c)).join('\n');
+    el.innerHTML=`<h4>${esc(ns()||'app')}.help (what agents discover)</h4><div class="cmd">${methods||'<span class="muted">add a method…</span>'}</div>`+
+      `<h4 style="margin-top:16px">pilotctl commands</h4><div class="cmd">${cmds}</div>`;
+  } catch(e){ el.innerHTML=`<span class="muted">preview unavailable (${esc(e.message)})</span>`; }
+}
+
+function renderReview(){
+  const s=submission();
+  const rows=[
+    ['App ID',s.id],['Version',s.version],['Description',s.description],
+    ['Backend',s.backend.base_url],
+    ...(s.backend.headers.map(h=>['Header',h.name+': '+h.value])),
+    ['Methods',s.methods.map(m=>`${m.name} (${m.http.verb} ${m.http.path}, ${m.latency})`).join('<br>')||'—'],
+    ['Display name',s.listing.display_name],['License',s.listing.license],
+    ['App description',s.listing.app_description],['Categories',(s.listing.categories||[]).join(', ')],
+    ['App type','HTTP API'],
+    ['Vendor',s.vendor.name+(s.vendor.url?' · '+s.vendor.url:'')],['Email',s.email],
+    ['Agent usage',s.vendor.agent_usage],['Capabilities',s.vendor.capabilities],
+  ];
+  document.getElementById('review-tbl').innerHTML=rows.map(([k,v])=>`<tr><th>${esc(k)}</th><td>${v||'<span style="color:var(--ink-faint)">—</span>'}</td></tr>`).join('');
+}
+
+async function doSubmit(){
+  const btn=document.getElementById('submit'); const banner=document.getElementById('submit-banner');
+  btn.disabled=true; banner.innerHTML='<div class="banner">Building, signing, and verifying on the server…</div>';
+  try {
+    const r=await fetch(API+'/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(submission())});
+    const d=await r.json();
+    if(r.ok){ banner.innerHTML=`<div class="banner ok"><b>Submitted ✓</b> — case <code>${esc(d.case_id)}</code> is now <b>pending</b> review. The server built, signed, and verified your adapter.</div>`; localStorage.removeItem(LS); }
+    else { const errs=(d.errors||[d.error||'submission failed']); banner.innerHTML=`<div class="banner bad"><b>Fix these:</b><ul>${errs.map(e=>`<li>${esc(e)}</li>`).join('')}</ul></div>`; btn.disabled=false; }
+  } catch(e){ banner.innerHTML=`<div class="banner bad">Could not reach the API: ${esc(e.message)}</div>`; btn.disabled=false; }
+}
+
+// intro ⇄ form view (+ restore the last view/step on reload)
+var elStart=document.getElementById('start'), elExit=document.getElementById('exit');
+var elIntro=document.getElementById('intro'), elForm=document.getElementById('form-view');
+if(elStart) elStart.onclick=function(){ elIntro.hidden=true; elForm.hidden=false; persistUI(); window.scrollTo(0,0); };
+if(elExit) elExit.onclick=function(){ elForm.hidden=true; elIntro.hidden=false; persistUI(); window.scrollTo(0,0); };
+try { var ui=JSON.parse(localStorage.getItem(UIK)||'{}'); if(ui && ui.entered){ step=Math.min(ui.step||0, STEPS.length-1); elIntro.hidden=true; elForm.hidden=false; } } catch(e){}
+
+render();
+</script>
+</body>
+</html>
