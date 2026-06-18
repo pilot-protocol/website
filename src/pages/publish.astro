@@ -146,11 +146,17 @@ const canonicalUrl = 'https://pilotprotocol.network/publish';
   #publish .navrow { display:flex; justify-content:space-between; align-items:center; margin-top:32px; }
   #publish .navrow .back { color:var(--c-dim); cursor:pointer; font-size:16px; background:none; border:none; padding:0; }
   #publish .navrow .back:hover { color:var(--c-acc); }
-  #publish .linkbtn { background:none; border:none; padding:0; color:var(--c-acc); cursor:pointer; font:inherit; font-size:14px; text-decoration:underline; }
-  #publish .linkbtn:hover { opacity:.8; }
-  #publish .otp { display:flex; gap:12px; flex-wrap:wrap; }
-  #publish .otp .otp-d { width:56px; height:66px; text-align:center; font-size:28px; font-weight:600; padding:0; caret-color:var(--c-acc); }
-  @media (max-width:520px){ #publish .otp { gap:8px; } #publish .otp .otp-d { width:44px; height:54px; font-size:22px; } }
+  #publish .choices { display:grid; gap:12px; margin-bottom:20px; }
+  #publish .choice { display:flex; gap:14px; align-items:flex-start; background:var(--c-card); border:1px solid var(--c-line2); border-radius:14px; padding:18px 20px; cursor:pointer; transition:border-color .12s, box-shadow .12s; }
+  #publish .choice:hover { border-color:var(--c-acc); }
+  #publish .choice input { width:auto; margin:3px 0 0; accent-color:var(--c-acc); }
+  #publish .choice.sel { border-color:var(--c-acc); box-shadow:0 0 0 3px color-mix(in oklch, var(--c-acc) 18%, transparent); }
+  #publish .choice b { display:block; font-size:16px; margin-bottom:3px; }
+  #publish .choice span { color:var(--c-dim); font-size:14px; }
+  #publish .choice.disabled { opacity:.65; cursor:not-allowed; background:#f1f0ea; }
+  #publish .choice.disabled:hover { border-color:var(--c-line2); }
+  #publish .badge { display:inline-block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--c-dim); border:1px solid var(--c-line2); border-radius:999px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
+  #publish .badge.ok { color:#3f6b00; border-color:#bce08a; background:#eef7e0; }
   #publish .btn[disabled] { opacity:.5; cursor:not-allowed; }
   #publish .toggle { display:flex; align-items:center; gap:11px; font-weight:500; }
   #publish .toggle input { width:auto; }
@@ -176,10 +182,6 @@ const LAT = { fast: 'under 5 seconds', med: 'up to 15 seconds', slow: 'up to 1 m
 const STEPS = ['Email', 'Identity', 'Backend', 'Methods', 'Listing', 'Vendor', 'Review'];
 let step = 0;
 
-// Email verification (preliminary step). verifyToken proves the email was
-// confirmed; it's persisted in UI state so a reload keeps you verified.
-let emailSent = false;
-let verifyToken = '';
 
 const blankParam = () => ({ name: '', type: 'string', required: false, description: '' });
 const blankMethod = () => ({ name: '', http: { verb: 'GET', path: '' }, latency: '', description: '', params: [blankParam()] });
@@ -188,6 +190,7 @@ const blankHeader = () => ({ name: '', value: '' });
 let state = load() || {
   email: '',
   id: 'io.pilot.', version: '', description: '',
+  app_type: 'api', // 'api' (available) | 'cli' (coming soon)
   backend: { base_url: '', headers: [blankHeader()] },
   methods: [blankMethod()],
   listing: { display_name: '', tagline: '', app_description: '', license: '', homepage: '', source_url: '', categories: '', keywords: '', requires_binary: false, binary_url: '' },
@@ -205,7 +208,7 @@ function submission() {
   const csv = s => (s||'').split(',').map(x=>x.trim()).filter(Boolean);
   return {
     id: state.id, version: state.version, description: state.description,
-    email: state.email, verify_token: verifyToken,
+    email: state.email,
     backend: { base_url: state.backend.base_url, headers: state.backend.headers.filter(h=>h.name.trim()) },
     methods: state.methods.filter(m=>m.name.trim()).map(m=>({
       name: m.name, description: m.description, latency: m.latency,
@@ -219,67 +222,13 @@ function submission() {
 
 // ── Email step (preliminary): collect → send code → verify ──
 function emailStepHTML(){
-  if (verifyToken){
-    return `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Email verified</h2></div>
-      <div class="card"><p style="margin:0;font-size:16px">✓ <b>${esc(state.email)}</b> is verified. We'll send submission updates and the review decision here.</p></div>
-      <div class="navrow"><button class="back" id="change-email2" type="button">Change email</button><button class="btn" id="next" type="button">Next →</button></div>`;
-  }
-  if (emailSent){
-    return `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Verify your email</h2></div>
-      <p class="lede2">We sent a 6-digit code to <b>${esc(state.email)}</b>. Enter it below — it expires in 10 minutes.</p>
-      <div class="card">
-        <div class="field"><label>Verification code</label>
-          <div class="otp" id="otp">${[0,1,2,3,4,5].map(i=>`<input class="otp-d" data-i="${i}" inputmode="numeric" maxlength="1" autocomplete="${i===0?'one-time-code':'off'}" aria-label="digit ${i+1}">`).join('')}</div>
-          <div class="err" id="e-code"></div></div>
-        <p class="desc"><button class="linkbtn" id="resend" type="button">Resend code</button> · <button class="linkbtn" id="change-email" type="button">Use a different email</button></p>
-      </div>
-      <div class="navrow"><span></span><button class="btn" id="verify-code" type="button">Verify &amp; continue →</button></div>`;
-  }
   return `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Your email</h2></div>
-    <p class="lede2">We'll send a one-time code to verify it. You'll get submission updates and the approval decision here.</p>
+    <p class="lede2">We'll use this to send you a submission confirmation and the review decision.</p>
     <div class="card">
-      <div class="field"><label>Email ${info('We send a 6-digit verification code here. Used for submission updates and the approval/rejection notice.')}</label>
+      <div class="field"><label>Email ${info('Where we send your submission confirmation and the approval/rejection notice.')}</label>
         <input id="f-email" type="email" autocomplete="email" placeholder="you@company.com" value="${esc(state.email)}">
         <div class="err" id="e-email"></div></div>
-    </div>
-    <div class="navrow"><span></span><button class="btn" id="send-code" type="button">Send code →</button></div>`;
-}
-
-// otpValue concatenates the 6 digit boxes. otpFill spreads a code across them.
-function otpValue(){ return [...document.querySelectorAll('#otp .otp-d')].map(b=>b.value).join(''); }
-function otpFill(code){ const bs=[...document.querySelectorAll('#otp .otp-d')]; for(let k=0;k<bs.length;k++) bs[k].value=(code||'')[k]||''; }
-function wireOtp(){
-  const boxes=[...document.querySelectorAll('#otp .otp-d')]; if(!boxes.length) return;
-  boxes.forEach((b,i)=>{
-    b.addEventListener('input',()=>{ b.value=b.value.replace(/\D/g,'').slice(0,1); if(b.value&&i<boxes.length-1) boxes[i+1].focus(); if(otpValue().length===6) verifyCode(); });
-    b.addEventListener('keydown',e=>{ if(e.key==='Backspace'&&!b.value&&i>0){ boxes[i-1].focus(); } else if(e.key==='Enter'){ verifyCode(); } });
-    b.addEventListener('paste',e=>{ e.preventDefault(); const t=((e.clipboardData||window.clipboardData).getData('text')||'').replace(/\D/g,'').slice(0,6); otpFill(t); (boxes[Math.min(t.length,5)]).focus(); if(t.length===6) verifyCode(); });
-  });
-  boxes[0].focus();
-}
-
-async function sendCode(){
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(state.email||'')){ show('e-email','Enter a valid email'); return; }
-  show('e-email','');
-  const btn=document.getElementById('send-code')||document.getElementById('resend'); if(btn) btn.disabled=true;
-  try {
-    const r=await fetch(API+'/api/email/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:state.email})});
-    const d=await r.json();
-    if(r.ok){ emailSent=true; render(); if(d.dev_code) otpFill(d.dev_code); }
-    else { show('e-email', d.error||'Could not send the code'); if(btn) btn.disabled=false; }
-  } catch(e){ show('e-email','Network error: '+e.message); if(btn) btn.disabled=false; }
-}
-
-async function verifyCode(){
-  const code=otpValue();
-  if(code.length<6){ show('e-code','Enter all 6 digits'); return; }
-  const btn=document.getElementById('verify-code'); if(btn) btn.disabled=true;
-  try {
-    const r=await fetch(API+'/api/email/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:state.email,code:code})});
-    const d=await r.json();
-    if(r.ok){ verifyToken=d.token; persistUI(); step++; render(); scrollTop(); }
-    else { show('e-code', d.error||'That code is incorrect or expired'); otpFill(''); const f=document.querySelector('#otp .otp-d'); if(f) f.focus(); if(btn) btn.disabled=false; }
-  } catch(e){ show('e-code','Network error: '+e.message); if(btn) btn.disabled=false; }
+    </div>${nav()}`;
 }
 
 function renderStepper() {
@@ -301,7 +250,7 @@ function render() {
 // fields are already saved separately).
 const UIK = 'pilot.publish.ui.v1';
 function persistUI() {
-  try { localStorage.setItem(UIK, JSON.stringify({ step: step, entered: !document.getElementById('form-view').hidden, verifyToken: verifyToken })); } catch (e) {}
+  try { localStorage.setItem(UIK, JSON.stringify({ step: step, entered: !document.getElementById('form-view').hidden })); } catch (e) {}
 }
 
 // ── per-step HTML ──
@@ -322,6 +271,17 @@ const STEPS_HTML = [
     </div>${nav()}`,
 
   () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Backend</h2></div>
+    <p class="desc" style="margin:-8px 0 16px">What kind of app are you publishing?</p>
+    <div class="choices">
+      <label class="choice sel">
+        <input type="radio" name="apptype" value="api" checked>
+        <div><b>HTTP API <span class="badge ok">available</span></b><span>Your app is reachable over HTTP. We generate, sign, and verify an adapter that forwards each method to it.</span></div>
+      </label>
+      <label class="choice disabled">
+        <input type="radio" name="apptype" value="cli" disabled>
+        <div><b>CLI / binary <span class="badge">coming soon</span></b><span>Ship a real command-line binary to the host. Native delivery is in the works — not available yet.</span></div>
+      </label>
+    </div>
     <div class="explain">Your adapter forwards each method to your app. Add any auth headers it needs.
       A value like <code>\${WEATHER_TOKEN}</code> is a <b>secret placeholder</b>: the operator who installs the app
       supplies it at install time (from their environment or a local secrets file) — it is <b>never</b> stored in the published app.</div>
@@ -359,10 +319,6 @@ const STEPS_HTML = [
         <div class="field"><label>Categories ${info('Comma-separated, e.g. search, weather')}</label><input id="f-l-categories" placeholder="weather, data" value="${esc(state.listing.categories)}"></div>
         <div class="field"><label>Keywords</label><input id="f-l-keywords" placeholder="weather, forecast" value="${esc(state.listing.keywords)}"></div>
       </div>
-      <div class="field"><label class="toggle"><input type="checkbox" id="f-l-requires_binary" ${state.listing.requires_binary?'checked':''}> This app ships a binary that must be downloaded to the host ${info('For native/CLI apps: the store delivers a real binary. Provide where it is hosted (per-OS/arch). Native delivery is in preview.')}</label>
-        <div id="binwrap" style="${state.listing.requires_binary?'':'display:none'};margin-top:10px">
-          <input id="f-l-binary_url" placeholder="https://dl.example.com/app-{os}-{arch}" value="${esc(state.listing.binary_url)}">
-          <p class="desc">Download URL for the binary (we pin its checksum at review). <span class="pill">preview</span></p></div></div>
     </div>${nav()}`,
 
   () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Vendor</h2></div>
@@ -434,12 +390,6 @@ function wire() {
 
   if (cur==='Email'){
     const em=document.getElementById('f-email'); if(em) em.addEventListener('input',()=>{ state.email=em.value.trim(); save(); });
-    const sc=document.getElementById('send-code'); if(sc) sc.onclick=sendCode;
-    const vc=document.getElementById('verify-code'); if(vc) vc.onclick=verifyCode;
-    wireOtp();
-    const rs=document.getElementById('resend'); if(rs) rs.onclick=sendCode;
-    const ce=document.getElementById('change-email'); if(ce) ce.onclick=()=>{ emailSent=false; render(); };
-    const ce2=document.getElementById('change-email2'); if(ce2) ce2.onclick=()=>{ verifyToken=''; emailSent=false; persistUI(); render(); };
   }
   if (cur==='Identity'){
     const idn=document.getElementById('f-idname'); if(idn) idn.addEventListener('input',()=>{ state.id='io.pilot.'+idn.value.trim(); document.querySelector('#publish .prefixed + .desc')?.replaceChildren(); save(); const d=idn.closest('.field').querySelector('.desc'); if(d) d.innerHTML='Your app installs as <code>'+esc(state.id)+'</code>.'; });
@@ -473,8 +423,7 @@ function wire() {
     });
   }
   if (cur==='Listing'){
-    ['display_name','tagline','app_description','license','homepage','source_url','categories','keywords','binary_url'].forEach(k=>bindVal('f-l-'+k,v=>state.listing[k]=v));
-    const rb=document.getElementById('f-l-requires_binary'); if(rb) rb.addEventListener('change',()=>{ state.listing.requires_binary=rb.checked; document.getElementById('binwrap').style.display=rb.checked?'':'none'; save(); });
+    ['display_name','tagline','app_description','license','homepage','source_url','categories','keywords'].forEach(k=>bindVal('f-l-'+k,v=>state.listing[k]=v));
   }
   if (cur==='Vendor'){ ['name','url','agent_usage','capabilities'].forEach(k=>bindVal('f-v-'+k,v=>state.vendor[k]=v)); }
   if (cur==='Review'){ renderReview(); document.getElementById('submit').onclick=doSubmit; }
@@ -485,7 +434,7 @@ function show(id,msg){ const el=document.getElementById(id); if(el) el.textConte
 function validateStep(){
   let ok=true; const bad=(id,m)=>{show(id,m); ok=false;};
   const cur=STEPS[step];
-  if (cur==='Email'){ if(!verifyToken){ bad('e-code','Verify your email to continue'); } }
+  if (cur==='Email'){ if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(state.email||'')) bad('e-email','Enter a valid email'); else show('e-email',''); }
   if (cur==='Identity'){
     if(!/^io\.pilot\.[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(state.id)) bad('e-id','Must be io.pilot.<name> (lowercase, digits, hyphens)'); else show('e-id','');
     if(!/^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/.test(state.version)) bad('e-version','Semver, e.g. 0.1.0'); else show('e-version','');
@@ -525,7 +474,7 @@ function renderReview(){
     ['Methods',s.methods.map(m=>`${m.name} (${m.http.verb} ${m.http.path}, ${m.latency})`).join('<br>')||'—'],
     ['Display name',s.listing.display_name],['License',s.listing.license],
     ['App description',s.listing.app_description],['Categories',(s.listing.categories||[]).join(', ')],
-    ['Requires binary',s.listing.requires_binary?('yes — '+s.listing.binary_url):'no'],
+    ['App type','HTTP API'],
     ['Vendor',s.vendor.name+(s.vendor.url?' · '+s.vendor.url:'')],['Email',s.email],
     ['Agent usage',s.vendor.agent_usage],['Capabilities',s.vendor.capabilities],
   ];
@@ -548,7 +497,7 @@ var elStart=document.getElementById('start'), elExit=document.getElementById('ex
 var elIntro=document.getElementById('intro'), elForm=document.getElementById('form-view');
 if(elStart) elStart.onclick=function(){ elIntro.hidden=true; elForm.hidden=false; persistUI(); window.scrollTo(0,0); };
 if(elExit) elExit.onclick=function(){ elForm.hidden=true; elIntro.hidden=false; persistUI(); window.scrollTo(0,0); };
-try { var ui=JSON.parse(localStorage.getItem(UIK)||'{}'); if(ui){ if(ui.verifyToken) verifyToken=ui.verifyToken; if(ui.entered){ step=Math.min(ui.step||0, STEPS.length-1); elIntro.hidden=true; elForm.hidden=false; } } } catch(e){}
+try { var ui=JSON.parse(localStorage.getItem(UIK)||'{}'); if(ui && ui.entered){ step=Math.min(ui.step||0, STEPS.length-1); elIntro.hidden=true; elForm.hidden=false; } } catch(e){}
 
 render();
 </script>
