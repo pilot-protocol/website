@@ -15,10 +15,10 @@
 //   GEMINI_API_KEY=... node scripts/regen-plain.mjs [page-slug ...]
 //
 //   If no page-slug is passed, all pages in the manifest are regenerated.
-//   Valid slugs: index, networks, p2p, mcp, plans
+//   Valid slugs: index, p2p, mcp, plans
 //
-//   Data-driven pages (skills/, setups/, setups/[slug]) are NOT regenerated
-//   here — they render directly from the upstream JSON at build time.
+//   Data-driven pages (skills/) are NOT regenerated here — they render
+//   directly from the upstream JSON at build time.
 //
 // Env:
 //   GEMINI_API_KEY   — required
@@ -58,13 +58,6 @@ const MANIFEST = {
     title: 'Pilot Protocol — plain',
     canonical: 'https://pilotprotocol.network/plain/',
     description: 'Pilot Protocol is an overlay network for AI agents: virtual addresses, ports, and encrypted tunnels over UDP.',
-  },
-  networks: {
-    source: 'src/pages/for/networks.astro',
-    dest: 'src/pages/plain/networks.astro',
-    title: 'Networks — Pilot Protocol',
-    canonical: 'https://pilotprotocol.network/plain/networks/',
-    description: 'Live networks on Pilot Protocol: Backbone, Data Exchange, private networks, upcoming interest networks.',
   },
   p2p: {
     source: 'src/pages/for/p2p.astro',

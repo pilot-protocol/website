@@ -70,20 +70,7 @@ export async function GET() {
     add(loc, lastmod, p, freq);
   }
 
-  // 2. Dynamic /for/setups/<slug> — expanded from the same source the
-  //    page's getStaticPaths uses. Best-effort: a fetch failure just
-  //    omits these rather than breaking the build.
-  try {
-    const res = await fetch('https://raw.githubusercontent.com/TeoSlayer/pilot-skills/main/setups.json');
-    if (res.ok) {
-      const catalog: { setups?: Array<{ slug: string }> } = await res.json();
-      for (const s of catalog.setups ?? []) add(`/for/setups/${s.slug}`, today, 0.7);
-    }
-  } catch {
-    // offline build — skip dynamic setup pages
-  }
-
-  // 3. Static assets served from public/ that aren't .astro routes.
+  // 2. Static assets served from public/ that aren't .astro routes.
   add('/llms.txt', '2026-02-28', 0.5);
   add('/brand/', today, 0.6);
   add('/research/ietf/draft-teodor-pilot-problem-statement-01.html', '2026-04-06', 0.7);
