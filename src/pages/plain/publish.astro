@@ -1,0 +1,52 @@
+---
+import PlainLayout from '../../layouts/PlainLayout.astro';
+---
+<PlainLayout title="Publish an app — Pilot Protocol" description="Publish your existing HTTP API on the Pilot Protocol app store. Describe it once; we generate, sign, and verify an agent-first adapter." canonical="https://pilotprotocol.network/plain/publish/">
+
+<h1>Publish an app.</h1>
+
+<p>Bring your existing HTTP API. Describe it once and Pilot generates, signs, and verifies an agent-first adapter for it, then a reviewer publishes it to the app store. You do not upload code, and your secrets stay yours.</p>
+
+<h2>Two ways to publish</h2>
+<ul>
+  <li>Browser wizard (no code): https://pilotprotocol.network/publish</li>
+  <li>By PR (from the terminal): the pilot-app toolkit plus one pull request to pilot-protocol/app-template.</li>
+</ul>
+
+<h2>Browser wizard steps</h2>
+<ul>
+  <li>Email: where we send your submission confirmation and the review decision.</li>
+  <li>Identity: app id (io.pilot.&lt;name&gt;), version (semver), and a one-line description.</li>
+  <li>Backend: the app type (HTTP API; CLI/binary is coming soon), the backend base URL, and any auth headers. Header values may use $&#123;TOKEN&#125; placeholders that the operator supplies at install — never stored in the app.</li>
+  <li>Methods: each method an agent can call — name (&lt;ns&gt;.&lt;verb&gt;), HTTP route, latency class (fast under 5s, medium up to 15s, slow up to 1 minute), description, and parameters.</li>
+  <li>Listing: display name, description, license, and categories for the store page.</li>
+  <li>Vendor: who you are, how autonomous agents should use the app, and the list of capabilities.</li>
+  <li>Review and submit: the server builds, signs, and verifies the adapter and stores it for review.</li>
+</ul>
+
+<h2>Publish by PR</h2>
+<ul>
+  <li>Install: <code>go install github.com/pilot-protocol/app-template/cmd/pilot-app@latest</code></li>
+  <li>Spec: <code>pilot-app example &gt; pilot.app.yaml</code>, then edit it.</li>
+  <li>Validate: <code>pilot-app validate</code></li>
+  <li>Scaffold: <code>pilot-app init -o ./my-app</code></li>
+  <li>Package (build, sha256-pin, sign, tar): <code>make package</code></li>
+  <li>Verify locally (optional): <code>pilot-app verify io.pilot.&lt;id&gt;-&lt;ver&gt;.tar.gz</code></li>
+  <li>Submit: <code>pilot-app submit -C . --prepare /path/to/app-template-fork</code>, commit submissions/&lt;id&gt;/, and open a PR to pilot-protocol/app-template.</li>
+</ul>
+
+<h2>What happens after you submit</h2>
+<ul>
+  <li>CI verifies the bundle on the PR. (Browser flow: the server already built and verified it.)</li>
+  <li>A maintainer reviews. On approval, automation releases the bundle on pilot-protocol/catalog and adds the catalogue entry.</li>
+  <li>Then any agent can install it: <code>pilotctl appstore install &lt;your.id&gt;</code></li>
+</ul>
+
+<h2>Requirements</h2>
+<ul>
+  <li>An existing HTTP API. CLI/binary apps are coming soon.</li>
+  <li>A valid email (browser flow) for the confirmation and the review decision.</li>
+  <li>You confirm you have the right to publish the app and agree to the Terms and Acceptable Use Policy.</li>
+</ul>
+
+</PlainLayout>
