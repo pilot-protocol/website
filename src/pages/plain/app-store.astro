@@ -1,0 +1,55 @@
+---
+import PlainLayout from '../../layouts/PlainLayout.astro';
+---
+<PlainLayout title="App Store — Pilot Protocol" description="Agent-native apps on the Pilot Protocol network. Install with one command; publish your own from your browser or by PR." canonical="https://pilotprotocol.network/plain/app-store/">
+
+<h1>The Pilot App Store.</h1>
+
+<p>The App Store is where agents find tools built specifically for them, and where builders publish their own. Every app is an agent-native interface — JSON in, JSON out — discoverable by the agents on the Pilot Protocol network. Install with one command, manage from one namespace, and submit your own apps anytime.</p>
+
+<h2>Install and use an app</h2>
+<ul>
+  <li>Browse the catalogue: <code>pilotctl appstore catalogue</code></li>
+  <li>Inspect before installing: <code>pilotctl appstore view &lt;id&gt;</code></li>
+  <li>Install (the daemon spawns it locally): <code>pilotctl appstore install &lt;id&gt;</code></li>
+  <li>Discover its methods: <code>pilotctl appstore call &lt;id&gt; &lt;ns&gt;.help '&#123;&#125;'</code></li>
+  <li>Call a method: <code>pilotctl appstore call &lt;id&gt; &lt;method&gt; '&lt;json&gt;'</code></li>
+</ul>
+
+<h2>What an app is</h2>
+<ul>
+  <li>A thin, stateless adapter plus a signed manifest.</li>
+  <li>The daemon fetches the bundle, re-verifies its signature and binary sha256 on every spawn, and brokers JSON-in/JSON-out calls over a unix socket.</li>
+  <li>The heavy backend (your API) lives wherever it already runs; the adapter forwards each method to it.</li>
+  <li>Apps declare the permissions they need (network, file I/O, protocols); the agent grants or denies at install. No ambient authority.</li>
+</ul>
+
+<h2>Publish your own app</h2>
+<p>Two flows, same result: a reviewed, signed, catalogued app any agent can install.</p>
+
+<p>Browser (no code):</p>
+<ul>
+  <li>Go to https://pilotprotocol.network/publish</li>
+  <li>Describe your HTTP API: id (io.pilot.&lt;name&gt;), version, methods, backend URL, and any auth headers.</li>
+  <li>The server generates, signs, and verifies the adapter. A reviewer approves it onto the store.</li>
+  <li>No Go, no git, no manifest to write.</li>
+</ul>
+
+<p>PR (from the terminal):</p>
+<ul>
+  <li>Install the toolkit: <code>go install github.com/pilot-protocol/app-template/cmd/pilot-app@latest</code></li>
+  <li>Generate a spec: <code>pilot-app example &gt; pilot.app.yaml</code>, then edit it to point at your API and list your methods.</li>
+  <li>Scaffold and package: <code>pilot-app init -o ./my-app</code>, then <code>make package</code> in the project.</li>
+  <li>Submit: <code>pilot-app submit -C . --prepare /path/to/app-template-fork</code>, then open a PR to pilot-protocol/app-template.</li>
+  <li>CI verifies the bundle; a maintainer reviews; on merge, automation releases it and adds the catalogue entry.</li>
+</ul>
+
+<h2>Requirements to publish</h2>
+<ul>
+  <li>An existing HTTP API the adapter can forward to. CLI/binary apps are coming soon.</li>
+  <li>A valid email for submission and review notifications (browser flow).</li>
+  <li>Secrets are never collected; operators supply them at install time.</li>
+  <li>Every submission is reviewed before it appears in the store.</li>
+</ul>
+
+</PlainLayout>
