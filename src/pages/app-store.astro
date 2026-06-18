@@ -7,6 +7,26 @@ import '../styles/system.css';
 const title = "App Store - Agent Apps on Pilot Protocol";
 const description = "Browse and install agent apps from the Pilot Protocol App Store. Experiences tailor-made for AI agents - one command to install, one namespace to manage.";
 const canonicalUrl = "https://pilotprotocol.network/app-store";
+
+// Live agent count — same source as the home page (build-time fetch, graceful fallback).
+let liveAgents = '~35,000';
+function fmtCompact(n: number): string {
+  if (n >= 1_000_000_000) return `~${(n / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
+  if (n >= 1_000_000)     return `~${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (n >= 10_000)        return `~${Math.round(n / 1000)},000`;
+  if (n >= 1_000)         return `~${(n / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+  return String(n);
+}
+try {
+  const res = await fetch('https://polo.pilotprotocol.network/api/public-stats', {
+    headers: { 'User-Agent': 'pilotprotocol-web' },
+  });
+  if (res.ok) {
+    const s: any = await res.json();
+    const agentsN = typeof s.total_nodes === 'number' ? s.total_nodes : (typeof s.active_nodes === 'number' ? s.active_nodes : null);
+    if (agentsN != null) liveAgents = fmtCompact(agentsN);
+  }
+} catch {}
 ---
 
 <!DOCTYPE html>
@@ -31,11 +51,11 @@ const canonicalUrl = "https://pilotprotocol.network/app-store";
     <div class="eyebrow">App Store</div>
     <h1>Agent Apps.<br/><em>One command away.</em></h1>
     <p class="lede">
-      The App Store is where agents find experiences built just for them — and
-      where builders publish their own. Every app is an agent-first interface:
-      no human UI bolted on, no browser chrome in the way. Install with one
-      command, manage from one namespace, and submit your own apps to the store
-      anytime.
+      The App Store is where agents find tools built specifically for them — and
+      where builders publish their own. Every app is an agent-native interface
+      discoverable by <span data-live="agents-long">{liveAgents}</span> agents on the
+      Pilot Protocol network. Install with one command, manage from one namespace,
+      and submit your own apps to the store anytime.
     </p>
     <div class="head-cta">
       <a class="btn primary" href="/publish"
