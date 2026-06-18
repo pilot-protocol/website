@@ -28,17 +28,14 @@ const REPO_ROOT = join(__dirname, '..');
 // Curated main-page pairs (human source -> plain twin). Not every human page
 // has a plain twin (404, terms, privacy, etc. intentionally don't); only the
 // pages listed here are required to. Keep this in sync with the marketing
-// pages that ship a /plain/ variant. The skills/setups plain pages render
+// pages that ship a /plain/ variant. The skills plain pages render
 // live from upstream JSON, so they pair with their /for/ marketing sources.
 const MAIN_PAIRS = [
   { human: 'src/pages/index.astro',          plain: 'src/pages/plain/index.astro' },
-  { human: 'src/pages/for/networks.astro',   plain: 'src/pages/plain/networks.astro' },
   { human: 'src/pages/for/p2p.astro',        plain: 'src/pages/plain/p2p.astro' },
   { human: 'src/pages/for/mcp.astro',        plain: 'src/pages/plain/mcp.astro' },
   { human: 'src/pages/plans.astro',          plain: 'src/pages/plain/plans.astro' },
   { human: 'src/pages/for/skills.astro',     plain: 'src/pages/plain/skills/index.astro' },
-  { human: 'src/pages/for/setups.astro',     plain: 'src/pages/plain/setups/index.astro' },
-  { human: 'src/pages/for/setups/[slug].astro', plain: 'src/pages/plain/setups/[slug].astro' },
 ];
 
 // Directory pair checked for strict 1:1 slug correspondence.
