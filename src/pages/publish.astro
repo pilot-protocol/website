@@ -146,6 +146,11 @@ const canonicalUrl = 'https://pilotprotocol.network/publish';
   #publish .navrow { display:flex; justify-content:space-between; align-items:center; margin-top:32px; }
   #publish .navrow .back { color:var(--c-dim); cursor:pointer; font-size:16px; background:none; border:none; padding:0; }
   #publish .navrow .back:hover { color:var(--c-acc); }
+  #publish .linkbtn { background:none; border:none; padding:0; color:var(--c-acc); cursor:pointer; font:inherit; font-size:14px; text-decoration:underline; }
+  #publish .linkbtn:hover { opacity:.8; }
+  #publish .otp { display:flex; gap:12px; flex-wrap:wrap; }
+  #publish .otp .otp-d { width:56px; height:66px; text-align:center; font-size:28px; font-weight:600; padding:0; caret-color:var(--c-acc); }
+  @media (max-width:520px){ #publish .otp { gap:8px; } #publish .otp .otp-d { width:44px; height:54px; font-size:22px; } }
   #publish .btn[disabled] { opacity:.5; cursor:not-allowed; }
   #publish .toggle { display:flex; align-items:center; gap:11px; font-weight:500; }
   #publish .toggle input { width:auto; }
@@ -168,19 +173,25 @@ const LS = 'pilot.publish.draft.v1';
 
 const LAT = { fast: 'under 5 seconds', med: 'up to 15 seconds', slow: 'up to 1 minute' };
 
-const STEPS = ['Identity', 'Backend', 'Methods', 'Listing', 'Vendor', 'Review'];
+const STEPS = ['Email', 'Identity', 'Backend', 'Methods', 'Listing', 'Vendor', 'Review'];
 let step = 0;
+
+// Email verification (preliminary step). verifyToken proves the email was
+// confirmed; it's persisted in UI state so a reload keeps you verified.
+let emailSent = false;
+let verifyToken = '';
 
 const blankParam = () => ({ name: '', type: 'string', required: false, description: '' });
 const blankMethod = () => ({ name: '', http: { verb: 'GET', path: '' }, latency: '', description: '', params: [blankParam()] });
 const blankHeader = () => ({ name: '', value: '' });
 
 let state = load() || {
+  email: '',
   id: 'io.pilot.', version: '', description: '',
   backend: { base_url: '', headers: [blankHeader()] },
   methods: [blankMethod()],
   listing: { display_name: '', tagline: '', app_description: '', license: '', homepage: '', source_url: '', categories: '', keywords: '', requires_binary: false, binary_url: '' },
-  vendor: { name: '', url: '', contact: '', agent_usage: '', capabilities: '' },
+  vendor: { name: '', url: '', agent_usage: '', capabilities: '' },
 };
 
 function load() { try { return JSON.parse(localStorage.getItem(LS)); } catch { return null; } }
@@ -194,6 +205,7 @@ function submission() {
   const csv = s => (s||'').split(',').map(x=>x.trim()).filter(Boolean);
   return {
     id: state.id, version: state.version, description: state.description,
+    email: state.email, verify_token: verifyToken,
     backend: { base_url: state.backend.base_url, headers: state.backend.headers.filter(h=>h.name.trim()) },
     methods: state.methods.filter(m=>m.name.trim()).map(m=>({
       name: m.name, description: m.description, latency: m.latency,
@@ -201,8 +213,73 @@ function submission() {
       params: m.params.filter(p=>p.name.trim()),
     })),
     listing: { ...state.listing, categories: csv(state.listing.categories), keywords: csv(state.listing.keywords) },
-    vendor: state.vendor,
+    vendor: { ...state.vendor, contact: state.email },
   };
+}
+
+// ── Email step (preliminary): collect → send code → verify ──
+function emailStepHTML(){
+  if (verifyToken){
+    return `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Email verified</h2></div>
+      <div class="card"><p style="margin:0;font-size:16px">✓ <b>${esc(state.email)}</b> is verified. We'll send submission updates and the review decision here.</p></div>
+      <div class="navrow"><button class="back" id="change-email2" type="button">Change email</button><button class="btn" id="next" type="button">Next →</button></div>`;
+  }
+  if (emailSent){
+    return `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Verify your email</h2></div>
+      <p class="lede2">We sent a 6-digit code to <b>${esc(state.email)}</b>. Enter it below — it expires in 10 minutes.</p>
+      <div class="card">
+        <div class="field"><label>Verification code</label>
+          <div class="otp" id="otp">${[0,1,2,3,4,5].map(i=>`<input class="otp-d" data-i="${i}" inputmode="numeric" maxlength="1" autocomplete="${i===0?'one-time-code':'off'}" aria-label="digit ${i+1}">`).join('')}</div>
+          <div class="err" id="e-code"></div></div>
+        <p class="desc"><button class="linkbtn" id="resend" type="button">Resend code</button> · <button class="linkbtn" id="change-email" type="button">Use a different email</button></p>
+      </div>
+      <div class="navrow"><span></span><button class="btn" id="verify-code" type="button">Verify &amp; continue →</button></div>`;
+  }
+  return `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Your email</h2></div>
+    <p class="lede2">We'll send a one-time code to verify it. You'll get submission updates and the approval decision here.</p>
+    <div class="card">
+      <div class="field"><label>Email ${info('We send a 6-digit verification code here. Used for submission updates and the approval/rejection notice.')}</label>
+        <input id="f-email" type="email" autocomplete="email" placeholder="you@company.com" value="${esc(state.email)}">
+        <div class="err" id="e-email"></div></div>
+    </div>
+    <div class="navrow"><span></span><button class="btn" id="send-code" type="button">Send code →</button></div>`;
+}
+
+// otpValue concatenates the 6 digit boxes. otpFill spreads a code across them.
+function otpValue(){ return [...document.querySelectorAll('#otp .otp-d')].map(b=>b.value).join(''); }
+function otpFill(code){ const bs=[...document.querySelectorAll('#otp .otp-d')]; for(let k=0;k<bs.length;k++) bs[k].value=(code||'')[k]||''; }
+function wireOtp(){
+  const boxes=[...document.querySelectorAll('#otp .otp-d')]; if(!boxes.length) return;
+  boxes.forEach((b,i)=>{
+    b.addEventListener('input',()=>{ b.value=b.value.replace(/\D/g,'').slice(0,1); if(b.value&&i<boxes.length-1) boxes[i+1].focus(); if(otpValue().length===6) verifyCode(); });
+    b.addEventListener('keydown',e=>{ if(e.key==='Backspace'&&!b.value&&i>0){ boxes[i-1].focus(); } else if(e.key==='Enter'){ verifyCode(); } });
+    b.addEventListener('paste',e=>{ e.preventDefault(); const t=((e.clipboardData||window.clipboardData).getData('text')||'').replace(/\D/g,'').slice(0,6); otpFill(t); (boxes[Math.min(t.length,5)]).focus(); if(t.length===6) verifyCode(); });
+  });
+  boxes[0].focus();
+}
+
+async function sendCode(){
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(state.email||'')){ show('e-email','Enter a valid email'); return; }
+  show('e-email','');
+  const btn=document.getElementById('send-code')||document.getElementById('resend'); if(btn) btn.disabled=true;
+  try {
+    const r=await fetch(API+'/api/email/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:state.email})});
+    const d=await r.json();
+    if(r.ok){ emailSent=true; render(); if(d.dev_code) otpFill(d.dev_code); }
+    else { show('e-email', d.error||'Could not send the code'); if(btn) btn.disabled=false; }
+  } catch(e){ show('e-email','Network error: '+e.message); if(btn) btn.disabled=false; }
+}
+
+async function verifyCode(){
+  const code=otpValue();
+  if(code.length<6){ show('e-code','Enter all 6 digits'); return; }
+  const btn=document.getElementById('verify-code'); if(btn) btn.disabled=true;
+  try {
+    const r=await fetch(API+'/api/email/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:state.email,code:code})});
+    const d=await r.json();
+    if(r.ok){ verifyToken=d.token; persistUI(); step++; render(); scrollTop(); }
+    else { show('e-code', d.error||'That code is incorrect or expired'); otpFill(''); const f=document.querySelector('#otp .otp-d'); if(f) f.focus(); if(btn) btn.disabled=false; }
+  } catch(e){ show('e-code','Network error: '+e.message); if(btn) btn.disabled=false; }
 }
 
 function renderStepper() {
@@ -216,7 +293,7 @@ function render() {
   renderStepper();
   root2.innerHTML = STEPS_HTML[step]();
   wire();
-  if (step === 2 || step === 5) refreshPreview();
+  if (STEPS[step] === 'Methods' || STEPS[step] === 'Review') refreshPreview();
   persistUI();
 }
 
@@ -224,12 +301,14 @@ function render() {
 // fields are already saved separately).
 const UIK = 'pilot.publish.ui.v1';
 function persistUI() {
-  try { localStorage.setItem(UIK, JSON.stringify({ step: step, entered: !document.getElementById('form-view').hidden })); } catch (e) {}
+  try { localStorage.setItem(UIK, JSON.stringify({ step: step, entered: !document.getElementById('form-view').hidden, verifyToken: verifyToken })); } catch (e) {}
 }
 
 // ── per-step HTML ──
 const STEPS_HTML = [
-  () => `<div class="stephdr"><span class="k">Step 1 of 6</span><h2>Identity</h2></div>
+  () => emailStepHTML(),
+
+  () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Identity</h2></div>
     <div class="card">
       <div class="row2">
         <div class="field"><label>App ID ${info('Reverse-DNS id under the io.pilot namespace. Lowercase letters, digits, hyphens.')}</label>
@@ -242,7 +321,7 @@ const STEPS_HTML = [
         <input id="f-description" placeholder="Current weather and forecasts." value="${esc(state.description)}"><div class="err" id="e-description"></div></div>
     </div>${nav()}`,
 
-  () => `<div class="stephdr"><span class="k">Step 2 of 6</span><h2>Backend</h2></div>
+  () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Backend</h2></div>
     <div class="explain">Your adapter forwards each method to your app. Add any auth headers it needs.
       A value like <code>\${WEATHER_TOKEN}</code> is a <b>secret placeholder</b>: the operator who installs the app
       supplies it at install time (from their environment or a local secrets file) — it is <b>never</b> stored in the published app.</div>
@@ -255,14 +334,14 @@ const STEPS_HTML = [
       </div>
     </div>${nav()}`,
 
-  () => `<div class="stephdr"><span class="k">Step 3 of 6</span><h2>Methods</h2></div>
+  () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Methods</h2></div>
     <p class="desc" style="margin:-8px 0 16px">Each method is one call an agent can make. Give it a clear name, the backend route, a latency class, a description, and its parameters. The live preview shows exactly what agents will see and run.</p>
     <div id="methods">${state.methods.map((m,i)=>methodCard(m,i)).join('')}</div>
     <button class="iconbtn" id="add-method" type="button">+ method</button>
     <div class="err" id="e-methods"></div>
     <div class="preview" id="preview"></div>${nav()}`,
 
-  () => `<div class="stephdr"><span class="k">Step 4 of 6</span><h2>Listing</h2></div>
+  () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Listing</h2></div>
     <p class="desc" style="margin:-8px 0 16px">How the app appears in the store.</p>
     <div class="card">
       <div class="row2">
@@ -286,21 +365,21 @@ const STEPS_HTML = [
           <p class="desc">Download URL for the binary (we pin its checksum at review). <span class="pill">preview</span></p></div></div>
     </div>${nav()}`,
 
-  () => `<div class="stephdr"><span class="k">Step 5 of 6</span><h2>Vendor</h2></div>
+  () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Vendor</h2></div>
     <p class="desc" style="margin:-8px 0 16px">About you, and how agents should use this app.</p>
     <div class="card">
       <div class="row2">
         <div class="field"><label>Vendor name</label><input id="f-v-name" placeholder="Acme Inc." value="${esc(state.vendor.name)}"></div>
         <div class="field"><label>Vendor URL</label><input id="f-v-url" placeholder="https://acme.example" value="${esc(state.vendor.url)}"></div>
       </div>
-      <div class="field"><label>Contact ${info('Email or URL a reviewer can reach you at.')}</label><input id="f-v-contact" placeholder="apps@acme.example" value="${esc(state.vendor.contact)}"></div>
+      <p class="desc" style="margin:-6px 0 18px">We'll reach you at your verified email: <b>${esc(state.email)}</b>.</p>
       <div class="field"><label>How will autonomous AI agents use this app? ${info('Include package details, whether methods must be called in a specific order, auth/setup, and anything an agent needs to use it correctly.')}</label>
         <textarea id="f-v-agent_usage" placeholder="e.g. Call search first to get a result id, then fetch with that id. No human steps required…">${esc(state.vendor.agent_usage)}</textarea></div>
       <div class="field"><label>List of all capabilities ${info('Everything this app can do, in plain language — one per line is fine.')}</label>
         <textarea id="f-v-capabilities" placeholder="- Search the web&#10;- Fetch page contents&#10;- Summarize a URL">${esc(state.vendor.capabilities)}</textarea></div>
     </div>${nav()}`,
 
-  () => `<div class="stephdr"><span class="k">Step 6 of 6</span><h2>Review &amp; submit</h2></div>
+  () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Review &amp; submit</h2></div>
     <div id="submit-banner"></div>
     <div class="card"><table class="review-tbl" id="review-tbl"></table></div>
     <div class="preview" id="preview"></div>
@@ -323,9 +402,8 @@ function methodCard(m,i){
       <div class="field"><span class="ghead">Method name ${info('Prefixed with your namespace, e.g. '+esc(ns()||'app')+'.search')}</span><input class="m-name" placeholder="${esc(ns()||'app')}.search" value="${esc(m.name)}"></div>
       <div class="field"><span class="ghead">Verb</span><select class="m-verb"><option ${m.http.verb==='GET'?'selected':''}>GET</option><option ${m.http.verb==='POST'?'selected':''}>POST</option></select></div>
       <div class="field"><span class="ghead">Path ${info('Backend route. GET → params become the query string; POST → JSON body.')}</span><input class="m-path" placeholder="/search" value="${esc(m.http.path)}"></div>
-      <div class="field"><span class="ghead">Latency ${info('How long a typical call takes. Agents use this to pick the cheapest method that fits.')}</span><select class="m-latency"><option value="">Select…</option>${['fast','med','slow'].map(l=>`<option value="${l}" ${m.latency===l?'selected':''}>${l==='med'?'Medium':l[0].toUpperCase()+l.slice(1)}</option>`).join('')}</select></div>
+      <div class="field"><span class="ghead">Latency ${info('How long a typical call takes — agents use it to pick the cheapest method that fits. Fast: under 5s · Medium: up to 15s · Slow: up to 1 min.')}</span><select class="m-latency"><option value="">Select…</option>${['fast','med','slow'].map(l=>`<option value="${l}" ${m.latency===l?'selected':''}>${l==='med'?'Medium':l[0].toUpperCase()+l.slice(1)}</option>`).join('')}</select></div>
     </div>
-    <p class="latref"><b>Fast</b> under 5s &nbsp;·&nbsp; <b>Medium</b> up to 15s &nbsp;·&nbsp; <b>Slow</b> up to 1 min</p>
     <div class="field"><span class="ghead">Description ${info('Shown in the help doc agents read. Be specific about what it returns.')}</span>
       <textarea class="m-description" placeholder="Search the corpus; returns ranked results with url, title, score.">${esc(m.description)}</textarea></div>
     <div class="params">
@@ -348,15 +426,26 @@ function paramRow(p,pi){
 
 // ── event wiring (per render) ──
 function bindVal(id, set){ const el=document.getElementById(id); if(el) el.addEventListener('input',()=>{ set(el.value); save(); }); }
+function scrollTop(){ var s=document.getElementById('form-view'); window.scrollTo({ top: s? s.offsetTop-12 : 0, behavior:'smooth' }); }
 function wire() {
-  const back=document.getElementById('back'); if(back) back.onclick=()=>{ step=Math.max(0,step-1); render(); };
-  const next=document.getElementById('next'); if(next) next.onclick=()=>{ if(validateStep()) { step++; render(); } };
+  const cur=STEPS[step];
+  const back=document.getElementById('back'); if(back) back.onclick=()=>{ step=Math.max(0,step-1); render(); scrollTop(); };
+  const next=document.getElementById('next'); if(next) next.onclick=()=>{ if(validateStep()) { step++; render(); scrollTop(); } };
 
-  if (step===0){
+  if (cur==='Email'){
+    const em=document.getElementById('f-email'); if(em) em.addEventListener('input',()=>{ state.email=em.value.trim(); save(); });
+    const sc=document.getElementById('send-code'); if(sc) sc.onclick=sendCode;
+    const vc=document.getElementById('verify-code'); if(vc) vc.onclick=verifyCode;
+    wireOtp();
+    const rs=document.getElementById('resend'); if(rs) rs.onclick=sendCode;
+    const ce=document.getElementById('change-email'); if(ce) ce.onclick=()=>{ emailSent=false; render(); };
+    const ce2=document.getElementById('change-email2'); if(ce2) ce2.onclick=()=>{ verifyToken=''; emailSent=false; persistUI(); render(); };
+  }
+  if (cur==='Identity'){
     const idn=document.getElementById('f-idname'); if(idn) idn.addEventListener('input',()=>{ state.id='io.pilot.'+idn.value.trim(); document.querySelector('#publish .prefixed + .desc')?.replaceChildren(); save(); const d=idn.closest('.field').querySelector('.desc'); if(d) d.innerHTML='Your app installs as <code>'+esc(state.id)+'</code>.'; });
     bindVal('f-version',v=>state.version=v); bindVal('f-description',v=>state.description=v);
   }
-  if (step===1){
+  if (cur==='Backend'){
     bindVal('f-baseurl',v=>state.backend.base_url=v);
     document.getElementById('add-header').onclick=()=>{ state.backend.headers.push(blankHeader()); save(); render(); };
     document.querySelectorAll('#headers .prow').forEach(rowEl=>{ const i=+rowEl.dataset.hi;
@@ -365,7 +454,7 @@ function wire() {
       rowEl.querySelector('.h-del').onclick=()=>{ state.backend.headers.splice(i,1); if(!state.backend.headers.length)state.backend.headers.push(blankHeader()); save(); render(); };
     });
   }
-  if (step===2){
+  if (cur==='Methods'){
     document.getElementById('add-method').onclick=()=>{ state.methods.push(blankMethod()); save(); render(); };
     document.querySelectorAll('#methods .mcard').forEach(cardEl=>{ const i=+cardEl.dataset.mi; const m=state.methods[i];
       const on=(sel,fn)=>{ const el=cardEl.querySelector(sel); if(el) el.addEventListener('input',()=>{fn(el);save();schedulePreview();}); };
@@ -383,25 +472,27 @@ function wire() {
       });
     });
   }
-  if (step===3){
+  if (cur==='Listing'){
     ['display_name','tagline','app_description','license','homepage','source_url','categories','keywords','binary_url'].forEach(k=>bindVal('f-l-'+k,v=>state.listing[k]=v));
     const rb=document.getElementById('f-l-requires_binary'); if(rb) rb.addEventListener('change',()=>{ state.listing.requires_binary=rb.checked; document.getElementById('binwrap').style.display=rb.checked?'':'none'; save(); });
   }
-  if (step===4){ ['name','url','contact','agent_usage','capabilities'].forEach(k=>bindVal('f-v-'+k,v=>state.vendor[k]=v)); }
-  if (step===5){ renderReview(); document.getElementById('submit').onclick=doSubmit; }
+  if (cur==='Vendor'){ ['name','url','agent_usage','capabilities'].forEach(k=>bindVal('f-v-'+k,v=>state.vendor[k]=v)); }
+  if (cur==='Review'){ renderReview(); document.getElementById('submit').onclick=doSubmit; }
 }
 
 // ── validation (client mirror of the server's; server is authoritative) ──
 function show(id,msg){ const el=document.getElementById(id); if(el) el.textContent=msg||''; }
 function validateStep(){
   let ok=true; const bad=(id,m)=>{show(id,m); ok=false;};
-  if (step===0){
+  const cur=STEPS[step];
+  if (cur==='Email'){ if(!verifyToken){ bad('e-code','Verify your email to continue'); } }
+  if (cur==='Identity'){
     if(!/^io\.pilot\.[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(state.id)) bad('e-id','Must be io.pilot.<name> (lowercase, digits, hyphens)'); else show('e-id','');
     if(!/^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/.test(state.version)) bad('e-version','Semver, e.g. 0.1.0'); else show('e-version','');
     if(!state.description.trim()) bad('e-description','Required'); else show('e-description','');
   }
-  if (step===1){ if(!/^https?:\/\/[^\s/]+/.test(state.backend.base_url)) bad('e-baseurl','Absolute http(s) URL'); else show('e-baseurl',''); }
-  if (step===2){
+  if (cur==='Backend'){ if(!/^https?:\/\/[^\s/]+/.test(state.backend.base_url)) bad('e-baseurl','Absolute http(s) URL'); else show('e-baseurl',''); }
+  if (cur==='Methods'){
     const ms=state.methods.filter(m=>m.name.trim());
     if(!ms.length) bad('e-methods','Add at least one method');
     else { const badm=ms.find(m=>!m.latency||!m.description.trim()||!/^\//.test(m.http.path)||!m.name.startsWith(ns()+'.'));
@@ -435,7 +526,7 @@ function renderReview(){
     ['Display name',s.listing.display_name],['License',s.listing.license],
     ['App description',s.listing.app_description],['Categories',(s.listing.categories||[]).join(', ')],
     ['Requires binary',s.listing.requires_binary?('yes — '+s.listing.binary_url):'no'],
-    ['Vendor',s.vendor.name+(s.vendor.url?' · '+s.vendor.url:'')],['Contact',s.vendor.contact],
+    ['Vendor',s.vendor.name+(s.vendor.url?' · '+s.vendor.url:'')],['Email',s.email],
     ['Agent usage',s.vendor.agent_usage],['Capabilities',s.vendor.capabilities],
   ];
   document.getElementById('review-tbl').innerHTML=rows.map(([k,v])=>`<tr><th>${esc(k)}</th><td>${v||'<span style="color:var(--ink-faint)">—</span>'}</td></tr>`).join('');
@@ -457,7 +548,7 @@ var elStart=document.getElementById('start'), elExit=document.getElementById('ex
 var elIntro=document.getElementById('intro'), elForm=document.getElementById('form-view');
 if(elStart) elStart.onclick=function(){ elIntro.hidden=true; elForm.hidden=false; persistUI(); window.scrollTo(0,0); };
 if(elExit) elExit.onclick=function(){ elForm.hidden=true; elIntro.hidden=false; persistUI(); window.scrollTo(0,0); };
-try { var ui=JSON.parse(localStorage.getItem(UIK)||'{}'); if(ui && ui.entered){ step=Math.min(ui.step||0, STEPS.length-1); elIntro.hidden=true; elForm.hidden=false; } } catch(e){}
+try { var ui=JSON.parse(localStorage.getItem(UIK)||'{}'); if(ui){ if(ui.verifyToken) verifyToken=ui.verifyToken; if(ui.entered){ step=Math.min(ui.step||0, STEPS.length-1); elIntro.hidden=true; elForm.hidden=false; } } } catch(e){}
 
 render();
 </script>
