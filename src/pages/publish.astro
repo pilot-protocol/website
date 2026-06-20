@@ -54,11 +54,38 @@ const canonicalUrl = 'https://pilotprotocol.network/publish';
   </div>
 </section>
 
+<section id="mobile-gate">
+  <div class="wrap">
+    <div class="mg-card">
+      <div class="mg-icon">🖥️</div>
+      <h1>Publishing needs a desktop</h1>
+      <p>Open <b>pilotprotocol.network/publish</b> on a desktop browser to submit your app.</p>
+      <a class="mg-link" href="/app-store">← Back to the App Store</a>
+    </div>
+  </div>
+</section>
+
 <Footer />
 
 <style is:global>
   /* GLOBAL (the wizard DOM is JS-injected, so Astro-scoped styles can't reach it),
      namespaced under #publish, and forced LIGHT + large regardless of the site theme. */
+
+  /* ── mobile gate: the multi-step form needs a desktop; on small screens swap
+     the whole publish experience for a "open on desktop" message. ── */
+  #mobile-gate { display: none; }
+  @media (max-width: 768px) {
+    #intro, #form-view { display: none !important; }
+    #mobile-gate { display: block; }
+  }
+  #mobile-gate .wrap { padding: 0 22px; }
+  #mobile-gate .mg-card { max-width: 460px; margin: 0 auto; padding: 80px 0 96px; text-align: center; }
+  #mobile-gate .mg-icon { font-size: 46px; line-height: 1; margin-bottom: 18px; }
+  #mobile-gate h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 14px; }
+  #mobile-gate p { color: var(--ink-dim); font-size: 16px; line-height: 1.55; margin: 0 0 24px; }
+  #mobile-gate p b { color: var(--ink); }
+  #mobile-gate .mg-link { color: var(--accent); font-size: 15px; text-decoration: none; }
+  #mobile-gate .mg-link:hover { text-decoration: underline; }
 
   /* ── intro / presentation (site-themed hero) ── */
   #intro .req-list { list-style:none; padding:0; margin:26px 0 0; display:grid; gap:11px; max-width:660px; }
