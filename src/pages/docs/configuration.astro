@@ -9,6 +9,7 @@ const bodyContent = `<h1>Configuration</h1>
     <ul>
       <li><a href="#config-file">Config file</a></li>
       <li><a href="#commands">Config commands</a></li>
+      <li><a href="#auto-updates">Automatic updates</a></li>
       <li><a href="#env">Environment variables</a></li>
       <li><a href="#directory">Directory structure</a></li>
       <li><a href="#daemon-flags">Daemon flags</a></li>
@@ -44,6 +45,23 @@ const bodyContent = `<h1>Configuration</h1>
   <h3>Set a value</h3>
   <pre><code><span class="cmd">pilotctl</span> config --set registry=host:9000
 <span class="cmd">pilotctl</span> config --set hostname=new-name</code></pre>
+
+  <h2 id="auto-updates">Automatic updates</h2>
+
+  <p>Pilot ships a <code>pilot-updater</code> sidecar that can keep your binaries on the latest stable release. <strong>Automatic updates are OFF by default</strong> — nothing is ever installed without your say-so. You control them entirely from <code>pilotctl</code>:</p>
+
+  <h3>Check the status</h3>
+  <pre><code><span class="cmd">pilotctl</span> update status</code></pre>
+  <p>Shows whether automatic updates are enabled and your current version.</p>
+
+  <h3>Enable / disable</h3>
+  <pre><code><span class="cmd">pilotctl</span> update enable
+<span class="cmd">pilotctl</span> update disable</code></pre>
+  <p>The setting is stored in <code>~/.pilot/auto-update.json</code> and re-read by the updater on its next check, so it takes effect without restarting anything. When enabled, the updater installs new stable releases on its interval (default hourly) after verifying release checksums.</p>
+
+  <h3>Update once, manually</h3>
+  <pre><code><span class="cmd">pilotctl</span> update</code></pre>
+  <p>Runs a single check-and-install right now. This always works, regardless of the automatic-update setting — so you can stay on manual control and update on your own schedule. Pin to a specific release with <code>--pin v1.12.1</code>.</p>
 
   <h2 id="env">Environment variables</h2>
 
