@@ -29,7 +29,7 @@ function routeFromKey(key: string): string {
 }
 
 const REFERENCE = new Set(['error-codes', 'troubleshooting', 'diagnostics', 'configuration']);
-const LEGAL = new Set(['/privacy', '/cookies', '/terms', '/aup']);
+const LEGAL = new Set(['/privacy', '/cookies', '/terms', '/aup', '/publisher-agreement']);
 
 function priorityFor(loc: string): { p: number; freq: string } {
   if (loc === '/') return { p: 1.0, freq: 'weekly' };
