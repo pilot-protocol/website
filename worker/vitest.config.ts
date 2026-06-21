@@ -9,7 +9,7 @@ export default defineWorkersConfig({
           bindings: {
             PUBLISH_SECRET: 'test-publish-secret',
             GITHUB_TOKEN: 'ghp_test_token',
-            GITHUB_OWNER: 'TeoSlayer',
+            GITHUB_OWNER: 'pilot-protocol',
             GITHUB_REPO: 'pilotprotocol',
           },
         },

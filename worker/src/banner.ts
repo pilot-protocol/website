@@ -1,7 +1,7 @@
 import puppeteer, { type BrowserWorker } from '@cloudflare/puppeteer';
 import type { PublishPayload } from './template';
 
-const PILOT_LOGO_URL = 'https://raw.githubusercontent.com/TeoSlayer/pilotprotocol/main/docs/media/pilot.png';
+const PILOT_LOGO_URL = 'https://raw.githubusercontent.com/pilot-protocol/pilotprotocol/main/docs/media/pilot.png';
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
