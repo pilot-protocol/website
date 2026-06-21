@@ -34,7 +34,7 @@ const canonicalUrl = 'https://pilotprotocol.network/publish';
         <li><b>Your keys stay yours.</b> Secrets are never collected here — operators supply them at install time.</li>
         <li><b>Every submission is reviewed</b> by our team before it appears in the store.</li>
         <li><b>We'll keep you posted by email</b> — a confirmation when you submit, and again when your app is approved or needs changes.</li>
-        <li>By submitting you confirm you have the right to publish this app and agree to the <a href="/terms">Terms</a> and <a href="/aup">Acceptable Use Policy</a>.</li>
+        <li><b>You sign a short release at the end.</b> Before submitting you confirm you have the right to publish this app, grant us permission to use your name and the app's name to list it, and agree to the <a href="/terms">Terms</a>, <a href="/aup">Acceptable Use Policy</a>, and <a href="/publisher-agreement">Publisher Release Agreement</a>.</li>
       </ul>
 
       <p class="how">How it works: <b>describe your app → verify your email → we build &amp; verify the adapter → our team reviews → it's live in the app store.</b></p>
@@ -196,6 +196,14 @@ const canonicalUrl = 'https://pilotprotocol.network/publish';
   #publish .banner.ok { background:#eef7f0; border:1px solid #b9dcc0; color:oklch(0.42 0.16 145); }
   #publish .explain { background:#f3f2ec; border:1px solid var(--c-line); border-radius:11px; padding:14px 16px; font-size:14px; color:var(--c-dim); margin-bottom:18px; line-height:1.5; }
   #publish .explain code { color:oklch(0.5 0.17 142); font-family:var(--mono,monospace); }
+
+  /* ── release agreement (final step) ── */
+  #publish .card.release { padding:26px 30px; }
+  #publish .release-h { font-size:18px; font-weight:650; margin:0 0 10px; color:var(--c-ink); }
+  #publish .release-p { font-size:15px; line-height:1.55; color:var(--c-dim); margin:0 0 22px; }
+  #publish .release a { color:var(--c-acc); text-decoration:underline; }
+  #publish .agree { display:flex; gap:12px; align-items:flex-start; font-size:15px; line-height:1.5; color:var(--c-ink); cursor:pointer; }
+  #publish .agree input { width:auto; margin:2px 0 0; flex:none; accent-color:var(--c-acc); }
 </style>
 
 <script>
@@ -214,6 +222,10 @@ const blankParam = () => ({ name: '', type: 'string', required: false, descripti
 const blankMethod = () => ({ name: '', http: { verb: 'GET', path: '' }, latency: '', description: '', params: [blankParam()] });
 const blankHeader = () => ({ name: '', value: '' });
 
+// Version of the Publisher Release Agreement the publisher signs at submit time.
+// Bump this (and the page at /publisher-agreement) whenever the agreement changes.
+const AGREEMENT_VERSION = '2026-06-20';
+
 let state = load() || {
   email: '',
   id: 'io.pilot.', version: '', description: '',
@@ -222,7 +234,10 @@ let state = load() || {
   methods: [blankMethod()],
   listing: { display_name: '', tagline: '', app_description: '', license: '', homepage: '', source_url: '', categories: '', keywords: '', requires_binary: false, binary_url: '' },
   vendor: { name: '', url: '', agent_usage: '', capabilities: '' },
+  release: { signer_name: '', agreed: false },
 };
+// Drafts saved before the release step existed won't carry a release object.
+if (!state.release) state.release = { signer_name: '', agreed: false };
 
 function load() { try { return JSON.parse(localStorage.getItem(LS)); } catch { return null; } }
 function save() { localStorage.setItem(LS, JSON.stringify(state)); }
@@ -244,6 +259,11 @@ function submission() {
     })),
     listing: { ...state.listing, categories: csv(state.listing.categories), keywords: csv(state.listing.keywords) },
     vendor: { ...state.vendor, contact: state.email },
+    release: {
+      agreement_version: AGREEMENT_VERSION,
+      signer_name: state.release.signer_name,
+      agreed: !!state.release.agreed,
+    },
   };
 }
 
@@ -366,7 +386,15 @@ const STEPS_HTML = [
     <div id="submit-banner"></div>
     <div class="card"><table class="review-tbl" id="review-tbl"></table></div>
     <div class="preview" id="preview"></div>
-    <div class="navrow"><button class="back" id="back" type="button">← Back</button><button class="btn" id="submit" type="button">Submit for review</button></div>`,
+    <div class="card release">
+      <h3 class="release-h">Release agreement</h3>
+      <p class="release-p">Before your app can be listed, you sign the <a href="/publisher-agreement" target="_blank" rel="noopener">Publisher Release Agreement</a>. In short: you confirm you have the right to publish this app, you grant Pilot Protocol a license to use your name and the app's name to list and promote it in the app store and on our website, and you release us from claims arising from that authorized use. Please read the full agreement before signing.</p>
+      <div class="field"><label>Full legal name (your signature) ${info('Typing your name and submitting signs the Publisher Release Agreement electronically — it carries the same legal effect as a handwritten signature.')}</label>
+        <input id="f-signer" autocomplete="name" placeholder="Jane Doe" value="${esc(state.release.signer_name)}"><div class="err" id="e-signer"></div></div>
+      <label class="agree"><input type="checkbox" id="f-agree" ${state.release.agreed?'checked':''}><span>I have read and agree to the <a href="/publisher-agreement" target="_blank" rel="noopener">Publisher Release Agreement</a>, and I confirm I am authorized to publish this app and to grant the rights it describes.</span></label>
+      <div class="err" id="e-agree"></div>
+    </div>
+    <div class="navrow"><button class="back" id="back" type="button">← Back</button><button class="btn" id="submit" type="button" disabled>Submit for review</button></div>`,
 ];
 
 function nav() {
@@ -453,7 +481,17 @@ function wire() {
     ['display_name','tagline','app_description','license','homepage','source_url','categories','keywords'].forEach(k=>bindVal('f-l-'+k,v=>state.listing[k]=v));
   }
   if (cur==='Vendor'){ ['name','url','agent_usage','capabilities'].forEach(k=>bindVal('f-v-'+k,v=>state.vendor[k]=v)); }
-  if (cur==='Review'){ renderReview(); document.getElementById('submit').onclick=doSubmit; }
+  if (cur==='Review'){
+    renderReview();
+    const signer=document.getElementById('f-signer');
+    const agree=document.getElementById('f-agree');
+    const submit=document.getElementById('submit');
+    const syncRelease=()=>{ if(submit) submit.disabled=!(state.release.signer_name.trim() && state.release.agreed); };
+    if(signer) signer.addEventListener('input',()=>{ state.release.signer_name=signer.value; save(); show('e-signer',''); renderReview(); syncRelease(); });
+    if(agree) agree.addEventListener('change',()=>{ state.release.agreed=agree.checked; save(); show('e-agree',''); syncRelease(); });
+    syncRelease();
+    if(submit) submit.onclick=doSubmit;
+  }
 }
 
 // ── validation (client mirror of the server's; server is authoritative) ──
@@ -504,15 +542,22 @@ function renderReview(){
     ['App type','HTTP API'],
     ['Vendor',s.vendor.name+(s.vendor.url?' · '+s.vendor.url:'')],['Email',s.email],
     ['Agent usage',s.vendor.agent_usage],['Capabilities',s.vendor.capabilities],
+    ['Signed by',s.release.signer_name],
   ];
   document.getElementById('review-tbl').innerHTML=rows.map(([k,v])=>`<tr><th>${esc(k)}</th><td>${v||'<span style="color:var(--ink-faint)">—</span>'}</td></tr>`).join('');
 }
 
 async function doSubmit(){
   const btn=document.getElementById('submit'); const banner=document.getElementById('submit-banner');
+  // The release agreement must be signed before we submit (the button is also
+  // disabled until then; this is the authoritative guard).
+  if(!state.release.signer_name.trim()){ show('e-signer','Type your full legal name to sign the release agreement'); return; }
+  if(!state.release.agreed){ show('e-agree','You must agree to the Publisher Release Agreement to submit'); return; }
+  const payload=submission();
+  payload.release.signed_at=new Date().toISOString();
   btn.disabled=true; banner.innerHTML='<div class="banner">Building, signing, and verifying on the server…</div>';
   try {
-    const r=await fetch(API+'/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(submission())});
+    const r=await fetch(API+'/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const d=await r.json();
     if(r.ok){ banner.innerHTML=`<div class="banner ok"><b>Submitted ✓</b> — case <code>${esc(d.case_id)}</code> is now <b>pending</b> review. The server built, signed, and verified your adapter.</div>`; localStorage.removeItem(LS); }
     else { const errs=(d.errors||[d.error||'submission failed']); banner.innerHTML=`<div class="banner bad"><b>Fix these:</b><ul>${errs.map(e=>`<li>${esc(e)}</li>`).join('')}</ul></div>`; btn.disabled=false; }
