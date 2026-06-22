@@ -214,7 +214,7 @@ const LS = 'pilot.publish.draft.v1';
 
 const LAT = { fast: 'under 5 seconds', med: 'up to 15 seconds', slow: 'up to 1 minute' };
 
-const STEPS = ['Email', 'Identity', 'Backend', 'Methods', 'Listing', 'Vendor', 'Review'];
+const STEPS = ['Email', 'Identity', 'Backend', 'Methods', 'Artifacts', 'Listing', 'Vendor', 'Review'];
 let step = 0;
 
 
@@ -233,6 +233,7 @@ let state = load() || {
   app_type: 'api', // 'api' (HTTP) | 'cli' (local command)
   backend: { base_url: '', headers: [blankHeader()], command: '', env_passthrough: '' },
   methods: [blankMethod()],
+  artifacts: [], // native binary delivery (cli apps): per-platform uploads + install order/deps/args
   listing: { display_name: '', tagline: '', app_description: '', license: '', homepage: '', source_url: '', categories: '', keywords: '', requires_binary: false, binary_url: '' },
   vendor: { name: '', url: '', agent_usage: '', capabilities: '' },
   release: { signer_name: '', agreed: false },
@@ -243,6 +244,7 @@ if (!state.release) state.release = { signer_name: '', agreed: false };
 if (state.app_type == null) state.app_type = 'api';
 if (state.backend.command == null) state.backend.command = '';
 if (state.backend.env_passthrough == null) state.backend.env_passthrough = '';
+if (!Array.isArray(state.artifacts)) state.artifacts = [];
 state.methods.forEach(m => { if (!m.cli) m.cli = blankCLI(); if (!m.http) m.http = { verb: 'GET', path: '' }; });
 
 function load() { try { return JSON.parse(localStorage.getItem(LS)); } catch { return null; } }
@@ -268,6 +270,10 @@ function submission() {
       else base.http = { verb: m.http.verb, path: m.http.path };
       return base;
     }),
+    artifacts: cli ? state.artifacts.filter(a=>a.url && a.sha256 && a.exec_path).map(a=>({
+      role: a.role||'binary', name: a.name||'', os: a.os, arch: a.arch, url: a.url, sha256: a.sha256,
+      unpack: a.unpack||'', exec_path: a.exec_path, deps: csv(a.deps), order: Number(a.order)||0, args: csv(a.args),
+    })) : [],
     listing: { ...state.listing, categories: csv(state.listing.categories), keywords: csv(state.listing.keywords) },
     vendor: { ...state.vendor, contact: state.email },
     release: {
@@ -349,6 +355,8 @@ const STEPS_HTML = [
     <button class="iconbtn" id="add-method" type="button">+ method</button>
     <div class="err" id="e-methods"></div>
     <div class="preview" id="preview"></div>${nav()}`,
+
+  () => artifactsStepHTML(),
 
   () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Listing</h2></div>
     <p class="desc" style="margin:-8px 0 16px">How the app appears in the store.</p>
@@ -432,6 +440,74 @@ function cliBackendHTML(){
       <div class="field"><label>Env passthrough <span class="muted">(optional)</span> ${info('Host environment variables the CLI may see, comma-separated. Everything else is scrubbed from the child.')}</label>
         <input id="f-envpass" placeholder="GH_TOKEN, AWS_PROFILE" value="${esc(state.backend.env_passthrough)}"></div>
     </div>`;
+}
+
+// ── Artifacts step (native binary delivery for cli apps) ──
+const blankArtifact = () => ({ os:'darwin', arch:'arm64', role:'binary', unpack:'', exec_path:'', name:'', deps:'', order:0, args:'', url:'', sha256:'', filename:'', status:'' });
+function artifactsStepHTML(){
+  if (state.app_type !== 'cli') {
+    return `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Artifacts</h2></div>
+      <div class="explain">Artifacts deliver a binary from the Pilot registry to the host. Your <b>HTTP API</b> app runs on your servers and ships no binary, so there is nothing to upload here.</div>${nav()}`;
+  }
+  return `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Artifacts</h2></div>
+    <p class="desc" style="margin:-8px 0 16px">Upload the platform-specific binaries your CLI needs. Each is uploaded to the Pilot artifact registry, sha256-checksummed, and — at <code>pilotctl appstore install</code> — fetched, verified, and staged under the app dir in the order you set (with any dependencies and install args). The command you set in Backend (<code>${esc((state.backend.command||'').split(',')[0].trim()||'cli')}</code>) is run from the staged path.</p>
+    <div class="explain">Upload a single binary, or a <code>.tar.gz</code> bundle (set <b>unpack</b> = tar.gz and point <b>exec_path</b> at the binary inside it). Integrity is the sha256 — computed in your browser and pinned into the signed manifest.</div>
+    <div id="artifacts">${state.artifacts.map((a,i)=>artifactRow(a,i)).join('')}</div>
+    <button class="iconbtn" id="add-artifact" type="button">+ artifact</button>
+    <div class="err" id="e-artifacts"></div>${nav()}`;
+}
+function artifactRow(a,i){
+  const sel=(v,opts)=>opts.map(o=>`<option value="${o}" ${v===o?'selected':''}>${o}</option>`).join('');
+  const status = a.url
+    ? `<span class="badge ok">uploaded ✓</span> <code style="font-size:11px">${esc((a.sha256||'').slice(0,16))}…</code> <span class="muted">${esc(a.filename)}</span>`
+    : (a.status ? `<span class="muted">${esc(a.status)}</span>` : `<span class="muted">no file uploaded yet</span>`);
+  return `<div class="mcard" data-ai="${i}">
+    <div class="mhead"><span class="mname">${esc(a.os)}/${esc(a.arch)}${a.exec_path?' — '+esc(a.exec_path):''}</span>
+      ${state.artifacts.length>0?'<button class="iconbtn danger a-del" type="button">Remove</button>':''}</div>
+    <div class="mgrid" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="field"><span class="ghead">OS</span><select class="a-os">${sel(a.os,['linux','darwin'])}</select></div>
+      <div class="field"><span class="ghead">Arch</span><select class="a-arch">${sel(a.arch,['amd64','arm64'])}</select></div>
+      <div class="field"><span class="ghead">Unpack ${info('tar.gz extracts the upload under the app dir; leave blank for a single binary.')}</span><select class="a-unpack">${sel(a.unpack,['','tar.gz'])}</select></div>
+    </div>
+    <div class="field"><span class="ghead">Binary file ${info('Uploaded directly to the Pilot registry. sha256 is computed in your browser.')}</span>
+      <input class="a-file" type="file"><div class="desc a-status" style="margin-top:6px">${status}</div></div>
+    <div class="mgrid" style="grid-template-columns:2fr 1fr">
+      <div class="field"><span class="ghead">exec_path ${info('Where the binary lands under the app dir, or the path INSIDE a tar.gz (e.g. tool-1.0-darwin-arm64/tool).')}</span><input class="a-execpath" placeholder="bin/${esc((state.backend.command||'tool').split(',')[0].trim())}" value="${esc(a.exec_path)}"></div>
+      <div class="field"><span class="ghead">Install order ${info('Lower installs first. Within a platform.')}</span><input class="a-order" type="number" value="${esc(a.order)}"></div>
+    </div>
+    <div class="mgrid" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="field"><span class="ghead">Name ${info('Optional id for this artifact, referenced by other artifacts as a dependency. Defaults to the exec_path basename.')}</span><input class="a-name" placeholder="runtime" value="${esc(a.name)}"></div>
+      <div class="field"><span class="ghead">Dependencies ${info('Comma-separated names of artifacts (same platform) that must install before this one.')}</span><input class="a-deps" placeholder="runtime" value="${esc(a.deps)}"></div>
+      <div class="field"><span class="ghead">Install args ${info('Optional one-time setup run after staging, e.g. --accept-license. Comma-separated.')}</span><input class="a-args" placeholder="" value="${esc(a.args)}"></div>
+    </div>
+  </div>`;
+}
+// sha256 hex of a File/Blob, computed in the browser.
+async function sha256hex(buf){
+  const d = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(d)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function uploadArtifact(i, file){
+  const a = state.artifacts[i];
+  const setStatus = (msg)=>{ a.status=msg; const el=document.querySelector(`[data-ai="${i}"] .a-status`); if(el) el.innerHTML=`<span class="muted">${esc(msg)}</span>`; };
+  if (!/^io\.pilot\.[a-z0-9-]+$/.test(state.id) || !state.version) { setStatus('set a valid App ID + Version first'); return; }
+  try {
+    setStatus('requesting upload slot…');
+    const pres = await fetch(API+'/api/artifact/presign',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ id:state.id, version:state.version, os:a.os, arch:a.arch, filename:file.name })});
+    if(!pres.ok){ setStatus('presign failed: '+(await pres.text()).slice(0,140)); return; }
+    const slot = await pres.json();
+    const buf = await file.arrayBuffer();
+    setStatus('hashing…'); const sha = await sha256hex(buf);
+    setStatus('uploading '+(file.size/1048576).toFixed(1)+' MB…');
+    const put = await fetch(slot.put_url,{method:'PUT',body:buf});
+    if(!put.ok){ setStatus('upload failed: HTTP '+put.status); return; }
+    a.url = slot.public_url; a.sha256 = sha; a.filename = file.name; a.status='';
+    if(!a.exec_path){ a.exec_path = a.unpack==='tar.gz' ? '' : 'bin/'+(state.backend.command||'tool').split(',')[0].trim(); }
+    save();
+    const el=document.querySelector(`[data-ai="${i}"] .a-status`);
+    if(el) el.innerHTML=`<span class="badge ok">uploaded ✓</span> <code style="font-size:11px">${esc(sha.slice(0,16))}…</code> <span class="muted">${esc(file.name)}</span>`;
+  } catch(e){ setStatus('error: '+(e&&e.message||e)); }
 }
 
 // ── method route cells (per app type) ──
@@ -532,6 +608,20 @@ function wire() {
         pr.querySelector('.p-desc').addEventListener('input',e=>{p.description=e.target.value;save();});
         pr.querySelector('.p-del').onclick=()=>{ m.params.splice(pi,1); if(!m.params.length)m.params.push(blankParam()); save(); render(); };
       });
+    });
+  }
+  if (cur==='Artifacts' && state.app_type==='cli'){
+    const add=document.getElementById('add-artifact'); if(add) add.onclick=()=>{ state.artifacts.push(blankArtifact()); save(); render(); };
+    document.querySelectorAll('#artifacts .mcard').forEach(cardEl=>{ const i=+cardEl.dataset.ai; const a=state.artifacts[i];
+      const onv=(sel,fn)=>{ const el=cardEl.querySelector(sel); if(el) el.addEventListener('input',()=>{fn(el.value);save();}); };
+      const onc=(sel,fn)=>{ const el=cardEl.querySelector(sel); if(el) el.addEventListener('change',()=>{fn(el.value);save();}); };
+      onc('.a-os',v=>{a.os=v; cardEl.querySelector('.mname').textContent=a.os+'/'+a.arch+(a.exec_path?' — '+a.exec_path:'');});
+      onc('.a-arch',v=>{a.arch=v; cardEl.querySelector('.mname').textContent=a.os+'/'+a.arch+(a.exec_path?' — '+a.exec_path:'');});
+      onc('.a-unpack',v=>a.unpack=v);
+      onv('.a-execpath',v=>{a.exec_path=v; cardEl.querySelector('.mname').textContent=a.os+'/'+a.arch+(v?' — '+v:'');});
+      onv('.a-order',v=>a.order=v); onv('.a-name',v=>a.name=v); onv('.a-deps',v=>a.deps=v); onv('.a-args',v=>a.args=v);
+      const fileEl=cardEl.querySelector('.a-file'); if(fileEl) fileEl.addEventListener('change',()=>{ if(fileEl.files&&fileEl.files[0]) uploadArtifact(i, fileEl.files[0]); });
+      const del=cardEl.querySelector('.a-del'); if(del) del.onclick=()=>{ state.artifacts.splice(i,1); save(); render(); };
     });
   }
   if (cur==='Listing'){
