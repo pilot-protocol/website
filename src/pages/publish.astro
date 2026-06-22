@@ -219,7 +219,8 @@ let step = 0;
 
 
 const blankParam = () => ({ name: '', type: 'string', required: false, description: '' });
-const blankMethod = () => ({ name: '', http: { verb: 'GET', path: '' }, latency: '', description: '', params: [blankParam()] });
+const blankCLI = () => ({ args: '', params_as_flags: false, passthrough: false });
+const blankMethod = () => ({ name: '', http: { verb: 'GET', path: '' }, cli: blankCLI(), latency: '', description: '', params: [blankParam()] });
 const blankHeader = () => ({ name: '', value: '' });
 
 // Version of the Publisher Release Agreement the publisher signs at submit time.
@@ -229,8 +230,8 @@ const AGREEMENT_VERSION = '2026-06-20';
 let state = load() || {
   email: '',
   id: 'io.pilot.', version: '', description: '',
-  app_type: 'api', // 'api' (available) | 'cli' (coming soon)
-  backend: { base_url: '', headers: [blankHeader()] },
+  app_type: 'api', // 'api' (HTTP) | 'cli' (local command)
+  backend: { base_url: '', headers: [blankHeader()], command: '', env_passthrough: '' },
   methods: [blankMethod()],
   listing: { display_name: '', tagline: '', app_description: '', license: '', homepage: '', source_url: '', categories: '', keywords: '', requires_binary: false, binary_url: '' },
   vendor: { name: '', url: '', agent_usage: '', capabilities: '' },
@@ -238,6 +239,11 @@ let state = load() || {
 };
 // Drafts saved before the release step existed won't carry a release object.
 if (!state.release) state.release = { signer_name: '', agreed: false };
+// Back-compat for drafts saved before cli support landed.
+if (state.app_type == null) state.app_type = 'api';
+if (state.backend.command == null) state.backend.command = '';
+if (state.backend.env_passthrough == null) state.backend.env_passthrough = '';
+state.methods.forEach(m => { if (!m.cli) m.cli = blankCLI(); if (!m.http) m.http = { verb: 'GET', path: '' }; });
 
 function load() { try { return JSON.parse(localStorage.getItem(LS)); } catch { return null; } }
 function save() { localStorage.setItem(LS, JSON.stringify(state)); }
@@ -248,15 +254,20 @@ function info(t){ return `<span class="info" data-tip="${esc(t)}">i</span>`; }
 // Build the Submission JSON the API expects.
 function submission() {
   const csv = s => (s||'').split(',').map(x=>x.trim()).filter(Boolean);
+  const cli = state.app_type==='cli';
+  const backend = cli
+    ? { type: 'cli', command: csv(state.backend.command), env_passthrough: csv(state.backend.env_passthrough) }
+    : { type: 'http', base_url: state.backend.base_url, headers: state.backend.headers.filter(h=>h.name.trim()) };
   return {
     id: state.id, version: state.version, description: state.description,
     email: state.email,
-    backend: { base_url: state.backend.base_url, headers: state.backend.headers.filter(h=>h.name.trim()) },
-    methods: state.methods.filter(m=>m.name.trim()).map(m=>({
-      name: m.name, description: m.description, latency: m.latency,
-      http: { verb: m.http.verb, path: m.http.path },
-      params: m.params.filter(p=>p.name.trim()),
-    })),
+    backend,
+    methods: state.methods.filter(m=>m.name.trim()).map(m=>{
+      const base = { name: m.name, description: m.description, latency: m.latency, params: m.params.filter(p=>p.name.trim()) };
+      if (cli) base.cli = { args: m.cli.passthrough ? [] : csv(m.cli.args), params_as_flags: !!m.cli.params_as_flags, passthrough: !!m.cli.passthrough };
+      else base.http = { verb: m.http.verb, path: m.http.path };
+      return base;
+    }),
     listing: { ...state.listing, categories: csv(state.listing.categories), keywords: csv(state.listing.keywords) },
     vendor: { ...state.vendor, contact: state.email },
     release: {
@@ -320,26 +331,17 @@ const STEPS_HTML = [
   () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Backend</h2></div>
     <p class="desc" style="margin:-8px 0 16px">What kind of app are you publishing?</p>
     <div class="choices">
-      <label class="choice sel">
-        <input type="radio" name="apptype" value="api" checked>
+      <label class="choice ${state.app_type==='api'?'sel':''}">
+        <input type="radio" name="apptype" value="api" ${state.app_type==='api'?'checked':''}>
         <div><b>HTTP API <span class="badge ok">available</span></b><span>Your app is reachable over HTTP. We generate, sign, and verify an adapter that forwards each method to it.</span></div>
       </label>
-      <label class="choice disabled">
-        <input type="radio" name="apptype" value="cli" disabled>
-        <div><b>CLI / binary <span class="badge">coming soon</span></b><span>Ship a real command-line binary to the host. Native delivery is in the works — not available yet.</span></div>
+      <label class="choice ${state.app_type==='cli'?'sel':''}">
+        <input type="radio" name="apptype" value="cli" ${state.app_type==='cli'?'checked':''}>
+        <div><b>CLI <span class="badge ok">available</span></b><span>Front a command-line tool installed on the host. Each method runs a subprocess; <code>pilotctl appstore call</code> translates into <code>&lt;cli&gt; &lt;args&gt;</code>.</span></div>
       </label>
     </div>
-    <div class="explain">Your adapter forwards each method to your app. Add any auth headers it needs.
-      A value like <code>\${WEATHER_TOKEN}</code> is a <b>secret placeholder</b>: the operator who installs the app
-      supplies it at install time (from their environment or a local secrets file) — it is <b>never</b> stored in the published app.</div>
-    <div class="card">
-      <div class="field"><label>Base URL ${info('The production endpoint. Baked in as the default; operators can override.')}</label>
-        <input id="f-baseurl" placeholder="https://api.example.com" value="${esc(state.backend.base_url)}"><div class="err" id="e-baseurl"></div></div>
-      <div class="field"><label>Auth headers <span class="muted">(optional)</span></label>
-        <div id="headers">${state.backend.headers.map((h,i)=>headerRow(h,i)).join('')}</div>
-        <button class="iconbtn" id="add-header" type="button">+ header</button>
-      </div>
-    </div>${nav()}`,
+    ${state.app_type==='cli' ? cliBackendHTML() : httpBackendHTML()}
+    ${nav()}`,
 
   () => `<div class="stephdr"><span class="k">Step ${step+1} of ${STEPS.length}</span><h2>Methods</h2></div>
     <p class="desc" style="margin:-8px 0 16px">Each method is one call an agent can make. Give it a clear name, the backend route, a latency class, a description, and its parameters. The live preview shows exactly what agents will see and run.</p>
@@ -406,15 +408,61 @@ function headerRow(h,i){
     <input class="h-value" placeholder="\${WEATHER_TOKEN}" value="${esc(h.value)}">
     <button class="iconbtn danger h-del" type="button">✕</button></div>`;
 }
+// ── backend step bodies (per app type) ──
+function httpBackendHTML(){
+  return `<div class="explain">Your adapter forwards each method to your app. Add any auth headers it needs.
+      A value like <code>\${WEATHER_TOKEN}</code> is a <b>secret placeholder</b>: the operator who installs the app
+      supplies it at install time (from their environment or a local secrets file) — it is <b>never</b> stored in the published app.</div>
+    <div class="card">
+      <div class="field"><label>Base URL ${info('The production endpoint. Baked in as the default; operators can override.')}</label>
+        <input id="f-baseurl" placeholder="https://api.example.com" value="${esc(state.backend.base_url)}"><div class="err" id="e-baseurl"></div></div>
+      <div class="field"><label>Auth headers <span class="muted">(optional)</span></label>
+        <div id="headers">${state.backend.headers.map((h,i)=>headerRow(h,i)).join('')}</div>
+        <button class="iconbtn" id="add-header" type="button">+ header</button>
+      </div>
+    </div>`;
+}
+function cliBackendHTML(){
+  return `<div class="explain">We generate, sign, and verify an adapter that runs your command. The command must already be
+      installed on the operator's host. The child runs with a <b>scrubbed environment</b> — only the variables you list below
+      (plus PATH/HOME/locale) are passed through. The app ships with a <code>proc.exec</code> grant scoped to exactly this command, and installs <b>guarded</b> via the reviewed catalogue.</div>
+    <div class="card">
+      <div class="field"><label>Command ${info('The base argv the adapter runs. Comma-separated, e.g. gh  —or—  python, -m, tool. Each method appends its own args.')}</label>
+        <input id="f-command" placeholder="gh" value="${esc(state.backend.command)}"><div class="err" id="e-command"></div></div>
+      <div class="field"><label>Env passthrough <span class="muted">(optional)</span> ${info('Host environment variables the CLI may see, comma-separated. Everything else is scrubbed from the child.')}</label>
+        <input id="f-envpass" placeholder="GH_TOKEN, AWS_PROFILE" value="${esc(state.backend.env_passthrough)}"></div>
+    </div>`;
+}
+
+// ── method route cells (per app type) ──
+function httpRouteCells(m){
+  return `<div class="field"><span class="ghead">Verb</span><select class="m-verb"><option ${m.http.verb==='GET'?'selected':''}>GET</option><option ${m.http.verb==='POST'?'selected':''}>POST</option></select></div>
+      <div class="field"><span class="ghead">Path ${info('Backend route. GET → params become the query string; POST → JSON body.')}</span><input class="m-path" placeholder="/search" value="${esc(m.http.path)}"></div>`;
+}
+// The CLI route lives in a full-width row below the name/latency grid.
+function cliRouteRow(m){
+  const pass = !!m.cli.passthrough;
+  const enumerated = `<span class="ghead" style="margin-top:12px">Arguments ${info('Comma-separated argv appended to the command. Use ${param} to insert a payload field, e.g. current, --lat, ${lat}')}</span>
+      <input class="m-args" placeholder="current, --lat, \${lat}" value="${esc(m.cli.args)}">
+      <label class="toggle" style="margin-top:8px"><input type="checkbox" class="m-flags" ${m.cli.params_as_flags?'checked':''}> <span>Also append each parameter as <code>--name value</code></span></label>`;
+  const passthru = `<p class="desc" style="margin:6px 0 0">Every subcommand is reachable; the caller supplies the argv. Call it as <code>{"args":["…"]}</code> — no baked arguments.</p>`;
+  return `<div class="field" style="margin-top:4px">
+      <label class="toggle"><input type="checkbox" class="m-passthrough" ${pass?'checked':''}> <span>Passthrough — front the whole CLI (translate any <code>&lt;cli&gt; &lt;args&gt;</code>)</span></label>
+      ${pass ? passthru : enumerated}
+    </div>`;
+}
 function methodCard(m,i){
+  const cli = state.app_type==='cli';
+  const gridStyle = cli ? ' style="grid-template-columns:2fr 1fr"' : '';
+  const routeCells = cli ? '' : httpRouteCells(m);
   return `<div class="mcard" data-mi="${i}">
     <div class="mhead"><span class="mname">${esc(m.name||ns()+'.method')}</span>${state.methods.length>1?'<button class="iconbtn danger m-del" type="button">Remove</button>':''}</div>
-    <div class="mgrid">
+    <div class="mgrid"${gridStyle}>
       <div class="field"><span class="ghead">Method name ${info('Prefixed with your namespace, e.g. '+esc(ns()||'app')+'.search')}</span><input class="m-name" placeholder="${esc(ns()||'app')}.search" value="${esc(m.name)}"></div>
-      <div class="field"><span class="ghead">Verb</span><select class="m-verb"><option ${m.http.verb==='GET'?'selected':''}>GET</option><option ${m.http.verb==='POST'?'selected':''}>POST</option></select></div>
-      <div class="field"><span class="ghead">Path ${info('Backend route. GET → params become the query string; POST → JSON body.')}</span><input class="m-path" placeholder="/search" value="${esc(m.http.path)}"></div>
+      ${routeCells}
       <div class="field"><span class="ghead">Latency ${info('How long a typical call takes — agents use it to pick the cheapest method that fits. Fast: under 5s · Medium: up to 15s · Slow: up to 1 min.')}</span><select class="m-latency"><option value="">Select…</option>${['fast','med','slow'].map(l=>`<option value="${l}" ${m.latency===l?'selected':''}>${l==='med'?'Medium':l[0].toUpperCase()+l.slice(1)}</option>`).join('')}</select></div>
     </div>
+    ${cli ? cliRouteRow(m) : ''}
     <div class="field"><span class="ghead">Description ${info('Shown in the help doc agents read. Be specific about what it returns.')}</span>
       <textarea class="m-description" placeholder="Search the corpus; returns ranked results with url, title, score.">${esc(m.description)}</textarea></div>
     <div class="params">
@@ -451,13 +499,19 @@ function wire() {
     bindVal('f-version',v=>state.version=v); bindVal('f-description',v=>state.description=v);
   }
   if (cur==='Backend'){
-    bindVal('f-baseurl',v=>state.backend.base_url=v);
-    document.getElementById('add-header').onclick=()=>{ state.backend.headers.push(blankHeader()); save(); render(); };
-    document.querySelectorAll('#headers .prow').forEach(rowEl=>{ const i=+rowEl.dataset.hi;
-      rowEl.querySelector('.h-name').addEventListener('input',e=>{state.backend.headers[i].name=e.target.value;save();});
-      rowEl.querySelector('.h-value').addEventListener('input',e=>{state.backend.headers[i].value=e.target.value;save();});
-      rowEl.querySelector('.h-del').onclick=()=>{ state.backend.headers.splice(i,1); if(!state.backend.headers.length)state.backend.headers.push(blankHeader()); save(); render(); };
-    });
+    document.querySelectorAll('input[name="apptype"]').forEach(r=>{ r.addEventListener('change',()=>{ if(r.checked && state.app_type!==r.value){ state.app_type=r.value; save(); render(); schedulePreview(); } }); });
+    if (state.app_type==='cli'){
+      bindVal('f-command',v=>state.backend.command=v);
+      bindVal('f-envpass',v=>state.backend.env_passthrough=v);
+    } else {
+      bindVal('f-baseurl',v=>state.backend.base_url=v);
+      document.getElementById('add-header').onclick=()=>{ state.backend.headers.push(blankHeader()); save(); render(); };
+      document.querySelectorAll('#headers .prow').forEach(rowEl=>{ const i=+rowEl.dataset.hi;
+        rowEl.querySelector('.h-name').addEventListener('input',e=>{state.backend.headers[i].name=e.target.value;save();});
+        rowEl.querySelector('.h-value').addEventListener('input',e=>{state.backend.headers[i].value=e.target.value;save();});
+        rowEl.querySelector('.h-del').onclick=()=>{ state.backend.headers.splice(i,1); if(!state.backend.headers.length)state.backend.headers.push(blankHeader()); save(); render(); };
+      });
+    }
   }
   if (cur==='Methods'){
     document.getElementById('add-method').onclick=()=>{ state.methods.push(blankMethod()); save(); render(); };
@@ -465,6 +519,9 @@ function wire() {
       const on=(sel,fn)=>{ const el=cardEl.querySelector(sel); if(el) el.addEventListener('input',()=>{fn(el);save();schedulePreview();}); };
       on('.m-name',el=>{m.name=el.value; cardEl.querySelector('.mname').textContent=el.value||ns()+'.method';});
       on('.m-verb',el=>m.http.verb=el.value); on('.m-path',el=>m.http.path=el.value);
+      on('.m-args',el=>m.cli.args=el.value);
+      const mflags=cardEl.querySelector('.m-flags'); if(mflags) mflags.addEventListener('change',()=>{m.cli.params_as_flags=mflags.checked;save();schedulePreview();});
+      const mpass=cardEl.querySelector('.m-passthrough'); if(mpass) mpass.addEventListener('change',()=>{m.cli.passthrough=mpass.checked;save();render();schedulePreview();});
       on('.m-latency',el=>m.latency=el.value); on('.m-description',el=>m.description=el.value);
       const del=cardEl.querySelector('.m-del'); if(del) del.onclick=()=>{ state.methods.splice(i,1); if(!state.methods.length)state.methods.push(blankMethod()); save(); render(); };
       cardEl.querySelector('.p-add').onclick=()=>{ m.params.push(blankParam()); save(); render(); };
@@ -505,12 +562,23 @@ function validateStep(){
     if(!/^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/.test(state.version)) bad('e-version','Semver, e.g. 0.1.0'); else show('e-version','');
     if(!state.description.trim()) bad('e-description','Required'); else show('e-description','');
   }
-  if (cur==='Backend'){ if(!/^https?:\/\/[^\s/]+/.test(state.backend.base_url)) bad('e-baseurl','Absolute http(s) URL'); else show('e-baseurl',''); }
+  if (cur==='Backend'){
+    if (state.app_type==='cli'){
+      if(!state.backend.command.trim()) bad('e-command','Enter the command to run, e.g. gh'); else show('e-command','');
+    } else {
+      if(!/^https?:\/\/[^\s/]+/.test(state.backend.base_url)) bad('e-baseurl','Absolute http(s) URL'); else show('e-baseurl','');
+    }
+  }
   if (cur==='Methods'){
     const ms=state.methods.filter(m=>m.name.trim());
     if(!ms.length) bad('e-methods','Add at least one method');
-    else { const badm=ms.find(m=>!m.latency||!m.description.trim()||!/^\//.test(m.http.path)||!m.name.startsWith(ns()+'.'));
-      if(badm) bad('e-methods','Each method needs a '+ns()+'.-prefixed name, path starting with /, a latency, and a description'); else show('e-methods',''); }
+    else if (state.app_type==='cli'){
+      const badm=ms.find(m=>!m.latency||!m.description.trim()||!m.name.startsWith(ns()+'.')||(!m.cli.passthrough && !m.cli.args.trim() && !m.cli.params_as_flags));
+      if(badm) bad('e-methods','Each CLI method needs a '+ns()+'.-prefixed name, a latency, a description, and either arguments, params-as-flags, or passthrough'); else show('e-methods','');
+    } else {
+      const badm=ms.find(m=>!m.latency||!m.description.trim()||!/^\//.test(m.http.path)||!m.name.startsWith(ns()+'.'));
+      if(badm) bad('e-methods','Each method needs a '+ns()+'.-prefixed name, path starting with /, a latency, and a description'); else show('e-methods','');
+    }
   }
   return ok;
 }
@@ -534,14 +602,18 @@ function renderReview(){
   const s=submission();
   // Each value carries already-escaped HTML; the only markup allowed in a value
   // is the <br> separators in Methods. All user-controlled text goes through esc().
+  const cli=state.app_type==='cli';
+  const routeStr=m=>cli ? (m.cli.passthrough?'passthrough':((m.cli.args||[]).join(' ')||'flags')+(m.cli.params_as_flags?' +flags':'')) : `${m.http.verb} ${m.http.path}`;
   const rows=[
     ['App ID',esc(s.id)],['Version',esc(s.version)],['Description',esc(s.description)],
-    ['Backend',esc(s.backend.base_url)],
-    ...(s.backend.headers.map(h=>['Header',esc(h.name+': '+h.value)])),
-    ['Methods',s.methods.map(m=>esc(`${m.name} (${m.http.verb} ${m.http.path}, ${m.latency})`)).join('<br>')],
+    ['App type',cli?'CLI':'HTTP API'],
+    cli ? ['Command',esc((s.backend.command||[]).join(' '))] : ['Backend',esc(s.backend.base_url)],
+    ...(cli
+      ? ((s.backend.env_passthrough||[]).length ? [['Env passthrough',esc((s.backend.env_passthrough||[]).join(', '))]] : [])
+      : s.backend.headers.map(h=>['Header',esc(h.name+': '+h.value)])),
+    ['Methods',s.methods.map(m=>esc(`${m.name} (${routeStr(m)}, ${m.latency})`)).join('<br>')],
     ['Display name',esc(s.listing.display_name)],['License',esc(s.listing.license)],
     ['App description',esc(s.listing.app_description)],['Categories',esc((s.listing.categories||[]).join(', '))],
-    ['App type','HTTP API'],
     ['Vendor',esc(s.vendor.name+(s.vendor.url?' · '+s.vendor.url:''))],['Email',esc(s.email)],
     ['Agent usage',esc(s.vendor.agent_usage)],['Capabilities',esc(s.vendor.capabilities)],
     ['Signed by',esc(s.release.signer_name)],
