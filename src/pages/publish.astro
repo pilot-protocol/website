@@ -532,17 +532,19 @@ async function refreshPreview(){
 
 function renderReview(){
   const s=submission();
+  // Each value carries already-escaped HTML; the only markup allowed in a value
+  // is the <br> separators in Methods. All user-controlled text goes through esc().
   const rows=[
-    ['App ID',s.id],['Version',s.version],['Description',s.description],
-    ['Backend',s.backend.base_url],
-    ...(s.backend.headers.map(h=>['Header',h.name+': '+h.value])),
-    ['Methods',s.methods.map(m=>`${m.name} (${m.http.verb} ${m.http.path}, ${m.latency})`).join('<br>')||'—'],
-    ['Display name',s.listing.display_name],['License',s.listing.license],
-    ['App description',s.listing.app_description],['Categories',(s.listing.categories||[]).join(', ')],
+    ['App ID',esc(s.id)],['Version',esc(s.version)],['Description',esc(s.description)],
+    ['Backend',esc(s.backend.base_url)],
+    ...(s.backend.headers.map(h=>['Header',esc(h.name+': '+h.value)])),
+    ['Methods',s.methods.map(m=>esc(`${m.name} (${m.http.verb} ${m.http.path}, ${m.latency})`)).join('<br>')],
+    ['Display name',esc(s.listing.display_name)],['License',esc(s.listing.license)],
+    ['App description',esc(s.listing.app_description)],['Categories',esc((s.listing.categories||[]).join(', '))],
     ['App type','HTTP API'],
-    ['Vendor',s.vendor.name+(s.vendor.url?' · '+s.vendor.url:'')],['Email',s.email],
-    ['Agent usage',s.vendor.agent_usage],['Capabilities',s.vendor.capabilities],
-    ['Signed by',s.release.signer_name],
+    ['Vendor',esc(s.vendor.name+(s.vendor.url?' · '+s.vendor.url:''))],['Email',esc(s.email)],
+    ['Agent usage',esc(s.vendor.agent_usage)],['Capabilities',esc(s.vendor.capabilities)],
+    ['Signed by',esc(s.release.signer_name)],
   ];
   document.getElementById('review-tbl').innerHTML=rows.map(([k,v])=>`<tr><th>${esc(k)}</th><td>${v||'<span style="color:var(--ink-faint)">—</span>'}</td></tr>`).join('');
 }
