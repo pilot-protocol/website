@@ -41,15 +41,20 @@ const bodyContent = `<h1>App Store</h1>
   <pre><code><span class="comment"># 1. Discover what's installable</span>
 <span class="cmd">pilotctl</span> appstore catalogue
 
-<span class="comment"># 2. Install by id - fetch + verify sha + install; the daemon auto-spawns it</span>
+<span class="comment"># 2. Inspect before committing - description, vendor, changelog, size, source, methods, permissions</span>
+<span class="cmd">pilotctl</span> appstore view io.pilot.cosift [--all-changelog]
+
+<span class="comment"># 3. Install by id - fetch + verify sha + install; the daemon auto-spawns it</span>
 <span class="cmd">pilotctl</span> appstore install io.pilot.cosift
 
-<span class="comment"># 3. Confirm it's ready (lists installed apps + the methods each exposes)</span>
+<span class="comment"># 4. Confirm it's ready (lists installed apps + the methods each exposes)</span>
 <span class="cmd">pilotctl</span> appstore list
 <span class="cmd">pilotctl</span> appstore status io.pilot.cosift
 
-<span class="comment"># 4. Call a method - JSON in, JSON out on stdout</span>
+<span class="comment"># 5. Call a method - JSON in, JSON out on stdout</span>
 <span class="cmd">pilotctl</span> appstore call io.pilot.cosift cosift.search '{"q":"raft consensus","k":"5"}'</code></pre>
+
+  <p><code>view &lt;id&gt;</code> is the app's detail page — it works whether or not the app is installed, so you can vet description, vendor, latest changelog (<code>--all-changelog</code> for full history), download/installed size, source URL, license, exposed methods, and the permissions it requests before installing.</p>
 
   <div class="callout">
     <p><strong>No config step.</strong> A well-built app ships with sane defaults, so <code>install</code> then <code>call</code> is all an agent needs. Apps may read an optional <code>config.json</code> next to their manifest for overrides (e.g. a self-hosted backend).</p>
@@ -74,9 +79,13 @@ const bodyContent = `<h1>App Store</h1>
   <h2 id="lifecycle">Lifecycle</h2>
 
   <pre><code><span class="cmd">pilotctl</span> appstore restart io.pilot.cosift    <span class="comment"># respawn (e.g. after writing a config.json)</span>
+<span class="cmd">pilotctl</span> appstore caps io.pilot.cosift       <span class="comment"># spend caps + current rolling-window usage</span>
 <span class="cmd">pilotctl</span> appstore audit io.pilot.cosift      <span class="comment"># supervisor log: spawn / exit / verify-fail</span>
+<span class="cmd">pilotctl</span> appstore actions                    <span class="comment"># pilotctl-side install/uninstall log (survives removal)</span>
 <span class="cmd">pilotctl</span> appstore install io.pilot.cosift --force  <span class="comment"># upgrade to a new version</span>
 <span class="cmd">pilotctl</span> appstore uninstall io.pilot.cosift --yes</code></pre>
+
+  <p><code>caps</code> reports the manifest's spend caps and how much of each rolling window the app has consumed; <code>audit</code> tails the supervisor lifecycle log for one app; <code>actions</code> is the pilotctl-side install/uninstall log, which persists even after an app is removed. Both <code>audit</code> and <code>actions</code> accept <code>--tail &lt;n&gt;</code> and <code>--event &lt;name&gt;</code> (and <code>audit</code> takes <code>--since &lt;dur&gt;</code>).</p>
 
   <div class="callout">
     <p><strong>Upgrades key on the version.</strong> The supervisor respawns an app when its <code>app_version</code> changes. Bump the version for every new build, or a re-release of the same version won't roll running nodes onto the new binary.</p>
@@ -156,6 +165,8 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
   <div class="callout">
     <p>To stage a release locally before publishing, point <code>$PILOT_APPSTORE_CATALOG_URL</code> at a <code>file://</code> catalogue and install by id - the same code path as production, with your own tarball.</p>
   </div>
+
+  <p>To check a bundle without installing it, <code>pilotctl appstore verify &lt;bundle-dir&gt;</code> sha256-checks every file in a pre-install bundle against its manifest and reports any mismatch — a tampered or wrongly-built bundle fails here before it ever reaches the install root.</p>
 
   <h2 id="security">Security model &amp; hardening</h2>
 

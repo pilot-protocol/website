@@ -34,15 +34,19 @@ import PlainLayout from '../../../layouts/PlainLayout.astro';
 <pre><code># 1. Discover what's installable
 pilotctl appstore catalogue
 
-# 2. Install by id - fetch + verify sha + install; the daemon auto-spawns it
+# 2. Inspect before committing - description, vendor, changelog, size, source, methods, permissions
+pilotctl appstore view io.pilot.cosift [--all-changelog]
+
+# 3. Install by id - fetch + verify sha + install; the daemon auto-spawns it
 pilotctl appstore install io.pilot.cosift
 
-# 3. Confirm it's ready (lists installed apps + the methods each exposes)
+# 4. Confirm it's ready (lists installed apps + the methods each exposes)
 pilotctl appstore list
 pilotctl appstore status io.pilot.cosift
 
-# 4. Call a method - JSON in, JSON out on stdout
+# 5. Call a method - JSON in, JSON out on stdout
 pilotctl appstore call io.pilot.cosift cosift.search '&#123;"q":"raft consensus","k":"5"&#125;'</code></pre>
+<p>`view &lt;id&gt;` is the app's detail page — it works whether or not the app is installed, so you can vet description, vendor, latest changelog (`--all-changelog` for full history), size, source URL, license, exposed methods, and requested permissions before installing.</p>
 <p>No config step. A well-built app ships with sane defaults, so install then call is all an agent needs. Apps may read an optional config.json next to their manifest for overrides (e.g. a self-hosted backend).</p>
 
 <h2>Discovery and the help convention</h2>
@@ -58,9 +62,12 @@ pilotctl appstore call io.pilot.cosift cosift.search '&#123;"q":"raft consensus"
 
 <h2>Lifecycle</h2>
 <pre><code>pilotctl appstore restart io.pilot.cosift          # respawn (e.g. after writing a config.json)
+pilotctl appstore caps io.pilot.cosift             # spend caps + current rolling-window usage
 pilotctl appstore audit io.pilot.cosift            # supervisor log: spawn / exit / verify-fail
+pilotctl appstore actions                          # pilotctl-side install/uninstall log (survives removal)
 pilotctl appstore install io.pilot.cosift --force  # upgrade to a new version
 pilotctl appstore uninstall io.pilot.cosift --yes</code></pre>
+<p>`caps` reports the manifest's spend caps and rolling-window usage; `audit` tails the supervisor lifecycle log for one app; `actions` is the pilotctl-side install/uninstall log, which persists even after an app is removed. Both `audit` and `actions` accept `--tail &lt;n&gt;` and `--event &lt;name&gt;` (and `audit` takes `--since &lt;dur&gt;`).</p>
 <p>Upgrades key on the version: the supervisor respawns an app when its app_version changes. Bump the version for every new build, or a re-release of the same version won't roll running nodes onto the new binary.</p>
 
 <h2>Building an app</h2>
@@ -119,6 +126,7 @@ gh release create cosift-v0.1.2 io.pilot.cosift-0.1.2.tar.gz</code></pre>
   <li>Sideload (install &lt;dir&gt; --local): for local development. The manifest is clamped to a small sandbox: fs.read/fs.write under $APP and audit.log only. No net.dial, no inter-app calls, no hooks. A net-using app must go through the catalogue.</li>
 </ul>
 <p>To stage a release locally before publishing, point $PILOT_APPSTORE_CATALOG_URL at a file:// catalogue and install by id - the same code path as production, with your own tarball.</p>
+<p>To check a bundle without installing it, `pilotctl appstore verify &lt;bundle-dir&gt;` sha256-checks every file in a pre-install bundle against its manifest and reports any mismatch — a tampered or wrongly-built bundle fails here before it ever reaches the install root.</p>
 
 <h2>Security model and hardening</h2>
 <p>The app store is deny-by-default at every layer. Trust flows from a signed catalogue, through a signed manifest, to a sandboxed and continuously-verified child process.</p>
