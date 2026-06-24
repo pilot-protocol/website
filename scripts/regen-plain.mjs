@@ -18,6 +18,10 @@
 //   Valid slugs: index, p2p, mcp, plans, app-store, publish, plus every
 //   docs/<slug> auto-discovered from src/pages/docs/.
 //
+//   Pass --stale-only to regenerate ONLY pages whose twin's stamped source
+//   hash no longer matches the current source (used by CI auto-regen). Exits
+//   0 with no work when everything is in sync.
+//
 //   Data-driven pages (skills/) are NOT regenerated here — they render
 //   directly from the upstream JSON at build time.
 //
@@ -48,10 +52,10 @@ const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-pro';
 const API_KEY = process.env.GEMINI_API_KEY;
 const DRY_RUN = process.env.DRY_RUN === '1';
 
-if (!API_KEY) {
-  console.error('Missing GEMINI_API_KEY.');
-  process.exit(1);
-}
+// Note: GEMINI_API_KEY is required only when there is actually a page to
+// regenerate (checked in main() once the work list is known). This lets
+// `--stale-only` exit 0 with no key when nothing has drifted — the common
+// CI case, including fork PRs where the secret is unavailable.
 
 // Manifest: marketing source → plain destination.
 //
@@ -353,16 +357,59 @@ async function regen(slug) {
   console.log(`[${slug}] wrote ${entry.dest}`);
 }
 
+// Slugs whose twin's stamped source hash no longer matches the current source
+// (or whose twin is missing/unstamped) — i.e. exactly the pages that drifted.
+async function staleSlugs() {
+  const out = [];
+  for (const [slug, entry] of Object.entries(MANIFEST)) {
+    let srcText;
+    try {
+      srcText = await readFile(join(REPO_ROOT, entry.source), 'utf8');
+    } catch {
+      continue; // source gone — coverage guard handles that case
+    }
+    const current = sourceHash(srcText);
+    let stamped = null;
+    try {
+      const twin = await readFile(join(REPO_ROOT, entry.dest), 'utf8');
+      const m = twin.match(/^\/\/ plain-source-sha256:\s*([0-9a-f]{64})/m);
+      stamped = m ? m[1] : null;
+    } catch {
+      stamped = null; // twin missing
+    }
+    if (stamped !== current) out.push(slug);
+  }
+  return out;
+}
+
 async function main() {
   await loadDocManifest();
 
-  const requested = process.argv.slice(2);
-  const slugs = requested.length ? requested : Object.keys(MANIFEST);
+  const argv = process.argv.slice(2);
+  const staleOnly = argv.includes('--stale-only');
+  const requested = argv.filter((a) => !a.startsWith('--'));
+
+  let slugs;
+  if (staleOnly) {
+    slugs = await staleSlugs();
+    if (!slugs.length) {
+      console.log('No stale plain pages — nothing to regenerate.');
+      return;
+    }
+    console.log(`Stale page(s): ${slugs.join(', ')}`);
+  } else {
+    slugs = requested.length ? requested : Object.keys(MANIFEST);
+  }
 
   const unknown = slugs.filter((s) => !MANIFEST[s]);
   if (unknown.length) {
     console.error(`Unknown slugs: ${unknown.join(', ')}`);
     console.error(`Known: ${Object.keys(MANIFEST).join(', ')}`);
+    process.exit(1);
+  }
+
+  if (!API_KEY) {
+    console.error('Missing GEMINI_API_KEY (required to regenerate pages).');
     process.exit(1);
   }
 
