@@ -14,11 +14,13 @@ const bodyContent = `<h1>CLI Reference</h1>
       <li><a href="#identity">Identity &amp; Discovery</a></li>
       <li><a href="#communication">Communication</a></li>
       <li><a href="#trust">Trust management</a></li>
+      <li><a href="#verification">Verification &amp; Recovery</a></li>
       <li><a href="#webhooks">Webhooks</a></li>
       <li><a href="#tags">Tags</a></li>
       <li><a href="#mailbox">Mailbox</a></li>
       <li><a href="#networks">Networks</a></li>
       <li><a href="#service-agents">Service Agents</a></li>
+      <li><a href="#appstore">App Store</a></li>
       <li><a href="#diagnostics">Diagnostics</a></li>
       <li><a href="#managed">Managed Networks</a></li>
       <li><a href="#member-tags">Member Tags</a></li>
@@ -218,6 +220,22 @@ const bodyContent = `<h1>CLI Reference</h1>
   <pre><code><span class="cmd">pilotctl</span> untrust &lt;node_id&gt;</code></pre>
   <p>Returns: <code>node_id</code></p>
 
+  <h2 id="verification">Verification &amp; Recovery</h2>
+
+  <h3 id="verify">verify</h3>
+  <pre><code><span class="cmd">pilotctl</span> verify [status] [--node &lt;addr|id&gt;]
+<span class="cmd">pilotctl</span> verify --provider &lt;name&gt;
+<span class="cmd">pilotctl</span> verify --badge &lt;b&gt; --badge-sig &lt;s&gt;   <span class="comment"># or --from &lt;file&gt;</span></code></pre>
+  <p>Verified-address badges prove a node controls a real, attested identity. Bare <code>verify</code> (or <code>verify status</code>) shows your current state; <code>--provider &lt;name&gt;</code> runs a device-flow to become verified; <code>--badge</code>/<code>--badge-sig</code> (or <code>--from &lt;file&gt;</code>) submits a badge you already hold. Badges are checked offline against the pinned issuer key — the registry's word is never trusted.</p>
+  <p>Returns: <code>verified</code> (bool), <code>node_id</code>, <code>address</code>, <code>issuer</code></p>
+
+  <h3 id="recovery">recovery</h3>
+  <pre><code><span class="cmd">pilotctl</span> recovery enroll &lt;...&gt;
+<span class="cmd">pilotctl</span> recovery new-key &lt;...&gt;
+<span class="cmd">pilotctl</span> recovery recover &lt;...&gt;</code></pre>
+  <p>Reclaim a node's address if its identity key is lost. <code>enroll</code> records an opaque recovery commitment for the address; <code>new-key</code> rotates to a fresh key; <code>recover</code> reclaims the address using recovery material. Enrollment and signatures come from the <code>pilot-verify</code> tool.</p>
+  <p>Returns: <code>status</code>, <code>node_id</code>, <code>address</code></p>
+
   <h2 id="webhooks">Webhooks</h2>
 
   <h3 id="set-webhook">set-webhook</h3>
@@ -231,13 +249,15 @@ const bodyContent = `<h1>CLI Reference</h1>
 
   <h2 id="tags">Tags</h2>
 
+  <p>Discovery tags are operator setup, so they live in the <code>extras</code> tier — <code>pilotctl set-tags</code> on its own is rejected.</p>
+
   <h3 id="set-tags">set-tags</h3>
-  <pre><code><span class="cmd">pilotctl</span> set-tags &lt;tag1&gt; [tag2] [tag3]</code></pre>
+  <pre><code><span class="cmd">pilotctl</span> extras set-tags &lt;tag1&gt; [tag2] [tag3]</code></pre>
   <p>Maximum 3 tags. Lowercase alphanumeric + hyphens, 1–32 characters each.</p>
   <p>Returns: <code>node_id</code>, <code>tags</code></p>
 
   <h3 id="clear-tags">clear-tags</h3>
-  <pre><code><span class="cmd">pilotctl</span> clear-tags</code></pre>
+  <pre><code><span class="cmd">pilotctl</span> extras clear-tags</code></pre>
   <p>Returns: <code>tags</code> (empty array)</p>
 
   <h2 id="mailbox">Mailbox</h2>
@@ -307,6 +327,50 @@ const bodyContent = `<h1>CLI Reference</h1>
 
   <p>The <code>--wait [&lt;dur&gt;]</code> flag (default 30s) makes <code>send-message</code> block until the reply lands in <code>~/.pilot/inbox/</code>, which avoids racing with the file system poll. See <a href="/docs/service-agents">Service Agents</a> for the full pattern.</p>
 
+  <h2 id="appstore">App Store</h2>
+
+  <p>The app store installs local capability apps that run on your daemon as typed IPC services — JSON in, JSON out, auto-spawned on install. All subcommands are invoked as <code>pilotctl appstore &lt;subcommand&gt;</code>. The install root is <code>$PILOT_APPSTORE_ROOT</code> or <code>~/.pilot/apps</code>. See the full <a href="/docs/app-store">App Store</a> guide for the discover → install → call loop. Run <code>pilotctl appstore help</code> for the complete subcommand list.</p>
+
+  <h3 id="appstore-catalogue">catalogue</h3>
+  <pre><code><span class="cmd">pilotctl</span> appstore catalogue</code></pre>
+  <p>Lists apps available for one-command install (alias: <code>catalog</code>).</p>
+
+  <h3 id="appstore-view">view</h3>
+  <pre><code><span class="cmd">pilotctl</span> appstore view &lt;id&gt; [--all-changelog]</code></pre>
+  <p>App detail page — description, vendor, changelog, download/installed size, source URL, license, exposed methods, and granted permissions. Works whether or not the app is installed.</p>
+
+  <h3 id="appstore-install">install</h3>
+  <pre><code><span class="cmd">pilotctl</span> appstore install &lt;app-id&gt; [--force]
+<span class="cmd">pilotctl</span> appstore install &lt;bundle-dir&gt; --local [--force]</code></pre>
+  <p>Install by catalogue ID (fetches, verifies, and extracts), or sideload a local bundle with <code>--local</code> (sandboxed: <code>fs.read</code>/<code>fs.write</code> under <code>$APP</code> + <code>audit.log</code>; no net, no <code>key.sign</code>, no hooks). The daemon auto-spawns the app on install.</p>
+
+  <h3 id="appstore-list">list</h3>
+  <pre><code><span class="cmd">pilotctl</span> appstore list</code></pre>
+  <p>Lists installed apps and the IPC methods each exposes.</p>
+
+  <h3 id="appstore-call">call</h3>
+  <pre><code><span class="cmd">pilotctl</span> appstore call &lt;id&gt; &lt;method&gt; [json-args] [--timeout &lt;dur&gt;]</code></pre>
+  <p>Dispatches an IPC call into an app and prints the JSON result on stdout. Every app exposes <code>&lt;app&gt;.help</code> listing its methods, params, and latency class. Default timeout 120s (also <code>$PILOT_APPSTORE_CALL_TIMEOUT</code>).</p>
+
+  <h3 id="appstore-status">status / caps / audit / actions</h3>
+  <pre><code><span class="cmd">pilotctl</span> appstore status &lt;id&gt;
+<span class="cmd">pilotctl</span> appstore caps &lt;id&gt;
+<span class="cmd">pilotctl</span> appstore audit &lt;id&gt; [--tail &lt;n&gt;] [--event &lt;name&gt;] [--since &lt;dur&gt;]
+<span class="cmd">pilotctl</span> appstore actions [--tail &lt;n&gt;] [--event &lt;name&gt;]</code></pre>
+  <p><code>status</code> deep-dives one app's pinned state; <code>caps</code> shows the manifest's spend caps and current rolling-window usage; <code>audit</code> shows the supervisor lifecycle log (spawn/exit/suspend/verify-fail); <code>actions</code> shows the pilotctl-side install/uninstall log, which survives app removal.</p>
+
+  <h3 id="appstore-restart">restart / uninstall / verify</h3>
+  <pre><code><span class="cmd">pilotctl</span> appstore restart &lt;id&gt;
+<span class="cmd">pilotctl</span> appstore uninstall &lt;id&gt; --yes
+<span class="cmd">pilotctl</span> appstore verify &lt;bundle-dir&gt;</code></pre>
+  <p><code>restart</code> clears crash-loop suspension and respawns the app; <code>uninstall</code> removes it from the install root; <code>verify</code> sha256-checks a pre-install bundle against its manifest.</p>
+
+  <h3 id="appstore-publisher">gen-key / sign / sign-catalogue</h3>
+  <pre><code><span class="cmd">pilotctl</span> appstore gen-key &lt;key-file&gt;
+<span class="cmd">pilotctl</span> appstore sign --key &lt;key-file&gt; &lt;manifest&gt;
+<span class="cmd">pilotctl</span> appstore sign-catalogue --key &lt;key-file&gt; &lt;catalogue.json&gt;</code></pre>
+  <p>Publisher tooling: generate an ed25519 publisher keypair, sign a manifest's <code>store.signature</code> so the supervisor accepts it, and sign a catalogue (writes a detached <code>.sig</code> pilotctl verifies on load). Alias: <code>sign-catalog</code>.</p>
+
   <h2 id="diagnostics">Diagnostics</h2>
 
   <h3 id="health">health</h3>
@@ -340,6 +404,11 @@ const bodyContent = `<h1>CLI Reference</h1>
   <h3 id="disconnect">disconnect</h3>
   <pre><code><span class="cmd">pilotctl</span> disconnect &lt;conn_id&gt;</code></pre>
   <p>Returns: <code>conn_id</code></p>
+
+  <h3 id="prefer-direct">prefer-direct</h3>
+  <pre><code><span class="cmd">pilotctl</span> prefer-direct &lt;node_id|address|hostname&gt;</code></pre>
+  <p>Resets routing state for a peer so the next connection prefers a direct (hole-punched) tunnel over the relay — useful after a relay path got pinned. Requires daemon v1.12+.</p>
+  <p>Returns: <code>had_tunnel</code>, <code>was_relay_active</code>, <code>was_relay_pinned</code></p>
 
   <h2 id="managed">Managed Networks</h2>
   <p>Operator commands for networks that run an automated evaluation cycle (membership pruning + vacancy filling). Three subcommands: <code>status</code>, <code>cycle</code>, <code>reconcile</code>.</p>
@@ -468,6 +537,14 @@ const bodyContent = `<h1>CLI Reference</h1>
   <h3 id="version">version</h3>
   <pre><code><span class="cmd">pilotctl</span> version</code></pre>
   <p>Prints the build version string.</p>
+
+  <h3 id="update">update</h3>
+  <pre><code><span class="cmd">pilotctl</span> update [status|enable|disable] [--pin &lt;tag&gt;]</code></pre>
+  <p>Self-update. With no subcommand, runs the updater once — checks for and installs the latest release. Automatic updates are <strong>off by default</strong>; <code>enable</code>/<code>disable</code> toggle the background updater and <code>status</code> shows the current setting and version. Distinct from <code>updates</code> (below), which just reads the changelog feed.</p>
+
+  <h3 id="review">review</h3>
+  <pre><code><span class="cmd">pilotctl</span> review &lt;pilot|app-id&gt; [--rating &lt;1-5&gt;] [--text "..."]</code></pre>
+  <p>Submit a rating and/or written review for Pilot itself (<code>pilot</code>) or for an installed app (e.g. <code>io.pilot.cosift</code>).</p>
 
   <h3 id="updates">updates</h3>
   <pre><code><span class="cmd">pilotctl</span> updates [--count &lt;n&gt;] [--scope &lt;name&gt;]</code></pre>
