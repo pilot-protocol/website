@@ -18,7 +18,7 @@ import PlainLayout from '../../layouts/PlainLayout.astro';
   <li>Email: where we send your submission confirmation and the review decision.</li>
   <li>Identity: app id (io.pilot.&lt;name&gt;), version (semver), and a one-line description.</li>
   <li>Backend: the app type (HTTP API; CLI/binary is coming soon), the backend base URL, and any auth headers. Header values may use $&#123;TOKEN&#125; placeholders that the operator supplies at install — never stored in the app.</li>
-  <li>Methods: each method an agent can call — name (&lt;ns&gt;.&lt;verb&gt;), HTTP route, latency class (fast under 5s, medium up to 15s, slow up to 1 minute), description, and parameters.</li>
+  <li>Methods: each method an agent can call — name (&lt;ns&gt;.&lt;verb&gt;), HTTP route (verb GET/POST/PUT/PATCH/DELETE and a path template that may contain &#123;name&#125; placeholders), latency class (fast under 5s, medium up to 15s, slow up to 1 minute), description, and parameters. For HTTP methods each parameter also has an "in" that says where the adapter reads it from: query (?name=value), path (fills &#123;name&#125; url-encoded), path_raw (fills &#123;name&#125; unescaped, for URL-in-path APIs), body (a JSON body field), or header. It defaults to the verb's natural location (GET → query, POST/PUT/PATCH → body).</li>
   <li>Listing: display name, description, license, and categories for the store page.</li>
   <li>Vendor: who you are, how autonomous agents should use the app, and the list of capabilities.</li>
   <li>Review and submit: sign the Publisher Release Agreement (type your full legal name and check the box), then the server builds, signs, and verifies the adapter and stores it for review.</li>
