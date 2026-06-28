@@ -11,6 +11,16 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
  {
+ slug: "pilot-vs-tailscale-nebula-zerotier-ai-agents",
+ title: "Pilot vs Tailscale vs Nebula vs ZeroTier for AI Agents",
+ description: "Tailscale, Nebula, and ZeroTier are great machine VPNs — but agents need addressing, discovery, and per-peer trust. An honest architecture comparison and decision guide.",
+ date: "Jun 28",
+ category: "Blog",
+ tags: ["comparison", "overlay-network", "vpn", "networking"],
+ banner: "banners/pilot-vs-tailscale-nebula-zerotier-ai-agents.svg",
+ },
+
+ {
  slug: "secure-data-exchange-for-multi-cloud-ai-systems",
  title: "Secure data exchange for multi-cloud AI systems",
  description: "Discover essential strategies for explaining secure data exchange in multi-cloud AI systems. Learn to protect sensitive data effectively!",
@@ -22,7 +32,7 @@ export const blogPosts: BlogPost[] = [
 
  {
  slug: "encrypted-data-exchange-for-decentralized-ai-systems",
- title: "Encrypted data exchange for decentralized AI systems",
+ title: "Encrypted Data Exchange for Decentralized AI",
  description: "Unlock essential strategies with our guide to encrypted data exchange for decentralized AI systems, safeguarding sensitive data across networks.",
  date: "May 10",
  category: "Blog",
@@ -272,7 +282,7 @@ export const blogPosts: BlogPost[] = [
 
  {
  slug: "persistent-addresses-distributed-autonomous-systems",
- title: "Persistent addresses for distributed and autonomous systems",
+ title: "Persistent Addresses for Distributed AI Agents",
  description: "Learn how persistent addresses solve unstable endpoint problems in distributed and autonomous agent systems across multi-cloud environments with secure P2P solutions.",
  date: "Apr 14",
  category: "Blog",
@@ -450,7 +460,7 @@ slug: "secure-ai-agent-networking-workflow-step-by-step",
  },
  {
  slug: "peer-to-peer-agent-communication-no-server",
- title: "Peer-to-Peer Agent Communication: No Server Required",
+ title: "Peer-to-Peer Agent Communication With No Server",
  description: "Why hub-and-spoke is a bottleneck for agents. Walk through Pilot Protocol's direct P2P model: STUN, hole-punching, encrypted tunnels, trust handshakes.",
  date: "Mar 30",
  category: "Architecture",
@@ -685,7 +695,7 @@ slug: "secure-ai-agent-networking-workflow-step-by-step",
  },
  {
  slug: "move-beyond-rest-persistent-connections-for-agents",
- title: "Move Beyond REST: Persistent Connections for Agents",
+ title: "Beyond REST: Persistent Connections for AI Agents",
  description: "REST polling wastes 98.5% of requests. WebSockets break at scale. Persistent bidirectional connections solve real-time agent communication without the infrastructure pain.",
  date: "Feb 26",
  category: "Architecture",
@@ -802,7 +812,7 @@ slug: "secure-ai-agent-networking-workflow-step-by-step",
  },
  {
  slug: "connect-agents-across-aws-gcp-azure-without-vpn",
- title: "Connect Agents Across AWS, GCP, and Azure Without a VPN",
+ title: "Connect AI Agents Across AWS, GCP & Azure — No VPN",
  description: "Deploy agents across any cloud with two commands. No VPN tunnels, no cloud interconnect, no per-cloud networking configuration. Virtual addresses that work everywhere.",
  date: "Feb 19",
  category: "Guide",
@@ -946,7 +956,7 @@ slug: "secure-ai-agent-networking-workflow-step-by-step",
  },
  {
  slug: "mcp-plus-pilot-tools-and-network",
- title: "MCP + Pilot: Give Your Agent Tools AND a Network",
+ title: "MCP + Pilot: Tools and a Network for AI Agents",
  description: "MCP handles tool access. Pilot handles peer communication. Together: agents that gather data, share results, and delegate work without a platform in the middle.",
  date: "Feb 9",
  category: "Integration",
