@@ -17,8 +17,9 @@
 //
 // Exit code: 0 when coverage is complete, 1 when any page is missing/orphaned.
 
-import { readdir } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -52,6 +53,34 @@ async function astroSlugs(relDir) {
   );
 }
 
+const PLAIN_DIR = 'src/pages/plain';
+
+// Recursively collect every plain .astro file (repo-relative paths).
+async function walkAstro(relDir) {
+  const out = [];
+  const entries = await readdir(join(REPO_ROOT, relDir), { withFileTypes: true });
+  for (const e of entries) {
+    const rel = `${relDir}/${e.name}`;
+    if (e.isDirectory()) out.push(...(await walkAstro(rel)));
+    else if (e.name.endsWith('.astro')) out.push(rel);
+  }
+  return out;
+}
+
+// Same hashing as scripts/regen-plain.mjs sourceHash(): raw utf8, sha256, hex.
+function sha256(text) {
+  return createHash('sha256').update(text, 'utf8').digest('hex');
+}
+
+// Pull the regen provenance stamp out of a generated plain file, if present.
+// Returns { source, hash } or null for hand-written / data-driven plain pages.
+function readStamp(plainText) {
+  const src = plainText.match(/^\/\/ plain-source:\s*(.+)$/m);
+  const hash = plainText.match(/^\/\/ plain-source-sha256:\s*([0-9a-f]{64})$/m);
+  if (!src || !hash) return null;
+  return { source: src[1].trim(), hash: hash[1] };
+}
+
 async function main() {
   const errors = [];
 
@@ -79,7 +108,28 @@ async function main() {
     }
   }
 
-  const checked = MAIN_PAIRS.length + human.size;
+  // 3. Content drift: every plain file that carries a regen provenance stamp
+  //    must match the CURRENT hash of its source. A mismatch means the source
+  //    was edited but the plain twin was never regenerated — the silent staleness
+  //    the structural checks above can't see. Files with no stamp (data-driven
+  //    skills/setups pages, hand-written plain pages) are skipped here.
+  let stamped = 0;
+  for (const rel of await walkAstro(PLAIN_DIR)) {
+    const stamp = readStamp(await readFile(join(REPO_ROOT, rel), 'utf8'));
+    if (!stamp) continue;
+    stamped += 1;
+    const srcAbs = join(REPO_ROOT, stamp.source);
+    if (!existsSync(srcAbs)) {
+      errors.push(`Stale plain page: ${rel} was generated from ${stamp.source}, which no longer exists (remove the plain page or restore the source)`);
+      continue;
+    }
+    const current = sha256(await readFile(srcAbs, 'utf8'));
+    if (current !== stamp.hash) {
+      errors.push(`Stale plain page: ${stamp.source} changed since ${rel} was generated — re-run \`node scripts/regen-plain.mjs\` and commit the result`);
+    }
+  }
+
+  const checked = MAIN_PAIRS.length + human.size + stamped;
   if (errors.length) {
     console.error('✗ Plain (machine UI) coverage check failed:\n');
     for (const e of errors) console.error(`  - ${e}`);
@@ -90,7 +140,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`✓ Plain coverage OK — ${checked} required pairs present, no orphans.`);
+  console.log(`✓ Plain coverage OK — ${checked} required pairs present, no orphans, ${stamped} stamped twins in sync with source.`);
 }
 
 main().catch((err) => {

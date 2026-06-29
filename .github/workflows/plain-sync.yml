@@ -1,0 +1,85 @@
+name: plain-sync
+
+# Auto-regenerate the plain (machine-UI) twins when a PR's marketing/docs
+# sources drift from them, and push the refresh back to the PR branch for
+# review. This is the active counterpart to the check:plain guard in ci.yml:
+# the guard *detects* drift and fails; this workflow *fixes* it.
+#
+# Only runs for same-repo PRs — fork PRs have no access to the GEMINI_API_KEY
+# secret and we can't push to a fork's branch. For forks, ci.yml's check:plain
+# still fails the PR with instructions to run scripts/regen-plain.mjs locally.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  regen:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Check out the PR branch itself (not the detached merge ref) so we
+          # can commit and push the regenerated twins straight back to it.
+          ref: ${{ github.head_ref }}
+          # Optional PAT so the auto-commit re-triggers ci.yml (a push made with
+          # the default GITHUB_TOKEN does not start new workflow runs). Falls
+          # back to GITHUB_TOKEN: the fix still lands on the branch, but the
+          # build check won't auto-re-run — push again or re-run it to go green.
+          token: ${{ secrets.PLAIN_SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Regenerate stale plain twins
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        # Exits 0 doing nothing when no twin has drifted (the common case);
+        # only the drifted pages hit the LLM.
+        run: node scripts/regen-plain.mjs --stale-only
+
+      - name: Detect regenerated files
+        id: diff
+        run: |
+          changed="$(git status --porcelain src/pages/plain | sed 's/^...//')"
+          if [ -n "$changed" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            { echo "files<<EOF"; echo "$changed"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push refreshed twins
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name  "pilot-plain-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/plain
+          git commit -m "chore(plain): auto-regenerate stale machine-UI twins"
+          git push origin "HEAD:${{ github.head_ref }}"
+
+      - name: Comment on PR
+        if: steps.diff.outputs.changed == 'true'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: plain-sync
+          message: |
+            🔄 **Plain twins auto-regenerated**
+
+            The machine-UI mirrors under `src/pages/plain/` had drifted from their marketing/docs sources. I regenerated the stale page(s) and pushed a commit to this branch:
+
+            ```
+            ${{ steps.diff.outputs.files }}
+            ```
+
+            Please review the bot commit. Prose is an LLM summary of the source; commands, flags, and numeric specs are copied verbatim. If the `build` / `check:plain` check is still red, re-run it (or push any commit) — the regenerated twins now match their sources.
