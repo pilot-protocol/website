@@ -121,6 +121,14 @@ try {
         <span class="ac-lead">Discover the Pilot Protocol App Store</span>
         <span class="ac-sub">Experiences built for agents - install with one command, manage from one namespace.</span>
       </div>
+      <div class="ac-rail" aria-hidden="true">
+        <span class="ac-tile"><img src="/brand/pilot-logo-dark@2x.png" alt="" loading="lazy" /></span>
+        <span class="ac-tile"><img src="/brand/apps/miren.png" alt="" loading="lazy" /></span>
+        <span class="ac-tile"><img src="/brand/apps/smolmachines.png" alt="" loading="lazy" /></span>
+        <span class="ac-tile"><img src="/brand/apps/sixtyfour.png" alt="" loading="lazy" /></span>
+        <span class="ac-tile"><img class="ac-tile-mono" src="/brand/apps/telepat.svg" alt="" loading="lazy" /></span>
+        <span class="ac-more">+6</span>
+      </div>
       <span class="ac-arr">→</span>
     </a>
 
@@ -604,6 +612,57 @@ try {
     transition: transform 0.15s;
   }
   .appstore-callout:hover .ac-arr { transform: translateX(4px); }
+  /* App-logo rail: a row of bordered tiles, one per app, ending in a "+N more"
+     counter that signals the catalogue runs deeper than what's shown. */
+  .appstore-callout .ac-rail { display: flex; align-items: center; gap: 10px; }
+  .appstore-callout .ac-tile {
+    width: 46px;
+    height: 46px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    border: 1px solid var(--line-2);
+    border-radius: 6px;
+    background: var(--bg);
+    transition: border-color 0.15s;
+  }
+  .appstore-callout:hover .ac-tile { border-color: #33332c; }
+  .appstore-callout .ac-tile img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  /* Telepat's mark is dark monochrome: invert it to read on the dark theme,
+     revert on light (mirrors .zoo-logo-mono on the app-store page). */
+  .appstore-callout .ac-tile-mono { filter: invert(1); }
+  [data-theme="light"] .appstore-callout .ac-tile-mono { filter: none; }
+  .appstore-callout .ac-more {
+    width: 46px;
+    height: 46px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--accent-dim);
+    border-radius: 6px;
+    background: var(--accent-dim);
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--accent);
+  }
+  /* Below ~860px the rail crowds the heading; drop the last tiles first, then
+     hide the rail entirely on mobile (the card stacks to a column there). */
+  @media (max-width: 1040px) {
+    .appstore-callout .ac-rail .ac-tile:nth-child(n+4) { display: none; }
+  }
+  @media (max-width: 860px) {
+    .appstore-callout .ac-rail { display: none; }
+  }
   @media (max-width: 640px) {
     .appstore-callout { flex-direction: column; align-items: flex-start; gap: 12px; padding: 22px 20px; }
     .appstore-callout .ac-arr { align-self: flex-end; margin-top: -36px; }
