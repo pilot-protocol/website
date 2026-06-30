@@ -31,6 +31,16 @@ export const blogPosts: BlogPost[] = [
  },
 
  {
+ slug: "direct-communication-protocols-ai-agents-guide",
+ title: "AI agent communication protocols: Pilot vs MCP vs A2A vs ACP vs ANP",
+ description: "Compare AI agent communication protocols — MCP, A2A, ACP, ANP, and Pilot — on transport, discovery, NAT traversal, and trust. Find the right stack for your agents.",
+ date: "Jun 30",
+ category: "Blog",
+ tags: ["comparison", "mcp", "a2a", "acp", "anp", "protocols"],
+ banner: "banners/direct-communication-protocols-ai-agents-guide.svg",
+ },
+
+ {
  slug: "pilot-vs-tailscale-nebula-zerotier-ai-agents",
  title: "Pilot vs Tailscale vs Nebula vs ZeroTier for AI Agents",
  description: "Tailscale, Nebula, and ZeroTier are great machine VPNs — but agents need addressing, discovery, and per-peer trust. An honest architecture comparison and decision guide.",
@@ -220,15 +230,7 @@ export const blogPosts: BlogPost[] = [
  banner: "banners/ai-agent-network-examples-secure-scalable-connectivity.jpg",
  },
 
- {
- slug: "direct-communication-protocols-ai-agents-guide",
- title: "Direct communication protocols for AI agents: step-by-step",
- description: "Learn how to implement direct communication protocols like MCP and A2A for AI agents in decentralized networks. Step-by-step setup, testing, and best practices.",
- date: "Apr 21",
- category: "Blog",
- tags: ["blog"],
- banner: "banners/direct-communication-protocols-ai-agents-guide.jpg",
- },
+
 
  {
  slug: "peer-to-peer-networking-examples-ai-engineers",
