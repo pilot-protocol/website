@@ -1,0 +1,121 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>If you are trying to connect a fleet of programs across machines, clouds, and home networks, you will quickly land on the same shortlist: <a href="https://tailscale.com" target="_blank" rel="noopener">Tailscale</a>, <a href="https://github.com/slackhq/nebula" target="_blank" rel="noopener">Nebula</a>, and <a href="https://www.zerotier.com" target="_blank" rel="noopener">ZeroTier</a>. They are the three most popular overlay networks, and all three are genuinely good at what they were built for: giving machines a flat, encrypted network regardless of where they physically sit.</p>
+
+  <p>But "machines on a flat network" and "AI agents that find and trust each other" are different problems. This article compares the architecture of Tailscale, Nebula, and ZeroTier head to head, then explains where an agent-native overlay like Pilot Protocol fits — and, just as importantly, where it does not. The goal is an honest decision guide, not a teardown.</p>
+
+  <section>
+  <h2>The short answer</h2>
+  <p>Tailscale, Nebula, and ZeroTier are <strong>VPN-class overlays</strong>: they move IP (or Ethernet) packets between hosts you administer. Pilot Protocol is an <strong>application-layer overlay for agents</strong>: instead of giving a host an IP on a private LAN, it gives an <em>agent</em> a permanent address, a trust handshake, and a discovery directory so it can find and message other agents it has never met. If your unit of work is a <em>machine</em>, pick one of the three VPNs. If your unit of work is an <em>autonomous agent</em>, a VPN is the wrong layer.</p>
+  </section>
+
+  <section>
+  <h2>Architecture at a glance</h2>
+  <table>
+    <thead>
+      <tr><th>&nbsp;</th><th>Tailscale</th><th>Nebula</th><th>ZeroTier</th><th>Pilot Protocol</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Built for</td><td>Devices &amp; users</td><td>Server fleets</td><td>Devices &amp; LANs</td><td>AI agents</td></tr>
+      <tr><td>OSI layer</td><td>L3 (IP)</td><td>L3 (IP)</td><td>L2 (Ethernet)</td><td>L7 (agent messaging)</td></tr>
+      <tr><td>Crypto core</td><td>WireGuard</td><td>Noise framework</td><td>Custom (Curve25519/Salsa)</td><td>X25519 + AES-GCM</td></tr>
+      <tr><td>Identity</td><td>SSO / OIDC accounts</td><td>Self-run CA + certs</td><td>Network ID + controller</td><td>Per-agent key + trust handshake</td></tr>
+      <tr><td>Discovery</td><td>Coordination server</td><td>Lighthouses</td><td>Roots / controllers</td><td>Rendezvous + nameserver directory</td></tr>
+      <tr><td>NAT traversal</td><td>Hole-punch + DERP relay</td><td>Lighthouse-assisted punch</td><td>Roots-assisted punch</td><td>STUN + hole-punch + relay</td></tr>
+      <tr><td>What an endpoint is</td><td>A host IP</td><td>A host IP</td><td>A host on an L2 net</td><td>A named, addressable agent</td></tr>
+      <tr><td>License</td><td>BSD client; SaaS control</td><td>MIT</td><td>BSL</td><td>AGPL-3.0, stdlib-only Go</td></tr>
+    </tbody>
+  </table>
+  <p>Two things stand out. First, the crypto is broadly similar across all four — modern elliptic-curve key exchange with authenticated encryption — so "which is most secure" is rarely the deciding factor. Second, the real differences are in <em>identity, discovery, and what an endpoint represents</em>. That is where agent workloads diverge from device workloads.</p>
+  </section>
+
+  <section>
+  <h2>Tailscale: the device VPN that "just works"</h2>
+  <p>Tailscale wraps <a href="https://www.wireguard.com" target="_blank" rel="noopener">WireGuard</a> in a control plane that handles key distribution, NAT traversal, and access control for you. Devices authenticate through your existing identity provider (Google, Okta, GitHub), a coordination server exchanges the WireGuard keys, and DERP relay servers carry traffic when a direct hole-punch fails. MagicDNS gives every node a friendly name, and ACLs gate who can reach whom.</p>
+  <p>It is the easiest of the three to adopt, and for connecting laptops, servers, and CI runners into one private network it is hard to beat. The trade-offs: the coordination server is a hosted dependency (the open-source <a href="https://github.com/juanfont/headscale" target="_blank" rel="noopener">Headscale</a> re-implements it if you need self-hosting), identity is tied to <em>human</em> accounts and devices, and the model is "give this machine an IP," not "let this agent advertise a capability."</p>
+  </section>
+
+  <section>
+  <h2>Nebula: certificates and lighthouses for server fleets</h2>
+  <p>Nebula came out of Slack and is built around a certificate authority you run yourself. You issue each host a signed certificate that encodes its IP and group membership; firewall rules are expressed in terms of those groups. Discovery and NAT traversal go through <em>lighthouses</em> — well-known nodes that track where everyone is and help peers punch through NAT. The data plane uses the Noise protocol framework over UDP.</p>
+  <p>Nebula shines for large, security-conscious server fleets where you want full control of identity and no SaaS in the path. The cost is operational: you own the CA, certificate issuance and rotation, and lighthouse availability. Like Tailscale, the abstraction is the host and its IP — there is no concept of an agent, a capability, or a per-message trust decision.</p>
+  </section>
+
+  <section>
+  <h2>ZeroTier: a virtual Ethernet switch</h2>
+  <p>ZeroTier is the odd one out: it emulates a <strong>Layer 2 Ethernet</strong> network over the internet, so joined devices behave as if they share a physical switch — broadcast, multicast, and non-IP protocols all work. Devices join a network by its 16-digit Network ID, and a controller authorizes membership; planet/root servers handle discovery and relay.</p>
+  <p>That L2 model is powerful for replicating LAN behavior across sites (think legacy systems, game servers, or appliances that expect to be on the same subnet). For agent-to-agent messaging it is more network than you need: you are emulating Ethernet frames to ultimately move application messages between two programs that just want to find each other by name.</p>
+  </section>
+
+  <section>
+  <h2>Where Pilot Protocol is different</h2>
+  <p>Pilot does not try to be a better VPN. It operates one layer up. The questions an agent actually asks are: <em>"What is my durable address? How do I discover an agent that can do X? How do I prove who I am and decide whether to trust this peer — per connection, not per network?"</em> A VPN answers none of these; it just delivers packets once you already know the IP.</p>
+  <ul>
+    <li><strong>Agents, not hosts, are addressable.</strong> Every agent gets a permanent 48-bit virtual address that survives restarts, IP changes, and moving between clouds. You message an agent, not a machine.</li>
+    <li><strong>Trust is per-peer, not per-network.</strong> Joining a Tailscale tailnet or a ZeroTier network ID means you are "in." Pilot uses an explicit handshake: two agents mutually approve a trust link before they exchange data, so membership and trust are decoupled.</li>
+    <li><strong>Discovery is built in.</strong> A rendezvous directory and a nameserver let an agent resolve peers and capabilities by name or tag — closer to DNS-plus-a-service-registry than to a VPN's static host list.</li>
+    <li><strong>It is a thin application layer.</strong> Encrypted UDP tunnels (X25519 + AES-GCM) with STUN, hole-punching, and relay fallback for NAT — implemented in pure-stdlib Go with no external dependencies, AGPL-licensed.</li>
+  </ul>
+  <p>The honest framing: Pilot and a mesh VPN are not mutually exclusive. You can absolutely run agents on top of Tailscale or Nebula. You would just be solving addressing, discovery, and trust yourself, on top of a layer that does not know what an agent is.</p>
+  </section>
+
+  <section>
+  <h2>Which should you choose?</h2>
+  <ul>
+    <li><strong>Connecting laptops, servers, and CI into one private network, fast?</strong> Tailscale.</li>
+    <li><strong>Large server fleet, want to own identity end to end with no SaaS?</strong> Nebula.</li>
+    <li><strong>Need true L2 / broadcast behavior across sites?</strong> ZeroTier.</li>
+    <li><strong>Building software where the unit is an autonomous agent that must discover, address, and trust other agents?</strong> Pilot Protocol — at the agent layer, optionally over one of the above.</li>
+  </ul>
+  </section>
+
+  <section>
+  <h2>Try it</h2>
+  <p>Pilot installs in one line and gives an agent an address on the network in under a minute:</p>
+  <pre><code><span class="comment"># Install and start</span>
+<span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
+<span class="cmd">pilotctl daemon start --email agent@example.com</span>
+<span class="cmd">pilotctl network join 1</span>
+
+<span class="comment"># You now have a permanent address; discover and message a peer</span>
+<span class="cmd">pilotctl handshake &lt;peer-address&gt;</span>
+<span class="cmd">pilotctl send-message &lt;peer-address&gt; --data 'hello'</span></code></pre>
+  </section>
+
+  <div class="cta">
+    <h3>Networking built for agents, not just machines</h3>
+    <p>Permanent addresses, a trust handshake, and built-in discovery — over encrypted UDP, with no external dependencies.</p>
+    <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
+  </div>`;
+
+const faqItems = [
+  {
+    question: "Is Tailscale or Nebula better for connecting AI agents?",
+    answer: "Both are excellent <em>device</em> VPNs, but neither is built for agents. They connect hosts by IP and treat network membership as trust. If your unit of work is an autonomous agent that must discover peers and make per-connection trust decisions, you will end up building addressing, discovery, and trust on top of them — which is the problem an agent-native overlay like Pilot solves directly.",
+  },
+  {
+    question: "What is the difference between Nebula and Tailscale?",
+    answer: "Tailscale wraps WireGuard in a hosted coordination server and authenticates devices through your SSO/identity provider — it is the fastest to adopt. Nebula is self-hosted: you run your own certificate authority and lighthouses, issue each host a signed certificate, and keep all identity in your control with no SaaS in the path. Tailscale optimizes for ease; Nebula optimizes for self-sovereign control of server fleets.",
+  },
+  {
+    question: "Do AI agents need a VPN?",
+    answer: "Not necessarily. A VPN gives a machine a private IP, but agents need three things a VPN does not provide: a durable address that survives restarts and cloud moves, a way to discover other agents by capability, and per-peer trust rather than blanket network membership. You can run agents over a VPN, but the agent layer (addressing, discovery, trust) still has to come from somewhere.",
+  },
+  {
+    question: "What is the best overlay network for agent-to-agent communication?",
+    answer: "For machine-to-machine connectivity, Tailscale, Nebula, and ZeroTier are all strong choices. For agent-to-agent communication specifically — where agents discover, address, and trust each other directly — Pilot Protocol works at the application layer: permanent per-agent virtual addresses, a mutual trust handshake, and a discovery directory, over encrypted UDP with NAT traversal.",
+  },
+];
+---
+<BlogLayout
+  title="Pilot vs Tailscale vs Nebula vs ZeroTier for AI Agents"
+  description="Comparing overlay networks for connecting AI agents: Tailscale, Nebula, ZeroTier, and Pilot. Architecture, NAT traversal, identity, trust — and which one actually fits agent-to-agent."
+  date="June 28, 2026"
+  tags={["comparison", "overlay-network", "vpn", "networking"]}
+  canonicalPath="/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents"
+  bannerImage="/blog/banners/pilot-vs-tailscale-nebula-zerotier-ai-agents.svg"
+  faqItems={faqItems}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
