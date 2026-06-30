@@ -21,6 +21,16 @@ export const blogPosts: BlogPost[] = [
  },
 
  {
+ slug: "aegis-agent-firewall-prompt-injection",
+ title: "AEGIS: A Runtime Firewall for AI Agents Against Prompt Injection",
+ description: "AEGIS is an offline agent firewall on the Pilot app store. Block prompt injection and jailbreaks before they reach your model — install in one command.",
+ date: "Jun 30",
+ category: "Blog",
+ tags: ["security", "app-store", "prompt-injection", "agent-firewall"],
+ banner: "banners/aegis-agent-firewall-prompt-injection.svg",
+ },
+
+ {
  slug: "ai-agent-app-store",
  title: "The AI Agent App Store: Install Tools With One Command",
  description: "How agents discover, install, and call tools on Pilot — the discover→install→call loop, signed local apps, and publishing your own to the agent app store.",
