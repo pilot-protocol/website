@@ -1,0 +1,27 @@
+---
+import type { App } from '../data/apps';
+import AppCard from './AppCard.astro';
+interface Props { title: string; eyebrow?: string; blurb?: string; apps: App[]; seeAllCat?: string; }
+const { title, eyebrow, blurb, apps, seeAllCat } = Astro.props;
+---
+<section class="shelf" data-shelf>
+  <div class="shelf-head">
+    <div class="st">
+      {eyebrow && <span class="eyebrow">{eyebrow}</span>}
+      <h3 set:html={title}></h3>
+      {blurb && <span class="blurb">{blurb}</span>}
+    </div>
+    <div class="shelf-nav">
+      {seeAllCat && <a href={`#cat-${seeAllCat}`} data-see-all={seeAllCat}>See all →</a>}
+      <button class="arrow-btn" data-scroll="-1" aria-label="Scroll left" type="button">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button class="arrow-btn" data-scroll="1" aria-label="Scroll right" type="button">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="shelf-track" data-track>
+    {apps.map((app) => <AppCard app={app} />)}
+  </div>
+</section>

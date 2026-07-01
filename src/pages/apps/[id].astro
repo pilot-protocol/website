@@ -1,0 +1,261 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+import AppIcon from '../../components/AppIcon.astro';
+import Shelf from '../../components/Shelf.astro';
+import { apps, categories, relatedApps } from '../../data/apps';
+import { fmtBytes, fmtNum, fmtDate, platformLabel, osOf, osSummary, ALL_PLATFORMS } from '../../data/format';
+import '../../styles/system.css';
+import '../../styles/appstore.css';
+
+export function getStaticPaths() {
+  return apps.map((app) => ({ params: { id: app.id }, props: { app } }));
+}
+const { app } = Astro.props;
+
+const catName = (id) => categories.find((c) => c.id === id)?.name ?? id;
+const related = relatedApps(app);
+const installCmd = `pilotctl appstore install ${app.id}`;
+const oses = [...new Set(app.bundles.map((b) => osOf(b.platform)))];
+const bundleFor = (p) => app.bundles.find((b) => b.platform === p);
+
+// tiny inline markdown: escape, then **bold** and `code`
+function inline(s) {
+  const esc = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return esc.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`([^`]+?)`/g, '<code>$1</code>');
+}
+const paragraphs = app.description.split('\n\n').map((p) => {
+  const lines = p.split('\n');
+  const isList = lines.every((l) => /^\s*-\s+/.test(l)) && lines.length > 1;
+  if (isList) return { type: 'ul', items: lines.map((l) => inline(l.replace(/^\s*-\s+/, ''))) };
+  return { type: 'p', html: inline(p) };
+});
+
+const title = `${app.name} — Pilot Protocol App Store`;
+const description = app.tagline;
+const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<BaseHead title={title} description={description} canonicalUrl={canonicalUrl} />
+<script type="application/ld+json" set:html={JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: app.name,
+  applicationCategory: catName(app.primaryCategory),
+  operatingSystem: oses.join(', '),
+  softwareVersion: app.version,
+  description: app.tagline,
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  author: { '@type': 'Organization', name: app.vendor },
+})}></script>
+</head>
+<body>
+<Nav active="for" />
+
+<main class="store">
+
+  <!-- ================= DETAIL HEAD ================= -->
+  <section class="detail-head">
+    <div class="wrap">
+      <a class="back-link" href="/app-store">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to App Store
+      </a>
+      <div class="crumbs">
+        <a href="/app-store">App Store</a><span class="sep">/</span>
+        <a href={`/app-store#cat-${app.primaryCategory}`}>{catName(app.primaryCategory)}</a><span class="sep">/</span>
+        <span>{app.name}</span>
+      </div>
+
+      <div class="dh-grid">
+        <div class="dh-l">
+          <AppIcon app={app} size={120} />
+          <div class="dh-title">
+            <h1>{app.name}</h1>
+            <div class="vendor">
+              {app.vendorUrl ? <a href={app.vendorUrl} target="_blank" rel="noopener">{app.vendor}</a> : app.vendor}
+              <span class="sep" style="color:var(--ink-faint);"> · </span>{app.id}
+            </div>
+            <div class="tag">{app.tagline}.</div>
+            <div class="dh-cats">
+              {app.categories.map((c) => <a class="tag-pill" href={`/app-store#cat-${c}`} style="text-decoration:none;">{catName(c)}</a>)}
+              {app.real && <span class="tag-pill" style="color:var(--accent);border-color:color-mix(in oklab,var(--accent) 45%,var(--line-2));">Live on catalogue</span>}
+            </div>
+          </div>
+        </div>
+
+        <div class="dh-r">
+          <div class="dh-install">
+            <div class="install-block" style="min-width:340px;max-width:420px;">
+              <div class="ib-bar">
+                <span class="lbl">Install</span>
+                <button class="copy-btn" data-copy={installCmd} type="button">Copy</button>
+              </div>
+              <div class="ib-cmd">
+                <code>pilotctl appstore install <span class="tok">{app.id}</span></code>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- metric strip -->
+      <div class="dh-metrics">
+        <div class="m"><div class="v">{fmtNum(app.downloads)}</div><div class="l">Installs</div></div>
+        <div class="m"><div class="v">v{app.version}</div><div class="l">Version</div></div>
+        <div class="m"><div class="v">{fmtBytes(app.installedBytes)}</div><div class="l">Size</div></div>
+        <div class="m"><div class="v" style="text-transform:capitalize;">{app.protection}</div><div class="l">Sandbox</div></div>
+        <div class="m"><div class="v">{osSummary(app.bundles)}</div><div class="l">Platforms</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= BODY ================= -->
+  <div class="wrap">
+    <div class="detail-body">
+
+      <!-- MAIN COLUMN -->
+      <div class="detail-main">
+
+        <section>
+          <h2 class="sec-h">About {app.name}</h2>
+          <div class="prose-desc">
+            {paragraphs.map((p) => p.type === 'ul'
+              ? <ul style="margin:0 0 16px;padding-left:20px;color:var(--ink-dim);line-height:1.7;">{p.items.map((it) => <li set:html={it} />)}</ul>
+              : <p set:html={p.html} />)}
+          </div>
+        </section>
+
+        <section>
+          <h2 class="sec-h">Methods · {app.methods.length}</h2>
+          <div class="method-list">
+            {app.methods.map((m) => (
+              <div class="mrow">
+                <code>{m.name}</code>
+                <div class="ms">{m.summary ?? '—'}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section class="changelog">
+          <h2 class="sec-h">What’s New</h2>
+          {app.changelog.map((c, i) => (
+            <div class="cl-entry">
+              <div class="cl-ver">
+                v{c.version}
+                {i === 0 && <span class="badge new">Latest</span>}
+                <div class="cl-date">{fmtDate(c.date ?? null)}</div>
+              </div>
+              <ul>{c.notes.map((n) => <li>{n}</li>)}</ul>
+            </div>
+          ))}
+        </section>
+
+        <section>
+          <h2 class="sec-h">Platform Compatibility</h2>
+          <div class="compat-grid">
+            {ALL_PLATFORMS.map((p) => {
+              const b = bundleFor(p);
+              const [os, arch] = [osOf(p), platformLabel(p).split(' · ')[1] ?? p];
+              return (
+                <div class="compat-mrow" data-ok={b ? 'true' : 'false'}>
+                  <div class="cp-l">
+                    <span class="cp-os">{os}</span>
+                    <span class="cp-arch">{arch}</span>
+                  </div>
+                  <div class="cp-r">
+                    {b
+                      ? <><span class="cp-size">{fmtBytes(b.bytes)}</span><span class="cp-yes"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Supported</span></>
+                      : <span class="cp-no">Not available</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+      </div>
+
+      <!-- SIDEBAR -->
+      <aside class="detail-side">
+        <div class="side-card">
+          <h4>Information</h4>
+          <div class="info-row"><span class="k">Vendor</span><span class="val">{app.vendorUrl ? <a href={app.vendorUrl} target="_blank" rel="noopener">{app.vendor}</a> : app.vendor}</span></div>
+          <div class="info-row"><span class="k">Category</span><span class="val">{catName(app.primaryCategory)}</span></div>
+          <div class="info-row"><span class="k">Version</span><span class="val">{app.version}</span></div>
+          <div class="info-row"><span class="k">Size</span><span class="val">{fmtBytes(app.installedBytes)}</span></div>
+          <div class="info-row"><span class="k">License</span><span class="val">{app.license}</span></div>
+          <div class="info-row"><span class="k">Runtime</span><span class="val">{app.runtimes.join(', ')}</span></div>
+          <div class="info-row"><span class="k">Min Pilot</span><span class="val">v{app.minPilotVersion}</span></div>
+          {app.publishedAt && <div class="info-row"><span class="k">Published</span><span class="val">{fmtDate(app.publishedAt)}</span></div>}
+          {app.sourceUrl && <div class="info-row"><span class="k">Source</span><span class="val"><a href={app.sourceUrl} target="_blank" rel="noopener">GitHub ↗</a></span></div>}
+        </div>
+
+        <div class="side-card">
+          <h4>Permissions</h4>
+          {app.grants.map((g) => {
+            const idx = g.indexOf(':');
+            const cap = idx === -1 ? g : g.slice(0, idx);
+            const target = idx === -1 ? '' : g.slice(idx + 1);
+            return <div class="perm"><code><span class="cap">{cap}</span>{target && <>:{target}</>}</code></div>;
+          })}
+          <p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin:12px 0 0;line-height:1.5;">Granted or denied by the agent at install time. No ambient authority.</p>
+        </div>
+
+        <div class="side-card">
+          <h4>Publish an app</h4>
+          <p style="font-size:13px;color:var(--ink-dim);line-height:1.55;margin:0 0 14px;">Built something agents need? Ship it to the catalogue with one PR.</p>
+          <a class="pub-btn" href="/publish" style="width:100%;justify-content:center;box-sizing:border-box;">Publish your app <span class="arr">→</span></a>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- related -->
+  {related.length > 0 && (
+    <div class="wrap" style="padding-bottom:40px;">
+      <Shelf title={`More in <em>${catName(app.primaryCategory)}</em>`} eyebrow="You might also like" apps={related} />
+    </div>
+  )}
+
+</main>
+
+<Footer />
+
+<div id="toast" style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:var(--bg-2);border:1px solid var(--line-2);border-radius:10px;padding:12px 18px;font-family:var(--mono);font-size:12px;color:var(--ink);z-index:9998;transition:opacity .2s,transform .2s;box-shadow:0 10px 30px rgba(0,0,0,.3);"></div>
+
+<script>
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $('#toast'); if (!t) return;
+    t.textContent = msg; t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(20px)'; }, 1900);
+  }
+
+  $$('[data-copy]').forEach((btn) => btn.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(btn.getAttribute('data-copy')); } catch {}
+    const o = btn.textContent; btn.textContent = 'Copied ✓'; btn.classList.add('copied');
+    toast('Copied  ·  ' + btn.getAttribute('data-copy'));
+    setTimeout(() => { btn.textContent = o; btn.classList.remove('copied'); }, 1600);
+  }));
+
+  // shelf arrows (related)
+  $$('[data-shelf]').forEach((shelf) => {
+    const track = $('[data-track]', shelf);
+    shelf.querySelectorAll('[data-scroll]').forEach((btn) => btn.addEventListener('click', () => {
+      track.scrollBy({ left: Number(btn.getAttribute('data-scroll')) * Math.round(track.clientWidth * 0.8), behavior: 'smooth' });
+    }));
+  });
+</script>
+
+</body>
+</html>
