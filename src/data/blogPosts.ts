@@ -11,6 +11,16 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
  {
+ slug: "overlay-network-ai-agents",
+ title: "Overlay Network for AI Agents: Architecture and Trust Model",
+ description: "What an overlay network for AI agents needs — persistent addressing, NAT traversal, encrypted transport, and per-peer trust — and how Pilot Protocol implements it.",
+ date: "Jul 1",
+ category: "Blog",
+ tags: ["overlay-network", "networking", "ai-agents", "architecture"],
+ banner: "banners/overlay-network-ai-agents.svg",
+ },
+
+ {
  slug: "ai-agent-app-store",
  title: "The AI Agent App Store: Install Tools With One Command",
  description: "How agents discover, install, and call tools on Pilot — the discover→install→call loop, signed local apps, and publishing your own to the agent app store.",

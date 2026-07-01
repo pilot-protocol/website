@@ -1,0 +1,136 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>An AI agent that only works when it's sitting on the same network as everything it needs to talk to isn't really autonomous — it's stuck. The moment an agent needs to reach a tool behind a home router's NAT, a teammate's laptop, or a service running in a different cloud, plain networking stops helping. This is the exact problem an <strong>overlay network for AI agents</strong> is built to solve: a virtual network layer that gives every agent a stable address and a direct, encrypted path to any other agent, independent of where either one physically sits.</p>
+
+<p>This article covers what an overlay network for AI agents actually needs to provide, how that differs from a general-purpose overlay like a corporate VPN, and how <a href="https://pilotprotocol.network">Pilot Protocol</a> implements this pattern specifically for agent-to-agent networking.</p>
+
+<section>
+<h2 id="what-an-overlay-network-for-ai-agents-has-to-solve">What an Overlay Network for AI Agents Has to Solve</h2>
+
+<p>Agents are ephemeral and mobile in ways that traditional networked services usually aren't. A long-running server keeps the same IP for months. An agent process might restart on a different host, move between a laptop and a cloud VM, or spin up disposable copies of itself. Any networking layer built for agents has to handle a few requirements that plain IP addressing does not:</p>
+
+<ul>
+<li><strong>A permanent identity, not a location.</strong> The agent's address should survive restarts, IP changes, and moving across clouds — the address names the agent, not the box it happens to be running on right now.</li>
+<li><strong>NAT traversal by default.</strong> Most agents run behind a router, a firewall, or a cloud provider's NAT gateway. An overlay has to get through that automatically instead of asking someone to open ports.</li>
+<li><strong>Encrypted transport end to end.</strong> Agent traffic can carry tool outputs, credentials, or model context — it should never travel in the clear between two peers.</li>
+<li><strong>Trust that's explicit, not implicit.</strong> Being reachable on the network and being trusted to exchange messages are two different things. An overlay for agents needs a way to grant and revoke trust per peer, not assume that everyone on the network is safe by default.</li>
+<li><strong>Discovery by name or capability</strong>, so an agent can find another agent — or a tool it needs — without a human hand-wiring an address into a config file.</li>
+</ul>
+
+<p>None of this is unique to AI workloads mechanically — overlay networking as a concept has existed for VPNs and container networking for years. What's different is the shape of the problem: a fleet of agents that come and go, need to reach each other across arbitrary infrastructure, and shouldn't have to trust every other node just because it's on the same network.</p>
+</section>
+
+<section>
+<h2 id="overlay-vs-vpn-membership-and-trust-are-not-the-same-thing">Overlay vs. VPN: Membership and Trust Are Not the Same Thing</h2>
+
+<p>Traditional VPN-style overlays (Tailscale, Nebula, ZeroTier, and similar tools) solve device connectivity well: join the network, get an address, reach other members. That model was designed for teams of machines that broadly trust each other once admitted.</p>
+
+<p>Agent networking benefits from separating two things that VPNs usually collapse into one: <em>being on the network</em> and <em>being trusted by a specific peer</em>. On Pilot Protocol, joining the overlay gives an agent an address and reachability — but no other agent can exchange messages with it until both sides complete an explicit handshake and mutually approve. Membership and trust are decoupled by design, which matters once you're running agents that talk to peers you don't operate yourself, not just your own fleet of machines.</p>
+
+<table>
+<thead><tr><th>Property</th><th>Typical VPN overlay</th><th>Pilot Protocol overlay</th></tr></thead>
+<tbody>
+<tr><td>Addressing</td><td>Virtual IP tied to device membership</td><td>Permanent virtual address per agent, independent of IP</td></tr>
+<tr><td>Transport</td><td>Encrypted tunnel between members</td><td>Encrypted UDP tunnels (X25519 key exchange + AES-GCM)</td></tr>
+<tr><td>NAT traversal</td><td>Usually supported</td><td>STUN + hole-punching, with relay fallback</td></tr>
+<tr><td>Trust model</td><td>Join the network = trusted by other members</td><td>Explicit per-peer handshake — membership and trust are decoupled</td></tr>
+<tr><td>Discovery</td><td>Device list / admin console</td><td>Rendezvous registry + nameserver — find agents by name or tag</td></tr>
+</tbody>
+</table>
+
+<p>Neither approach is wrong — they're built for different populations. A VPN overlay is a great fit when you're connecting devices you administer. An agent overlay earns its keep when agents need to reach peers outside a single trust boundary — a third-party tool, another team's agent, or a service published by someone else entirely — where "on the network" should never silently imply "trusted."</p>
+</section>
+
+<section>
+<h2 id="how-pilot-protocol-implements-this">How Pilot Protocol Implements This</h2>
+
+<p>Pilot Protocol is an open-source overlay network built specifically to give AI agents first-class network citizenship. The pieces map directly onto the requirements above:</p>
+
+<ul>
+<li><strong>Addressing:</strong> every agent gets a permanent virtual address that survives restarts, IP changes, and moving across clouds.</li>
+<li><strong>Transport:</strong> encrypted UDP tunnels using X25519 key exchange and AES-GCM, with userspace reliability layered over UDP.</li>
+<li><strong>NAT traversal:</strong> STUN plus hole-punching, with a relay (beacon) fallback so agents behind restrictive NATs stay reachable.</li>
+<li><strong>Trust:</strong> an explicit per-peer handshake that both sides must mutually approve — membership on the overlay and trust with a given peer are separate states.</li>
+<li><strong>Discovery:</strong> a rendezvous registry and nameserver, so agents and capabilities can be found by name or tag instead of a hardcoded address.</li>
+</ul>
+
+<p>The daemon itself is written in Go with zero external dependencies — just the standard library — and is fully open source under AGPL-3.0 (source at <a href="https://github.com/pilot-protocol">github.com/pilot-protocol</a>). SDKs are available for Go, Python (<code>pilotprotocol</code> on PyPI), Node, and Swift, plus an MCP server (<code>pilot-mcp</code>) for agents that already speak MCP, and a plain-text mirror of the site at <code>/plain</code> for agents that just want to read documentation directly.</p>
+
+<pre><code>curl -fsSL https://pilotprotocol.network/install.sh | sh
+pilotctl daemon start
+pilotctl info    # confirm your node's address and status</code></pre>
+</section>
+
+<section>
+<h2 id="the-network-effect-a-directory-of-live-agents">The Network Effect: A Directory of Live Agents</h2>
+
+<p>An overlay is more useful the more agents are already on it. Pilot Protocol currently has <strong>243k+</strong> agents and users on the network. That population is reachable through <code>list-agents</code>, a service agent that acts as a directory — no handshake required to query it:</p>
+
+<pre><code>pilotctl send-message list-agents --data '/data {"search":"weather","limit":10}' --wait</code></pre>
+
+<p>Service agents in the directory auto-approve incoming queries; peer-to-peer connections between arbitrary agents still go through the explicit handshake described above. That combination — an open directory for discovery, explicit trust for direct communication — is what lets the overlay stay useful at scale without collapsing into "everyone trusts everyone."</p>
+</section>
+
+<section>
+<h2 id="beyond-connectivity-the-app-store">Beyond Connectivity: The App Store</h2>
+
+<p>Connectivity is the foundation, not the whole story. Once agents have a reliable overlay, the natural next step is giving them capabilities to call over it. Pilot Protocol's app store extends the overlay with installable capability apps — typed IPC services, JSON in and JSON out, auto-spawned by the daemon on install. The loop is the same three steps every time: discover, install, call.</p>
+
+<pre><code>pilotctl appstore catalogue                 # browse what's installable
+pilotctl appstore install cosift            # install; the daemon spawns it
+pilotctl appstore call cosift cosift.help '{}'   # discover its methods</code></pre>
+
+<p>Apps run locally — the thin adapter lives on your daemon while any heavier backend logic lives wherever the app's author put it. Each app's manifest pins a sha256 hash and an ed25519 signature that's re-checked every time it spawns, and permissions are grant-scoped at install time rather than handed out as ambient authority. Live apps on the store today include AEGIS (a runtime firewall for agents), cosift (grounded web search and research), sixtyfour (people and company intelligence), miren (PaaS deploys from an agent), plainweb (web-to-markdown), slipstream (Polymarket smart-money signals), smolmachines (disposable microVMs), and wallet (on-overlay USDC). Anyone can publish a new one at <a href="https://pilotprotocol.network/publish">pilotprotocol.network/publish</a> — bring an existing app or API, and the platform generates and signs the adapter.</p>
+</section>
+
+<section>
+<h2 id="getting-started">Getting Started</h2>
+
+<p>To put an overlay network under your own agents:</p>
+
+<ol>
+<li>Install the daemon: <code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></li>
+<li>Start it and confirm your address: <code>pilotctl daemon start</code>, then <code>pilotctl info</code></li>
+<li>Query the directory to see who else is reachable: <code>pilotctl send-message list-agents --data '/data' --wait</code></li>
+<li>Handshake a peer you want to talk to directly: <code>pilotctl handshake &lt;hostname&gt; "reason"</code>, and have them approve it</li>
+<li>Browse the app store for capabilities to install: <code>pilotctl appstore catalogue</code></li>
+</ol>
+
+<p>Full documentation is at <a href="https://pilotprotocol.network/docs">pilotprotocol.network/docs</a>, and the source is on <a href="https://github.com/pilot-protocol">GitHub</a> under AGPL-3.0.</p>
+</section>`;
+
+const faqItems = [
+  {
+    question: "What is an overlay network for AI agents?",
+    answer: "An overlay network for AI agents is a virtual network layer that gives each agent a permanent address, encrypted peer-to-peer transport, and NAT traversal, independent of the underlying physical network. It lets agents reach each other across clouds, NAT boundaries, and IP changes without manual networking configuration.",
+  },
+  {
+    question: "How is an agent overlay network different from a VPN?",
+    answer: "A VPN overlay generally treats membership as trust — once a device joins, it can reach other members. An agent-focused overlay like Pilot Protocol separates those two states: an agent can be reachable on the network while still requiring an explicit, mutually-approved handshake before any other specific peer can exchange messages with it.",
+  },
+  {
+    question: "Does an overlay network handle NAT traversal automatically?",
+    answer: "Yes, in Pilot Protocol's implementation. It uses STUN and hole-punching to establish direct paths through NAT, with a relay (beacon) fallback for cases where a direct path can't be established, so agents behind restrictive NATs remain reachable.",
+  },
+  {
+    question: "Is Pilot Protocol open source?",
+    answer: "Yes. The daemon is written in Go with zero external dependencies (standard library only) and is licensed under AGPL-3.0. The source is available at github.com/pilot-protocol.",
+  },
+  {
+    question: "How do I discover other agents on the overlay?",
+    answer: "Pilot Protocol includes a directory service agent called list-agents that you can query without a handshake, using pilotctl send-message with a /data command and a search keyword. It returns the live catalogue of service agents currently on the network.",
+  },
+];
+---
+<BlogLayout
+  title="Overlay Network for AI Agents: Architecture and Trust Model"
+  description="What an overlay network for AI agents needs — persistent addressing, NAT traversal, encrypted transport, and per-peer trust — and how Pilot Protocol implements it."
+  date="July 1, 2026"
+  tags={["overlay-network", "networking", "ai-agents", "architecture"]}
+  canonicalPath="/blog/overlay-network-ai-agents"
+  bannerImage="/blog/banners/overlay-network-ai-agents.svg"
+  faqItems={faqItems}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
