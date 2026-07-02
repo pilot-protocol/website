@@ -5,7 +5,7 @@ import Footer from '../../components/Footer.astro';
 import AppIcon from '../../components/AppIcon.astro';
 import Shelf from '../../components/Shelf.astro';
 import { apps, categories, relatedApps } from '../../data/apps';
-import { fmtBytes, fmtNum, fmtDate, platformLabel, osOf, osSummary, ALL_PLATFORMS } from '../../data/format';
+import { fmtBytes, fmtDate, platformLabel, osOf, osSummary, ALL_PLATFORMS } from '../../data/format';
 import '../../styles/system.css';
 import '../../styles/appstore.css';
 
@@ -20,16 +20,24 @@ const installCmd = `pilotctl appstore install ${app.id}`;
 const oses = [...new Set(app.bundles.map((b) => osOf(b.platform)))];
 const bundleFor = (p) => app.bundles.find((b) => b.platform === p);
 
-// tiny inline markdown: escape, then **bold** and `code`
+// tiny inline markdown: escape, then **bold**, `code`, and [text](url)
 function inline(s) {
   const esc = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  return esc.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`([^`]+?)`/g, '<code>$1</code>');
+  return esc
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/`([^`]+?)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s"'<>]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 }
-const paragraphs = app.description.split('\n\n').map((p) => {
+let descBlocks = app.description.split('\n\n').map((b) => b.trim()).filter(Boolean);
+// drop a leading level-1 header (redundant with the page title)
+if (descBlocks.length && /^#\s+/.test(descBlocks[0])) descBlocks = descBlocks.slice(1);
+const paragraphs = descBlocks.map((p) => {
   const lines = p.split('\n');
-  const isList = lines.every((l) => /^\s*-\s+/.test(l)) && lines.length > 1;
-  if (isList) return { type: 'ul', items: lines.map((l) => inline(l.replace(/^\s*-\s+/, ''))) };
-  return { type: 'p', html: inline(p) };
+  const h = /^(#{1,6})\s+(.*)$/.exec(lines[0]);
+  if (lines.length === 1 && h) return { type: 'h', html: inline(h[2]) };
+  const isList = lines.every((l) => /^\s*[-*]\s+/.test(l));
+  if (isList) return { type: 'ul', items: lines.map((l) => inline(l.replace(/^\s*[-*]\s+/, ''))) };
+  return { type: 'p', html: inline(p.replace(/\n/g, ' ')) };
 });
 
 const title = `${app.name} — Pilot Protocol App Store`;
@@ -82,7 +90,9 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
             <div class="tag">{app.tagline}.</div>
             <div class="dh-cats">
               {app.categories.map((c) => <a class="tag-pill" href={`/app-store#cat-${c}`} style="text-decoration:none;">{catName(c)}</a>)}
-              {app.real && <span class="tag-pill" style="color:var(--accent);border-color:color-mix(in oklab,var(--accent) 45%,var(--line-2));">Live on catalogue</span>}
+              {app.inCatalogue
+                ? <span class="tag-pill" style="color:var(--accent);border-color:color-mix(in oklab,var(--accent) 45%,var(--line-2));">Live on catalogue</span>
+                : <span class="tag-pill" style="color:var(--ink-dim);">Coming soon</span>}
             </div>
           </div>
         </div>
@@ -104,9 +114,9 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
 
       <!-- metric strip -->
       <div class="dh-metrics">
-        <div class="m"><div class="v">{fmtNum(app.downloads)}</div><div class="l">Installs</div></div>
         <div class="m"><div class="v">v{app.version}</div><div class="l">Version</div></div>
-        <div class="m"><div class="v">{fmtBytes(app.installedBytes)}</div><div class="l">Size</div></div>
+        <div class="m"><div class="v">{app.methods.length || '—'}</div><div class="l">Methods</div></div>
+        <div class="m"><div class="v">{app.installedBytes ? fmtBytes(app.installedBytes) : '—'}</div><div class="l">Size</div></div>
         <div class="m"><div class="v" style="text-transform:capitalize;">{app.protection}</div><div class="l">Sandbox</div></div>
         <div class="m"><div class="v">{osSummary(app.bundles)}</div><div class="l">Platforms</div></div>
       </div>
@@ -122,25 +132,39 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
 
         <section>
           <h2 class="sec-h">About {app.name}</h2>
-          <div class="prose-desc">
-            {paragraphs.map((p) => p.type === 'ul'
-              ? <ul style="margin:0 0 16px;padding-left:20px;color:var(--ink-dim);line-height:1.7;">{p.items.map((it) => <li set:html={it} />)}</ul>
-              : <p set:html={p.html} />)}
+          <div class="desc-wrap" data-desc>
+            <div class="prose-desc">
+              {paragraphs.map((p) => p.type === 'ul'
+                ? <ul style="margin:0 0 16px;padding-left:20px;color:var(--ink-dim);line-height:1.7;">{p.items.map((it) => <li set:html={it} />)}</ul>
+                : p.type === 'h'
+                ? <h3 class="desc-h" set:html={p.html} />
+                : <p set:html={p.html} />)}
+            </div>
+            <div class="desc-fade" aria-hidden="true"></div>
           </div>
+          <button class="desc-toggle" data-desc-toggle type="button" hidden aria-expanded="false">
+            <span class="lbl">Read more</span>
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
         </section>
 
         <section>
-          <h2 class="sec-h">Methods · {app.methods.length}</h2>
-          <div class="method-list">
-            {app.methods.map((m) => (
-              <div class="mrow">
-                <code>{m.name}</code>
-                <div class="ms">{m.summary ?? '—'}</div>
-              </div>
-            ))}
-          </div>
+          <h2 class="sec-h">Methods{app.methods.length ? ` · ${app.methods.length}` : ''}</h2>
+          {app.methods.length > 0 ? (
+            <div class="method-list">
+              {app.methods.map((m) => (
+                <div class="mrow">
+                  <code>{m.name}</code>
+                  <div class="ms">{m.summary ?? '—'}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p style="font-size:14.5px;color:var(--ink-dim);line-height:1.6;">This app publishes its method surface at runtime — call <code style="font-family:var(--mono);font-size:.9em;">{app.id.split('.').pop()}.help</code> after install to discover every method, its parameters, and latency class.</p>
+          )}
         </section>
 
+        {app.changelog.length > 0 && (
         <section class="changelog">
           <h2 class="sec-h">What’s New</h2>
           {app.changelog.map((c, i) => (
@@ -154,6 +178,7 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
             </div>
           ))}
         </section>
+        )}
 
         <section>
           <h2 class="sec-h">Platform Compatibility</h2>
@@ -169,7 +194,7 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
                   </div>
                   <div class="cp-r">
                     {b
-                      ? <><span class="cp-size">{fmtBytes(b.bytes)}</span><span class="cp-yes"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Supported</span></>
+                      ? <>{b.bytes && <span class="cp-size">{fmtBytes(b.bytes)}</span>}<span class="cp-yes"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Supported</span></>
                       : <span class="cp-no">Not available</span>}
                   </div>
                 </div>
@@ -187,14 +212,15 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
           <div class="info-row"><span class="k">Vendor</span><span class="val">{app.vendorUrl ? <a href={app.vendorUrl} target="_blank" rel="noopener">{app.vendor}</a> : app.vendor}</span></div>
           <div class="info-row"><span class="k">Category</span><span class="val">{catName(app.primaryCategory)}</span></div>
           <div class="info-row"><span class="k">Version</span><span class="val">{app.version}</span></div>
-          <div class="info-row"><span class="k">Size</span><span class="val">{fmtBytes(app.installedBytes)}</span></div>
-          <div class="info-row"><span class="k">License</span><span class="val">{app.license}</span></div>
+          {app.installedBytes && <div class="info-row"><span class="k">Size</span><span class="val">{fmtBytes(app.installedBytes)}</span></div>}
+          {app.license && <div class="info-row"><span class="k">License</span><span class="val">{app.license}</span></div>}
           <div class="info-row"><span class="k">Runtime</span><span class="val">{app.runtimes.join(', ')}</span></div>
           <div class="info-row"><span class="k">Min Pilot</span><span class="val">v{app.minPilotVersion}</span></div>
           {app.publishedAt && <div class="info-row"><span class="k">Published</span><span class="val">{fmtDate(app.publishedAt)}</span></div>}
           {app.sourceUrl && <div class="info-row"><span class="k">Source</span><span class="val"><a href={app.sourceUrl} target="_blank" rel="noopener">GitHub ↗</a></span></div>}
         </div>
 
+        {app.grants.length > 0 && (
         <div class="side-card">
           <h4>Permissions</h4>
           {app.grants.map((g) => {
@@ -205,6 +231,7 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
           })}
           <p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin:12px 0 0;line-height:1.5;">Granted or denied by the agent at install time. No ambient authority.</p>
         </div>
+        )}
 
         <div class="side-card">
           <h4>Publish an app</h4>
@@ -247,6 +274,26 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
     toast('Copied  ·  ' + btn.getAttribute('data-copy'));
     setTimeout(() => { btn.textContent = o; btn.classList.remove('copied'); }, 1600);
   }));
+
+  // collapsible description — enable only when it exceeds the threshold height
+  (() => {
+    const wrap = $('[data-desc]');
+    const btn = $('[data-desc-toggle]');
+    if (!wrap || !btn) return;
+    const COLLAPSED = 208;
+    const enable = () => {
+      if (wrap.scrollHeight <= COLLAPSED + 90) return; // not enough hidden to justify a toggle — leave fully visible
+      wrap.classList.add('is-collapsible', 'is-collapsed');
+      btn.hidden = false;
+      btn.addEventListener('click', () => {
+        const collapsed = wrap.classList.toggle('is-collapsed');
+        btn.classList.toggle('is-open', !collapsed);
+        btn.setAttribute('aria-expanded', String(!collapsed));
+        btn.querySelector('.lbl').textContent = collapsed ? 'Read more' : 'Show less';
+      });
+    };
+    enable();
+  })();
 
   // shelf arrows (related)
   $$('[data-shelf]').forEach((shelf) => {
