@@ -1059,8 +1059,16 @@ export const apps: App[] = [
         "summary": "List YOUR smol cloud machines (only yours — the broker filters by owner)."
       },
       {
+        "name": "smol.key",
+        "summary": "Get your current per-user smol cloud key (bound to your Pilot identity; also cached in your app's private secrets)."
+      },
+      {
+        "name": "smol.rotate",
+        "summary": "Rotate your cloud key if it leaked — the old key stops working immediately; your credit and machines are unaffected."
+      },
+      {
         "name": "smol.help",
-        "summary": "Discovery: every method with params, kind, and latency class."
+        "summary": "Discovery: methods grouped by plane (local vs cloud), with params, latency, and cost."
       }
     ],
     "changelog": [
