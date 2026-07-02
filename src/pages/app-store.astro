@@ -6,7 +6,7 @@ import AppIcon from '../components/AppIcon.astro';
 import AppCard from '../components/AppCard.astro';
 import Shelf from '../components/Shelf.astro';
 import { apps, categories, featuredApps, newApps, appsByCategory } from '../data/apps';
-import { fmtNum, osSummary } from '../data/format';
+import { osSummary } from '../data/format';
 import '../styles/system.css';
 import '../styles/appstore.css';
 
@@ -29,11 +29,11 @@ const liveCount = apps.filter((a) => a.real).length;
 
 // category shelves (only categories with at least a couple of apps to fill a rail)
 const shelves = categories
-  .map((c) => ({ cat: c, list: appsByCategory(c.id).sort((a, b) => b.downloads - a.downloads) }))
+  .map((c) => ({ cat: c, list: appsByCategory(c.id).sort((a, b) => a.name.localeCompare(b.name)) }))
   .filter((s) => s.list.length >= 2);
 
 // all apps for the search/filter results grid
-const allSorted = [...apps].sort((a, b) => b.downloads - a.downloads);
+const allSorted = [...apps].sort((a, b) => a.name.localeCompare(b.name));
 
 const publishHref = '/publish';
 ---
@@ -117,7 +117,8 @@ const publishHref = '/publish';
               <a class="get-btn" href={`/apps/${hero.id}`}>View details <span class="arr">→</span></a>
               <div class="f-meta">
                 <div class="mini-stat"><div class="v">{osSummary(hero.bundles)}</div><div class="l">Platforms</div></div>
-                <div class="mini-stat"><div class="v">{fmtNum(hero.downloads)}</div><div class="l">Installs</div></div>
+                <div class="mini-stat"><div class="v">v{hero.version}</div><div class="l">Version</div></div>
+                <div class="mini-stat"><div class="v" style="text-transform:capitalize;">{hero.protection}</div><div class="l">Sandbox</div></div>
               </div>
             </div>
           </div>
