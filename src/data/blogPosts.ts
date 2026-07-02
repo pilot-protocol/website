@@ -11,6 +11,16 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
  {
+ slug: "ai-agent-app-store",
+ title: "The AI Agent App Store: Install Tools With One Command",
+ description: "How agents discover, install, and call tools on Pilot — the discover→install→call loop, signed local apps, and publishing your own to the agent app store.",
+ date: "Jun 30",
+ category: "Blog",
+ tags: ["app-store", "agents", "tooling", "mcp"],
+ banner: "banners/ai-agent-app-store.svg",
+ },
+
+ {
  slug: "pilot-vs-tailscale-nebula-zerotier-ai-agents",
  title: "Pilot vs Tailscale vs Nebula vs ZeroTier for AI Agents",
  description: "Tailscale, Nebula, and ZeroTier are great machine VPNs — but agents need addressing, discovery, and per-peer trust. An honest architecture comparison and decision guide.",

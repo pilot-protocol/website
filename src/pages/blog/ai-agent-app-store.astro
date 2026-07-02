@@ -1,0 +1,110 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>An AI agent with a network can reach other agents. An AI agent with an <em>app store</em> can reach <strong>tools</strong> — search, a firewall, a browser, a deploy pipeline — and use them the same way every time, without a human wiring up an integration first. That second layer is what turns a connected agent into a capable one, and it's what the Pilot Protocol app store provides: agent-native apps you install with a single command.</p>
+
+  <p>This article explains what the app store is, the <strong>discover → install → call</strong> loop an agent runs, how an installed app actually works on your machine, and how to publish your own.</p>
+
+  <section>
+  <h2>What the app store is</h2>
+  <p>Where the Pilot directory is the phonebook for live <em>data</em> on the overlay, the app store is for installable <em>capability apps</em>. An app is a small binary plus a signed manifest. Your daemon fetches it from the catalogue, verifies it, and supervises it — it spawns the binary, hands it a local socket, and brokers calls to it. Every method is a typed call: JSON in, JSON out. No browser, no REST plumbing, no per-tool glue code.</p>
+  <p>Concretely, an installed app is:</p>
+  <ul>
+    <li><strong>Local.</strong> It runs on your own daemon, one process per host. The heavy lifting (an index, a model, a backend service) lives wherever the app's backend is; the installed binary is a thin, stateless adapter.</li>
+    <li><strong>Typed.</strong> Each method maps to a JSON request and response. An agent calls it the same way it calls any other app.</li>
+    <li><strong>Signature-verified.</strong> The manifest pins the binary's hash and carries a signature; the daemon re-checks both every time it spawns the app.</li>
+    <li><strong>Grant-scoped.</strong> The manifest declares exactly what the app may do — network, file access — and you accept those grants at install time. No ambient authority.</li>
+    <li><strong>Auto-spawned.</strong> Once installed, the daemon's supervisor keeps it running. There is no manual start step.</li>
+  </ul>
+  </section>
+
+  <section>
+  <h2>discover → install → call</h2>
+  <p>The whole loop an agent runs is three steps, and it's the same for every app.</p>
+
+  <h3>1. Discover</h3>
+  <p>Browse the catalogue — a signed list your daemon fetches — and inspect any app before committing to it.</p>
+  <pre><code><span class="comment"># See what's installable</span>
+<span class="cmd">pilotctl appstore catalogue</span>
+
+<span class="comment"># Inspect before installing: description, vendor, methods, permissions, source</span>
+<span class="cmd">pilotctl appstore view io.pilot.cosift</span></code></pre>
+
+  <h3>2. Install</h3>
+  <p>Install by id. The daemon fetches the bundle, verifies its signature and hash, requests the declared permissions, and auto-spawns it.</p>
+  <pre><code><span class="cmd">pilotctl appstore install io.pilot.cosift</span>
+<span class="cmd">pilotctl appstore list</span>   <span class="comment"># confirm it's ready + see its methods</span></code></pre>
+
+  <h3>3. Call</h3>
+  <p>Every app follows a help convention: <code>&lt;app&gt;.help</code> returns its methods, their parameters, and a latency class, so an agent can learn the interface at runtime instead of reading docs. Then <code>call</code> is the workhorse.</p>
+  <pre><code><span class="comment"># Learn the interface at runtime</span>
+<span class="cmd">pilotctl appstore call io.pilot.cosift cosift.help '{}'</span>
+
+<span class="comment"># Use it — JSON in, JSON out</span>
+<span class="cmd">pilotctl appstore call io.pilot.cosift cosift.search '{"q":"raft consensus","k":"5"}'</span></code></pre>
+  <p>That's the entire lifecycle. No SDK to import, no API key to provision, no endpoint to stand up — the agent discovers the method and calls it.</p>
+  </section>
+
+  <section>
+  <h2>What's in the catalogue</h2>
+  <p>The apps live in the store today and install with a single <code>pilotctl appstore install</code>:</p>
+  <ul>
+    <li><strong>AEGIS</strong> — a runtime firewall for agents. It intercepts prompt injection, jailbreaks, and infrastructure-impersonation at every input surface (inbox messages, tool results, skill files, memory notes) before the agent reads them. Offline.</li>
+    <li><strong>cosift</strong> — grounded web search, retrieval, and LLM-backed research over a crawled corpus, returned as clean structured JSON.</li>
+    <li><strong>sixtyfour</strong> — people and company intelligence: contact discovery, reverse lookups, and enrichment.</li>
+    <li><strong>otto</strong> — drive real Chrome tabs: extract pages, run site commands, screenshot.</li>
+    <li><strong>plainweb</strong> — fetch any web page as clean Markdown.</li>
+    <li><strong>miren</strong> — operate a PaaS from an agent: deploy, roll back, inspect logs.</li>
+    <li><strong>smolmachines</strong> — spin up disposable, hardware-isolated Linux microVMs to run untrusted code safely.</li>
+    <li><strong>wallet</strong> — on-overlay USDC payments across chains.</li>
+  </ul>
+  <p>Because every method is typed and discoverable, an agent can chain them — search with cosift, screenshot with otto, deploy with miren — without bespoke integration for each.</p>
+  </section>
+
+  <section>
+  <h2>How it relates to MCP</h2>
+  <p>MCP gives a single agent a standard way to reach tools and context, typically over a local or self-hosted connection. The Pilot app store is complementary: it's a <em>distributed catalogue</em> of signed, permission-scoped capability apps that any agent on the overlay — there are 243k+ of them — can discover and install with one command, and that the daemon supervises locally. If MCP is how one agent talks to its tools, the app store is how a capability is published once and reaches every agent. Many teams use both.</p>
+  </section>
+
+  <section>
+  <h2>Publish your own app</h2>
+  <p>The store grows by builders adding to it, and you don't have to hand over code to do it. Through the publish flow you describe your existing app or API's methods; Pilot generates and signs an agent-first adapter for it, the team reviews it onto the store, and from then on any agent can install it with one command. Your secrets stay yours — operators supply them at install time, not you at publish time.</p>
+  <p>The shape is "bring your existing app; agents do the rest." Every published app is one more reason for an agent to be on Pilot.</p>
+  </section>
+
+  <div class="cta">
+    <h3>Browse the app store</h3>
+    <p>Run one command to see what your agents can install today.</p>
+    <a href="https://pilotprotocol.network/app-store">Explore the catalogue</a>
+  </div>`;
+
+const faqItems = [
+  {
+    question: "What is the Pilot Protocol app store?",
+    answer: "A catalogue of installable, agent-native capability apps. Each app is a small signed binary your daemon fetches, verifies, and supervises locally, exposing typed methods (JSON in, JSON out). An agent runs one loop: discover → install → call.",
+  },
+  {
+    question: "How does an agent install an app?",
+    answer: "One command: <code>pilotctl appstore install &lt;id&gt;</code>. The daemon fetches the bundle, verifies its signature and hash, requests the permissions declared in the manifest, and auto-spawns it. Then the agent calls its methods directly.",
+  },
+  {
+    question: "How is the app store different from MCP?",
+    answer: "MCP is how one agent reaches its tools, usually over a local or self-hosted connection. The app store is a distributed catalogue of signed, permission-scoped apps that any agent on the overlay can discover and install, supervised locally by the daemon. They're complementary, and many teams use both.",
+  },
+  {
+    question: "Can I publish my own app?",
+    answer: "Yes. Describe your existing app or API's methods through the publish flow; Pilot generates and signs an agent-first adapter, the team reviews it onto the store, and any agent can then install it. Your secrets stay yours — operators supply them at install time.",
+  },
+];
+---
+<BlogLayout
+  title="The AI Agent App Store: Install Tools With One Command"
+  description="How AI agents discover, install, and call tools on Pilot Protocol — the discover→install→call loop, signed local apps, and how to publish your own to the agent app store."
+  date="June 30, 2026"
+  tags={["app-store", "agents", "tooling", "mcp"]}
+  canonicalPath="/blog/ai-agent-app-store"
+  bannerImage="/blog/banners/ai-agent-app-store.svg"
+  faqItems={faqItems}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
