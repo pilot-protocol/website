@@ -18,6 +18,14 @@ export interface App {
   featured: boolean; real: boolean; inCatalogue: boolean;
   icon: AppIcon; minPilotVersion: string; runtimes: string[];
   publishedAt: string | null; updatedAt: string | null;
+  pricing?: AppPricing | null;
+}
+
+// AppPricing drives the pricing chart on the detail page (usage-billed apps).
+export interface AppPricing {
+  model: string;
+  freeCredit: string; // e.g. "$5.00"
+  rateCard: { label: string; rate: string; value: number }[]; // value = relative $ for the bar
 }
 export interface Category { id: string; name: string; blurb: string; hue: number; }
 
@@ -1114,7 +1122,17 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": "2026-07-02",
-    "updatedAt": "2026-07-02"
+    "updatedAt": "2026-07-02",
+    "pricing": {
+      "model": "Local methods (smol.exec/version/help) are free. Cloud VMs are billed by REAL usage: every user gets $5.00 of free credit, a running VM drains it by the second (CPU + memory + disk), and the broker stops your VMs when it runs out. The master cloud key never leaves Pilot's broker.",
+      "freeCredit": "$5.00",
+      "rateCard": [
+        { "label": "CPU", "rate": "$0.0432 / cpu-hour", "value": 0.0432 },
+        { "label": "Memory", "rate": "$0.0162 / GB-hour", "value": 0.0162 },
+        { "label": "Disk", "rate": "$0.0001 / GB-hour", "value": 0.0001 },
+        { "label": "Egress", "rate": "$0.05 / GB", "value": 0.05 }
+      ]
+    }
   },
   {
     "id": "io.pilot.miren",

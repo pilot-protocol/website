@@ -164,6 +164,32 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
           )}
         </section>
 
+        {app.pricing && (
+        <section>
+          <h2 class="sec-h">Pricing</h2>
+          <p style="font-size:14.5px;color:var(--ink-dim);line-height:1.65;margin:0 0 18px;">{app.pricing.model}</p>
+          <div class="pricing-wrap">
+            <div class="pricing-free">
+              <div class="pf-amt">{app.pricing.freeCredit}</div>
+              <div class="pf-lbl">free credit — then billed by real usage</div>
+            </div>
+            <div class="pricing-chart">
+              {app.pricing.rateCard.map((r) => {
+                const max = Math.max(...app.pricing!.rateCard.map((x) => x.value));
+                const pct = Math.max(5, Math.round((r.value / max) * 100));
+                return (
+                  <div class="pc-row">
+                    <span class="pc-label">{r.label}</span>
+                    <span class="pc-track"><span class="pc-bar" style={`width:${pct}%`}></span></span>
+                    <span class="pc-rate">{r.rate}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+        )}
+
         {app.changelog.length > 0 && (
         <section class="changelog">
           <h2 class="sec-h">What’s New</h2>
