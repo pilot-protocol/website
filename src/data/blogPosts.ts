@@ -11,7 +11,17 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
  {
- slug: "overlay-network-ai-agents",
+  slug: "web-search-api-for-ai-agents-grounded-research",
+  title: "Web Search API for AI Agents: Grounded Research with cosift",
+  description: "Why raw search APIs aren't enough for AI agents, what grounded research means, and how to install and call cosift's search, answer, and research methods.",
+  date: "Jul 2",
+  category: "Blog",
+  tags: ["app-store", "search", "agents", "research"],
+  banner: "banners/web-search-api-for-ai-agents-grounded-research.svg",
+ },
+
+ {
+  slug: "overlay-network-ai-agents",
  title: "Overlay Network for AI Agents: Architecture and Trust Model",
  description: "What an overlay network for AI agents needs — persistent addressing, NAT traversal, encrypted transport, and per-peer trust — and how Pilot Protocol implements it.",
  date: "Jul 1",
