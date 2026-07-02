@@ -102,7 +102,7 @@ function bundlesFor(id, bytes, platforms) {
 function build(id) {
   const o = overrides[id] || {};
   const cat = CATMAP[id];
-  const platforms = LINUX_ONLY.has(id) ? ['linux-arm64', 'linux-amd64'] : ALL_PLATFORMS;
+  const platforms = o.platforms || (LINUX_ONLY.has(id) ? ['linux-arm64', 'linux-amd64'] : ALL_PLATFORMS);
   const methods = (methodsMap[id] || []).map((m) => ({ name: m.name, summary: m.summary || null }));
   return {
     id,
@@ -127,6 +127,7 @@ function build(id) {
     protection: o.protection || PROTECTION_FALLBACK[id] || 'shareable',
     featured: FEATURED.includes(id),
     real: true,
+    inCatalogue: o.inCatalogue !== false,
     icon: iconFor(id, CAT_HUE[cat]),
     minPilotVersion: o.minPilotVersion || '1.0.0',
     runtimes: o.runtimes || ['go'],
@@ -152,7 +153,7 @@ export interface App {
   methods: AppMethod[]; changelog: AppChangelog[]; grants: string[];
   bundles: AppBundle[]; installedBytes: number | null;
   depends: AppDependency[]; protection: string;
-  featured: boolean; real: boolean;
+  featured: boolean; real: boolean; inCatalogue: boolean;
   icon: AppIcon; minPilotVersion: string; runtimes: string[];
   publishedAt: string | null; updatedAt: string | null;
 }

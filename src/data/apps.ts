@@ -15,7 +15,7 @@ export interface App {
   methods: AppMethod[]; changelog: AppChangelog[]; grants: string[];
   bundles: AppBundle[]; installedBytes: number | null;
   depends: AppDependency[]; protection: string;
-  featured: boolean; real: boolean;
+  featured: boolean; real: boolean; inCatalogue: boolean;
   icon: AppIcon; minPilotVersion: string; runtimes: string[];
   publishedAt: string | null; updatedAt: string | null;
 }
@@ -175,6 +175,7 @@ export const apps: App[] = [
     "protection": "guarded",
     "featured": true,
     "real": true,
+    "inCatalogue": true,
     "icon": {
       "mode": "mask",
       "img": null,
@@ -299,6 +300,7 @@ export const apps: App[] = [
     "protection": "guarded",
     "featured": true,
     "real": true,
+    "inCatalogue": true,
     "icon": {
       "mode": "mask",
       "img": null,
@@ -421,6 +423,7 @@ export const apps: App[] = [
     "protection": "guarded",
     "featured": false,
     "real": true,
+    "inCatalogue": true,
     "icon": {
       "mode": "mask",
       "img": null,
@@ -550,6 +553,7 @@ export const apps: App[] = [
     "protection": "shareable",
     "featured": false,
     "real": true,
+    "inCatalogue": true,
     "icon": {
       "mode": "image",
       "img": "/appicons/io.pilot.sixtyfour.png",
@@ -663,6 +667,7 @@ export const apps: App[] = [
     "protection": "shareable",
     "featured": false,
     "real": true,
+    "inCatalogue": true,
     "icon": {
       "mode": "image",
       "img": "/appicons/io.pilot.cosift.png",
@@ -750,6 +755,7 @@ export const apps: App[] = [
     "protection": "guarded",
     "featured": false,
     "real": true,
+    "inCatalogue": true,
     "icon": {
       "mode": "image",
       "img": "/appicons/io.telepat.ideon-free.png",
@@ -840,6 +846,7 @@ export const apps: App[] = [
     "protection": "shareable",
     "featured": false,
     "real": true,
+    "inCatalogue": true,
     "icon": {
       "mode": "image",
       "img": "/appicons/io.pilot.plainweb.png",
@@ -980,6 +987,7 @@ export const apps: App[] = [
     "protection": "guarded",
     "featured": false,
     "real": true,
+    "inCatalogue": true,
     "icon": {
       "mode": "image",
       "img": "/appicons/io.pilot.otto.png",
@@ -1069,6 +1077,7 @@ export const apps: App[] = [
     "protection": "guarded",
     "featured": false,
     "real": true,
+    "inCatalogue": true,
     "icon": {
       "mode": "image",
       "img": "/appicons/io.pilot.smolmachines.png",
@@ -1207,6 +1216,7 @@ export const apps: App[] = [
     "protection": "shareable",
     "featured": false,
     "real": true,
+    "inCatalogue": true,
     "icon": {
       "mode": "image",
       "img": "/appicons/io.pilot.miren.png",
@@ -1325,6 +1335,7 @@ export const apps: App[] = [
     "protection": "guarded",
     "featured": true,
     "real": true,
+    "inCatalogue": true,
     "icon": {
       "mode": "mask",
       "img": null,
@@ -1369,19 +1380,31 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "aegis.scan",
-        "summary": "One-shot scan of text or a file for prompt injection, jailbreaks, and impersonation; blocks on match."
+        "summary": "Scan a file or path for prompt injection, jailbreaks, homoglyph/leetspeak obfuscation, and impersonation."
       },
       {
-        "name": "aegis.sock",
-        "summary": "Persistent stdin/socket scanner (scan-pipe) — allow (0) or block (2) for inline harness integration."
+        "name": "aegis.scan_cmd",
+        "summary": "Blocking gate over stdin JSON — allow (exit 0) or block (exit 2) a command or tool input before it runs."
+      },
+      {
+        "name": "aegis.scan_result",
+        "summary": "Non-blocking scan of a tool result (web fetch, MCP response); warns on a hit, never blocks."
       },
       {
         "name": "aegis.status",
-        "summary": "Tail the HMAC-chained audit log of recent verdicts."
+        "summary": "Show firewall status and tail the HMAC-chained audit log of recent verdicts."
       },
       {
-        "name": "aegis.health",
-        "summary": "Report firewall health and judge-model readiness."
+        "name": "aegis.targets",
+        "summary": "List the configured scan targets and rule families."
+      },
+      {
+        "name": "aegis.config",
+        "summary": "Show or edit AEGIS configuration."
+      },
+      {
+        "name": "aegis.version",
+        "summary": "Print the AEGIS version."
       }
     ],
     "changelog": [
@@ -1402,19 +1425,15 @@ export const apps: App[] = [
     "bundles": [
       {
         "platform": "darwin-arm64",
-        "bytes": 844800
-      },
-      {
-        "platform": "darwin-amd64",
-        "bytes": 844800
-      },
-      {
-        "platform": "linux-arm64",
-        "bytes": 924000
+        "bytes": 865029
       },
       {
         "platform": "linux-amd64",
-        "bytes": 924000
+        "bytes": 946126
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": 946126
       }
     ],
     "installedBytes": null,
@@ -1422,6 +1441,7 @@ export const apps: App[] = [
     "protection": "guarded",
     "featured": false,
     "real": true,
+    "inCatalogue": true,
     "icon": {
       "mode": "image",
       "img": "/appicons/io.pilot.aegis.svg",
@@ -1486,6 +1506,7 @@ export const apps: App[] = [
     "protection": "shareable",
     "featured": false,
     "real": true,
+    "inCatalogue": true,
     "icon": {
       "mode": "mask",
       "img": null,
@@ -1648,6 +1669,7 @@ export const apps: App[] = [
     "protection": "guarded",
     "featured": false,
     "real": true,
+    "inCatalogue": true,
     "icon": {
       "mode": "image",
       "img": "/appicons/io.pilot.wallet.png",

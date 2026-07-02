@@ -90,7 +90,9 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
             <div class="tag">{app.tagline}.</div>
             <div class="dh-cats">
               {app.categories.map((c) => <a class="tag-pill" href={`/app-store#cat-${c}`} style="text-decoration:none;">{catName(c)}</a>)}
-              {app.real && <span class="tag-pill" style="color:var(--accent);border-color:color-mix(in oklab,var(--accent) 45%,var(--line-2));">Live on catalogue</span>}
+              {app.inCatalogue
+                ? <span class="tag-pill" style="color:var(--accent);border-color:color-mix(in oklab,var(--accent) 45%,var(--line-2));">Live on catalogue</span>
+                : <span class="tag-pill" style="color:var(--ink-dim);">Coming soon</span>}
             </div>
           </div>
         </div>
@@ -130,13 +132,20 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
 
         <section>
           <h2 class="sec-h">About {app.name}</h2>
-          <div class="prose-desc">
-            {paragraphs.map((p) => p.type === 'ul'
-              ? <ul style="margin:0 0 16px;padding-left:20px;color:var(--ink-dim);line-height:1.7;">{p.items.map((it) => <li set:html={it} />)}</ul>
-              : p.type === 'h'
-              ? <h3 class="desc-h" set:html={p.html} />
-              : <p set:html={p.html} />)}
+          <div class="desc-wrap" data-desc>
+            <div class="prose-desc">
+              {paragraphs.map((p) => p.type === 'ul'
+                ? <ul style="margin:0 0 16px;padding-left:20px;color:var(--ink-dim);line-height:1.7;">{p.items.map((it) => <li set:html={it} />)}</ul>
+                : p.type === 'h'
+                ? <h3 class="desc-h" set:html={p.html} />
+                : <p set:html={p.html} />)}
+            </div>
+            <div class="desc-fade" aria-hidden="true"></div>
           </div>
+          <button class="desc-toggle" data-desc-toggle type="button" hidden aria-expanded="false">
+            <span class="lbl">Read more</span>
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
         </section>
 
         <section>
@@ -265,6 +274,26 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
     toast('Copied  ·  ' + btn.getAttribute('data-copy'));
     setTimeout(() => { btn.textContent = o; btn.classList.remove('copied'); }, 1600);
   }));
+
+  // collapsible description — enable only when it exceeds the threshold height
+  (() => {
+    const wrap = $('[data-desc]');
+    const btn = $('[data-desc-toggle]');
+    if (!wrap || !btn) return;
+    const COLLAPSED = 208;
+    const enable = () => {
+      if (wrap.scrollHeight <= COLLAPSED + 90) return; // not enough hidden to justify a toggle — leave fully visible
+      wrap.classList.add('is-collapsible', 'is-collapsed');
+      btn.hidden = false;
+      btn.addEventListener('click', () => {
+        const collapsed = wrap.classList.toggle('is-collapsed');
+        btn.classList.toggle('is-open', !collapsed);
+        btn.setAttribute('aria-expanded', String(!collapsed));
+        btn.querySelector('.lbl').textContent = collapsed ? 'Read more' : 'Show less';
+      });
+    };
+    enable();
+  })();
 
   // shelf arrows (related)
   $$('[data-shelf]').forEach((shelf) => {
