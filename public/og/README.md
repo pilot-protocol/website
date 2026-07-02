@@ -4,8 +4,9 @@ Per Artemii's spec on [PILOT-26](https://vulturelabs.atlassian.net/browse/PILOT-
 
 - `main.jpg`  → used by `/` (src/pages/index.astro)
 - `plans.jpg` → used by `/plans` (src/pages/plans.astro)
-- `docs.jpg`  → used by `/docs/` and all docs sub-routes (src/pages/docs/index.astro + layout)
+- `docs.jpg`  → used by `/docs/` and all docs sub-routes (default in src/layouts/DocLayout.astro)
 - `blogs.jpg` → used by `/blog/` index AND every individual blog post (fallback per Artemii's note)
+- `app-store.jpg` → used by `/app-store` (src/pages/app-store.astro)
 
 Recommended dimensions: **1200 × 630 px** (Open Graph standard for `summary_large_image`).
 
