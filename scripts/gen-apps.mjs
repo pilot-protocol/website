@@ -33,7 +33,7 @@ const CAT_HUE = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.hue]));
 const CATMAP = {
   'io.pilot.postgres': 'data', 'io.pilot.duckdb': 'data', 'io.pilot.redis': 'data', 'io.pilot.sixtyfour': 'data',
   'io.pilot.cosift': 'ai', 'io.telepat.ideon-free': 'ai',
-  'io.pilot.plainweb': 'web', 'io.pilot.otto': 'web',
+  'io.pilot.plainweb': 'web', 'io.pilot.otto': 'web', 'io.pilot.bowmark': 'web',
   'io.pilot.smolmachines': 'infra', 'io.pilot.miren': 'infra', 'io.pilot.docker': 'infra',
   'io.pilot.aegis': 'security',
   'io.pilot.slipstream': 'finance', 'io.pilot.wallet': 'finance',
@@ -55,6 +55,7 @@ const ICON_MAP = {
   'io.pilot.wallet': { image: 'png', fit: 'contain', bg: '#ffffff' },
   'io.telepat.ideon-free': { image: 'png', fit: 'cover', bg: '#0b0b0a' },
   'io.pilot.aegis': { image: 'svg', fit: 'contain', bg: '#ffffff' },
+  'io.pilot.bowmark': { image: 'png', fit: 'cover', bg: '#0b0b0a' },
 };
 
 function relLum(hex) {
@@ -83,7 +84,7 @@ const APP_IDS = [
   'io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.redis', 'io.pilot.sixtyfour',
   'io.pilot.cosift', 'io.telepat.ideon-free', 'io.pilot.plainweb', 'io.pilot.otto',
   'io.pilot.smolmachines', 'io.pilot.miren', 'io.pilot.docker', 'io.pilot.aegis',
-  'io.pilot.slipstream', 'io.pilot.wallet',
+  'io.pilot.slipstream', 'io.pilot.wallet', 'io.pilot.bowmark',
 ];
 const FEATURED = ['io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.docker'];
 const LINUX_ONLY = new Set(['io.pilot.docker']);

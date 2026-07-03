@@ -1686,6 +1686,102 @@ export const apps: App[] = [
     ],
     "publishedAt": "2026-06-08",
     "updatedAt": "2026-06-08"
+  },
+  {
+    "id": "io.pilot.bowmark",
+    "name": "Bowmark",
+    "tagline": "Navigation cheatsheets for public websites — recipes that skip explore-and-discover",
+    "description": "Bowmark gives a browsing agent **pre-computed navigation recipes** for public websites — a parameterized URL `shortcut` or a short `ui_procedure` of UI steps, each verified by prior crawls. Instead of exploring and discovering a site's structure on every task (snapshotting the DOM, guessing selectors, burning tokens), the agent calls `ask({ site, task })` once and executes the returned recipe open-loop. On known sites that means roughly **5x fewer tokens** and far less latency.\n\n**Managed-key:** Pilot holds one shared Bowmark account behind the broker and meters each caller, so you install it **keyless** and never handle an API key. It's plain request/response REST — no websockets, no server-side browser, no async jobs. Your agent runs the recipe in its own browser; Bowmark only supplies the recipe.\n\n**Methods.** `bowmark.ask` — look up a recipe for a (site, task); on `status: ok` you get a URL `shortcut` (a `template` with `{name}` slots) and/or a `ui_procedure` of steps to run open-loop, plus an `id`. `bowmark.report_outcome` — after running a recipe, report whether it executed cleanly (`success` + `evidence`); this feeds the re-crawl loop that keeps recipes healthy, so report `false` on any deviation even if you still got the answer.\n\n**Syntax & edge cases.** `site` is a registrable domain, optionally with a product surface (`google.com`, `docs.stripe.com`, `google.com/maps`); `task` is intent, never a URL. Request the signed-in view with `variants: { auth_state: \"logged_in\", role: \"owner\" }` (also `locale` / `region` / `currency`). Non-`ok` statuses: `no_useful_data` / `site_not_supported` → browse manually; `ambiguous_scope` → retry with `scopeHint`; `rate_limited` → back off until `error.retry_after` (only new synthesis is capped). Skip it for localhost, RFC1918 IPs, and open-ended search with no destination.",
+    "categories": [
+      "web"
+    ],
+    "primaryCategory": "web",
+    "keywords": [
+      "browser",
+      "navigation",
+      "recipes",
+      "cheatsheets",
+      "websites",
+      "playwright",
+      "puppeteer",
+      "computer-use",
+      "scraping"
+    ],
+    "version": "0.1.0",
+    "vendor": "Bowmark AI",
+    "vendorUrl": "https://bowmark.ai",
+    "license": "Proprietary",
+    "sourceUrl": "https://github.com/bowmark-ai/plugin",
+    "homepage": "https://bowmark.ai",
+    "methods": [
+      {
+        "name": "bowmark.ask",
+        "summary": "Look up a navigation recipe for a (site, task) pair — a URL shortcut or short UI procedure verified by prior crawls. status=ok → execute it open-loop; no_useful_data/site_not_supported → browse manually; ambiguous_scope → retry with scopeHint; rate_limited → back off. Pass variants:{auth_state:'logged_in'} for signed-in surfaces. Intent, not a URL."
+      },
+      {
+        "name": "bowmark.report_outcome",
+        "summary": "After running a recipe from ask, report how it executed (envelope_id, success, evidence). success=true only if every step ran as written; false on any retry, JS-eval fallback, or extra click. Feeds the re-crawl loop that keeps recipes healthy."
+      },
+      {
+        "name": "bowmark.help",
+        "summary": "Discovery: every method with params, kind, and latency class."
+      }
+    ],
+    "changelog": [
+      {
+        "version": "0.1.0",
+        "notes": [
+          "Initial release — managed-key REST adapter over the Bowmark API (bowmark.ask → /v1/ask, bowmark.report_outcome → /v1/outcomes).",
+          "One shared Bowmark account behind the Pilot broker, metered per caller; the installed adapter is keyless."
+        ]
+      }
+    ],
+    "grants": [
+      "fs.read:$APP/config.json",
+      "key.sign:self",
+      "net.dial:broker.pilotprotocol.network",
+      "audit.log:*"
+    ],
+    "bundles": [
+      {
+        "platform": "darwin-arm64",
+        "bytes": 5374254
+      },
+      {
+        "platform": "darwin-amd64",
+        "bytes": 4968650
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": 5019350
+      },
+      {
+        "platform": "linux-amd64",
+        "bytes": 4613746
+      }
+    ],
+    "installedBytes": 9105408,
+    "depends": [],
+    "protection": "shareable",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "image",
+      "img": "/appicons/io.pilot.bowmark.png",
+      "fit": "cover",
+      "pos": "center",
+      "color": "#0b0b0a",
+      "ink": false,
+      "file": null,
+      "hue": 200
+    },
+    "minPilotVersion": "1.10.0",
+    "runtimes": [
+      "go"
+    ],
+    "publishedAt": "2026-07-03",
+    "updatedAt": "2026-07-03"
   }
 ];
 
