@@ -49,6 +49,25 @@ const bodyContent = `<p>If you are trying to connect a fleet of programs across 
   </section>
 
   <section>
+  <h2>Nebula vs Tailscale: the direct comparison</h2>
+  <p>Since Nebula and Tailscale are the two most common shortlist candidates for a self-managed overlay, it's worth putting them head to head before bringing agents into the picture at all.</p>
+  <table>
+    <thead>
+      <tr><th>&nbsp;</th><th>Tailscale</th><th>Nebula</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Control plane</td><td>Hosted coordination server (or self-hosted via Headscale)</td><td>Fully self-hosted — you run the CA and lighthouses</td></tr>
+      <tr><td>Identity model</td><td>SSO / OIDC accounts tied to a device</td><td>Signed certificates you issue per host</td></tr>
+      <tr><td>Setup effort</td><td>Lowest — install, sign in, connected</td><td>Higher — you generate and distribute certs, run lighthouses</td></tr>
+      <tr><td>Operational ownership</td><td>Tailscale (or your Headscale instance) manages coordination</td><td>You own every part of the trust chain</td></tr>
+      <tr><td>Best fit</td><td>Teams that want a private network fast, with minimal ops burden</td><td>Security-conscious server fleets that need zero third-party dependency in the control path</td></tr>
+    </tbody>
+  </table>
+  <p>In short: <strong>Nebula vs Tailscale</strong> is a trade between operational simplicity and self-sovereign control. Tailscale gets a private network running in minutes because someone else runs the coordination server (Headscale exists precisely for teams who want the Tailscale client experience without that dependency). Nebula asks you to run your own certificate authority and lighthouses, but in exchange nothing about your trust chain depends on any third party. Both use modern authenticated encryption (WireGuard for Tailscale, the Noise framework for Nebula), so the choice usually comes down to who you want holding the keys to network membership — not raw cryptographic strength.</p>
+  <p>Neither answers a question that matters once your "hosts" are autonomous AI agents rather than laptops and servers: how does an agent find another agent it has never talked to, and how does it decide whether to trust a specific peer rather than an entire network? That's the gap Pilot Protocol closes, described next.</p>
+  </section>
+
+  <section>
   <h2>Where Pilot Protocol is different</h2>
   <p>Pilot does not try to be a better VPN. It operates one layer up. The questions an agent actually asks are: <em>"What is my durable address? How do I discover an agent that can do X? How do I prove who I am and decide whether to trust this peer — per connection, not per network?"</em> A VPN answers none of these; it just delivers packets once you already know the IP.</p>
   <ul>
@@ -99,6 +118,10 @@ const faqItems = [
     answer: "Tailscale wraps WireGuard in a hosted coordination server and authenticates devices through your SSO/identity provider — it is the fastest to adopt. Nebula is self-hosted: you run your own certificate authority and lighthouses, issue each host a signed certificate, and keep all identity in your control with no SaaS in the path. Tailscale optimizes for ease; Nebula optimizes for self-sovereign control of server fleets.",
   },
   {
+    question: "Nebula vs Tailscale: which should I pick?",
+    answer: "Pick Tailscale if you want a private network running in minutes and are fine with a hosted (or Headscale self-hosted) coordination server. Pick Nebula if you need full ownership of your certificate authority and trust chain with no third-party dependency in the control path, and you're comfortable running your own lighthouses. Both rely on modern authenticated encryption, so the decision is really about who administers identity and coordination, not which is more secure.",
+  },
+  {
     question: "Do AI agents need a VPN?",
     answer: "Not necessarily. A VPN gives a machine a private IP, but agents need three things a VPN does not provide: a durable address that survives restarts and cloud moves, a way to discover other agents by capability, and per-peer trust rather than blanket network membership. You can run agents over a VPN, but the agent layer (addressing, discovery, trust) still has to come from somewhere.",
   },
@@ -110,7 +133,7 @@ const faqItems = [
 ---
 <BlogLayout
   title="Pilot vs Tailscale vs Nebula vs ZeroTier for AI Agents"
-  description="Comparing overlay networks for connecting AI agents: Tailscale, Nebula, ZeroTier, and Pilot. Architecture, NAT traversal, identity, trust — and which one actually fits agent-to-agent."
+  description="Nebula vs Tailscale compared, plus where Pilot Protocol fits for AI agents: architecture, identity, discovery, and trust."
   date="June 28, 2026"
   tags={["comparison", "overlay-network", "vpn", "networking"]}
   canonicalPath="/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents"
