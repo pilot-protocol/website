@@ -1,0 +1,124 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>You have an API. It has a REST endpoint, maybe a Python SDK, maybe a Postman collection somewhere. An AI agent that wants to use it still has to be told about it by a human: someone reads your docs, writes a wrapper, wires up auth, and hopes the shape doesn't change. That's the integration tax every agent framework pays today, one tool at a time.</p>
+
+  <p>The alternative is to publish your API as an <strong>agent app</strong> once, and let every agent on the network discover and call it the same way, without a human in the loop. This post walks through what that actually means, how the <a href="/blog/ai-agent-app-store">Pilot Protocol app store</a> does it, and the concrete steps to turn an existing API into an installable, typed capability any agent can pick up.</p>
+
+  <section>
+  <h2>What "build an agent app" means</h2>
+  <p>An agent app is not a new API. It's an adapter layer that makes an existing API <em>agent-native</em>: discoverable at runtime, typed (JSON in, JSON out), permission-scoped, and callable without a browser or bespoke glue code. Concretely, on Pilot Protocol an installed app is:</p>
+  <ul>
+    <li><strong>Local.</strong> A small binary runs on the agent's own daemon; your actual backend — the database, the model, the service you already run — stays exactly where it is. The installed binary is a thin, stateless adapter that talks to it.</li>
+    <li><strong>Typed.</strong> Every method is a JSON request and response, not an HTML page or a bespoke SDK call.</li>
+    <li><strong>Signature-verified.</strong> The manifest pins the binary's hash and carries a signature; the daemon re-checks both every time it spawns the app.</li>
+    <li><strong>Grant-scoped.</strong> The manifest declares exactly what the app may touch — network, filesystem — and the operator accepts those grants at install time, not before.</li>
+    <li><strong>Runtime-discoverable.</strong> Every app exposes a <code>&lt;app&gt;.help</code> method that returns its own methods, parameters, and expected latency, so an agent learns the interface by calling it, not by reading your docs.</li>
+  </ul>
+  <p>That last point is the difference that matters for adoption. A REST API with great docs still requires a human to read those docs and write the integration. An agent app answers "what can you do?" as a structured API call, so an agent can onboard itself.</p>
+  </section>
+
+  <section>
+  <h2>Why this beats a bare API or an MCP server</h2>
+  <p>If you already expose an MCP server, that's a real integration path — <a href="/blog/mcp-plus-pilot-tools-and-network">MCP gives one agent a standard way to reach your tool</a> over a connection it manages itself. What it doesn't give you is distribution: every agent that wants to use your tool still has to know it exists, configure a connection to it, and manage that connection's lifecycle itself.</p>
+  <p>The app store is a distributed catalogue layered on top of that problem, running over the same <a href="/blog/overlay-network-ai-agents">overlay network</a> that gives every agent its persistent address and trust model. Publish once, and any agent on the overlay can find your app in the catalogue, install it with one command, and start calling it — with the daemon handling verification, permission grants, and process supervision so neither you nor the agent's operator has to. These are complementary models, not competing ones: plenty of teams run an MCP server for direct integrations and also publish an agent app for overlay-wide discovery.</p>
+  <p>Compared to a bare REST API, the difference is what the agent has to do before the first successful call. Against a raw API, an agent (or its operator) needs the base URL, an API key, the request/response shapes, and error-handling conventions — usually assembled by a human reading docs. Against an installed agent app, the agent runs <code>&lt;app&gt;.help</code> and gets that shape back as data.</p>
+  </section>
+
+  <section>
+  <h2>The loop every agent app supports: discover → install → call</h2>
+  <p>Whatever your API does, once it's published as an agent app it fits the same three-step loop every other app on the store follows.</p>
+
+  <h3>1. Discover</h3>
+  <p>An agent (or its operator) browses the catalogue and inspects your app before installing it — description, vendor, the methods it exposes, and its declared permissions.</p>
+  <pre><code><span class="comment"># See what's installable</span>
+<span class="cmd">pilotctl appstore catalogue</span>
+
+<span class="comment"># Inspect one app before installing it</span>
+<span class="cmd">pilotctl appstore view io.pilot.yourapp</span></code></pre>
+
+  <h3>2. Install</h3>
+  <p>One command. The daemon fetches the bundle, verifies its signature and hash against the manifest, requests the permissions it declares, and auto-spawns it — no manual start step, no separate service to babysit.</p>
+  <pre><code><span class="cmd">pilotctl appstore install io.pilot.yourapp</span>
+<span class="cmd">pilotctl appstore list</span>   <span class="comment"># confirm it's ready and see its methods</span></code></pre>
+
+  <h3>3. Call</h3>
+  <p>The agent calls <code>&lt;app&gt;.help</code> to learn your methods and their parameters at runtime, then calls the method it needs.</p>
+  <pre><code><span class="comment"># Learn the interface</span>
+<span class="cmd">pilotctl appstore call io.pilot.yourapp yourapp.help '{}'</span>
+
+<span class="comment"># Call a method — JSON in, JSON out</span>
+<span class="cmd">pilotctl appstore call io.pilot.yourapp yourapp.search '{"q":"example"}'</span></code></pre>
+  <p>That's the whole lifecycle from the agent's side. No SDK to import for your specific API, no key to provision by hand, no endpoint to memorize.</p>
+  </section>
+
+  <section>
+  <h2>What you actually bring to the table</h2>
+  <p>You don't rewrite your API and you don't hand over your source code. You describe your existing app or API's methods — what each one takes, what it returns, how auth is structured — through the publish flow, and Pilot generates and signs an agent-first adapter from that description. Your secrets stay yours: operators supply their own credentials at install time, not you at publish time.</p>
+  <p>Concretely, before you start the publish flow it helps to have on hand:</p>
+  <ul>
+    <li><strong>A method list.</strong> Each endpoint you want exposed, with its inputs and outputs described plainly — this becomes the typed methods an agent calls.</li>
+    <li><strong>Auth shape.</strong> Whether calls need an API key, a header token, or nothing at all, and where that credential is supplied.</li>
+    <li><strong>A sense of latency.</strong> Which methods are fast lookups versus slower, multi-step operations — this feeds the <code>&lt;app&gt;.help</code> latency class an agent uses to pick the cheapest method that fits its task.</li>
+    <li><strong>A valid email.</strong> The publish flow verifies it with a one-time code before you can submit, and uses it to keep you posted on review status.</li>
+  </ul>
+  <p>From there, the shape is: describe your app → verify your email → Pilot builds and signs the adapter → the team reviews it → it's live in the app store, one command away from every agent on the network.</p>
+  </section>
+
+  <section>
+  <h2>Designing methods agents actually call well</h2>
+  <p>A published app is only as useful as its methods are easy to call correctly on the first try. A few things that make a real difference:</p>
+  <ul>
+    <li><strong>Name methods by intent, not by internal route.</strong> <code>search</code>, <code>answer</code>, <code>lookup</code> read clearly at runtime; an internal endpoint name your team uses internally usually doesn't.</li>
+    <li><strong>Group by latency honestly.</strong> If one method is a cheap cache read and another kicks off a multi-step job, say so — an agent choosing between methods via <code>&lt;app&gt;.help</code> should be able to pick the cheapest one that answers its actual question, the same way a developer would pick a lighter call over a heavier one.</li>
+    <li><strong>Keep parameters flat and typed.</strong> Every value passed through <code>call</code> arrives as JSON; simple, well-named fields are easier for an agent to construct correctly than deeply nested structures.</li>
+    <li><strong>Return structured errors, not prose.</strong> An agent that gets a clear error code back can decide whether to retry, adjust its call, or give up — much more useful than a string it has to parse.</li>
+  </ul>
+  <p>These aren't arbitrary style preferences. They're the same considerations that make an app's <code>&lt;app&gt;.help</code> output actually useful as a runtime contract instead of just a list of names.</p>
+  </section>
+
+  <section>
+  <h2>Why publish at all</h2>
+  <p>The store grows by builders adding to it. Every app you publish is one more capability the agents already on the network — 243k+ of them — can pick up with a single install command, without you having to market it, write framework-specific SDKs, or answer integration questions one developer at a time. If your API is genuinely useful to autonomous agents, publishing it once reaches all of them; keeping it as a bare REST endpoint means each agent's operator has to do the integration work themselves, every time.</p>
+  </section>
+
+  <div class="cta">
+    <h3>Publish your app</h3>
+    <p>Describe your API's methods once — we build, sign, and verify the adapter.</p>
+    <a href="https://pilotprotocol.network/publish">Start the publish flow</a>
+  </div>`;
+
+const faqItems = [
+  {
+    question: "What is an agent app on Pilot Protocol?",
+    answer: "A small, signed binary that runs locally on an agent's daemon and exposes your API's methods as typed calls — JSON in, JSON out — instead of requiring an agent to integrate your REST API by hand. It follows the same discover, install, call loop as every other app in the store.",
+  },
+  {
+    question: "Do I need to rewrite my API to publish it as an agent app?",
+    answer: "No. You describe your existing app or API's methods through the publish flow, and Pilot generates and signs an agent-first adapter for you. You don't upload code and you don't change your existing service.",
+  },
+  {
+    question: "How is publishing an agent app different from running an MCP server?",
+    answer: "An MCP server gives one agent a standard way to reach your tool over a connection it configures and manages itself. Publishing to the Pilot app store adds distribution on top: any agent on the overlay can discover your app in the catalogue and install it with one command, with the daemon handling verification and process supervision. The two are complementary, and many teams run both.",
+  },
+  {
+    question: "Who holds my API keys or secrets after I publish?",
+    answer: "You don't supply secrets at publish time. The published adapter is generic; operators who install your app supply their own credentials to it at install time, so your keys never pass through the publish flow.",
+  },
+  {
+    question: "What do I need before starting the publish flow?",
+    answer: "A description of your methods (inputs, outputs), the auth shape your API expects, a rough sense of which methods are fast versus slow, and a valid email to verify with a one-time code before submitting.",
+  },
+];
+---
+<BlogLayout
+  title="How to Build an Agent App: Turn Your API Into an Agent-Native Tool"
+  description="Turn an existing API into an installable agent app on Pilot Protocol — the discover, install, call loop, what to prepare, and how to publish."
+  date="Jul 5, 2026"
+  tags={["app-store", "agents", "publish", "how-to"]}
+  canonicalPath="/blog/build-agent-app-turn-api-into-tool"
+  bannerImage="/blog/banners/build-agent-app-turn-api-into-tool.svg"
+  faqItems={faqItems}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
