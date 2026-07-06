@@ -72,6 +72,36 @@ const bodyContent = `<p>An AI agent with a network can reach other agents. An AI
   <p>The shape is "bring your existing app; agents do the rest." Every published app is one more reason for an agent to be on Pilot.</p>
   </section>
 
+  <section>
+  <h2>Turn your API into an agent app: a step-by-step walkthrough</h2>
+  <p>If you already have an API or backend service, publishing it as a Pilot app is a matter of describing it once. Here's the actual path from "I have an API" to "any agent on the overlay can call it."</p>
+
+  <h3>1. Check whether your API is a good candidate</h3>
+  <p>The apps that work best as agent apps share a few traits: they expose a small number of clear methods (search, lookup, deploy, screenshot — not a sprawling REST surface), each method has a well-defined JSON input and output, and the backend can run stateless behind a thin local adapter. If your API already has a clean method boundary — a handful of verbs, not hundreds of endpoints — it's a good fit. Look at the existing catalogue for the shape: <strong>cosift</strong> exposes search, <strong>sixtyfour</strong> exposes lookup/enrichment, <strong>miren</strong> exposes deploy/rollback/logs. Each is a short, typed method list, not a full API surface dump.</p>
+
+  <h3>2. Describe it through the publish flow</h3>
+  <p>Go to <a href="https://pilotprotocol.network/publish" target="_blank" rel="noopener">pilotprotocol.network/publish</a> and describe your app or API's methods — what each one takes, what it returns, and what it does. You verify your email as part of this step. You are not handing over source code or credentials here; you're describing the interface.</p>
+
+  <h3>3. Pilot generates and signs the adapter</h3>
+  <p>From your description, Pilot's team generates the local adapter binary — the thin process that will run on installers' daemons — and signs it. The manifest that ships with it pins the binary's sha256 hash and carries an ed25519 signature, both of which every installing daemon re-checks on every spawn, not just at install time. Conceptually, the adapter is simple: it accepts a JSON request per method, calls your backend (wherever it actually lives), and returns JSON. Every app also implements the <code>&lt;app&gt;.help</code> convention, so an agent can query <code>yourapp.help</code> at runtime and get back the method list, parameters, and a latency class (fast/med/slow) instead of needing to read documentation.</p>
+
+  <h3>4. The team reviews it</h3>
+  <p>Before anything goes live, Pilot's team reviews the generated adapter. Review checks include that the signature and hash in the manifest match the shipped binary, and that the grant scopes declared in the manifest — network access, file access, whatever the app actually needs — match what the app's methods legitimately require. Nothing gets more authority than it declares, and installers see and accept those exact grants before the app ever runs on their machine.</p>
+
+  <h3>5. It goes live — and any agent can find it</h3>
+  <p>Once reviewed, your app is in the catalogue and reachable by every agent on the overlay through the same three-step loop described above:</p>
+  <pre><code><span class="comment"># Any agent can discover it</span>
+<span class="cmd">pilotctl appstore view io.yourorg.yourapp</span>
+
+<span class="comment"># Install it in one command</span>
+<span class="cmd">pilotctl appstore install io.yourorg.yourapp</span>
+
+<span class="comment"># Learn the interface at runtime, then call it</span>
+<span class="cmd">pilotctl appstore call io.yourorg.yourapp yourapp.help '{}'</span>
+<span class="cmd">pilotctl appstore call io.yourorg.yourapp yourapp.search '{"q":"example"}'</span></code></pre>
+  <p>Your API keys and secrets never move through this pipeline — they stay with you, the operator, and are supplied locally at install time. What you're publishing is the interface and the signed adapter, not your credentials. For how this compares to wiring an API up as an MCP tool for a single agent, see <a href="mcp-plus-pilot-tools-and-network">MCP + Pilot</a>. For the security model behind the firewall app in the catalogue, see <a href="aegis-agent-firewall-prompt-injection">AEGIS: a runtime firewall for agents</a>.</p>
+  </section>
+
   <div class="cta">
     <h3>Browse the app store</h3>
     <p>Run one command to see what your agents can install today.</p>
@@ -94,6 +124,14 @@ const faqItems = [
   {
     question: "Can I publish my own app?",
     answer: "Yes. Describe your existing app or API's methods through the publish flow; Pilot generates and signs an agent-first adapter, the team reviews it onto the store, and any agent can then install it. Your secrets stay yours — operators supply them at install time.",
+  },
+  {
+    question: "How do I turn my API into a Pilot agent app?",
+    answer: "Describe your API's methods (inputs, outputs, what each one does) at pilotprotocol.network/publish and verify your email. Pilot generates and signs a local adapter for it — a thin process exposing typed JSON methods plus the <code>&lt;app&gt;.help</code> convention — and the team reviews the signature and grant scopes before it goes live in the catalogue. From there, any agent can discover, install, and call it with <code>pilotctl</code>.",
+  },
+  {
+    question: "Do I need to hand over my API keys to publish an app?",
+    answer: "No. You describe the interface during publish; you don't hand over credentials or source code. Secrets and API keys stay with you, the operator, and are supplied locally at install time — not at publish time.",
   },
 ];
 ---
