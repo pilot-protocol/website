@@ -1782,6 +1782,124 @@ export const apps: App[] = [
     ],
     "publishedAt": "2026-07-03",
     "updatedAt": "2026-07-03"
+  },
+  {
+    "id": "io.pilot.orthogonal",
+    "name": "Orthogonal",
+    "tagline": "One key, 851 paid APIs — described in English, metered per user",
+    "description": "# Orthogonal — a catalog of paid tools and APIs, for your agent\n\nOrthogonal is an **API marketplace / meta-API**: a single key fronts **58 third-party APIs across 851 endpoints** — lead & contact enrichment, work-email and phone finding, web & social scraping, AI web search, company / people / jobs data, weather, voice/phone, email inboxes, and more. You never sign up for the underlying providers and you never juggle their keys — you describe what you need, and pay Orthogonal per call. This Pilot app wraps Orthogonal's control plane behind the managed-key broker, so **your agent gets one metered, keyless surface** and a **per-user $5 budget**.\n\n## The workflow: discover → price → execute\n\n1. **Discover — `orthogonal.search`** (the natural-language router ★). Describe the task in plain English, e.g. *\"find the work email and phone for a person given their name and company\"*, and get back the ranked APIs and endpoints that can do it, grouped by API with a relevance score. This is the \"which API do I need?\" endpoint — you don't have to know the catalog.\n2. **Price — `orthogonal.details`.** Pass an `{api, path}` and get the full request schema (every path/query/body param, with types and required flags) **and the exact price in dollars**. This is the authoritative price source — search and list return `null` prices.\n3. **Execute — `orthogonal.run`.** Call `{api, path, body?, query?}` and Orthogonal dispatches to the provider, returns the provider's data, and reports the exact `priceCents` charged. This is the **only call that costs money**.\n\n`orthogonal.integrate` and `orthogonal.list` round out discovery (code snippets and full-catalog browse), and `orthogonal.balance` / `.usage` / `.transactions` / `.check` expose the account ledger — all free.\n\n## What you can do (representative)\n\n- **Contact & lead enrichment** — apollo, contactout, company-enrich, peopledatalabs, coresignal, aviato, crustdata, ocean-io, influencers-club.\n- **Work-email & phone finding** — tomba, icypeas, contactout, company-enrich, hunter.\n- **Web & AI search** — serper, linkup, tavily, exa/perplexity.\n- **Web & social scraping** — olostep, serper-scrape, scrapecreators (107 endpoints), scrapegraphai, fiber (92 endpoints).\n- **Company / firmographic / jobs data** — predictleads, fantastic-jobs, openfunnel, edges, context-dev, brand-dev.\n- **Weather, voice/phone, email inboxes** — precip, agentphone, agentmail.\n\nRun `orthogonal.search` (or `orthogonal.list`) for the live, complete set.\n\n## Pricing — how you're billed (true to real usage)\n\n- **Only `orthogonal.run` costs money.** Every discovery, pricing, and account call is **free**.\n- Each run is billed the **target endpoint's real price**, debited from your **$5 per-user budget** in micro-dollars. The `priceCents` in the run response is the exact amount charged (real cents); `X-Pilot-Credits-Remaining` on every response is your remaining budget in micro-dollars ($5 = 5000000).\n- Prices span **$0.001 – $3.50**. Distribution across the 851 endpoints: **11 free, ~612 fixed-price, 104 \"dynamic\"** (priced only after the call). Common tiers: Basic $0.001–0.01, Standard $0.01–0.10, Premium $0.10–1.00. Cheap endpoints to start with: serper ($0.002), olostep / tomba / linkup ($0.01).\n- For a **known** cost up front, call `orthogonal.details` first. For **\"dynamic\"** endpoints the price is only knowable from the run response — so metering is done on the actual charged amount, and a single call may spend the last of your budget; after that, `orthogonal.run` returns **402** (the free discovery calls keep working).\n\n## Per-user budget & fair use\n\nEach Pilot user is seeded **$5 of credit** on first use, metered by the broker against their signed pilot identity. When the budget is exhausted, billable runs return 402. To keep the shared master account fair, the broker also enforces a **per-IP identity cap**: a small number of distinct pilot identities may claim a fresh $5 from any one network, so a depleted user can't farm new budgets by minting new identities. The Orthogonal account itself is the ultimate backstop — if it runs dry, runs return 402 until it's topped up.\n\n## Good to know\n\n- **Auth is fully managed.** The `orth_live_` master key lives only in the broker; the installed adapter is keyless and signs each request with your pilot identity. Nothing to configure.\n- **The account is shared** across Pilot users (no per-user sub-accounts on Orthogonal), so `orthogonal.balance` / `.usage` / `.transactions` report the **account-wide** figures — your **personal** remaining budget is the `X-Pilot-Credits-Remaining` header.\n- Errors surface verbatim: 402 insufficient credit, 404 unknown api/path, 5xx upstream provider error, 429 rate-limited (back off).\n- `orthogonal.help` is the self-describing discovery contract: it lists every method with params, cost note, and latency class.",
+    "categories": [
+      null
+    ],
+    "keywords": [
+      "orthogonal",
+      "api-marketplace",
+      "enrichment",
+      "lead-enrichment",
+      "email-finder",
+      "scraping",
+      "web-search",
+      "people-data",
+      "company-data",
+      "meta-api",
+      "natural-language"
+    ],
+    "version": "0.1.0",
+    "vendor": "Orthogonal",
+    "vendorUrl": "https://orthogonal.com",
+    "license": "MIT",
+    "sourceUrl": "https://github.com/pilot-protocol/app-template/tree/main/submissions/io.pilot.orthogonal",
+    "homepage": "https://orthogonal.com",
+    "methods": [
+      {
+        "name": "orthogonal.search",
+        "summary": "★ Natural-language API router. Describe a task in plain English (prompt) and get back the ranked Orthogonal APIs + endpoints that can do it — grouped by API, each with slug, path, method and a 0–1 relevance score. FREE. Start here when you don't know which of the 851 endpoints to use, then price it with orthogonal.details and execute with orthogonal.run."
+      },
+      {
+        "name": "orthogonal.details",
+        "summary": "Full request schema (path/query/body params with types + required flags) AND the exact price in dollars for one endpoint. FREE. Call this before orthogonal.run to know the cost — it is the authoritative price source (prices are null in search/list). Price may be the string 'dynamic' for endpoints priced only after the call."
+      },
+      {
+        "name": "orthogonal.integrate",
+        "summary": "Ready-to-paste code snippets for one endpoint. FREE. format ∈ orth-sdk (default) | run-api | curl | x402-fetch | x402-python | all."
+      },
+      {
+        "name": "orthogonal.list",
+        "summary": "Browse the whole catalog — 58 APIs / 851 endpoints with descriptions and param schemas, paginated by limit/offset. FREE. Prices are null here; use orthogonal.details for the price of a specific endpoint."
+      },
+      {
+        "name": "orthogonal.run",
+        "summary": "★ Execute any of the 851 provider endpoints via a JSON payload {api, path, body?, query?} (the HTTP method is chosen automatically; body is the provider request body, query is its query-string params). THIS IS THE ONLY CALL THAT COSTS MONEY: you are billed the target endpoint's real price and it is debited from your $5 Pilot budget. The response returns priceCents (cents actually charged) alongside the provider data, and X-Pilot-Credits-Remaining shows your budget. Once your $5 is spent, run returns 402 while the free discovery calls keep working. Prices range $0.001–$3.50; 104 endpoints are 'dynamic' (priced only from the response) — check orthogonal.details first when you need the cost up front."
+      },
+      {
+        "name": "orthogonal.balance",
+        "summary": "Orthogonal account credit balance (string '$X.XX'). FREE, read-only. Note: your per-user $5 Pilot budget is metered separately by the broker and is surfaced in the X-Pilot-Credits-Remaining header on every call — that header, not this account balance, is your personal remaining budget."
+      },
+      {
+        "name": "orthogonal.check",
+        "summary": "Preflight the shared account: does it hold ≥ amountCents credits? (amountCents is in Orthogonal credit units = dollars × 100000, so $5 = 500000). FREE."
+      },
+      {
+        "name": "orthogonal.transactions",
+        "summary": "Account transaction ledger — purchases, API charges, bonuses, refunds — with amounts, direction and timestamps, paginated. FREE, read-only. Amounts are in the credits unit (dollars × 100000)."
+      },
+      {
+        "name": "orthogonal.usage",
+        "summary": "Per-call spend history plus totalSpent over a window (dollar strings), for the shared account. FREE, read-only."
+      },
+      {
+        "name": "orthogonal.help",
+        "summary": "The self-describing discovery contract: every method with params, cost note, and latency class. Local, free, no backend call."
+      }
+    ],
+    "changelog": [
+      {
+        "version": "0.1.0",
+        "notes": [
+          "Initial release — managed meta-API wrapper over Orthogonal (58 APIs / 851 endpoints), per-user $5 budget, NL router."
+        ]
+      }
+    ],
+    "grants": [],
+    "bundles": [
+      {
+        "platform": "darwin-arm64",
+        "bytes": 5381197
+      },
+      {
+        "platform": "darwin-amd64",
+        "bytes": 5178133
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": 4822771
+      },
+      {
+        "platform": "linux-amd64",
+        "bytes": 4822771
+      }
+    ],
+    "installedBytes": 9137279,
+    "depends": [],
+    "protection": "shareable",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "image",
+      "img": "/appicons/io.pilot.orthogonal.svg",
+      "fit": "contain",
+      "pos": "center",
+      "color": "#ffffff",
+      "ink": false,
+      "file": null
+    },
+    "minPilotVersion": "1.10.0",
+    "runtimes": [
+      "go"
+    ],
+    "publishedAt": null,
+    "updatedAt": null
   }
 ];
 
