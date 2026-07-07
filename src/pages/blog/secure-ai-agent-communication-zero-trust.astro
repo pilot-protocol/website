@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>"We are building Multi-Agent Systems like it's 1995 -- where is the authentication layer?" This question, posted on a developer forum in late 2025, captures the state of agent security precisely. The frameworks ship fast and the demos look impressive, but underneath the surface there is no identity, no authentication, and no access control between agents.</p>
+const bodyContent = `<p>Secure AI agent communication with zero trust means every agent has a cryptographic identity, every connection is mutually authenticated before any data flows, and trust between two agents is explicit, granular, and instantly revocable -- never implied by network membership. "We are building Multi-Agent Systems like it's 1995 -- where is the authentication layer?" This question, posted on a developer forum in late 2025, captures the state of agent security precisely. The frameworks ship fast and the demos look impressive, but underneath the surface there is no identity, no authentication, and no access control between agents.</p>
 
   <p>The numbers back it up. Security researchers at Columbia University found that <strong><a href="https://www.crewai.com" target="_blank" rel="noopener">CrewAI</a> exfiltrated data in 65% of tested scenarios</strong>. The same study showed that <strong>Magentic-One executed malicious code 97% of the time</strong> when a compromised agent was introduced to the group. These are not edge cases. These are the default outcomes when agent frameworks trust every participant without verification.</p>
 
@@ -141,7 +141,7 @@ Encrypted tunnel active</code></pre>
     </tbody>
   </table>
 
-  <p>No protocol is universally better. A2A optimizes for open ecosystems where agents need to advertise capabilities to unknown consumers. MCP optimizes for tool access patterns where a client connects to known servers. Raw REST optimizes for simplicity and ubiquity. Pilot Protocol optimizes for <strong>environments where agents handle sensitive data, cross organizational boundaries, and operate autonomously in adversarial conditions</strong>.</p>
+  <p>No protocol is universally better. A2A optimizes for open ecosystems where agents need to advertise capabilities to unknown consumers. MCP optimizes for tool access patterns where a client connects to known servers. Raw REST optimizes for simplicity and ubiquity. Pilot Protocol optimizes for <strong>environments where agents handle sensitive data, cross organizational boundaries, and operate autonomously in adversarial conditions</strong>. If you're specifically comparing overlay-network options rather than agent messaging protocols, see the full <a href="/docs/comparison-networking">Pilot Protocol vs Tailscale, ZeroTier, Nebula, and libp2p</a> breakdown.</p>
 
   <h2 id="practical-example">Practical Example: Two Agents Establishing Trust</h2>
 
@@ -233,12 +233,34 @@ Peer notified</code></pre>
   </div>`;
 ---
 <BlogLayout
-  title="Secure AI Agent Communication: Zero Trust"
-  description="Why every agent connection should be encrypted and mutually authenticated. Zero trust networking for AI agents."
+  title="Secure AI Agent Communication: A Zero Trust Model With Mutual Handshakes"
+  description="How to secure AI agent-to-agent communication: zero trust with Ed25519 identity, mutual handshakes, and instant revocation -- no shared API keys."
   date="February 23, 2026"
   tags={["security", "zero-trust", "identity"]}
   canonicalPath="/blog/secure-ai-agent-communication-zero-trust"
   bannerImage="/blog/banners/secure-ai-agent-communication-zero-trust.webp"
+  faqItems={[
+    {
+      question: "What does zero trust mean for AI agent communication?",
+      answer: "It means no agent is trusted by default, regardless of network location. Every agent has its own cryptographic identity, every connection requires mutual authentication before data flows, and trust between two specific agents is explicit, granular, and revocable at any time."
+    },
+    {
+      question: "How is zero trust for agents different from zero trust for humans?",
+      answer: "The security principles are the same -- never trust, always verify -- but the mechanisms change. Agents don't enter passwords or approve MFA prompts, so identity is a persistent key pair rather than a login session, and trust establishment is a signed handshake ceremony instead of an SSO flow."
+    },
+    {
+      question: "Can zero trust networking work with dynamic, short-lived AI agents?",
+      answer: "Yes. Because identity is a key pair rather than an IP address or hostname, an agent keeps the same identity across restarts, redeployments, or moving to a different machine. Peers recognize it by its public key, so dynamic agent populations don't require re-provisioning trust."
+    },
+    {
+      question: "How fast can you revoke trust from a compromised agent?",
+      answer: "Trust revocation should be near-instant, not dependent on token expiry or a redeployment cycle. In Pilot Protocol, running pilotctl untrust deletes the peer's public key locally, tears down any active tunnel, and notifies the peer -- the next packet from the revoked agent is rejected immediately."
+    },
+    {
+      question: "Does zero trust networking replace tool-level authorization like MCP?",
+      answer: "No. Zero trust networking secures the transport layer -- confirming which agent you're talking to and encrypting the channel. It does not restrict which actions a trusted agent can perform once connected. Tool-level authorization (MCP or similar) and application-level content guardrails are separate, complementary layers."
+    }
+  ]}
 >
   <Fragment set:html={bodyContent} />
 </BlogLayout>
