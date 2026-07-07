@@ -34,7 +34,7 @@ const CATMAP = {
   'io.pilot.postgres': 'data', 'io.pilot.duckdb': 'data', 'io.pilot.redis': 'data', 'io.pilot.sixtyfour': 'data',
   'io.pilot.cosift': 'ai', 'io.telepat.ideon-free': 'ai',
   'io.pilot.plainweb': 'web', 'io.pilot.otto': 'web',
-  'io.pilot.smolmachines': 'infra', 'io.pilot.miren': 'infra', 'io.pilot.docker': 'infra',
+  'io.pilot.smol': 'infra', 'io.pilot.miren': 'infra', 'io.pilot.docker': 'infra',
   'io.pilot.aegis': 'security',
   'io.pilot.slipstream': 'finance', 'io.pilot.wallet': 'finance',
 };
@@ -46,7 +46,7 @@ const ICON_MAP = {
   'io.pilot.redis': { brand: 'redis', hex: '#FF4438' },
   'io.pilot.docker': { brand: 'docker', hex: '#2496ED' },
   'io.pilot.cosift': { image: 'png', fit: 'contain', bg: '#ffffff' },
-  'io.pilot.smolmachines': { image: 'png', fit: 'cover', bg: '#ffffff' },
+  'io.pilot.smol': { image: 'png', fit: 'cover', bg: '#ffffff' },
   'io.pilot.sixtyfour': { image: 'png', fit: 'cover', bg: '#0b0b0a' },
   'io.pilot.plainweb': { image: 'png', fit: 'contain', bg: '#ffffff' },
   'io.pilot.slipstream': { lucide: 'trending-up' },
@@ -82,7 +82,7 @@ function iconFor(id, hue) {
 const APP_IDS = [
   'io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.redis', 'io.pilot.sixtyfour',
   'io.pilot.cosift', 'io.telepat.ideon-free', 'io.pilot.plainweb', 'io.pilot.otto',
-  'io.pilot.smolmachines', 'io.pilot.miren', 'io.pilot.docker', 'io.pilot.aegis',
+  'io.pilot.smol', 'io.pilot.miren', 'io.pilot.docker', 'io.pilot.aegis',
   'io.pilot.slipstream', 'io.pilot.wallet',
 ];
 const FEATURED = ['io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.docker'];
