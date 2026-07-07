@@ -1,8 +1,8 @@
 ---
 import DocLayout from "../../layouts/DocLayout.astro";
 
-const bodyContent = `<h1>Pilot Protocol vs Tailscale vs ZeroTier vs Nebula</h1>
-  <p class="subtitle">Overlay networks compared. Same layer, different goals: VPN mesh for humans vs networking for agents.</p>
+const bodyContent = `<h1>Pilot Protocol vs Tailscale, ZeroTier, Nebula, and libp2p: AI Agent Networking Compared</h1>
+  <p class="subtitle">Overlay networks compared side by side on identity, trust, and NAT traversal. Same layer, different goals: VPN mesh for humans vs networking for agents.</p>
 
   <div class="toc">
     <h4>On this page</h4>
@@ -14,11 +14,12 @@ const bodyContent = `<h1>Pilot Protocol vs Tailscale vs ZeroTier vs Nebula</h1>
       <li><a href="#vs-libp2p">vs libp2p</a></li>
       <li><a href="#matrix">Feature matrix</a></li>
       <li><a href="#when">When to use what</a></li>
+      <li><a href="#faq">FAQ</a></li>
     </ul>
   </div>
 
   <h2 id="overview">Overview</h2>
-  <p>Pilot Protocol, Tailscale, ZeroTier, and Nebula are all overlay networks. They all create virtual addresses, encrypt traffic, and traverse NATs. The difference is <strong>who they are built for</strong>:</p>
+  <p>Pilot Protocol, Tailscale, ZeroTier, and Nebula are all overlay networks. They all create virtual addresses, encrypt traffic, and traverse NATs. The difference is <strong>who they are built for</strong>. (If you're instead weighing Pilot against agent messaging standards like MCP or A2A rather than network-layer tools, see the <a href="/docs/comparison">protocol comparison</a>.)</p>
 
   <ul>
     <li><strong>Pilot Protocol</strong> - An overlay network built for autonomous AI agents. Provides virtual addresses, port-based services, a bilateral trust model, peer discovery with tags, and built-in application services (data exchange and pub/sub). No external Go dependencies.</li>
@@ -95,7 +96,7 @@ const bodyContent = `<h1>Pilot Protocol vs Tailscale vs ZeroTier vs Nebula</h1>
   <p><strong>Key difference:</strong> Nebula requires a PKI setup - you run a certificate authority, sign certificates for each node, and distribute them manually. Pilot Protocol agents generate their own identity and negotiate trust at runtime. This makes Pilot better suited for dynamic agent populations where nodes come and go, while Nebula excels for static infrastructure with known hosts.</p>
 
   <h2 id="vs-libp2p">vs libp2p</h2>
-  <p>libp2p is a modular networking toolkit used by IPFS, Ethereum, and Polkadot. It provides building blocks; Pilot Protocol provides a complete, opinionated stack.</p>
+  <p><a href="/blog/overlay-network-ai-agents">libp2p</a> is a modular networking toolkit used by IPFS, Ethereum, and Polkadot. It provides building blocks; Pilot Protocol provides a complete, opinionated stack.</p>
 
   <table>
     <thead><tr><th></th><th>Pilot Protocol</th><th>libp2p</th></tr></thead>
@@ -190,11 +191,59 @@ const bodyContent = `<h1>Pilot Protocol vs Tailscale vs ZeroTier vs Nebula</h1>
 
   <div class="callout">
     <p><strong>The short version:</strong> Tailscale, ZeroTier, and Nebula give you a network. Pilot Protocol gives agents a network <em>with identity, trust, discovery, and services built in</em>. If your nodes are humans or servers, use a VPN. If your nodes are agents, use Pilot.</p>
-  </div>`;
+  </div>
+
+  <h2 id="faq">FAQ</h2>
+
+  <h3>Is Pilot Protocol a replacement for Tailscale or ZeroTier?</h3>
+  <p>Not necessarily. Tailscale and ZeroTier are VPN mesh products built for human-managed device networks with centralized access control. Pilot Protocol is built for AI agents that generate their own identity and negotiate trust without an admin console. They solve adjacent problems for different audiences and can run on the same infrastructure at once — see the <a href="#vs-tailscale">Tailscale comparison</a> above.</p>
+
+  <h3>Can I run Pilot Protocol behind NAT without a VPN?</h3>
+  <p>Yes. Pilot Protocol uses STUN plus hole-punching with relay fallback so agents behind NAT are reachable without exposing ports or standing up a VPN. See <a href="/blog/connect-ai-agents-behind-nat-without-vpn">connecting AI agents behind NAT without a VPN</a> for a walkthrough.</p>
+
+  <h3>How does Pilot Protocol's trust model differ from ZeroTier or Nebula?</h3>
+  <p>ZeroTier uses network controller approval and Nebula uses certificate-based identity issued by a CA. Pilot Protocol uses a bilateral, agent-initiated handshake — both sides must approve before a tunnel opens, and there's no central authority or PKI to run.</p>
+
+  <h3>Does Pilot Protocol require an account like Tailscale does?</h3>
+  <p>No. Agents generate their own Ed25519 key pair and register a virtual address on the rendezvous registry — no SSO/OIDC sign-in and no admin console required.</p>
+
+  <h3>How is Pilot Protocol different from libp2p?</h3>
+  <p>libp2p is a modular toolkit — you assemble transport, discovery, and pubsub primitives yourself. Pilot Protocol ships as a single binary with addressing, encrypted transport, discovery, trust, and application-layer services already wired together. See the <a href="#vs-libp2p">libp2p comparison</a> above for the full breakdown.</p>`;
 ---
+<script type="application/ld+json" set:html={JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is Pilot Protocol a replacement for Tailscale or ZeroTier?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Not necessarily. Tailscale and ZeroTier are VPN mesh products built for human-managed device networks with centralized access control. Pilot Protocol is built for AI agents that generate their own identity and negotiate trust without an admin console. They solve adjacent problems for different audiences and can run on the same infrastructure at once." }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I run Pilot Protocol behind NAT without a VPN?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. Pilot Protocol uses STUN plus hole-punching with relay fallback so agents behind NAT are reachable without exposing ports or standing up a VPN." }
+    },
+    {
+      "@type": "Question",
+      "name": "How does Pilot Protocol's trust model differ from ZeroTier or Nebula?",
+      "acceptedAnswer": { "@type": "Answer", "text": "ZeroTier uses network controller approval and Nebula uses certificate-based identity issued by a CA. Pilot Protocol uses a bilateral, agent-initiated handshake, both sides must approve before a tunnel opens, and there's no central authority or PKI to run." }
+    },
+    {
+      "@type": "Question",
+      "name": "Does Pilot Protocol require an account like Tailscale does?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. Agents generate their own Ed25519 key pair and register a virtual address on the rendezvous registry, no SSO/OIDC sign-in and no admin console required." }
+    },
+    {
+      "@type": "Question",
+      "name": "How is Pilot Protocol different from libp2p?",
+      "acceptedAnswer": { "@type": "Answer", "text": "libp2p is a modular toolkit where you assemble transport, discovery, and pubsub primitives yourself. Pilot Protocol ships as a single binary with addressing, encrypted transport, discovery, trust, and application-layer services already wired together." }
+    }
+  ]
+})}></script>
 <DocLayout
-  title="Pilot Protocol vs Tailscale vs ZeroTier vs Nebula"
-  description="Compare Pilot Protocol with Tailscale, ZeroTier, Nebula, and libp2p. Overlay networks for AI agents vs VPN mesh for servers."
+  title="Pilot Protocol vs Tailscale, ZeroTier, Nebula, libp2p: AI Agent Networking Compared"
+  description="Pilot Protocol vs Tailscale, ZeroTier, Nebula, and libp2p compared: identity, trust, and NAT traversal for agents vs VPN mesh for servers."
   activePage="comparison-networking"
   canonicalPath="/docs/comparison-networking"
   prev={{ label: "vs MCP / A2A / ACP", href: "/docs/comparison" }}
