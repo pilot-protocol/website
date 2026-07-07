@@ -1,4 +1,218 @@
 {
+"io.pilot.agentphone": [
+{
+"name": "agentphone.usage",
+"summary": "Account status: plan, phone-number hold limit (used/limit/remaining), and message/call/webhook stats. Call this first to orient in a session. Read-only; no charge."
+},
+{
+"name": "agentphone.usage_daily",
+"summary": "Daily usage breakdown for the last N days (max 365). Read-only."
+},
+{
+"name": "agentphone.usage_monthly",
+"summary": "Monthly usage aggregation. Read-only."
+},
+{
+"name": "agentphone.usage_by_number",
+"summary": "Usage broken down per phone number. Read-only."
+},
+{
+"name": "agentphone.usage_by_agent",
+"summary": "Usage broken down per agent over a period. Read-only."
+},
+{
+"name": "agentphone.list_voices",
+"summary": "List available text-to-speech voices (voice_id, voice_name, provider, gender, accent, preview_audio_url) across ElevenLabs, Cartesia, OpenAI, and platform voices. gender/accent/preview may be null \u2014 do not crash on missing fields. Use voice_id when creating/updating an agent. Read-only."
+},
+{
+"name": "agentphone.list_agents",
+"summary": "List your agents (phone personas: name, voiceMode, model tier, system prompt, attached numbers). You get one starter agent on account setup \u2014 ALWAYS list before creating another. Read-only."
+},
+{
+"name": "agentphone.create_agent",
+"summary": "Create an agent (phone persona). For AI-driven use pass voiceMode:\"hosted\" explicitly (the backend defaults to \"webhook\", which needs a configured webhook or inbound calls fail). systemPrompt is required for hosted. Pick a voice from agentphone.list_voices. Free (no telephony spend)."
+},
+{
+"name": "agentphone.get_agent",
+"summary": "Get one agent's full config and its attached numbers. Read-only."
+},
+{
+"name": "agentphone.update_agent",
+"summary": "Update an agent \u2014 only the fields you send change. Any create field is updatable (systemPrompt, voice, modelTier, \u2026). Free."
+},
+{
+"name": "agentphone.delete_agent",
+"summary": "Delete an agent. Irreversible \u2014 clears the agent's references on its numbers/conversations/calls (those are NOT deleted). Confirm with your human first. Free."
+},
+{
+"name": "agentphone.attach_number",
+"summary": "Attach an existing number to an agent so the agent can call/text from it. Free."
+},
+{
+"name": "agentphone.detach_number",
+"summary": "Detach a number from an agent (the number is kept, just unassigned). Free."
+},
+{
+"name": "agentphone.list_agent_conversations",
+"summary": "List an agent's conversation threads, newest activity first (data[], hasMore, total). Read-only."
+},
+{
+"name": "agentphone.list_agent_calls",
+"summary": "List an agent's calls (data[], hasMore, total). Read-only."
+},
+{
+"name": "agentphone.list_numbers",
+"summary": "List your active phone numbers (id, phoneNumber, country, status, agentId). Read-only."
+},
+{
+"name": "agentphone.buy_number",
+"summary": "Provision a new US/CA phone number. COSTS $3.00 from your $5 Pilot budget (402 if it would overdraw). The provisioned number is saved to this host's ~/.pilot/.agentphone so you can recall it later with agentphone.mynumber \u2014 no need to store it yourself. Optionally attach to an agent and request an area code."
+},
+{
+"name": "agentphone.get_number",
+"summary": "Get one phone number by id (any status, including released). Read-only."
+},
+{
+"name": "agentphone.release_number",
+"summary": "Release (delete) a number. IRREVERSIBLE \u2014 the number returns to the carrier pool; no refund for the unused month. Confirm with your human first. Free to call."
+},
+{
+"name": "agentphone.list_number_messages",
+"summary": "List messages on a number (inbound + outbound), newest first, cursor-paginated. THE non-websocket way to detect SMS replies: poll with the `after` cursor and filter direction==\"inbound\". Read-only."
+},
+{
+"name": "agentphone.list_number_calls",
+"summary": "List calls on a number. Read-only."
+},
+{
+"name": "agentphone.get_contact_card",
+"summary": "Get the iMessage contact card shown on a number (firstName, lastName, displayName, hasAvatar). iMessage only. Read-only."
+},
+{
+"name": "agentphone.set_contact_card",
+"summary": "Create/replace the iMessage contact card on a number (name + avatar shown to recipients). iMessage only. Free."
+},
+{
+"name": "agentphone.delete_contact_card",
+"summary": "Remove the iMessage contact card from a number. Free."
+},
+{
+"name": "agentphone.send_message",
+"summary": "Send an SMS/iMessage. COSTS MONEY (~$0.01\u20130.02, debited from your $5 budget \u2192 402 if over). Auto-delivers over iMessage when both sides support it, else SMS/MMS \u2014 the response `channel` (sms|mms|imessage) tells you how it went. E.164 for `to_number` (or a group id grp_\u2026 for an iMessage group). iMessage-only extras (send_style, reply_to_message_id) are silently ignored on SMS."
+},
+{
+"name": "agentphone.react",
+"summary": "Send a tapback reaction to a message. iMessage ONLY \u2014 returns 400 on SMS. Free."
+},
+{
+"name": "agentphone.list_calls",
+"summary": "List calls for the account (filter by status/direction). Read-only."
+},
+{
+"name": "agentphone.place_call",
+"summary": "Place an OUTBOUND voice call. COSTS MONEY (per-minute, ~$0.05+, debited from your $5 budget \u2192 402 if over). With `systemPrompt` the AI runs the call autonomously (recommended); without it, each turn is POSTed to the agent's webhook. Returns a call id IMMEDIATELY (async) \u2014 the phone rings in a second or two. Then POLL agentphone.get_call every few seconds until status is completed/failed to read the transcript. Cannot call 911 / N11 / crisis lines (blocked)."
+},
+{
+"name": "agentphone.get_call",
+"summary": "Get a call and its embedded transcripts[]. THE poll target for a call outcome (no websockets): call every few seconds until status is completed or failed (in-progress means partial/empty transcript). Also carries durationSeconds, startedAt, endedAt. Read-only."
+},
+{
+"name": "agentphone.end_call",
+"summary": "Terminate an in-progress call. status/endedAt settle shortly after via the provider \u2014 keep polling agentphone.get_call until terminal. Free."
+},
+{
+"name": "agentphone.get_transcript",
+"summary": "Get the full ordered transcript of a call as plain JSON (user utterance + agent response per turn). This is the REST/polling alternative to the SSE live-transcript stream \u2014 the adapter never uses the stream. Read-only."
+},
+{
+"name": "agentphone.list_conversations",
+"summary": "List conversation threads (one per external contact or iMessage group), sorted by lastMessageAt desc (data[], hasMore, total). Read-only."
+},
+{
+"name": "agentphone.get_conversation",
+"summary": "Get one conversation with its recent messages (participant, isGroup, group roster, messageCount, metadata). Read-only."
+},
+{
+"name": "agentphone.update_conversation",
+"summary": "Update a conversation's `metadata` (attach custom AI context/state to the thread). Free."
+},
+{
+"name": "agentphone.list_conversation_messages",
+"summary": "List a conversation's messages, cursor-paginated (data[], hasMore). Poll with `after` to catch new inbound replies in a thread. Read-only."
+},
+{
+"name": "agentphone.typing",
+"summary": "Show a typing indicator before you reply. iMessage only, best-effort, auto-expires (no stop call). Free."
+},
+{
+"name": "agentphone.set_background",
+"summary": "Set a chat background image for a conversation. iMessage only. Free."
+},
+{
+"name": "agentphone.clear_background",
+"summary": "Clear a conversation's chat background. iMessage only. Free."
+},
+{
+"name": "agentphone.list_contacts",
+"summary": "List saved contacts (data[], hasMore, total); `search` filters by name/phone. Read-only."
+},
+{
+"name": "agentphone.create_contact",
+"summary": "Save a contact so you can look them up by name later. phoneNumber is normalized to E.164; returns 409 if the phone already exists. Free."
+},
+{
+"name": "agentphone.get_contact",
+"summary": "Get one contact by id. Read-only."
+},
+{
+"name": "agentphone.update_contact",
+"summary": "Update a contact \u2014 only the fields you send change (phone is re-normalized; 409 on conflict). Free."
+},
+{
+"name": "agentphone.delete_contact",
+"summary": "Delete a contact. Confirm with your human first. Free."
+},
+{
+"name": "agentphone.get_webhook",
+"summary": "Get the account-level webhook config. Read-only. (Polling is the default event model for this adapter; webhooks are optional.)"
+},
+{
+"name": "agentphone.set_webhook",
+"summary": "Set the account-level webhook URL (returns a signing `secret`; a new one each call). NOTE: on the shared Pilot AgentPhone account this is a GLOBAL setting \u2014 prefer per-agent webhooks or polling. Free."
+},
+{
+"name": "agentphone.delete_webhook",
+"summary": "Remove the account-level webhook. Global on the shared account \u2014 use with care. Free."
+},
+{
+"name": "agentphone.list_webhook_deliveries",
+"summary": "List recent webhook delivery attempts (items[], total). Read-only."
+},
+{
+"name": "agentphone.webhook_delivery_stats",
+"summary": "Aggregated webhook delivery stats over the last N hours (success/failed/pending, byEventType, byHour). Read-only."
+},
+{
+"name": "agentphone.test_webhook",
+"summary": "Send a synthetic test event to verify your endpoint is reachable and verifying signatures. Free."
+},
+{
+"name": "agentphone.get_agent_webhook",
+"summary": "Get an agent-specific webhook (overrides the account default for that agent). Read-only."
+},
+{
+"name": "agentphone.set_agent_webhook",
+"summary": "Set an agent-specific webhook URL (overrides the account default for THIS agent only \u2014 safer than the account-level webhook on a shared account). Free."
+},
+{
+"name": "agentphone.delete_agent_webhook",
+"summary": "Delete an agent-specific webhook (the agent falls back to the account default). Free."
+},
+{
+"name": "agentphone.mynumber",
+"summary": "Recall the phone number(s) THIS daemon provisioned (local, no backend call, free). Reads ~/.pilot/.agentphone, populated automatically by agentphone.buy_number. Returns {entries:[{id,phoneNumber,status,agentId,...}]} \u2014 empty if this host hasn't provisioned one yet. Use it to find 'my number' without listing the shared account."
+}
+],
 "io.pilot.bowmark": [
 {
 "name": "bowmark.ask",

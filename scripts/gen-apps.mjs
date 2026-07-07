@@ -27,6 +27,7 @@ const CATEGORIES = [
   { id: 'infra',    name: 'Infrastructure',     blurb: 'Containers, microVMs, and deploys — the compute layer for agents.',     hue: 30  },
   { id: 'security', name: 'Security',           blurb: 'Guardrails and firewalls for agents and their inputs.',                 hue: 5   },
   { id: 'finance',  name: 'Finance & Payments', blurb: 'Settle value on-overlay and read the markets.',                        hue: 155 },
+  { id: 'comms',    name: 'Communications',     blurb: 'Give an agent its own phone number — voice, SMS/iMessage, and threaded conversations.', hue: 315 },
 ];
 const CAT_HUE = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.hue]));
 
@@ -37,6 +38,7 @@ const CATMAP = {
   'io.pilot.smolmachines': 'infra', 'io.pilot.miren': 'infra', 'io.pilot.docker': 'infra',
   'io.pilot.aegis': 'security',
   'io.pilot.slipstream': 'finance', 'io.pilot.wallet': 'finance',
+  'io.pilot.agentphone': 'comms',
 };
 
 // ---------- icons: brand mark (Simple Icons), line glyph (Lucide), or real logo image ----------
@@ -58,6 +60,7 @@ const ICON_MAP = {
   'io.pilot.aegis': { image: 'svg', fit: 'contain', bg: '#ffffff' },
   'io.pilot.bowmark': { image: 'png', fit: 'cover', bg: '#0b0b0a' },
   'io.pilot.orthogonal': { image: 'svg', fit: 'contain', bg: '#ffffff' },
+  'io.pilot.agentphone': { image: 'png', fit: 'contain', bg: '#26B65A' },
 };
 
 function relLum(hex) {
@@ -83,6 +86,7 @@ function iconFor(id, hue) {
 
 // ---------- presentation config ----------
 const APP_IDS = [
+  'io.pilot.agentphone',
   'io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.sqlite', 'io.pilot.redis', 'io.pilot.sixtyfour',
   'io.pilot.cosift', 'io.telepat.ideon-free', 'io.pilot.plainweb', 'io.pilot.otto',
   'io.pilot.smolmachines', 'io.pilot.miren', 'io.pilot.docker', 'io.pilot.aegis',
