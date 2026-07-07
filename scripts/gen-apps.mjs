@@ -31,7 +31,7 @@ const CATEGORIES = [
 const CAT_HUE = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.hue]));
 
 const CATMAP = {
-  'io.pilot.postgres': 'data', 'io.pilot.duckdb': 'data', 'io.pilot.redis': 'data', 'io.pilot.sixtyfour': 'data',
+  'io.pilot.postgres': 'data', 'io.pilot.duckdb': 'data', 'io.pilot.sqlite': 'data', 'io.pilot.redis': 'data', 'io.pilot.sixtyfour': 'data',
   'io.pilot.cosift': 'ai', 'io.telepat.ideon-free': 'ai',
   'io.pilot.plainweb': 'web', 'io.pilot.otto': 'web', 'io.pilot.bowmark': 'web',
   'io.pilot.smolmachines': 'infra', 'io.pilot.miren': 'infra', 'io.pilot.docker': 'infra',
@@ -43,6 +43,7 @@ const CATMAP = {
 const ICON_MAP = {
   'io.pilot.postgres': { brand: 'postgresql', hex: '#4169E1' },
   'io.pilot.duckdb': { brand: 'duckdb', hex: '#FFF000' },
+  'io.pilot.sqlite': { brand: 'sqlite', hex: '#003B57' },
   'io.pilot.redis': { brand: 'redis', hex: '#FF4438' },
   'io.pilot.docker': { brand: 'docker', hex: '#2496ED' },
   'io.pilot.cosift': { image: 'png', fit: 'contain', bg: '#ffffff' },
@@ -82,7 +83,7 @@ function iconFor(id, hue) {
 
 // ---------- presentation config ----------
 const APP_IDS = [
-  'io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.redis', 'io.pilot.sixtyfour',
+  'io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.sqlite', 'io.pilot.redis', 'io.pilot.sixtyfour',
   'io.pilot.cosift', 'io.telepat.ideon-free', 'io.pilot.plainweb', 'io.pilot.otto',
   'io.pilot.smolmachines', 'io.pilot.miren', 'io.pilot.docker', 'io.pilot.aegis',
   'io.pilot.slipstream', 'io.pilot.wallet', 'io.pilot.bowmark', 'io.pilot.orthogonal',
@@ -90,7 +91,7 @@ const APP_IDS = [
 const FEATURED = ['io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.docker'];
 const LINUX_ONLY = new Set(['io.pilot.docker']);
 const PROTECTION_FALLBACK = {
-  'io.pilot.postgres': 'guarded', 'io.pilot.duckdb': 'guarded', 'io.pilot.redis': 'guarded',
+  'io.pilot.postgres': 'guarded', 'io.pilot.duckdb': 'guarded', 'io.pilot.sqlite': 'guarded', 'io.pilot.redis': 'guarded',
   'io.pilot.docker': 'guarded', 'io.pilot.miren': 'shareable', 'io.pilot.otto': 'guarded',
   'io.pilot.wallet': 'guarded', 'io.pilot.slipstream': 'shareable', 'io.telepat.ideon-free': 'guarded',
   'io.pilot.aegis': 'guarded',

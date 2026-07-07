@@ -544,6 +544,40 @@
 "summary": "Print usage and the subcommand list."
 }
 ],
+"io.pilot.sqlite": [
+{
+"name": "sqlite.query",
+"summary": "Run a SQL statement (or `;`-separated batch) against a database file (or `:memory:`) and return the rows as a JSON array of row objects \u2014 the most directly machine-parseable output. This is `sqlite3 -json <database> <sql>`."
+},
+{
+"name": "sqlite.script",
+"summary": "Run a multi-statement SQL script against a database file and return whatever the statements print. Ideal for schema setup, migrations, seed data, or an ETL batch: DDL + DML + a trailing SELECT in one call. This is `sqlite3 <database> <sql>` (SQLite executes every `;`-separated statement in order). For very large scripts or piping a file, use `sqlite.exec` with a `stdin` payload."
+},
+{
+"name": "sqlite.schema",
+"summary": "Print the `CREATE` statements (DDL) for every table, index, view, and trigger in the database \u2014 via SQLite's `.schema` meta-command. This is `sqlite3 <database> .schema`."
+},
+{
+"name": "sqlite.tables",
+"summary": "List the names of the tables (and views) in the database \u2014 via SQLite's `.tables` meta-command. This is `sqlite3 <database> .tables`."
+},
+{
+"name": "sqlite.exec",
+"summary": "Run the sqlite3 CLI with a verbatim argv \u2014 the full surface beyond the curated methods. Payload is {\"args\":[...]} (the args passed straight to `sqlite3`) plus optional {\"stdin\":\"...\"} piped to the process. Use it for any flag, output mode, or dot-command the curated methods don't cover: a different output mode (`-csv`, `-table`, `-markdown`, `-line`, `-html`, `-box`), `.dump`/`.import`/`.backup`/`.clone`/`.read` via `-cmd`, or a multi-statement session piped over stdin. Examples: {\"args\":[\":memory:\",\"-csv\",\"SELECT 1 AS a, 2 AS b\"]}; {\"args\":[\"/data/app.db\",\"-cmd\",\".mode csv\",\"-cmd\",\".import /data/in.csv t\",\"SELECT count(*) FROM t\"]}; {\"args\":[\"/data/app.db\"],\"stdin\":\"CREATE TABLE t(x);\\nINSERT INTO t VALUES (1),(2);\\nSELECT sum(x) FROM t;\"}."
+},
+{
+"name": "sqlite.cli_help",
+"summary": "Return the complete sqlite3 CLI help \u2014 every command-line option AND every dot-command (`.dump`, `.import`, `.backup`, `.clone`, `.mode`, `.schema`, `.tables`, `.read`, \u2026) \u2014 captured verbatim from the delivered binary and rendered as clean, color-free text. The full reference for what sqlite.query / sqlite.exec accept."
+},
+{
+"name": "sqlite.version",
+"summary": "Print the delivered SQLite version, e.g. \"3.45.2 2024-03-12 \u2026\". Needs no database. This is `sqlite3 -version`."
+},
+{
+"name": "sqlite.help",
+"summary": "Discovery: every method with its params, kind, and latency class \u2014 the self-describing contract."
+}
+],
   "io.pilot.orthogonal": [
     {
       "name": "orthogonal.search",
