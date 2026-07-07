@@ -57,6 +57,7 @@ const ICON_MAP = {
   'io.telepat.ideon-free': { image: 'png', fit: 'cover', bg: '#0b0b0a' },
   'io.pilot.aegis': { image: 'svg', fit: 'contain', bg: '#ffffff' },
   'io.pilot.bowmark': { image: 'png', fit: 'cover', bg: '#0b0b0a' },
+  'io.pilot.orthogonal': { image: 'svg', fit: 'contain', bg: '#ffffff' },
 };
 
 function relLum(hex) {
@@ -85,7 +86,7 @@ const APP_IDS = [
   'io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.sqlite', 'io.pilot.redis', 'io.pilot.sixtyfour',
   'io.pilot.cosift', 'io.telepat.ideon-free', 'io.pilot.plainweb', 'io.pilot.otto',
   'io.pilot.smolmachines', 'io.pilot.miren', 'io.pilot.docker', 'io.pilot.aegis',
-  'io.pilot.slipstream', 'io.pilot.wallet', 'io.pilot.bowmark',
+  'io.pilot.slipstream', 'io.pilot.wallet', 'io.pilot.bowmark', 'io.pilot.orthogonal',
 ];
 const FEATURED = ['io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.docker'];
 const LINUX_ONLY = new Set(['io.pilot.docker']);
