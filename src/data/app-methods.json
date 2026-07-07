@@ -849,5 +849,63 @@
 "name": "orthogonal.help",
 "summary": "The self-describing discovery contract: every method with params, cost note, and latency class. Local, free, no backend call."
 }
+],
+"io.pilot.mysql": [
+{
+"name": "mysql.initialize",
+"summary": "Initialize a new MySQL data directory (system tables + an insecure `root@localhost` with an empty password) \u2014 the one-time setup before the first start. This is `mysqld --initialize-insecure --datadir=<datadir>`. The bundle's basedir/plugin-dir/error-messages are wired in automatically."
+},
+{
+"name": "mysql.start",
+"summary": "Start a local MySQL server from a data directory, listening on 127.0.0.1:<port>. Runs detached (`--daemonize`) and returns once the server is accepting connections. This is `mysqld --daemonize --datadir=<datadir> --socket=<datadir>/mysql.sock --port=<port> --bind-address=127.0.0.1 --mysqlx=OFF --pid-file=<datadir>/mysqld.pid --log-error=<datadir>/mysqld.err`."
+},
+{
+"name": "mysql.stop",
+"summary": "Stop the local server listening on <port> (a clean shutdown). This is `mysqladmin -h 127.0.0.1 -P <port> -u root shutdown`."
+},
+{
+"name": "mysql.ping",
+"summary": "Check whether the server on <port> is up and accepting connections (liveness probe). This is `mysqladmin -h 127.0.0.1 -P <port> -u root ping`."
+},
+{
+"name": "mysql.createdb",
+"summary": "Create a database on the running server (no-op if it already exists). This is `mysql -h 127.0.0.1 -P <port> -u root -e \"CREATE DATABASE IF NOT EXISTS <dbname>\"`."
+},
+{
+"name": "mysql.query",
+"summary": "Run SQL against a database and return an aligned ASCII table \u2014 the default, human-readable shape. May contain multiple `;`-separated statements. This is `mysql -h 127.0.0.1 -P <port> -u root -D <database> --table -e <sql>`."
+},
+{
+"name": "mysql.query_tsv",
+"summary": "Same as mysql.query but returns tab-separated values (header + rows) via `--batch` \u2014 the machine-parseable shape. This is `mysql -h 127.0.0.1 -P <port> -u root -D <database> --batch -e <sql>`."
+},
+{
+"name": "mysql.databases",
+"summary": "List the databases on the server (`SHOW DATABASES`). This is `mysql -h 127.0.0.1 -P <port> -u root --table -e \"SHOW DATABASES\"`."
+},
+{
+"name": "mysql.tables",
+"summary": "List the tables in a database (`SHOW TABLES`). This is `mysql -h 127.0.0.1 -P <port> -u root -D <database> --table -e \"SHOW TABLES\"`."
+},
+{
+"name": "mysql.dump",
+"summary": "Dump a database as SQL (schema + data) with mysqldump \u2014 a portable logical backup the agent can save or replay. This is `mysqldump -h 127.0.0.1 -P <port> -u root --no-tablespaces <database>`."
+},
+{
+"name": "mysql.exec",
+"summary": "Run any bundled MySQL tool with a verbatim argv \u2014 the full surface beyond the curated methods. Payload is {\"args\":[tool, ...]} where tool is one of `mysql`, `mysqld`, `mysqladmin`, `mysqldump`, `mysqlshow`, plus optional {\"stdin\":\"...\"} piped to the process. Examples: {\"args\":[\"mysql\",\"--protocol=TCP\",\"-h\",\"127.0.0.1\",\"-P\",\"13306\",\"-u\",\"root\",\"-D\",\"app\",\"--vertical\",\"-e\",\"SELECT * FROM t\\\\G\"]}; {\"args\":[\"mysqlshow\",\"--protocol=TCP\",\"-h\",\"127.0.0.1\",\"-P\",\"13306\",\"-u\",\"root\",\"app\"]}; {\"args\":[\"mysql\",\"--protocol=TCP\",\"-h\",\"127.0.0.1\",\"-P\",\"13306\",\"-u\",\"root\",\"-D\",\"app\"],\"stdin\":\"SOURCE /work/schema.sql;\"}."
+},
+{
+"name": "mysql.mysql_help",
+"summary": "Return the full `mysql` client help \u2014 every command-line option \u2014 captured from the delivered binary. The reference for what mysql.query / mysql.exec accept."
+},
+{
+"name": "mysql.version",
+"summary": "Print the delivered MySQL version, e.g. \"mysql  Ver 9.7.1 for \u2026 (conda-forge)\". This is `mysql --version`."
+},
+{
+"name": "mysql.help",
+"summary": "Discovery: every method with its params, kind, and latency class \u2014 the self-describing contract."
+}
 ]
 }
