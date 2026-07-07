@@ -1,561 +1,853 @@
 {
-  "io.pilot.docker": [
-    {
-      "name": "docker.engine_start",
-      "summary": "Start a local Docker Engine (dockerd) on this Linux host, daemonized, on a private unix socket under `DOCKER_DIR` (default /tmp/pilot-docker); waits until the API is ready. Subsequent docker methods auto-target this socket. Requires root (dockerd manages namespaces/cgroups). This is the bundled `dockerd` with `--data-root/--exec-root` under DOCKER_DIR."
-    },
-    {
-      "name": "docker.engine_stop",
-      "summary": "Stop the local dockerd started by docker.engine_start."
-    },
-    {
-      "name": "docker.version",
-      "summary": "Print docker client + server (if reachable) version info. This is `docker version`."
-    },
-    {
-      "name": "docker.info",
-      "summary": "Show system-wide Docker info (containers, images, storage driver, kernel, runtimes). This is `docker info`."
-    },
-    {
-      "name": "docker.ps",
-      "summary": "List all containers (running and stopped). This is `docker ps -a`."
-    },
-    {
-      "name": "docker.images",
-      "summary": "List images in the local store. This is `docker images`."
-    },
-    {
-      "name": "docker.pull",
-      "summary": "Pull an image from a registry. This is `docker pull <image>`."
-    },
-    {
-      "name": "docker.run",
-      "summary": "Run a container from `image` with its default command and remove it on exit (`docker run --rm <image>`). For flags/commands (detached, ports, volumes, a custom command) use docker.exec, e.g. {\"args\":[\"run\",\"-d\",\"-p\",\"8080:80\",\"nginx\"]}."
-    },
-    {
-      "name": "docker.logs",
-      "summary": "Fetch the logs of a container. This is `docker logs <container>`."
-    },
-    {
-      "name": "docker.exec",
-      "summary": "Run the docker CLI with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[...]} passed straight to `docker` (+ optional {\"stdin\":\"...\"}). This is how you run a container with any flags, build an image, exec into a container, manage networks/volumes/compose, etc. Examples: {\"args\":[\"run\",\"-d\",\"--name\",\"web\",\"-p\",\"8080:80\",\"nginx\"]}; {\"args\":[\"run\",\"--rm\",\"alpine\",\"sh\",\"-c\",\"echo hi\"]}; {\"args\":[\"build\",\"-t\",\"myapp\",\"/work\"]}; {\"args\":[\"exec\",\"web\",\"nginx\",\"-v\"]}. The wrapper's own verbs `engine-start`/`engine-stop` also work here."
-    },
-    {
-      "name": "docker.cli_help",
-      "summary": "Return the complete `docker --help` (all commands + global options) from the delivered binary. This is `docker --help`."
-    },
-    {
-      "name": "docker.help",
-      "summary": "Discovery: every method with params, kind, and latency class."
-    }
-  ],
-  "io.pilot.duckdb": [
-    {
-      "name": "duckdb.query",
-      "summary": "Run a SQL statement (or `;`-separated batch) and return an aligned `box` table — the default, human-readable shape. Works in-memory (`database=\":memory:\"`) or against a DuckDB file, and can query CSV/Parquet/JSON files in place, e.g. `SELECT region, sum(amount) FROM '/data/*.parquet' GROUP BY region`. This is `duckdb <database> -box -c <sql>`."
-    },
-    {
-      "name": "duckdb.query_csv",
-      "summary": "Same as duckdb.query but returns the result set as CSV (header + rows) — the right shape when an agent needs to parse the output. This is `duckdb <database> -csv -c <sql>`."
-    },
-    {
-      "name": "duckdb.query_json",
-      "summary": "Run SQL and return the result set as a JSON array of row objects — the most directly machine-parseable output. This is `duckdb <database> -json -c <sql>`."
-    },
-    {
-      "name": "duckdb.query_markdown",
-      "summary": "Run SQL and return the result set as a GitHub-flavored Markdown table — handy when the output is going straight into a report or PR comment. This is `duckdb <database> -markdown -c <sql>`."
-    },
-    {
-      "name": "duckdb.file",
-      "summary": "Execute a `.sql` script file against the database and exit — for multi-statement setups, migrations, or ETL scripts the agent has written to disk. This is `duckdb <database> -f <file>`."
-    },
-    {
-      "name": "duckdb.tables",
-      "summary": "List every table and view across all attached databases/schemas (name, database, schema, column list) as a `box` table — a quick inventory of what a DuckDB file holds. This is `duckdb <database> -box -c \"SHOW ALL TABLES\"`."
-    },
-    {
-      "name": "duckdb.schema",
-      "summary": "Print the `CREATE` statements for every table, view, and index in the database — the DDL, via DuckDB's `.schema` meta-command. This is `duckdb <database> -no-stdin -cmd \".schema\"`."
-    },
-    {
-      "name": "duckdb.exec",
-      "summary": "Run the DuckDB CLI with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[...]} (the args passed straight to `duckdb`) plus optional {\"stdin\":\"...\"} piped to the process. Use it for any flag or meta-command the curated methods don't cover: a different output mode (`-line`, `-html`, `-ascii`), reading a script with `-init`, a `.mode`/`.import`/`.read` dot-command via `-cmd`, or a multi-statement session over stdin. Examples: {\"args\":[\":memory:\",\"-line\",\"-c\",\"SELECT 1\"]}; {\"args\":[\"/data/app.duckdb\",\"-csv\",\"-cmd\",\".import /data/in.csv t\",\"-c\",\"SELECT count(*) FROM t\"]}; {\"args\":[\":memory:\"],\"stdin\":\"CREATE TABLE t(x int);\\nINSERT INTO t VALUES (1),(2);\\nSELECT sum(x) FROM t;\"}."
-    },
-    {
-      "name": "duckdb.cli_help",
-      "summary": "Return the complete DuckDB CLI help — every command-line option AND every dot-command (`.mode`, `.tables`, `.schema`, `.read`, `.import`, `.export`, `.timer`, …) — captured verbatim from the delivered binary and rendered as clean, color-free text. The full reference for what duckdb.query / duckdb.exec accept."
-    },
-    {
-      "name": "duckdb.version",
-      "summary": "Print the delivered DuckDB version, e.g. \"v1.5.4 (Variegata) 08e34c447b\". Needs no database. This is `duckdb -version`."
-    },
-    {
-      "name": "duckdb.help",
-      "summary": "Discovery: every method with params, kind, and latency class."
-    }
-  ],
-  "io.pilot.redis": [
-    {
-      "name": "redis.start",
-      "summary": "Start a local Redis server, daemonized, listening on 127.0.0.1:`port`. Writes its pidfile, logfile, and RDB snapshot under `dir`; returns once the server has forked into the background. After this, use redis.ping/redis.set/redis.get/redis.exec against the same `port`. This is `redis-server --port <port> --dir <dir> --daemonize yes --pidfile <dir>/redis-<port>.pid --logfile <dir>/redis-<port>.log`."
-    },
-    {
-      "name": "redis.stop",
-      "summary": "Stop the local server on 127.0.0.1:`port` (no final save — use redis.exec with SAVE/BGSAVE first if you need to persist). This is `redis-cli -p <port> SHUTDOWN NOSAVE`."
-    },
-    {
-      "name": "redis.ping",
-      "summary": "Liveness check: PING the server on 127.0.0.1:`port` (returns PONG). This is `redis-cli -p <port> PING`."
-    },
-    {
-      "name": "redis.set",
-      "summary": "Set string `key` to `value`. This is `redis-cli -p <port> SET <key> <value>`."
-    },
-    {
-      "name": "redis.get",
-      "summary": "Get the value of string `key` (empty if missing). This is `redis-cli -p <port> GET <key>`."
-    },
-    {
-      "name": "redis.info",
-      "summary": "Return the server's INFO (version, memory, clients, persistence, stats, replication, keyspace) as plain text — a full health/inventory snapshot. This is `redis-cli -p <port> INFO`."
-    },
-    {
-      "name": "redis.dbsize",
-      "summary": "Number of keys in the current database. This is `redis-cli -p <port> DBSIZE`."
-    },
-    {
-      "name": "redis.exec",
-      "summary": "Run any bundled Redis tool with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[<tool>, ...]} where the first element is the tool (redis-cli, redis-server, redis-benchmark, redis-check-rdb, redis-check-aof, redis-sentinel) and the rest are its args; optional {\"stdin\":\"...\"} is piped to it. This is how you run ANY Redis command: {\"args\":[\"redis-cli\",\"-p\",\"6399\",\"LPUSH\",\"mylist\",\"a\",\"b\",\"c\"]}, {\"args\":[\"redis-cli\",\"-p\",\"6399\",\"-n\",\"1\",\"HSET\",\"h\",\"f\",\"v\"]}, a pipelined script via stdin {\"args\":[\"redis-cli\",\"-p\",\"6399\"],\"stdin\":\"SET a 1\\nINCR a\\nGET a\"}, or a benchmark {\"args\":[\"redis-benchmark\",\"-p\",\"6399\",\"-n\",\"1000\",\"-q\"]}. The REDISCLI_AUTH env var is passed through for password auth."
-    },
-    {
-      "name": "redis.cli_help",
-      "summary": "Return the complete `redis-cli --help` (every option of the Redis command-line client) straight from the delivered binary — the reference for what redis.exec accepts. This is `redis-cli --help`."
-    },
-    {
-      "name": "redis.version",
-      "summary": "Print the delivered client version, e.g. \"redis-cli 8.6.2\". Needs no server. This is `redis-cli --version`."
-    },
-    {
-      "name": "redis.help",
-      "summary": "Discovery: every method with params, kind, and latency class."
-    }
-  ],
-  "io.pilot.cosift": [
-    {
-      "name": "cosift.search",
-      "summary": "Keyword + semantic search over the crawled corpus"
-    },
-    {
-      "name": "cosift.find_similar",
-      "summary": "Find documents similar to a given result"
-    },
-    {
-      "name": "cosift.contents",
-      "summary": "Fetch the full contents of a document"
-    },
-    {
-      "name": "cosift.answer",
-      "summary": "Single-shot grounded answer with citations"
-    },
-    {
-      "name": "cosift.research",
-      "summary": "Multi-step research report over the corpus"
-    },
-    {
-      "name": "cosift.stats",
-      "summary": "Corpus and index statistics"
-    },
-    {
-      "name": "cosift.health",
-      "summary": "Service health check"
-    },
-    {
-      "name": "cosift.help",
-      "summary": "Discovery: methods, params, and latency classes"
-    }
-  ],
-  "io.pilot.sixtyfour": [
-    {
-      "name": "sixtyfour.people_intelligence",
-      "summary": "People Intelligence: full, source-backed enrichment of a person from seed details."
-    },
-    {
-      "name": "sixtyfour.company_intelligence",
-      "summary": "Company Intelligence: full, source-backed company profile, optionally with people."
-    },
-    {
-      "name": "sixtyfour.find_email",
-      "summary": "Contact discovery: find a verified email for a person from partial details."
-    },
-    {
-      "name": "sixtyfour.find_phone",
-      "summary": "Contact discovery: find a phone number for a person from partial details."
-    },
-    {
-      "name": "sixtyfour.reverse_email",
-      "summary": "Reverse lookup: identify the person and company behind an email address."
-    },
-    {
-      "name": "sixtyfour.reverse_phone",
-      "summary": "Reverse lookup: identify the person and company behind a phone number."
-    },
-    {
-      "name": "sixtyfour.enrich_linkedin",
-      "summary": "Enrich a person directly from their LinkedIn profile URL."
-    },
-    {
-      "name": "sixtyfour.qa",
-      "summary": "Agentic QA researcher: answer free-form qualification questions about a person or company, with sources."
-    },
-    {
-      "name": "sixtyfour.research_agent",
-      "summary": "Research agent: autonomous multi-step research over an entity, returning structured findings with sources."
-    },
-    {
-      "name": "sixtyfour.filter_search",
-      "summary": "Filter Search: structured field-based search across the corpus; returns matching entities."
-    },
-    {
-      "name": "sixtyfour.deep_search",
-      "summary": "Deep Search (agentic): start a natural-language search. Returns a task_id; results are retrieved asynchronously (see caveats)."
-    },
-    {
-      "name": "sixtyfour.help",
-      "summary": "Discovery: every method with params, kind, and latency class."
-    }
-  ],
-  "io.pilot.plainweb": [
-    {
-      "name": "plainweb.fetch",
-      "summary": "Fetch any web page and return it as clean Markdown — no HTML, no JavaScript. Pass the full target URL as `url`; it is placed verbatim in the request path (GET /<url>). Scheme-less hosts (e.g. example.com) are sanitized to https://. The reply is `{\"content_type\":\"text/markdown; charset=utf-8\",\"content\":\"<markdown>\"}`. Open and free — no API key needed."
-    },
-    {
-      "name": "plainweb.help",
-      "summary": "Discovery: every method with params, kind, and latency class."
-    }
-  ],
-  "io.pilot.miren": [
-    {
-      "name": "miren.exec",
-      "summary": "Run any miren subcommand. Payload is {\"args\":[...]} — the verbatim miren argv. Use this for the full CLI surface beyond the curated methods below (addon, auth, env, route, cluster, disk, sandbox, etc.). Run `miren help` or `miren <command> --help` for the surface. Example args: [\"app\",\"list\",\"--json\"]. Note: interactive subcommands (e.g. `app run`, `login`) and long-running ones (e.g. `server start`) are not suitable over IPC."
-    },
-    {
-      "name": "miren.apps",
-      "summary": "List all applications on the cluster (alias for `app list`)."
-    },
-    {
-      "name": "miren.app",
-      "summary": "Show the current status of one application. Provide the app name."
-    },
-    {
-      "name": "miren.app.history",
-      "summary": "Show an application's deployment history."
-    },
-    {
-      "name": "miren.logs",
-      "summary": "Read recent logs for an application as JSON."
-    },
-    {
-      "name": "miren.deploy",
-      "summary": "Build and deploy the app in the current directory (non-interactive, --force)."
-    },
-    {
-      "name": "miren.deploy.analyze",
-      "summary": "Analyze the app's detected stack/services without building or deploying."
-    },
-    {
-      "name": "miren.rollback",
-      "summary": "Roll an application back to its previous deployed version."
-    },
-    {
-      "name": "miren.doctor",
-      "summary": "Diagnose the miren environment and connectivity."
-    },
-    {
-      "name": "miren.whoami",
-      "summary": "Show the current authenticated user and cluster."
-    },
-    {
-      "name": "miren.server.install",
-      "summary": "Install the miren server as a systemd service on this host (Linux only)."
-    },
-    {
-      "name": "miren.server.status",
-      "summary": "Show miren server service status (Linux only)."
-    },
-    {
-      "name": "miren.debug.connection",
-      "summary": "Test connectivity and authentication with the miren server."
-    },
-    {
-      "name": "miren.debug.advertise",
-      "summary": "Show which addresses the server would advertise and why."
-    },
-    {
-      "name": "miren.help",
-      "summary": "Discovery: every method with params, kind, and latency class."
-    }
-  ],
-  "io.pilot.otto": [
-    {
-      "name": "otto.exec",
-      "summary": "Run any otto subcommand. Payload is {\"args\":[...]} — the verbatim otto argv. Use this for the full CLI surface beyond the curated methods (config, client register/login/remove, pair, listener unsubscribe, extension update, agent install, site-filtered `commands list --site`, filtered `logs list`, etc.). Add \"--json\" where the command supports it. Example args: [\"commands\",\"list\",\"--site\",\"reddit.com\",\"--json\"]. Note: interactive/streaming subcommands (setup, settings, logs follow, listener subscribe-network, test with stream/wait flags, mcp serve, start --attached) are not suitable over one-shot IPC."
-    },
-    {
-      "name": "otto.status",
-      "summary": "Relay daemon status as JSON: running pid, port, uptime, log path, and the list of currently connected browser node IDs. The right preflight before any page command — an empty node list means no Chrome extension node is paired/online."
-    },
-    {
-      "name": "otto.commands",
-      "summary": "List the automation commands the connected node(s) expose, as JSON. Use to learn which site commands are available before calling otto.test. For a single site, use otto.exec with [\"commands\",\"list\",\"--site\",\"<domain>\",\"--json\"]."
-    },
-    {
-      "name": "otto.extract",
-      "summary": "Extract the readable content of a web page through a live paired browser tab, as JSON markdown. Opens a temporary tab on the node, extracts, and closes it. Requires a running relay and a paired Chrome node."
-    },
-    {
-      "name": "otto.extract.format",
-      "summary": "Extract page content in a chosen format: markdown, distilled_html, clean_html, raw_html, or text. Returns JSON. Like otto.extract but lets you pick the output representation."
-    },
-    {
-      "name": "otto.screenshot",
-      "summary": "Capture a screenshot of a page through a live browser tab; returns JSON (base64 PNG in the envelope, no local Preview window). Requires a running relay and a paired Chrome node."
-    },
-    {
-      "name": "otto.test",
-      "summary": "Run a registered site command on a browser node (opens a tab, runs the command, returns JSON). Provide site (e.g. reddit.com), command id (e.g. getPosts), and a JSON payload string (use {} for none, e.g. {\"limit\":10}). One-shot; requires relay + paired node."
-    },
-    {
-      "name": "otto.cmd",
-      "summary": "Send a single raw action to the target browser node and return the full JSON envelope. Provide the action name and a JSON payload string (use {} for none). Use for low-level primitives (e.g. primitive.tab.open) not covered by a curated method."
-    },
-    {
-      "name": "otto.logs",
-      "summary": "Read recent relay logs as JSON. For filtered queries (level/source/since/request-id) use otto.exec with [\"logs\",\"list\",...,\"--json\"]."
-    },
-    {
-      "name": "otto.logs.status",
-      "summary": "Relay log storage status as JSON (retention, counts, sizes). Check whether logging is healthy and how much history is available."
-    },
-    {
-      "name": "otto.client.status",
-      "summary": "Local controller client identity state and where its secret resolves from (env vs keychain), as JSON. Verify the controller is registered and logged in before running page commands."
-    },
-    {
-      "name": "otto.authcode",
-      "summary": "List pending pairing codes from the relay as JSON. See codes awaiting approval when bringing a new Chrome extension node online (approve with `otto pair <code>` via otto.exec)."
-    },
-    {
-      "name": "otto.extension.info",
-      "summary": "Installed Chrome extension artifact metadata (version, unpacked path, checksum) and configured relay URLs, as JSON. Confirm which extension build the host has staged for the Load-unpacked handoff."
-    },
-    {
-      "name": "otto.agent.status",
-      "summary": "Which agent frameworks (claude, codex, cursor, vscode, …) currently have the Otto MCP server registered, as JSON."
-    },
-    {
-      "name": "otto.help",
-      "summary": "Discovery: every method with params, kind, and latency class."
-    }
-  ],
-  "io.telepat.ideon-free": [
-    {
-      "name": "ideon-free.generate",
-      "summary": ""
-    },
-    {
-      "name": "ideon-free.poll",
-      "summary": ""
-    },
-    {
-      "name": "ideon-free.help",
-      "summary": ""
-    }
-  ],
-  "io.pilot.postgres": [
-    {
-      "name": "postgres.initdb",
-      "summary": "Create (configure) a brand-new PostgreSQL data directory / cluster on this host — the one-time setup before a local server can start. Initializes `datadir` with superuser `postgres` and `trust` local auth (no password for local connections). Run once per cluster; `start` then brings it up. This is `initdb -D <datadir> -U postgres -A trust --encoding=UTF8`."
-    },
-    {
-      "name": "postgres.start",
-      "summary": "Start a local PostgreSQL server from an initialized `datadir`, listening on 127.0.0.1:`port` and on a Unix socket in `datadir`. Backgrounds the server and waits until it accepts connections; logs go to `<datadir>/postgres.log`. After this, connect with uri `host=127.0.0.1 port=<port> user=postgres dbname=postgres`. This is `pg_ctl -D <datadir> -o '-p <port> -k <datadir> -h 127.0.0.1' -l <datadir>/postgres.log -w start`."
-    },
-    {
-      "name": "postgres.stop",
-      "summary": "Stop a running local server (fast shutdown) for the given `datadir`. This is `pg_ctl -D <datadir> -m fast -w stop`."
-    },
-    {
-      "name": "postgres.status",
-      "summary": "Report whether the server for `datadir` is running, with its PID and command line. This is `pg_ctl -D <datadir> status`."
-    },
-    {
-      "name": "postgres.ready",
-      "summary": "Connection preflight: check whether a server is accepting connections on 127.0.0.1:`port`. This is `pg_isready -h 127.0.0.1 -p <port>`."
-    },
-    {
-      "name": "postgres.createdb",
-      "summary": "Create a new database named `dbname` on the local server at 127.0.0.1:`port` (owner postgres). This is `createdb -h 127.0.0.1 -p <port> -U postgres <dbname>`."
-    },
-    {
-      "name": "postgres.query",
-      "summary": "Run a single SQL statement (or semicolon-separated batch) against a PostgreSQL server and return an aligned text table. Works against the local cluster or any remote server. Runs with ON_ERROR_STOP=1 so a SQL error is a non-zero exit with the server message in stderr. This is `psql -d <uri> -c <sql>`."
-    },
-    {
-      "name": "postgres.query_csv",
-      "summary": "Same as postgres.query but returns the result set as CSV (header + rows) — the right shape when an agent needs to parse output. This is `psql -d <uri> --csv -c <sql>`. ON_ERROR_STOP=1 is set."
-    },
-    {
-      "name": "postgres.command",
-      "summary": "Run a single psql backslash meta-command for schema introspection. Pass it in `command`, e.g. `\\dt` (tables), `\\dn` (schemas), `\\du` (roles), `\\l` (databases), `\\df` (functions), `\\d tablename` (describe a relation). Plain SQL works here too. This is `psql -d <uri> -c <command>`."
-    },
-    {
-      "name": "postgres.list",
-      "summary": "List the databases on the server (owner, encoding, collation, access privileges) as an aligned table — a quick connectivity + inventory check. This is `psql -d <uri> -l`."
-    },
-    {
-      "name": "postgres.exec",
-      "summary": "Run any PostgreSQL client/server tool shipped in this bundle with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[<tool>, ...]} where the first element is the tool name (psql, initdb, pg_ctl, createdb, dropdb, pg_isready, pg_dump, pg_restore, pg_dumpall, vacuumdb, pg_basebackup, postgres) and the rest are its flags; optional {\"stdin\":\"...\"} is piped to the tool. Examples: {\"args\":[\"psql\",\"-d\",\"postgresql://127.0.0.1:5599/postgres\",\"-A\",\"-t\",\"-c\",\"select 1\"]}; {\"args\":[\"pg_dump\",\"-h\",\"127.0.0.1\",\"-p\",\"5599\",\"-U\",\"postgres\",\"mydb\"]}; {\"args\":[\"psql\",\"-d\",\"<uri>\"],\"stdin\":\"select 1;\\nselect 2;\"}. Connection can also come from PG* env vars passed through to the child."
-    },
-    {
-      "name": "postgres.psql_help",
-      "summary": "Return the complete `psql --help` text (all options of the PostgreSQL interactive terminal) straight from the delivered binary. The full reference for what postgres.query/postgres.exec accept. This is `psql --help`."
-    },
-    {
-      "name": "postgres.version",
-      "summary": "Print the delivered client version, e.g. \"psql (PostgreSQL) 17.10\". Needs no server. This is `psql --version`."
-    }
-  ],
-  "io.pilot.wallet": [
-    {
-      "name": "wallet.balance",
-      "summary": "USDC balance for the wallet."
-    },
-    {
-      "name": "wallet.balances",
-      "summary": "Balances across all configured chains."
-    },
-    {
-      "name": "wallet.address",
-      "summary": "The wallet receive address."
-    },
-    {
-      "name": "wallet.request",
-      "summary": "Create an x402 payment request."
-    },
-    {
-      "name": "wallet.pay",
-      "summary": "Pay an x402 / EIP-3009 USDC request."
-    },
-    {
-      "name": "wallet.verify",
-      "summary": "Verify a payment authorization."
-    },
-    {
-      "name": "wallet.settle",
-      "summary": "Settle a verified payment on-chain."
-    },
-    {
-      "name": "wallet.topup",
-      "summary": "Top up the wallet balance."
-    },
-    {
-      "name": "wallet.history",
-      "summary": "Recent payment history."
-    },
-    {
-      "name": "wallet.spend_caps",
-      "summary": "Show the supervisor-enforced spend caps."
-    },
-    {
-      "name": "wallet.evm.address",
-      "summary": "EVM receive address."
-    },
-    {
-      "name": "wallet.evm.balance",
-      "summary": "EVM USDC balance (optional chain_id)."
-    },
-    {
-      "name": "wallet.evm.satisfy",
-      "summary": "Satisfy an EVM x402 payment requirement."
-    },
-    {
-      "name": "wallet.evm.verify",
-      "summary": "Verify an EVM payment authorization."
-    },
-    {
-      "name": "wallet.evm.chains",
-      "summary": "List configured EVM chains (Base, Ethereum, Polygon)."
-    }
-  ],
-  "io.pilot.slipstream": [],
-  "io.pilot.aegis": [
-    {
-      "name": "aegis.scan",
-      "summary": "One-shot scan of a file or directory for prompt injection, jailbreaks, homoglyph/leetspeak obfuscation, and impersonation."
-    },
-    {
-      "name": "aegis.status",
-      "summary": "Tail the HMAC-chained audit log of recent verdicts."
-    },
-    {
-      "name": "aegis.targets",
-      "summary": "List the agent surfaces AEGIS is protecting (inbox, tool results, skill files, memory)."
-    },
-    {
-      "name": "aegis.config",
-      "summary": "Show the effective AEGIS configuration."
-    },
-    {
-      "name": "aegis.version",
-      "summary": "Print the AEGIS version."
-    },
-    {
-      "name": "aegis.exec",
-      "summary": "Run any AEGIS subcommand verbatim — including the scan-cmd / scan-result blocking gates (allow 0 / block 2) via stdin."
-    },
-    {
-      "name": "aegis.help",
-      "summary": "Print usage and the subcommand list."
-    }
-  ],
-  "io.pilot.smol": [
-    {
-      "name": "smol.exec",
-      "summary": "Run ANY smolvm subcommand in a fast, hardware-isolated Linux microVM LOCALLY. Payload is {\"args\":[...]} (verbatim smolvm argv) with optional {\"stdin\":\"...\"}. This one method exposes the whole smolvm CLI — for the complete agent reference call smol.exec {\"args\":[\"--help\"]}, and for any subcommand call smol.exec {\"args\":[\"<group>\",\"--help\"]}.\n\nCOMMAND SURFACE:\n• machine run — create an EPHEMERAL VM, run one command, tear down (nothing persists). e.g. [\"machine\",\"run\",\"--net\",\"--image\",\"alpine\",\"--\",\"sh\",\"-c\",\"echo hi\"].\n• machine create | start | stop | delete — lifecycle of a PERSISTENT named VM (--name, default \"default\").\n• machine exec — run a command in a persistent VM; FILESYSTEM CHANGES PERSIST across sessions (package installs stick). e.g. [\"machine\",\"exec\",\"--name\",\"myvm\",\"--\",\"apk\",\"add\",\"python3\"].\n• machine status | ls | images | monitor — read-only introspection (do NOT stop a running VM).\n• machine cp — copy files host↔VM (HOST:GUEST). machine update — change mounts/ports/env/cpu/memory on a STOPPED VM. machine prune — reclaim layers (prune --all needs the VM stopped).\n• pack create -o <out> — build a portable, self-contained .smolmachine executable; pack run — run one. machine create --from <artifact>.smolmachine for fast start.\n• serve start --listen <addr> — HTTP API server (POST/GET /api/v1/machines…); serve openapi — the spec.\n• config — manage registries + defaults.\n\nKEY FLAGS: --net (networking is OFF by default), --image <oci ref | ./archive.tar | ./rootfs/ | ->, -v HOST:GUEST[:ro] (mount; -v host:/workspace replaces the default workspace), -p HOST:GUEST (port), --gpu, --ssh-agent (forward host SSH agent; keys never enter the VM), --secret-env GUEST=HOST / --secret-file GUEST=/abs / -s Smolfile (inject secrets by reference), --from <artifact>, --cpus, --memory.\n\nDEFAULTS: network off; cpus 4; memory 8192 MiB; storage 20 GiB; name \"default\". Elastic memory/CPU via virtio balloon.\n\nNOT SUPPORTED OVER IPC: interactive sessions (-it / machine shell) and long-running serve (no attached TTY)."
-    },
-    {
-      "name": "smol.version",
-      "summary": "Report the local smolvm engine version. This is `smolvm --version`."
-    },
-    {
-      "name": "smol.provision",
-      "summary": "Provision (or fetch) this Pilot user's proprietary smol cloud key and free credit balance. Runs automatically on install and on smol.help — you rarely call it directly. The key is bound to your Pilot identity, stored only in your app's private secrets, and used to push and isolate your cloud VMs. Returns {key, credits}."
-    },
-    {
-      "name": "smol.balance",
-      "summary": "Report your remaining smol cloud credit balance. Returns {credits}."
-    },
-    {
-      "name": "smol.push",
-      "summary": "Push a VM to the smol cloud as YOU (your provisioned key) and START it running. Provide either a local packed artifact (base64 of a `smolvm pack` output) OR an OCI `image` reference the cloud pulls; pass {\"net\":true} for outbound networking (off by default). BILLING: you must have credit to start (402 if empty); the running VM then drains your credit by REAL usage (CPU + memory + disk per the rate card in smol.help) and the broker STOPS it when your credit runs out. The machine is tagged as owned by you, so no other user can see or touch it. Returns the created machine."
-    },
-    {
-      "name": "smol.list",
-      "summary": "List YOUR smol cloud machines (only yours — the broker filters by owner). Free (no credit). Returns an array of machines."
-    },
-    {
-      "name": "smol.key",
-      "summary": "Get your current smol cloud key (the per-user credential bound to your Pilot identity). Idempotent — safe to call anytime. The key is also cached in your app's private secrets. Returns {key, credits}."
-    },
-    {
-      "name": "smol.rotate",
-      "summary": "Rotate your smol cloud key if it leaked. Your OLD key stops working immediately and a NEW key is issued — your credit and cloud machines are NOT affected (only the key changes). Returns {key, credits, rotated}."
-    },
-    {
-      "name": "smol.help",
-      "summary": "Discovery: every method with params, kind, and latency class."
-    }
-  ]
+"io.pilot.agentphone": [
+{
+"name": "agentphone.usage",
+"summary": "Account status: plan, phone-number hold limit (used/limit/remaining), and message/call/webhook stats. Call this first to orient in a session. Read-only; no charge."
+},
+{
+"name": "agentphone.usage_daily",
+"summary": "Daily usage breakdown for the last N days (max 365). Read-only."
+},
+{
+"name": "agentphone.usage_monthly",
+"summary": "Monthly usage aggregation. Read-only."
+},
+{
+"name": "agentphone.usage_by_number",
+"summary": "Usage broken down per phone number. Read-only."
+},
+{
+"name": "agentphone.usage_by_agent",
+"summary": "Usage broken down per agent over a period. Read-only."
+},
+{
+"name": "agentphone.list_voices",
+"summary": "List available text-to-speech voices (voice_id, voice_name, provider, gender, accent, preview_audio_url) across ElevenLabs, Cartesia, OpenAI, and platform voices. gender/accent/preview may be null \u2014 do not crash on missing fields. Use voice_id when creating/updating an agent. Read-only."
+},
+{
+"name": "agentphone.list_agents",
+"summary": "List your agents (phone personas: name, voiceMode, model tier, system prompt, attached numbers). You get one starter agent on account setup \u2014 ALWAYS list before creating another. Read-only."
+},
+{
+"name": "agentphone.create_agent",
+"summary": "Create an agent (phone persona). For AI-driven use pass voiceMode:\"hosted\" explicitly (the backend defaults to \"webhook\", which needs a configured webhook or inbound calls fail). systemPrompt is required for hosted. Pick a voice from agentphone.list_voices. Free (no telephony spend)."
+},
+{
+"name": "agentphone.get_agent",
+"summary": "Get one agent's full config and its attached numbers. Read-only."
+},
+{
+"name": "agentphone.update_agent",
+"summary": "Update an agent \u2014 only the fields you send change. Any create field is updatable (systemPrompt, voice, modelTier, \u2026). Free."
+},
+{
+"name": "agentphone.delete_agent",
+"summary": "Delete an agent. Irreversible \u2014 clears the agent's references on its numbers/conversations/calls (those are NOT deleted). Confirm with your human first. Free."
+},
+{
+"name": "agentphone.attach_number",
+"summary": "Attach an existing number to an agent so the agent can call/text from it. Free."
+},
+{
+"name": "agentphone.detach_number",
+"summary": "Detach a number from an agent (the number is kept, just unassigned). Free."
+},
+{
+"name": "agentphone.list_agent_conversations",
+"summary": "List an agent's conversation threads, newest activity first (data[], hasMore, total). Read-only."
+},
+{
+"name": "agentphone.list_agent_calls",
+"summary": "List an agent's calls (data[], hasMore, total). Read-only."
+},
+{
+"name": "agentphone.list_numbers",
+"summary": "List your active phone numbers (id, phoneNumber, country, status, agentId). Read-only."
+},
+{
+"name": "agentphone.buy_number",
+"summary": "Provision a new US/CA phone number. COSTS $3.00 from your $5 Pilot budget (402 if it would overdraw). The provisioned number is saved to this host's ~/.pilot/.agentphone so you can recall it later with agentphone.mynumber \u2014 no need to store it yourself. Optionally attach to an agent and request an area code."
+},
+{
+"name": "agentphone.get_number",
+"summary": "Get one phone number by id (any status, including released). Read-only."
+},
+{
+"name": "agentphone.release_number",
+"summary": "Release (delete) a number. IRREVERSIBLE \u2014 the number returns to the carrier pool; no refund for the unused month. Confirm with your human first. Free to call."
+},
+{
+"name": "agentphone.list_number_messages",
+"summary": "List messages on a number (inbound + outbound), newest first, cursor-paginated. THE non-websocket way to detect SMS replies: poll with the `after` cursor and filter direction==\"inbound\". Read-only."
+},
+{
+"name": "agentphone.list_number_calls",
+"summary": "List calls on a number. Read-only."
+},
+{
+"name": "agentphone.get_contact_card",
+"summary": "Get the iMessage contact card shown on a number (firstName, lastName, displayName, hasAvatar). iMessage only. Read-only."
+},
+{
+"name": "agentphone.set_contact_card",
+"summary": "Create/replace the iMessage contact card on a number (name + avatar shown to recipients). iMessage only. Free."
+},
+{
+"name": "agentphone.delete_contact_card",
+"summary": "Remove the iMessage contact card from a number. Free."
+},
+{
+"name": "agentphone.send_message",
+"summary": "Send an SMS/iMessage. COSTS MONEY (~$0.01\u20130.02, debited from your $5 budget \u2192 402 if over). Auto-delivers over iMessage when both sides support it, else SMS/MMS \u2014 the response `channel` (sms|mms|imessage) tells you how it went. E.164 for `to_number` (or a group id grp_\u2026 for an iMessage group). iMessage-only extras (send_style, reply_to_message_id) are silently ignored on SMS."
+},
+{
+"name": "agentphone.react",
+"summary": "Send a tapback reaction to a message. iMessage ONLY \u2014 returns 400 on SMS. Free."
+},
+{
+"name": "agentphone.list_calls",
+"summary": "List calls for the account (filter by status/direction). Read-only."
+},
+{
+"name": "agentphone.place_call",
+"summary": "Place an OUTBOUND voice call. COSTS MONEY (per-minute, ~$0.05+, debited from your $5 budget \u2192 402 if over). With `systemPrompt` the AI runs the call autonomously (recommended); without it, each turn is POSTed to the agent's webhook. Returns a call id IMMEDIATELY (async) \u2014 the phone rings in a second or two. Then POLL agentphone.get_call every few seconds until status is completed/failed to read the transcript. Cannot call 911 / N11 / crisis lines (blocked)."
+},
+{
+"name": "agentphone.get_call",
+"summary": "Get a call and its embedded transcripts[]. THE poll target for a call outcome (no websockets): call every few seconds until status is completed or failed (in-progress means partial/empty transcript). Also carries durationSeconds, startedAt, endedAt. Read-only."
+},
+{
+"name": "agentphone.end_call",
+"summary": "Terminate an in-progress call. status/endedAt settle shortly after via the provider \u2014 keep polling agentphone.get_call until terminal. Free."
+},
+{
+"name": "agentphone.get_transcript",
+"summary": "Get the full ordered transcript of a call as plain JSON (user utterance + agent response per turn). This is the REST/polling alternative to the SSE live-transcript stream \u2014 the adapter never uses the stream. Read-only."
+},
+{
+"name": "agentphone.list_conversations",
+"summary": "List conversation threads (one per external contact or iMessage group), sorted by lastMessageAt desc (data[], hasMore, total). Read-only."
+},
+{
+"name": "agentphone.get_conversation",
+"summary": "Get one conversation with its recent messages (participant, isGroup, group roster, messageCount, metadata). Read-only."
+},
+{
+"name": "agentphone.update_conversation",
+"summary": "Update a conversation's `metadata` (attach custom AI context/state to the thread). Free."
+},
+{
+"name": "agentphone.list_conversation_messages",
+"summary": "List a conversation's messages, cursor-paginated (data[], hasMore). Poll with `after` to catch new inbound replies in a thread. Read-only."
+},
+{
+"name": "agentphone.typing",
+"summary": "Show a typing indicator before you reply. iMessage only, best-effort, auto-expires (no stop call). Free."
+},
+{
+"name": "agentphone.set_background",
+"summary": "Set a chat background image for a conversation. iMessage only. Free."
+},
+{
+"name": "agentphone.clear_background",
+"summary": "Clear a conversation's chat background. iMessage only. Free."
+},
+{
+"name": "agentphone.list_contacts",
+"summary": "List saved contacts (data[], hasMore, total); `search` filters by name/phone. Read-only."
+},
+{
+"name": "agentphone.create_contact",
+"summary": "Save a contact so you can look them up by name later. phoneNumber is normalized to E.164; returns 409 if the phone already exists. Free."
+},
+{
+"name": "agentphone.get_contact",
+"summary": "Get one contact by id. Read-only."
+},
+{
+"name": "agentphone.update_contact",
+"summary": "Update a contact \u2014 only the fields you send change (phone is re-normalized; 409 on conflict). Free."
+},
+{
+"name": "agentphone.delete_contact",
+"summary": "Delete a contact. Confirm with your human first. Free."
+},
+{
+"name": "agentphone.get_webhook",
+"summary": "Get the account-level webhook config. Read-only. (Polling is the default event model for this adapter; webhooks are optional.)"
+},
+{
+"name": "agentphone.set_webhook",
+"summary": "Set the account-level webhook URL (returns a signing `secret`; a new one each call). NOTE: on the shared Pilot AgentPhone account this is a GLOBAL setting \u2014 prefer per-agent webhooks or polling. Free."
+},
+{
+"name": "agentphone.delete_webhook",
+"summary": "Remove the account-level webhook. Global on the shared account \u2014 use with care. Free."
+},
+{
+"name": "agentphone.list_webhook_deliveries",
+"summary": "List recent webhook delivery attempts (items[], total). Read-only."
+},
+{
+"name": "agentphone.webhook_delivery_stats",
+"summary": "Aggregated webhook delivery stats over the last N hours (success/failed/pending, byEventType, byHour). Read-only."
+},
+{
+"name": "agentphone.test_webhook",
+"summary": "Send a synthetic test event to verify your endpoint is reachable and verifying signatures. Free."
+},
+{
+"name": "agentphone.get_agent_webhook",
+"summary": "Get an agent-specific webhook (overrides the account default for that agent). Read-only."
+},
+{
+"name": "agentphone.set_agent_webhook",
+"summary": "Set an agent-specific webhook URL (overrides the account default for THIS agent only \u2014 safer than the account-level webhook on a shared account). Free."
+},
+{
+"name": "agentphone.delete_agent_webhook",
+"summary": "Delete an agent-specific webhook (the agent falls back to the account default). Free."
+},
+{
+"name": "agentphone.mynumber",
+"summary": "Recall the phone number(s) THIS daemon provisioned (local, no backend call, free). Reads ~/.pilot/.agentphone, populated automatically by agentphone.buy_number. Returns {entries:[{id,phoneNumber,status,agentId,...}]} \u2014 empty if this host hasn't provisioned one yet. Use it to find 'my number' without listing the shared account."
+}
+],
+"io.pilot.bowmark": [
+{
+"name": "bowmark.ask",
+"summary": "Give it a site and a plain-English task (e.g. 'find Apple's latest 10-K') and it returns a ready-to-run cheatsheet \u2014 a URL shortcut to fill and navigate and/or a short ui_procedure of steps. Call it before any browser action, in place of exploring the page yourself, and execute open-loop. status=ok returns an id; no_useful_data/site_not_supported \u2192 browse manually; ambiguous_scope \u2192 retry with scopeHint; rate_limited \u2192 back off. Pass variants:{auth_state:'logged_in'} for signed-in surfaces. Intent, not a URL."
+},
+{
+"name": "bowmark.report_outcome",
+"summary": "After running a cheatsheet from ask, report whether every step ran exactly as written (envelope_id + success, optional evidence). success=true only if it ran clean \u2014 no retries, no raw-JS fallback, no extra clicks; false on any deviation, even if you still got the answer. Honest results trigger a re-crawl that keeps the cheatsheet fresh."
+},
+{
+"name": "bowmark.help",
+"summary": "Discovery: every method with params, kind, and latency class."
+}
+],
+"io.pilot.docker": [
+{
+"name": "docker.engine_start",
+"summary": "Start a local Docker Engine (dockerd) on this Linux host, daemonized, on a private unix socket under `DOCKER_DIR` (default /tmp/pilot-docker); waits until the API is ready. Subsequent docker methods auto-target this socket. Requires root (dockerd manages namespaces/cgroups). This is the bundled `dockerd` with `--data-root/--exec-root` under DOCKER_DIR."
+},
+{
+"name": "docker.engine_stop",
+"summary": "Stop the local dockerd started by docker.engine_start."
+},
+{
+"name": "docker.version",
+"summary": "Print docker client + server (if reachable) version info. This is `docker version`."
+},
+{
+"name": "docker.info",
+"summary": "Show system-wide Docker info (containers, images, storage driver, kernel, runtimes). This is `docker info`."
+},
+{
+"name": "docker.ps",
+"summary": "List all containers (running and stopped). This is `docker ps -a`."
+},
+{
+"name": "docker.images",
+"summary": "List images in the local store. This is `docker images`."
+},
+{
+"name": "docker.pull",
+"summary": "Pull an image from a registry. This is `docker pull <image>`."
+},
+{
+"name": "docker.run",
+"summary": "Run a container from `image` with its default command and remove it on exit (`docker run --rm <image>`). For flags/commands (detached, ports, volumes, a custom command) use docker.exec, e.g. {\"args\":[\"run\",\"-d\",\"-p\",\"8080:80\",\"nginx\"]}."
+},
+{
+"name": "docker.logs",
+"summary": "Fetch the logs of a container. This is `docker logs <container>`."
+},
+{
+"name": "docker.exec",
+"summary": "Run the docker CLI with a verbatim argv \u2014 the full surface beyond the curated methods. Payload is {\"args\":[...]} passed straight to `docker` (+ optional {\"stdin\":\"...\"}). This is how you run a container with any flags, build an image, exec into a container, manage networks/volumes/compose, etc. Examples: {\"args\":[\"run\",\"-d\",\"--name\",\"web\",\"-p\",\"8080:80\",\"nginx\"]}; {\"args\":[\"run\",\"--rm\",\"alpine\",\"sh\",\"-c\",\"echo hi\"]}; {\"args\":[\"build\",\"-t\",\"myapp\",\"/work\"]}; {\"args\":[\"exec\",\"web\",\"nginx\",\"-v\"]}. The wrapper's own verbs `engine-start`/`engine-stop` also work here."
+},
+{
+"name": "docker.cli_help",
+"summary": "Return the complete `docker --help` (all commands + global options) from the delivered binary. This is `docker --help`."
+},
+{
+"name": "docker.help",
+"summary": "Discovery: every method with params, kind, and latency class."
+}
+],
+"io.pilot.duckdb": [
+{
+"name": "duckdb.query",
+"summary": "Run a SQL statement (or `;`-separated batch) and return an aligned `box` table \u2014 the default, human-readable shape. Works in-memory (`database=\":memory:\"`) or against a DuckDB file, and can query CSV/Parquet/JSON files in place, e.g. `SELECT region, sum(amount) FROM '/data/*.parquet' GROUP BY region`. This is `duckdb <database> -box -c <sql>`."
+},
+{
+"name": "duckdb.query_csv",
+"summary": "Same as duckdb.query but returns the result set as CSV (header + rows) \u2014 the right shape when an agent needs to parse the output. This is `duckdb <database> -csv -c <sql>`."
+},
+{
+"name": "duckdb.query_json",
+"summary": "Run SQL and return the result set as a JSON array of row objects \u2014 the most directly machine-parseable output. This is `duckdb <database> -json -c <sql>`."
+},
+{
+"name": "duckdb.query_markdown",
+"summary": "Run SQL and return the result set as a GitHub-flavored Markdown table \u2014 handy when the output is going straight into a report or PR comment. This is `duckdb <database> -markdown -c <sql>`."
+},
+{
+"name": "duckdb.file",
+"summary": "Execute a `.sql` script file against the database and exit \u2014 for multi-statement setups, migrations, or ETL scripts the agent has written to disk. This is `duckdb <database> -f <file>`."
+},
+{
+"name": "duckdb.tables",
+"summary": "List every table and view across all attached databases/schemas (name, database, schema, column list) as a `box` table \u2014 a quick inventory of what a DuckDB file holds. This is `duckdb <database> -box -c \"SHOW ALL TABLES\"`."
+},
+{
+"name": "duckdb.schema",
+"summary": "Print the `CREATE` statements for every table, view, and index in the database \u2014 the DDL, via DuckDB's `.schema` meta-command. This is `duckdb <database> -no-stdin -cmd \".schema\"`."
+},
+{
+"name": "duckdb.exec",
+"summary": "Run the DuckDB CLI with a verbatim argv \u2014 the full surface beyond the curated methods. Payload is {\"args\":[...]} (the args passed straight to `duckdb`) plus optional {\"stdin\":\"...\"} piped to the process. Use it for any flag or meta-command the curated methods don't cover: a different output mode (`-line`, `-html`, `-ascii`), reading a script with `-init`, a `.mode`/`.import`/`.read` dot-command via `-cmd`, or a multi-statement session over stdin. Examples: {\"args\":[\":memory:\",\"-line\",\"-c\",\"SELECT 1\"]}; {\"args\":[\"/data/app.duckdb\",\"-csv\",\"-cmd\",\".import /data/in.csv t\",\"-c\",\"SELECT count(*) FROM t\"]}; {\"args\":[\":memory:\"],\"stdin\":\"CREATE TABLE t(x int);\\nINSERT INTO t VALUES (1),(2);\\nSELECT sum(x) FROM t;\"}."
+},
+{
+"name": "duckdb.cli_help",
+"summary": "Return the complete DuckDB CLI help \u2014 every command-line option AND every dot-command (`.mode`, `.tables`, `.schema`, `.read`, `.import`, `.export`, `.timer`, \u2026) \u2014 captured verbatim from the delivered binary and rendered as clean, color-free text. The full reference for what duckdb.query / duckdb.exec accept."
+},
+{
+"name": "duckdb.version",
+"summary": "Print the delivered DuckDB version, e.g. \"v1.5.4 (Variegata) 08e34c447b\". Needs no database. This is `duckdb -version`."
+},
+{
+"name": "duckdb.help",
+"summary": "Discovery: every method with params, kind, and latency class."
+}
+],
+"io.pilot.redis": [
+{
+"name": "redis.start",
+"summary": "Start a local Redis server, daemonized, listening on 127.0.0.1:`port`. Writes its pidfile, logfile, and RDB snapshot under `dir`; returns once the server has forked into the background. After this, use redis.ping/redis.set/redis.get/redis.exec against the same `port`. This is `redis-server --port <port> --dir <dir> --daemonize yes --pidfile <dir>/redis-<port>.pid --logfile <dir>/redis-<port>.log`."
+},
+{
+"name": "redis.stop",
+"summary": "Stop the local server on 127.0.0.1:`port` (no final save \u2014 use redis.exec with SAVE/BGSAVE first if you need to persist). This is `redis-cli -p <port> SHUTDOWN NOSAVE`."
+},
+{
+"name": "redis.ping",
+"summary": "Liveness check: PING the server on 127.0.0.1:`port` (returns PONG). This is `redis-cli -p <port> PING`."
+},
+{
+"name": "redis.set",
+"summary": "Set string `key` to `value`. This is `redis-cli -p <port> SET <key> <value>`."
+},
+{
+"name": "redis.get",
+"summary": "Get the value of string `key` (empty if missing). This is `redis-cli -p <port> GET <key>`."
+},
+{
+"name": "redis.info",
+"summary": "Return the server's INFO (version, memory, clients, persistence, stats, replication, keyspace) as plain text \u2014 a full health/inventory snapshot. This is `redis-cli -p <port> INFO`."
+},
+{
+"name": "redis.dbsize",
+"summary": "Number of keys in the current database. This is `redis-cli -p <port> DBSIZE`."
+},
+{
+"name": "redis.exec",
+"summary": "Run any bundled Redis tool with a verbatim argv \u2014 the full surface beyond the curated methods. Payload is {\"args\":[<tool>, ...]} where the first element is the tool (redis-cli, redis-server, redis-benchmark, redis-check-rdb, redis-check-aof, redis-sentinel) and the rest are its args; optional {\"stdin\":\"...\"} is piped to it. This is how you run ANY Redis command: {\"args\":[\"redis-cli\",\"-p\",\"6399\",\"LPUSH\",\"mylist\",\"a\",\"b\",\"c\"]}, {\"args\":[\"redis-cli\",\"-p\",\"6399\",\"-n\",\"1\",\"HSET\",\"h\",\"f\",\"v\"]}, a pipelined script via stdin {\"args\":[\"redis-cli\",\"-p\",\"6399\"],\"stdin\":\"SET a 1\\nINCR a\\nGET a\"}, or a benchmark {\"args\":[\"redis-benchmark\",\"-p\",\"6399\",\"-n\",\"1000\",\"-q\"]}. The REDISCLI_AUTH env var is passed through for password auth."
+},
+{
+"name": "redis.cli_help",
+"summary": "Return the complete `redis-cli --help` (every option of the Redis command-line client) straight from the delivered binary \u2014 the reference for what redis.exec accepts. This is `redis-cli --help`."
+},
+{
+"name": "redis.version",
+"summary": "Print the delivered client version, e.g. \"redis-cli 8.6.2\". Needs no server. This is `redis-cli --version`."
+},
+{
+"name": "redis.help",
+"summary": "Discovery: every method with params, kind, and latency class."
+}
+],
+"io.pilot.cosift": [
+{
+"name": "cosift.search",
+"summary": "Keyword + semantic search over the crawled corpus"
+},
+{
+"name": "cosift.find_similar",
+"summary": "Find documents similar to a given result"
+},
+{
+"name": "cosift.contents",
+"summary": "Fetch the full contents of a document"
+},
+{
+"name": "cosift.answer",
+"summary": "Single-shot grounded answer with citations"
+},
+{
+"name": "cosift.research",
+"summary": "Multi-step research report over the corpus"
+},
+{
+"name": "cosift.stats",
+"summary": "Corpus and index statistics"
+},
+{
+"name": "cosift.health",
+"summary": "Service health check"
+},
+{
+"name": "cosift.help",
+"summary": "Discovery: methods, params, and latency classes"
+}
+],
+"io.pilot.smol": [
+{
+"name": "smol.exec",
+"summary": "Run ANY smolvm subcommand in a fast, hardware-isolated Linux microVM LOCALLY. Payload is {\"args\":[...]} (verbatim smolvm argv) with optional {\"stdin\":\"...\"}. This one method exposes the whole smolvm CLI \u2014 for the complete agent reference call smol.exec {\"args\":[\"--help\"]}, and for any subcommand call smol.exec {\"args\":[\"<group>\",\"--help\"]}.\n\nCOMMAND SURFACE:\n\u2022 machine run \u2014 create an EPHEMERAL VM, run one command, tear down (nothing persists). e.g. [\"machine\",\"run\",\"--net\",\"--image\",\"alpine\",\"--\",\"sh\",\"-c\",\"echo hi\"].\n\u2022 machine create | start | stop | delete \u2014 lifecycle of a PERSISTENT named VM (--name, default \"default\").\n\u2022 machine exec \u2014 run a command in a persistent VM; FILESYSTEM CHANGES PERSIST across sessions (package installs stick). e.g. [\"machine\",\"exec\",\"--name\",\"myvm\",\"--\",\"apk\",\"add\",\"python3\"].\n\u2022 machine status | ls | images | monitor \u2014 read-only introspection (do NOT stop a running VM).\n\u2022 machine cp \u2014 copy files host\u2194VM (HOST:GUEST). machine update \u2014 change mounts/ports/env/cpu/memory on a STOPPED VM. machine prune \u2014 reclaim layers (prune --all needs the VM stopped).\n\u2022 pack create -o <out> \u2014 build a portable, self-contained .smolmachine executable; pack run \u2014 run one. machine create --from <artifact>.smolmachine for fast start.\n\u2022 serve start --listen <addr> \u2014 HTTP API server (POST/GET /api/v1/machines\u2026); serve openapi \u2014 the spec.\n\u2022 config \u2014 manage registries + defaults.\n\nKEY FLAGS: --net (networking is OFF by default), --image <oci ref | ./archive.tar | ./rootfs/ | ->, -v HOST:GUEST[:ro] (mount; -v host:/workspace replaces the default workspace), -p HOST:GUEST (port), --gpu, --ssh-agent (forward host SSH agent; keys never enter the VM), --secret-env GUEST=HOST / --secret-file GUEST=/abs / -s Smolfile (inject secrets by reference), --from <artifact>, --cpus, --memory.\n\nDEFAULTS: network off; cpus 4; memory 8192 MiB; storage 20 GiB; name \"default\". Elastic memory/CPU via virtio balloon.\n\nNOT SUPPORTED OVER IPC: interactive sessions (-it / machine shell) and long-running serve (no attached TTY)."
+},
+{
+"name": "smol.version",
+"summary": "Report the local smolvm engine version. This is `smolvm --version`."
+},
+{
+"name": "smol.provision",
+"summary": "Provision (or fetch) this Pilot user's proprietary smol cloud key and free credit balance. Runs automatically on install and on smol.help \u2014 you rarely call it directly. The key is bound to your Pilot identity, stored only in your app's private secrets, and used to push and isolate your cloud VMs. Returns {key, credits}."
+},
+{
+"name": "smol.balance",
+"summary": "Report your remaining smol cloud credit balance. Returns {credits}."
+},
+{
+"name": "smol.push",
+"summary": "Push a VM to the smol cloud as YOU (your provisioned key) and START it running. Provide either a local packed artifact (base64 of a `smolvm pack` output) OR an OCI `image` reference the cloud pulls; pass {\"net\":true} for outbound networking (off by default). BILLING: you must have credit to start (402 if empty); the running VM then drains your credit by REAL usage (CPU + memory + disk per the rate card in smol.help) and the broker STOPS it when your credit runs out. The machine is tagged as owned by you, so no other user can see or touch it. Returns the created machine."
+},
+{
+"name": "smol.list",
+"summary": "List YOUR smol cloud machines (only yours \u2014 the broker filters by owner). Free (no credit). Returns an array of machines."
+},
+{
+"name": "smol.key",
+"summary": "Get your current smol cloud key (the per-user credential bound to your Pilot identity). Idempotent \u2014 safe to call anytime. The key is also cached in your app's private secrets. Returns {key, credits}."
+},
+{
+"name": "smol.rotate",
+"summary": "Rotate your smol cloud key if it leaked. Your OLD key stops working immediately and a NEW key is issued \u2014 your credit and cloud machines are NOT affected (only the key changes). Returns {key, credits, rotated}."
+},
+{
+"name": "smol.help",
+"summary": "Discovery: every method with params, kind, and latency class."
+}
+],
+"io.pilot.sixtyfour": [
+{
+"name": "sixtyfour.people_intelligence",
+"summary": "People Intelligence: full, source-backed enrichment of a person from seed details."
+},
+{
+"name": "sixtyfour.company_intelligence",
+"summary": "Company Intelligence: full, source-backed company profile, optionally with people."
+},
+{
+"name": "sixtyfour.find_email",
+"summary": "Contact discovery: find a verified email for a person from partial details."
+},
+{
+"name": "sixtyfour.find_phone",
+"summary": "Contact discovery: find a phone number for a person from partial details."
+},
+{
+"name": "sixtyfour.reverse_email",
+"summary": "Reverse lookup: identify the person and company behind an email address."
+},
+{
+"name": "sixtyfour.reverse_phone",
+"summary": "Reverse lookup: identify the person and company behind a phone number."
+},
+{
+"name": "sixtyfour.enrich_linkedin",
+"summary": "Enrich a person directly from their LinkedIn profile URL."
+},
+{
+"name": "sixtyfour.qa",
+"summary": "Agentic QA researcher: answer free-form qualification questions about a person or company, with sources."
+},
+{
+"name": "sixtyfour.research_agent",
+"summary": "Research agent: autonomous multi-step research over an entity, returning structured findings with sources."
+},
+{
+"name": "sixtyfour.filter_search",
+"summary": "Filter Search: structured field-based search across the corpus; returns matching entities."
+},
+{
+"name": "sixtyfour.deep_search",
+"summary": "Deep Search (agentic): start a natural-language search. Returns a task_id; results are retrieved asynchronously (see caveats)."
+},
+{
+"name": "sixtyfour.help",
+"summary": "Discovery: every method with params, kind, and latency class."
+}
+],
+"io.pilot.plainweb": [
+{
+"name": "plainweb.fetch",
+"summary": "Fetch any web page and return it as clean Markdown \u2014 no HTML, no JavaScript. Pass the full target URL as `url`; it is placed verbatim in the request path (GET /<url>). Scheme-less hosts (e.g. example.com) are sanitized to https://. The reply is `{\"content_type\":\"text/markdown; charset=utf-8\",\"content\":\"<markdown>\"}`. Open and free \u2014 no API key needed."
+},
+{
+"name": "plainweb.help",
+"summary": "Discovery: every method with params, kind, and latency class."
+}
+],
+"io.pilot.miren": [
+{
+"name": "miren.exec",
+"summary": "Run any miren subcommand. Payload is {\"args\":[...]} \u2014 the verbatim miren argv. Use this for the full CLI surface beyond the curated methods below (addon, auth, env, route, cluster, disk, sandbox, etc.). Run `miren help` or `miren <command> --help` for the surface. Example args: [\"app\",\"list\",\"--json\"]. Note: interactive subcommands (e.g. `app run`, `login`) and long-running ones (e.g. `server start`) are not suitable over IPC."
+},
+{
+"name": "miren.apps",
+"summary": "List all applications on the cluster (alias for `app list`)."
+},
+{
+"name": "miren.app",
+"summary": "Show the current status of one application. Provide the app name."
+},
+{
+"name": "miren.app.history",
+"summary": "Show an application's deployment history."
+},
+{
+"name": "miren.logs",
+"summary": "Read recent logs for an application as JSON."
+},
+{
+"name": "miren.deploy",
+"summary": "Build and deploy the app in the current directory (non-interactive, --force)."
+},
+{
+"name": "miren.deploy.analyze",
+"summary": "Analyze the app's detected stack/services without building or deploying."
+},
+{
+"name": "miren.rollback",
+"summary": "Roll an application back to its previous deployed version."
+},
+{
+"name": "miren.doctor",
+"summary": "Diagnose the miren environment and connectivity."
+},
+{
+"name": "miren.whoami",
+"summary": "Show the current authenticated user and cluster."
+},
+{
+"name": "miren.server.install",
+"summary": "Install the miren server as a systemd service on this host (Linux only)."
+},
+{
+"name": "miren.server.status",
+"summary": "Show miren server service status (Linux only)."
+},
+{
+"name": "miren.debug.connection",
+"summary": "Test connectivity and authentication with the miren server."
+},
+{
+"name": "miren.debug.advertise",
+"summary": "Show which addresses the server would advertise and why."
+},
+{
+"name": "miren.help",
+"summary": "Discovery: every method with params, kind, and latency class."
+}
+],
+"io.pilot.otto": [
+{
+"name": "otto.exec",
+"summary": "Run any otto subcommand. Payload is {\"args\":[...]} \u2014 the verbatim otto argv. Use this for the full CLI surface beyond the curated methods (config, client register/login/remove, pair, listener unsubscribe, extension update, agent install, site-filtered `commands list --site`, filtered `logs list`, etc.). Add \"--json\" where the command supports it. Example args: [\"commands\",\"list\",\"--site\",\"reddit.com\",\"--json\"]. Note: interactive/streaming subcommands (setup, settings, logs follow, listener subscribe-network, test with stream/wait flags, mcp serve, start --attached) are not suitable over one-shot IPC."
+},
+{
+"name": "otto.status",
+"summary": "Relay daemon status as JSON: running pid, port, uptime, log path, and the list of currently connected browser node IDs. The right preflight before any page command \u2014 an empty node list means no Chrome extension node is paired/online."
+},
+{
+"name": "otto.commands",
+"summary": "List the automation commands the connected node(s) expose, as JSON. Use to learn which site commands are available before calling otto.test. For a single site, use otto.exec with [\"commands\",\"list\",\"--site\",\"<domain>\",\"--json\"]."
+},
+{
+"name": "otto.extract",
+"summary": "Extract the readable content of a web page through a live paired browser tab, as JSON markdown. Opens a temporary tab on the node, extracts, and closes it. Requires a running relay and a paired Chrome node."
+},
+{
+"name": "otto.extract.format",
+"summary": "Extract page content in a chosen format: markdown, distilled_html, clean_html, raw_html, or text. Returns JSON. Like otto.extract but lets you pick the output representation."
+},
+{
+"name": "otto.screenshot",
+"summary": "Capture a screenshot of a page through a live browser tab; returns JSON (base64 PNG in the envelope, no local Preview window). Requires a running relay and a paired Chrome node."
+},
+{
+"name": "otto.test",
+"summary": "Run a registered site command on a browser node (opens a tab, runs the command, returns JSON). Provide site (e.g. reddit.com), command id (e.g. getPosts), and a JSON payload string (use {} for none, e.g. {\"limit\":10}). One-shot; requires relay + paired node."
+},
+{
+"name": "otto.cmd",
+"summary": "Send a single raw action to the target browser node and return the full JSON envelope. Provide the action name and a JSON payload string (use {} for none). Use for low-level primitives (e.g. primitive.tab.open) not covered by a curated method."
+},
+{
+"name": "otto.logs",
+"summary": "Read recent relay logs as JSON. For filtered queries (level/source/since/request-id) use otto.exec with [\"logs\",\"list\",...,\"--json\"]."
+},
+{
+"name": "otto.logs.status",
+"summary": "Relay log storage status as JSON (retention, counts, sizes). Check whether logging is healthy and how much history is available."
+},
+{
+"name": "otto.client.status",
+"summary": "Local controller client identity state and where its secret resolves from (env vs keychain), as JSON. Verify the controller is registered and logged in before running page commands."
+},
+{
+"name": "otto.authcode",
+"summary": "List pending pairing codes from the relay as JSON. See codes awaiting approval when bringing a new Chrome extension node online (approve with `otto pair <code>` via otto.exec)."
+},
+{
+"name": "otto.extension.info",
+"summary": "Installed Chrome extension artifact metadata (version, unpacked path, checksum) and configured relay URLs, as JSON. Confirm which extension build the host has staged for the Load-unpacked handoff."
+},
+{
+"name": "otto.agent.status",
+"summary": "Which agent frameworks (claude, codex, cursor, vscode, \u2026) currently have the Otto MCP server registered, as JSON."
+},
+{
+"name": "otto.help",
+"summary": "Discovery: every method with params, kind, and latency class."
+}
+],
+"io.telepat.ideon-free": [
+{
+"name": "ideon-free.generate",
+"summary": ""
+},
+{
+"name": "ideon-free.poll",
+"summary": ""
+},
+{
+"name": "ideon-free.help",
+"summary": ""
+}
+],
+"io.pilot.postgres": [
+{
+"name": "postgres.initdb",
+"summary": "Create (configure) a brand-new PostgreSQL data directory / cluster on this host \u2014 the one-time setup before a local server can start. Initializes `datadir` with superuser `postgres` and `trust` local auth (no password for local connections). Run once per cluster; `start` then brings it up. This is `initdb -D <datadir> -U postgres -A trust --encoding=UTF8`."
+},
+{
+"name": "postgres.start",
+"summary": "Start a local PostgreSQL server from an initialized `datadir`, listening on 127.0.0.1:`port` and on a Unix socket in `datadir`. Backgrounds the server and waits until it accepts connections; logs go to `<datadir>/postgres.log`. After this, connect with uri `host=127.0.0.1 port=<port> user=postgres dbname=postgres`. This is `pg_ctl -D <datadir> -o '-p <port> -k <datadir> -h 127.0.0.1' -l <datadir>/postgres.log -w start`."
+},
+{
+"name": "postgres.stop",
+"summary": "Stop a running local server (fast shutdown) for the given `datadir`. This is `pg_ctl -D <datadir> -m fast -w stop`."
+},
+{
+"name": "postgres.status",
+"summary": "Report whether the server for `datadir` is running, with its PID and command line. This is `pg_ctl -D <datadir> status`."
+},
+{
+"name": "postgres.ready",
+"summary": "Connection preflight: check whether a server is accepting connections on 127.0.0.1:`port`. This is `pg_isready -h 127.0.0.1 -p <port>`."
+},
+{
+"name": "postgres.createdb",
+"summary": "Create a new database named `dbname` on the local server at 127.0.0.1:`port` (owner postgres). This is `createdb -h 127.0.0.1 -p <port> -U postgres <dbname>`."
+},
+{
+"name": "postgres.query",
+"summary": "Run a single SQL statement (or semicolon-separated batch) against a PostgreSQL server and return an aligned text table. Works against the local cluster or any remote server. Runs with ON_ERROR_STOP=1 so a SQL error is a non-zero exit with the server message in stderr. This is `psql -d <uri> -c <sql>`."
+},
+{
+"name": "postgres.query_csv",
+"summary": "Same as postgres.query but returns the result set as CSV (header + rows) \u2014 the right shape when an agent needs to parse output. This is `psql -d <uri> --csv -c <sql>`. ON_ERROR_STOP=1 is set."
+},
+{
+"name": "postgres.command",
+"summary": "Run a single psql backslash meta-command for schema introspection. Pass it in `command`, e.g. `\\dt` (tables), `\\dn` (schemas), `\\du` (roles), `\\l` (databases), `\\df` (functions), `\\d tablename` (describe a relation). Plain SQL works here too. This is `psql -d <uri> -c <command>`."
+},
+{
+"name": "postgres.list",
+"summary": "List the databases on the server (owner, encoding, collation, access privileges) as an aligned table \u2014 a quick connectivity + inventory check. This is `psql -d <uri> -l`."
+},
+{
+"name": "postgres.exec",
+"summary": "Run any PostgreSQL client/server tool shipped in this bundle with a verbatim argv \u2014 the full surface beyond the curated methods. Payload is {\"args\":[<tool>, ...]} where the first element is the tool name (psql, initdb, pg_ctl, createdb, dropdb, pg_isready, pg_dump, pg_restore, pg_dumpall, vacuumdb, pg_basebackup, postgres) and the rest are its flags; optional {\"stdin\":\"...\"} is piped to the tool. Examples: {\"args\":[\"psql\",\"-d\",\"postgresql://127.0.0.1:5599/postgres\",\"-A\",\"-t\",\"-c\",\"select 1\"]}; {\"args\":[\"pg_dump\",\"-h\",\"127.0.0.1\",\"-p\",\"5599\",\"-U\",\"postgres\",\"mydb\"]}; {\"args\":[\"psql\",\"-d\",\"<uri>\"],\"stdin\":\"select 1;\\nselect 2;\"}. Connection can also come from PG* env vars passed through to the child."
+},
+{
+"name": "postgres.psql_help",
+"summary": "Return the complete `psql --help` text (all options of the PostgreSQL interactive terminal) straight from the delivered binary. The full reference for what postgres.query/postgres.exec accept. This is `psql --help`."
+},
+{
+"name": "postgres.version",
+"summary": "Print the delivered client version, e.g. \"psql (PostgreSQL) 17.10\". Needs no server. This is `psql --version`."
+}
+],
+"io.pilot.wallet": [
+{
+"name": "wallet.balance",
+"summary": "USDC balance for the wallet."
+},
+{
+"name": "wallet.balances",
+"summary": "Balances across all configured chains."
+},
+{
+"name": "wallet.address",
+"summary": "The wallet receive address."
+},
+{
+"name": "wallet.request",
+"summary": "Create an x402 payment request."
+},
+{
+"name": "wallet.pay",
+"summary": "Pay an x402 / EIP-3009 USDC request."
+},
+{
+"name": "wallet.verify",
+"summary": "Verify a payment authorization."
+},
+{
+"name": "wallet.settle",
+"summary": "Settle a verified payment on-chain."
+},
+{
+"name": "wallet.topup",
+"summary": "Top up the wallet balance."
+},
+{
+"name": "wallet.history",
+"summary": "Recent payment history."
+},
+{
+"name": "wallet.spend_caps",
+"summary": "Show the supervisor-enforced spend caps."
+},
+{
+"name": "wallet.evm.address",
+"summary": "EVM receive address."
+},
+{
+"name": "wallet.evm.balance",
+"summary": "EVM USDC balance (optional chain_id)."
+},
+{
+"name": "wallet.evm.satisfy",
+"summary": "Satisfy an EVM x402 payment requirement."
+},
+{
+"name": "wallet.evm.verify",
+"summary": "Verify an EVM payment authorization."
+},
+{
+"name": "wallet.evm.chains",
+"summary": "List configured EVM chains (Base, Ethereum, Polygon)."
+}
+],
+"io.pilot.slipstream": [],
+"io.pilot.aegis": [
+{
+"name": "aegis.scan",
+"summary": "One-shot scan of a file or directory for prompt injection, jailbreaks, homoglyph/leetspeak obfuscation, and impersonation."
+},
+{
+"name": "aegis.status",
+"summary": "Tail the HMAC-chained audit log of recent verdicts."
+},
+{
+"name": "aegis.targets",
+"summary": "List the agent surfaces AEGIS is protecting (inbox, tool results, skill files, memory)."
+},
+{
+"name": "aegis.config",
+"summary": "Show the effective AEGIS configuration."
+},
+{
+"name": "aegis.version",
+"summary": "Print the AEGIS version."
+},
+{
+"name": "aegis.exec",
+"summary": "Run any AEGIS subcommand verbatim \u2014 including the scan-cmd / scan-result blocking gates (allow 0 / block 2) via stdin."
+},
+{
+"name": "aegis.help",
+"summary": "Print usage and the subcommand list."
+}
+],
+"io.pilot.sqlite": [
+{
+"name": "sqlite.query",
+"summary": "Run a SQL statement (or `;`-separated batch) against a database file (or `:memory:`) and return the rows as a JSON array of row objects \u2014 the most directly machine-parseable output. This is `sqlite3 -json <database> <sql>`."
+},
+{
+"name": "sqlite.script",
+"summary": "Run a multi-statement SQL script against a database file and return whatever the statements print. Ideal for schema setup, migrations, seed data, or an ETL batch: DDL + DML + a trailing SELECT in one call. This is `sqlite3 <database> <sql>` (SQLite executes every `;`-separated statement in order). For very large scripts or piping a file, use `sqlite.exec` with a `stdin` payload."
+},
+{
+"name": "sqlite.schema",
+"summary": "Print the `CREATE` statements (DDL) for every table, index, view, and trigger in the database \u2014 via SQLite's `.schema` meta-command. This is `sqlite3 <database> .schema`."
+},
+{
+"name": "sqlite.tables",
+"summary": "List the names of the tables (and views) in the database \u2014 via SQLite's `.tables` meta-command. This is `sqlite3 <database> .tables`."
+},
+{
+"name": "sqlite.exec",
+"summary": "Run the sqlite3 CLI with a verbatim argv \u2014 the full surface beyond the curated methods. Payload is {\"args\":[...]} (the args passed straight to `sqlite3`) plus optional {\"stdin\":\"...\"} piped to the process. Use it for any flag, output mode, or dot-command the curated methods don't cover: a different output mode (`-csv`, `-table`, `-markdown`, `-line`, `-html`, `-box`), `.dump`/`.import`/`.backup`/`.clone`/`.read` via `-cmd`, or a multi-statement session piped over stdin. Examples: {\"args\":[\":memory:\",\"-csv\",\"SELECT 1 AS a, 2 AS b\"]}; {\"args\":[\"/data/app.db\",\"-cmd\",\".mode csv\",\"-cmd\",\".import /data/in.csv t\",\"SELECT count(*) FROM t\"]}; {\"args\":[\"/data/app.db\"],\"stdin\":\"CREATE TABLE t(x);\\nINSERT INTO t VALUES (1),(2);\\nSELECT sum(x) FROM t;\"}."
+},
+{
+"name": "sqlite.cli_help",
+"summary": "Return the complete sqlite3 CLI help \u2014 every command-line option AND every dot-command (`.dump`, `.import`, `.backup`, `.clone`, `.mode`, `.schema`, `.tables`, `.read`, \u2026) \u2014 captured verbatim from the delivered binary and rendered as clean, color-free text. The full reference for what sqlite.query / sqlite.exec accept."
+},
+{
+"name": "sqlite.version",
+"summary": "Print the delivered SQLite version, e.g. \"3.45.2 2024-03-12 \u2026\". Needs no database. This is `sqlite3 -version`."
+},
+{
+"name": "sqlite.help",
+"summary": "Discovery: every method with its params, kind, and latency class \u2014 the self-describing contract."
+}
+],
+"io.pilot.orthogonal": [
+{
+"name": "orthogonal.search",
+"summary": "\u2605 Natural-language API router. Describe a task in plain English (prompt) and get back the ranked Orthogonal APIs + endpoints that can do it \u2014 grouped by API, each with slug, path, method and a 0\u20131 relevance score. FREE. Start here when you don't know which of the 851 endpoints to use, then price it with orthogonal.details and execute with orthogonal.run."
+},
+{
+"name": "orthogonal.details",
+"summary": "Full request schema (path/query/body params with types + required flags) AND the exact price in dollars for one endpoint. FREE. Call this before orthogonal.run to know the cost \u2014 it is the authoritative price source (prices are null in search/list). Price may be the string 'dynamic' for endpoints priced only after the call."
+},
+{
+"name": "orthogonal.integrate",
+"summary": "Ready-to-paste code snippets for one endpoint. FREE. format \u2208 orth-sdk (default) | run-api | curl | x402-fetch | x402-python | all."
+},
+{
+"name": "orthogonal.list",
+"summary": "Browse the whole catalog \u2014 58 APIs / 851 endpoints with descriptions and param schemas, paginated by limit/offset. FREE. Prices are null here; use orthogonal.details for the price of a specific endpoint."
+},
+{
+"name": "orthogonal.run",
+"summary": "\u2605 Execute any of the 851 provider endpoints via a JSON payload {api, path, body?, query?} (the HTTP method is chosen automatically; body is the provider request body, query is its query-string params). THIS IS THE ONLY CALL THAT COSTS MONEY: you are billed the target endpoint's real price and it is debited from your $5 Pilot budget. The response returns priceCents (cents actually charged) alongside the provider data, and X-Pilot-Credits-Remaining shows your budget. Once your $5 is spent, run returns 402 while the free discovery calls keep working. Prices range $0.001\u2013$3.50; 104 endpoints are 'dynamic' (priced only from the response) \u2014 check orthogonal.details first when you need the cost up front."
+},
+{
+"name": "orthogonal.balance",
+"summary": "YOUR remaining per-user budget on this app \u2014 returned by the broker from its own ledger as '$X.XX' plus credits_remaining (micro-USD; $5 = 5000000) and credits_seed. FREE, read-only, no upstream call. This is your personal budget, seeded at $5 on first use and debited by your own runs; the shared provider account's balance is never exposed. The same figure is on the X-Pilot-Credits-Remaining header of every response."
+},
+{
+"name": "orthogonal.help",
+"summary": "The self-describing discovery contract: every method with params, cost note, and latency class. Local, free, no backend call."
+}
+]
 }

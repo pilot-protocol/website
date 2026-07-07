@@ -57,10 +57,314 @@ export const categories: Category[] = [
     "name": "Finance & Payments",
     "blurb": "Settle value on-overlay and read the markets.",
     "hue": 155
+  },
+  {
+    "id": "comms",
+    "name": "Communications",
+    "blurb": "Give an agent its own phone number — voice, SMS/iMessage, and threaded conversations.",
+    "hue": 315
   }
 ];
 
 export const apps: App[] = [
+  {
+    "id": "io.pilot.agentphone",
+    "name": "AgentPhone",
+    "tagline": "A real phone number for your agent — voice calls, SMS/iMessage, and conversations over REST",
+    "description": "# AgentPhone — a real phone number for your AI agent\n\nAgentPhone gives your agent its **own real US/Canada phone number**: place and receive **voice calls**, send and receive **SMS & iMessage**, and hold threaded **conversations** with real people — all over plain REST. This is the managed Pilot front door: you bring **nothing** (no signup, no API key). Pilot holds one AgentPhone master key behind the broker and gives **each Pilot user a $5 budget**; calls and texts debit against it, and once it's spent the paid endpoints return `402 Payment Required` (reads stay free).\n\n## What you can do\n\n- **Call people.** `agentphone.place_call` with a `systemPrompt` runs an autonomous voice call — the phone rings in ~1–2s and the AI holds the conversation. Book a reservation, chase a shipment, return a missed call, or call another agent.\n- **Text people.** `agentphone.send_message` delivers over **iMessage** when both sides support it (unlocking threaded replies, tapback reactions, send effects, typing indicators, group chats) and transparently falls back to **SMS/MMS** otherwise — same call either way.\n- **Answer & follow up.** Poll `agentphone.list_number_messages` / `agentphone.list_conversation_messages` for inbound texts and `agentphone.get_call` for call transcripts — **no websockets required**.\n- **Manage your setup.** Buy/release numbers, create and tune agents (voice, model tier, system prompt, ambience), keep an address book of contacts, and attach numbers to agents.\n\n## How it works (no signup step)\n\nBecause this is the **managed** app, the AgentPhone account already exists behind the Pilot broker — you skip the `/v0/agent/sign-up` + `/v0/agent/verify` flow entirely. Just call the `/v1` methods below; the broker authenticates you as your Pilot identity, injects the master key, meters your spend, and forwards to `https://api.agentphone.ai`.\n\n**Async, poll-based (no streaming):**\n1. `agentphone.place_call` → returns a call `id` immediately; the call runs in the background.\n2. Poll `agentphone.get_call` every few seconds until `status` is `completed` or `failed`, then read `transcripts[]` (or `agentphone.get_transcript`).\n3. For inbound SMS, poll `agentphone.list_number_messages` with the `after` cursor and filter `direction == \"inbound\"`.\n\n## Critical gotchas (read once)\n\n- **You cannot call 911**, N11 numbers, or crisis lines — they're blocked. If your human has an emergency, tell them to dial directly.\n- **Released numbers are gone forever** — no refund for the unused month. Confirm before `agentphone.release_number`.\n- **Always use E.164**: `+14155551234` ✓ — never `(415) 555-1234` or `415-555-1234`. Assume `+1` for a bare US number and confirm if it matters.\n- **Inbound calls need hosted mode OR a webhook.** Create agents with `voiceMode: \"hosted\"` explicitly (the backend defaults to `webhook`, which fails inbound if no webhook is set).\n- **iMessage-only features** (reactions, send effects, typing, backgrounds, contact cards) are silently ignored on SMS — check the response `channel`.\n- **Don't spam.** Unsolicited bulk calls/texts are illegal and get the account suspended.\n\n## Cost & the $5 budget\n\nReads are free. Spending operations debit your per-user $5 Pilot budget: buying a number (**$3.00/mo**), placing a call (**per-minute**), and sending a text (**~$0.01–0.02**). When a call would overdraw, the broker returns `402` before anything is charged, and every response carries your remaining balance in the `X-Pilot-Credits-Remaining` header (micro-dollars).\n\nEvery method's parameters, kind, and latency class are discoverable at runtime via `agentphone.help`.\n",
+    "categories": [
+      "comms"
+    ],
+    "primaryCategory": "comms",
+    "keywords": [
+      "phone",
+      "sms",
+      "imessage",
+      "voice",
+      "calls",
+      "telephony",
+      "conversations",
+      "agent"
+    ],
+    "version": "0.3.0",
+    "vendor": "AgentPhone",
+    "vendorUrl": "https://agentphone.ai",
+    "license": "Apache-2.0",
+    "sourceUrl": "https://github.com/AgentPhone-AI/skills",
+    "homepage": "https://agentphone.ai",
+    "methods": [
+      {
+        "name": "agentphone.usage",
+        "summary": "Account status: plan, phone-number hold limit (used/limit/remaining), and message/call/webhook stats. Call this first to orient in a session. Read-only; no charge."
+      },
+      {
+        "name": "agentphone.usage_daily",
+        "summary": "Daily usage breakdown for the last N days (max 365). Read-only."
+      },
+      {
+        "name": "agentphone.usage_monthly",
+        "summary": "Monthly usage aggregation. Read-only."
+      },
+      {
+        "name": "agentphone.usage_by_number",
+        "summary": "Usage broken down per phone number. Read-only."
+      },
+      {
+        "name": "agentphone.usage_by_agent",
+        "summary": "Usage broken down per agent over a period. Read-only."
+      },
+      {
+        "name": "agentphone.list_voices",
+        "summary": "List available text-to-speech voices (voice_id, voice_name, provider, gender, accent, preview_audio_url) across ElevenLabs, Cartesia, OpenAI, and platform voices. gender/accent/preview may be null — do not crash on missing fields. Use voice_id when creating/updating an agent. Read-only."
+      },
+      {
+        "name": "agentphone.list_agents",
+        "summary": "List your agents (phone personas: name, voiceMode, model tier, system prompt, attached numbers). You get one starter agent on account setup — ALWAYS list before creating another. Read-only."
+      },
+      {
+        "name": "agentphone.create_agent",
+        "summary": "Create an agent (phone persona). For AI-driven use pass voiceMode:\"hosted\" explicitly (the backend defaults to \"webhook\", which needs a configured webhook or inbound calls fail). systemPrompt is required for hosted. Pick a voice from agentphone.list_voices. Free (no telephony spend)."
+      },
+      {
+        "name": "agentphone.get_agent",
+        "summary": "Get one agent's full config and its attached numbers. Read-only."
+      },
+      {
+        "name": "agentphone.update_agent",
+        "summary": "Update an agent — only the fields you send change. Any create field is updatable (systemPrompt, voice, modelTier, …). Free."
+      },
+      {
+        "name": "agentphone.delete_agent",
+        "summary": "Delete an agent. Irreversible — clears the agent's references on its numbers/conversations/calls (those are NOT deleted). Confirm with your human first. Free."
+      },
+      {
+        "name": "agentphone.attach_number",
+        "summary": "Attach an existing number to an agent so the agent can call/text from it. Free."
+      },
+      {
+        "name": "agentphone.detach_number",
+        "summary": "Detach a number from an agent (the number is kept, just unassigned). Free."
+      },
+      {
+        "name": "agentphone.list_agent_conversations",
+        "summary": "List an agent's conversation threads, newest activity first (data[], hasMore, total). Read-only."
+      },
+      {
+        "name": "agentphone.list_agent_calls",
+        "summary": "List an agent's calls (data[], hasMore, total). Read-only."
+      },
+      {
+        "name": "agentphone.list_numbers",
+        "summary": "List your active phone numbers (id, phoneNumber, country, status, agentId). Read-only."
+      },
+      {
+        "name": "agentphone.buy_number",
+        "summary": "Provision a new US/CA phone number. COSTS $3.00 from your $5 Pilot budget (402 if it would overdraw). The provisioned number is saved to this host's ~/.pilot/.agentphone so you can recall it later with agentphone.mynumber — no need to store it yourself. Optionally attach to an agent and request an area code."
+      },
+      {
+        "name": "agentphone.get_number",
+        "summary": "Get one phone number by id (any status, including released). Read-only."
+      },
+      {
+        "name": "agentphone.release_number",
+        "summary": "Release (delete) a number. IRREVERSIBLE — the number returns to the carrier pool; no refund for the unused month. Confirm with your human first. Free to call."
+      },
+      {
+        "name": "agentphone.list_number_messages",
+        "summary": "List messages on a number (inbound + outbound), newest first, cursor-paginated. THE non-websocket way to detect SMS replies: poll with the `after` cursor and filter direction==\"inbound\". Read-only."
+      },
+      {
+        "name": "agentphone.list_number_calls",
+        "summary": "List calls on a number. Read-only."
+      },
+      {
+        "name": "agentphone.get_contact_card",
+        "summary": "Get the iMessage contact card shown on a number (firstName, lastName, displayName, hasAvatar). iMessage only. Read-only."
+      },
+      {
+        "name": "agentphone.set_contact_card",
+        "summary": "Create/replace the iMessage contact card on a number (name + avatar shown to recipients). iMessage only. Free."
+      },
+      {
+        "name": "agentphone.delete_contact_card",
+        "summary": "Remove the iMessage contact card from a number. Free."
+      },
+      {
+        "name": "agentphone.send_message",
+        "summary": "Send an SMS/iMessage. COSTS MONEY (~$0.01–0.02, debited from your $5 budget → 402 if over). Auto-delivers over iMessage when both sides support it, else SMS/MMS — the response `channel` (sms|mms|imessage) tells you how it went. E.164 for `to_number` (or a group id grp_… for an iMessage group). iMessage-only extras (send_style, reply_to_message_id) are silently ignored on SMS."
+      },
+      {
+        "name": "agentphone.react",
+        "summary": "Send a tapback reaction to a message. iMessage ONLY — returns 400 on SMS. Free."
+      },
+      {
+        "name": "agentphone.list_calls",
+        "summary": "List calls for the account (filter by status/direction). Read-only."
+      },
+      {
+        "name": "agentphone.place_call",
+        "summary": "Place an OUTBOUND voice call. COSTS MONEY (per-minute, ~$0.05+, debited from your $5 budget → 402 if over). With `systemPrompt` the AI runs the call autonomously (recommended); without it, each turn is POSTed to the agent's webhook. Returns a call id IMMEDIATELY (async) — the phone rings in a second or two. Then POLL agentphone.get_call every few seconds until status is completed/failed to read the transcript. Cannot call 911 / N11 / crisis lines (blocked)."
+      },
+      {
+        "name": "agentphone.get_call",
+        "summary": "Get a call and its embedded transcripts[]. THE poll target for a call outcome (no websockets): call every few seconds until status is completed or failed (in-progress means partial/empty transcript). Also carries durationSeconds, startedAt, endedAt. Read-only."
+      },
+      {
+        "name": "agentphone.end_call",
+        "summary": "Terminate an in-progress call. status/endedAt settle shortly after via the provider — keep polling agentphone.get_call until terminal. Free."
+      },
+      {
+        "name": "agentphone.get_transcript",
+        "summary": "Get the full ordered transcript of a call as plain JSON (user utterance + agent response per turn). This is the REST/polling alternative to the SSE live-transcript stream — the adapter never uses the stream. Read-only."
+      },
+      {
+        "name": "agentphone.list_conversations",
+        "summary": "List conversation threads (one per external contact or iMessage group), sorted by lastMessageAt desc (data[], hasMore, total). Read-only."
+      },
+      {
+        "name": "agentphone.get_conversation",
+        "summary": "Get one conversation with its recent messages (participant, isGroup, group roster, messageCount, metadata). Read-only."
+      },
+      {
+        "name": "agentphone.update_conversation",
+        "summary": "Update a conversation's `metadata` (attach custom AI context/state to the thread). Free."
+      },
+      {
+        "name": "agentphone.list_conversation_messages",
+        "summary": "List a conversation's messages, cursor-paginated (data[], hasMore). Poll with `after` to catch new inbound replies in a thread. Read-only."
+      },
+      {
+        "name": "agentphone.typing",
+        "summary": "Show a typing indicator before you reply. iMessage only, best-effort, auto-expires (no stop call). Free."
+      },
+      {
+        "name": "agentphone.set_background",
+        "summary": "Set a chat background image for a conversation. iMessage only. Free."
+      },
+      {
+        "name": "agentphone.clear_background",
+        "summary": "Clear a conversation's chat background. iMessage only. Free."
+      },
+      {
+        "name": "agentphone.list_contacts",
+        "summary": "List saved contacts (data[], hasMore, total); `search` filters by name/phone. Read-only."
+      },
+      {
+        "name": "agentphone.create_contact",
+        "summary": "Save a contact so you can look them up by name later. phoneNumber is normalized to E.164; returns 409 if the phone already exists. Free."
+      },
+      {
+        "name": "agentphone.get_contact",
+        "summary": "Get one contact by id. Read-only."
+      },
+      {
+        "name": "agentphone.update_contact",
+        "summary": "Update a contact — only the fields you send change (phone is re-normalized; 409 on conflict). Free."
+      },
+      {
+        "name": "agentphone.delete_contact",
+        "summary": "Delete a contact. Confirm with your human first. Free."
+      },
+      {
+        "name": "agentphone.get_webhook",
+        "summary": "Get the account-level webhook config. Read-only. (Polling is the default event model for this adapter; webhooks are optional.)"
+      },
+      {
+        "name": "agentphone.set_webhook",
+        "summary": "Set the account-level webhook URL (returns a signing `secret`; a new one each call). NOTE: on the shared Pilot AgentPhone account this is a GLOBAL setting — prefer per-agent webhooks or polling. Free."
+      },
+      {
+        "name": "agentphone.delete_webhook",
+        "summary": "Remove the account-level webhook. Global on the shared account — use with care. Free."
+      },
+      {
+        "name": "agentphone.list_webhook_deliveries",
+        "summary": "List recent webhook delivery attempts (items[], total). Read-only."
+      },
+      {
+        "name": "agentphone.webhook_delivery_stats",
+        "summary": "Aggregated webhook delivery stats over the last N hours (success/failed/pending, byEventType, byHour). Read-only."
+      },
+      {
+        "name": "agentphone.test_webhook",
+        "summary": "Send a synthetic test event to verify your endpoint is reachable and verifying signatures. Free."
+      },
+      {
+        "name": "agentphone.get_agent_webhook",
+        "summary": "Get an agent-specific webhook (overrides the account default for that agent). Read-only."
+      },
+      {
+        "name": "agentphone.set_agent_webhook",
+        "summary": "Set an agent-specific webhook URL (overrides the account default for THIS agent only — safer than the account-level webhook on a shared account). Free."
+      },
+      {
+        "name": "agentphone.delete_agent_webhook",
+        "summary": "Delete an agent-specific webhook (the agent falls back to the account default). Free."
+      },
+      {
+        "name": "agentphone.mynumber",
+        "summary": "Recall the phone number(s) THIS daemon provisioned (local, no backend call, free). Reads ~/.pilot/.agentphone, populated automatically by agentphone.buy_number. Returns {entries:[{id,phoneNumber,status,agentId,...}]} — empty if this host hasn't provisioned one yet. Use it to find 'my number' without listing the shared account."
+      }
+    ],
+    "changelog": [
+      {
+        "version": "0.3.0",
+        "notes": [
+          "Managed Pilot front door — no signup, no API key: the broker holds one master key and gives each user a $5 budget (402 on overdraw; reads free).",
+          "Full non-streaming REST surface (53 methods): numbers, agents, voice calls, SMS/iMessage, threaded conversations, contacts, and usage.",
+          "Local recall: agentphone.buy_number captures the number to ~/.pilot/.agentphone; agentphone.mynumber reads it back with no backend call."
+        ]
+      }
+    ],
+    "grants": [
+      "fs.read:$APP/config.json",
+      "key.sign:self",
+      "net.dial:api.agentphone.ai",
+      "fs.read:$HOME/.pilot/.agentphone",
+      "fs.write:$HOME/.pilot/.agentphone",
+      "audit.log:*"
+    ],
+    "bundles": [
+      {
+        "platform": "darwin-arm64",
+        "bytes": 4719632
+      },
+      {
+        "platform": "darwin-amd64",
+        "bytes": 5322138
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": 5171512
+      },
+      {
+        "platform": "linux-amd64",
+        "bytes": 4569005
+      }
+    ],
+    "installedBytes": 8922112,
+    "depends": [],
+    "protection": "shareable",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "image",
+      "img": "/appicons/io.pilot.agentphone.png",
+      "fit": "contain",
+      "pos": "center",
+      "color": "#26B65A",
+      "ink": false,
+      "file": null,
+      "hue": 315
+    },
+    "minPilotVersion": "1.0.0",
+    "runtimes": [
+      "go"
+    ],
+    "publishedAt": "2026-07-07",
+    "updatedAt": "2026-07-07"
+  },
   {
     "id": "io.pilot.postgres",
     "name": "PostgreSQL",
@@ -309,6 +613,115 @@ export const apps: App[] = [
       "color": "#FFF000",
       "ink": true,
       "file": "/appicons/io.pilot.duckdb.svg",
+      "hue": 125
+    },
+    "minPilotVersion": "1.0.0",
+    "runtimes": [
+      "go"
+    ],
+    "publishedAt": null,
+    "updatedAt": null
+  },
+  {
+    "id": "io.pilot.sqlite",
+    "name": "SQLite",
+    "tagline": "Run SQLite from an agent — zero-server, single-file transactional SQL, no provisioning",
+    "description": "# SQLite — zero-server transactional SQL, native CLI for agents\n\nThis app installs the official **SQLite 3.45.2** command-line shell (`sqlite3`) on the host and fronts it\nas typed methods. The bundle is the upstream sqlite3 CLI binary (sha-pinned per OS/arch, fetched from the\nPilot artifact registry at install) plus a tiny wrapper that serves a clean, complete `--help`.\n\nSQLite is a **zero-server, single-file, transactional (OLTP)** SQL engine — the most widely deployed\ndatabase in the world. There is **no server, no daemon, no port, no auth, and nothing to provision**: an\nagent opens an in-memory database (`:memory:`) or a single `.db` file like any other file. It is the\ndurable, on-disk complement to **DuckDB's in-memory analytics** ([io.pilot.duckdb](https://pilotprotocol.network)) —\nreal transactional SQL and durable agent memory, locally, with no cloud account.\n\n## Why an agent wants this\n\n- **Zero provisioning.** No server lifecycle, no credentials, no \"is the daemon up?\" state. Open `:memory:`\n  or a file and run SQL.\n- **Durable, transactional storage — the killer feature.** A single `.db` file *is* the database: ACID\n  transactions, real constraints, indexes, triggers, and full-text search, all persisted to one file the\n  agent can copy, back up, or hand off. The right home for durable agent memory and structured state.\n- **Universal + rock-solid.** SQLite is public-domain, exhaustively tested, and backward-compatible — the\n  format your data will still open in decades from now.\n- **Agent-friendly output.** `sqlite.query` returns rows as **JSON**; other shapes (CSV, table, Markdown,\n  line, HTML) are one `sqlite.exec` away.\n- **Full SQL.** Window functions, CTEs, JSON1, generated columns, upserts, FTS5, and a rich function library.\n- **Self-contained + offline.** One binary, no dependencies, no network.\n\n## Methods\n\n- `sqlite.query` — run SQL, get rows back as a **JSON** array. In-memory or against a file.\n- `sqlite.script` — run a multi-statement SQL script (DDL + DML + a trailing SELECT) in one call.\n- `sqlite.schema` — print the `CREATE` DDL for every object in the database (`.schema`).\n- `sqlite.tables` — list the tables in the database (`.tables`).\n- `sqlite.exec` — run the CLI with a verbatim argv (+ optional stdin) for any flag, output mode, or\n  dot-command the curated methods don't cover (`.dump`, `.import`, `.backup`, `.clone`, `.read`, `-csv`, …).\n- `sqlite.cli_help` — the complete CLI help: every option **and** every dot-command, as clean text.\n- `sqlite.version` — the delivered SQLite version. `sqlite.help` — the self-describing method list.\n\n## How to use it\n\n1. **Quick query (no setup):** `sqlite.query` `{ \"database\": \":memory:\", \"sql\": \"SELECT 42 AS answer\" }`.\n2. **Persistent database:** point `database` at a file path (`/work/app.db`); it's created on first use and\n   persists. The same file holds many tables, indexes, and views.\n3. **Set up a schema:** `sqlite.script` `{ \"database\": \"/work/app.db\", \"sql\": \"CREATE TABLE notes(id INTEGER PRIMARY KEY, body TEXT); INSERT INTO notes(body) VALUES ('hello');\" }`.\n4. **Anything else:** `sqlite.exec` `{ \"args\": [\"/work/app.db\", \"-cmd\", \".mode csv\", \"-cmd\", \".import /data/in.csv t\", \"SELECT count(*) FROM t\"] }`.\n\n## Configuration\n\n- **`database`** — `:memory:` (ephemeral, no provisioning) or an absolute path to a `.db`/`.sqlite` file\n  (created on first use, persists, holds many tables).\n- **Output mode** — `sqlite.query` returns JSON; choose any other mode via `sqlite.exec` (`-csv`, `-table`,\n  `-markdown`, `-line`, `-html`, `-box`, `-ascii`).\n- **Read-only** — open a database without write access via `sqlite.exec` (`-readonly`).\n\n## Good to know\n\n- On a non-zero exit (SQL error) the reply is `{stdout, stderr, exit}` so the caller sees everything the\n  CLI produced.\n- Runs on **macOS and Linux** (arm64 + amd64); the binary is fetched from the Pilot artifact registry and\n  sha-pinned on install. SQLite is in the **public domain** (the \"blessing\" license).\n- `sqlite.help` lists every method with its latency class — the self-describing discovery contract.\n\n## SQLite CLI help (`sqlite.cli_help`)\n```\nSQLite CLI (sqlite3) — command-line options and meta-commands\n=============================================================\n\nSQLite is a zero-server, single-file, transactional SQL database engine.\nThe sqlite3 CLI runs SQL against a database file (created if it does not\nexist) or an in-memory database (use ':memory:' or omit the filename).\n\nUSAGE: sqlite3 [OPTIONS] [FILENAME] [SQL]\n\nFILENAME is an SQLite database file; ':memory:' is an ephemeral in-memory DB.\nA trailing SQL string is executed (may contain multiple ;-separated statements).\n\n------------------------------------------------------------------------------\nCOMMAND-LINE OPTIONS  (sqlite3 -help)\n------------------------------------------------------------------------------\n   --                   treat no subsequent arguments as options\n   -append              append the database to the end of the file\n   -ascii               set output mode to 'ascii'\n   -bail                stop after hitting an error\n   -batch               force batch I/O\n   -box                 set output mode to 'box'\n   -column              set output mode to 'column'\n   -cmd COMMAND         run \"COMMAND\" before reading stdin\n   -csv                 set output mode to 'csv'\n   -deserialize         open the database using sqlite3_deserialize()\n   -echo                print inputs before execution\n   -init FILENAME       read/process named file\n   -[no]header          turn headers on or off\n   -help                show this message\n   -html                set output mode to HTML\n   -interactive         force interactive I/O\n   -json                set output mode to 'json'\n   -line                set output mode to 'line'\n   -list                set output mode to 'list'\n   -lookaside SIZE N    use N entries of SZ bytes for lookaside memory\n   -markdown            set output mode to 'markdown'\n   -maxsize N           maximum size for a --deserialize database\n   -memtrace            trace all memory allocations and deallocations\n   -mmap N              default mmap size set to N\n   -newline SEP         set output row separator. Default: '\\n'\n   -nofollow            refuse to open symbolic links to database files\n   -nonce STRING        set the safe-mode escape nonce\n   -nullvalue TEXT      set text string for NULL values. Default ''\n   -pagecache SIZE N    use N slots of SZ bytes each for page cache memory\n   -pcachetrace         trace all page cache operations\n   -quote               set output mode to 'quote'\n   -readonly            open the database read-only\n   -safe                enable safe-mode\n   -separator SEP       set output column separator. Default: '|'\n   -stats               print memory stats before each finalize\n   -table               set output mode to 'table'\n   -tabs                set output mode to 'tabs'\n   -unsafe-testing      allow unsafe commands and modes for testing\n   -version             show SQLite version\n   -vfs NAME            use NAME as the default VFS\n\n------------------------------------------------------------------------------\nDOT-COMMANDS  (meta-commands; usable inside the shell or via -cmd \"...\")\n------------------------------------------------------------------------------\n.auth ON|OFF             Show authorizer callbacks\n.backup ?DB? FILE        Backup DB (default \"main\") to FILE\n.bail on|off             Stop after hitting an error.  Default OFF\n.cd DIRECTORY            Change the working directory to DIRECTORY\n.changes on|off          Show number of rows changed by SQL\n.check GLOB              Fail if output since .testcase does not match\n.clone NEWDB             Clone data into NEWDB from the existing database\n.connection [close] [#]  Open or close an auxiliary database connection\n.databases               List names and files of attached databases\n.dbconfig ?op? ?val?     List or change sqlite3_db_config() options\n.dump ?OBJECTS?          Render database content as SQL\n.echo on|off             Turn command echo on or off\n.eqp on|off|full|...     Enable or disable automatic EXPLAIN QUERY PLAN\n.excel                   Display the output of next command in spreadsheet\n.exit ?CODE?             Exit this program with return-code CODE\n.expert                  EXPERIMENTAL. Suggest indexes for queries\n.explain ?on|off|auto?   Change the EXPLAIN formatting mode.  Default: auto\n.filectrl CMD ...        Run various sqlite3_file_control() operations\n.fullschema ?--indent?   Show schema and the content of sqlite_stat tables\n.headers on|off          Turn display of headers on or off\n.help ?-all? ?PATTERN?   Show help text for PATTERN\n.import FILE TABLE       Import data from FILE into TABLE\n.indexes ?TABLE?         Show names of indexes\n.limit ?LIMIT? ?VAL?     Display or change the value of an SQLITE_LIMIT\n.lint OPTIONS            Report potential schema issues.\n.load FILE ?ENTRY?       Load an extension library\n.log FILE|on|off         Turn logging on or off.  FILE can be stderr/stdout\n.mode MODE ?OPTIONS?     Set output mode\n.nonce STRING            Suspend safe mode for one command if nonce matches\n.nullvalue STRING        Use STRING in place of NULL values\n.once ?OPTIONS? ?FILE?   Output for the next SQL command only to FILE\n.open ?OPTIONS? ?FILE?   Close existing database and reopen FILE\n.output ?FILE?           Send output to FILE or stdout if FILE is omitted\n.parameter CMD ...       Manage SQL parameter bindings\n.print STRING...         Print literal STRING\n.progress N              Invoke progress handler after every N opcodes\n.prompt MAIN CONTINUE    Replace the standard prompts\n.quit                    Stop interpreting input stream, exit if primary.\n.read FILE               Read input from FILE or command output\n.restore ?DB? FILE       Restore content of DB (default \"main\") from FILE\n.save ?OPTIONS? FILE     Write database to FILE (an alias for .backup ...)\n.scanstats on|off|est    Turn sqlite3_stmt_scanstatus() metrics on or off\n.schema ?PATTERN?        Show the CREATE statements matching PATTERN\n.separator COL ?ROW?     Change the column and row separators\n.sha3sum ...             Compute a SHA3 hash of database content\n.shell CMD ARGS...       Run CMD ARGS... in a system shell\n.show                    Show the current values for various settings\n.stats ?ARG?             Show stats or turn stats on or off\n.system CMD ARGS...      Run CMD ARGS... in a system shell\n.tables ?TABLE?          List names of tables matching LIKE pattern TABLE\n.timeout MS              Try opening locked tables for MS milliseconds\n.timer on|off            Turn SQL timer on or off\n.trace ?OPTIONS?         Output each SQL statement as it is run\n.version                 Show source, library and compiler versions\n.vfsinfo ?AUX?           Information about the top-level VFS\n.vfslist                 List all available VFSes\n.vfsname ?AUX?           Print the name of the VFS stack\n.width NUM1 NUM2 ...     Set minimum column widths for columnar output\n\n```\n",
+    "categories": [
+      "data"
+    ],
+    "primaryCategory": "data",
+    "keywords": [
+      "sqlite",
+      "sql",
+      "database",
+      "embedded",
+      "oltp",
+      "query",
+      "local",
+      "transactional"
+    ],
+    "version": "3.45.2",
+    "vendor": "Pilot Protocol",
+    "vendorUrl": "https://pilotprotocol.network",
+    "license": "Public Domain",
+    "sourceUrl": "https://sqlite.org/src",
+    "homepage": "https://sqlite.org",
+    "methods": [
+      {
+        "name": "sqlite.query",
+        "summary": "Run a SQL statement (or `;`-separated batch) against a database file (or `:memory:`) and return the rows as a JSON array of row objects — the most directly machine-parseable output. This is `sqlite3 -json <database> <sql>`."
+      },
+      {
+        "name": "sqlite.script",
+        "summary": "Run a multi-statement SQL script against a database file and return whatever the statements print. Ideal for schema setup, migrations, seed data, or an ETL batch: DDL + DML + a trailing SELECT in one call. This is `sqlite3 <database> <sql>` (SQLite executes every `;`-separated statement in order). For very large scripts or piping a file, use `sqlite.exec` with a `stdin` payload."
+      },
+      {
+        "name": "sqlite.schema",
+        "summary": "Print the `CREATE` statements (DDL) for every table, index, view, and trigger in the database — via SQLite's `.schema` meta-command. This is `sqlite3 <database> .schema`."
+      },
+      {
+        "name": "sqlite.tables",
+        "summary": "List the names of the tables (and views) in the database — via SQLite's `.tables` meta-command. This is `sqlite3 <database> .tables`."
+      },
+      {
+        "name": "sqlite.exec",
+        "summary": "Run the sqlite3 CLI with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[...]} (the args passed straight to `sqlite3`) plus optional {\"stdin\":\"...\"} piped to the process. Use it for any flag, output mode, or dot-command the curated methods don't cover: a different output mode (`-csv`, `-table`, `-markdown`, `-line`, `-html`, `-box`), `.dump`/`.import`/`.backup`/`.clone`/`.read` via `-cmd`, or a multi-statement session piped over stdin. Examples: {\"args\":[\":memory:\",\"-csv\",\"SELECT 1 AS a, 2 AS b\"]}; {\"args\":[\"/data/app.db\",\"-cmd\",\".mode csv\",\"-cmd\",\".import /data/in.csv t\",\"SELECT count(*) FROM t\"]}; {\"args\":[\"/data/app.db\"],\"stdin\":\"CREATE TABLE t(x);\\nINSERT INTO t VALUES (1),(2);\\nSELECT sum(x) FROM t;\"}."
+      },
+      {
+        "name": "sqlite.cli_help",
+        "summary": "Return the complete sqlite3 CLI help — every command-line option AND every dot-command (`.dump`, `.import`, `.backup`, `.clone`, `.mode`, `.schema`, `.tables`, `.read`, …) — captured verbatim from the delivered binary and rendered as clean, color-free text. The full reference for what sqlite.query / sqlite.exec accept."
+      },
+      {
+        "name": "sqlite.version",
+        "summary": "Print the delivered SQLite version, e.g. \"3.45.2 2024-03-12 …\". Needs no database. This is `sqlite3 -version`."
+      },
+      {
+        "name": "sqlite.help",
+        "summary": "Discovery: every method with its params, kind, and latency class — the self-describing contract."
+      }
+    ],
+    "changelog": [
+      {
+        "version": "3.45.2",
+        "notes": [
+          "Released v3.45.2"
+        ]
+      }
+    ],
+    "grants": [],
+    "bundles": [
+      {
+        "platform": "darwin-arm64",
+        "bytes": 5620110
+      },
+      {
+        "platform": "darwin-amd64",
+        "bytes": 5834210
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": 5459536
+      },
+      {
+        "platform": "linux-amd64",
+        "bytes": 5031337
+      }
+    ],
+    "installedBytes": 9620163,
+    "depends": [],
+    "protection": "guarded",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "mask",
+      "img": null,
+      "fit": null,
+      "pos": null,
+      "color": "#003B57",
+      "ink": false,
+      "file": "/appicons/io.pilot.sqlite.svg",
       "hue": 125
     },
     "minPilotVersion": "1.0.0",
@@ -1719,6 +2132,216 @@ export const apps: App[] = [
     ],
     "publishedAt": "2026-06-08",
     "updatedAt": "2026-06-08"
+  },
+  {
+    "id": "io.pilot.bowmark",
+    "name": "Bowmark",
+    "tagline": "Navigation cheatsheets for public websites, so agents run cheaper, faster, and more accurately",
+    "description": "Bowmark gives agents a **pre-computed cheatsheet** for the task at hand. A cheatsheet is a compact, ready-to-run answer for one task on one site: a parameterized URL `shortcut` and/or a short `ui_procedure` of UI steps. Instead of burning tokens re-reading a site's DOM and guessing its way through the page, your agent calls `ask({ site, task })` and gets the exact path back. It spends less, finishes sooner, and lands on the right action the first time.\n\nBowmark is **free to use** — no signup and no API key to manage. It's plain request/response REST — no websockets, no server-side browser, no async jobs. Your agent runs the cheatsheet in its own browser; Bowmark only supplies the path.\n\n**Methods.** `bowmark.ask` — give it a site and a plain-English task and it returns the cheatsheet: a URL `shortcut` (a `template` with `{name}` slots you fill and navigate) and/or a `ui_procedure` of steps to run in order, plus an `id`. Call it before any browser action, in place of exploring the page yourself, and execute open-loop. `bowmark.report_outcome` — after running a cheatsheet, report whether every step ran exactly as written; a failure triggers a re-crawl that repairs the path for the next agent, so report `false` on any deviation even if you still got the answer.\n\n**Syntax & edge cases.** `site` is a registrable domain, optionally with a product surface (`google.com`, `docs.stripe.com`, `google.com/maps`); `task` is intent, never a URL. Request the signed-in view with `variants: { auth_state: \"logged_in\", role: \"owner\" }` (also `locale` / `region` / `currency`). A step may be flagged `irreversible` (confirm first) or `requires_user_input` (stop and ask the user). Non-`ok` statuses: `no_useful_data` / `site_not_supported` → browse manually; `ambiguous_scope` → retry with `scopeHint`; `rate_limited` → back off until `error.retry_after` (only new cheatsheet synthesis is capped). Skip it for localhost, RFC1918 IPs, and open-ended search with no destination.",
+    "categories": [
+      "web"
+    ],
+    "primaryCategory": "web",
+    "keywords": [
+      "browser",
+      "navigation",
+      "recipes",
+      "cheatsheets",
+      "websites",
+      "playwright",
+      "puppeteer",
+      "computer-use",
+      "scraping"
+    ],
+    "version": "0.1.0",
+    "vendor": "Bowmark AI",
+    "vendorUrl": "https://bowmark.ai",
+    "license": "Proprietary",
+    "sourceUrl": "https://github.com/bowmark-ai/plugin",
+    "homepage": "https://bowmark.ai",
+    "methods": [
+      {
+        "name": "bowmark.ask",
+        "summary": "Give it a site and a plain-English task (e.g. 'find Apple's latest 10-K') and it returns a ready-to-run cheatsheet — a URL shortcut to fill and navigate and/or a short ui_procedure of steps. Call it before any browser action, in place of exploring the page yourself, and execute open-loop. status=ok returns an id; no_useful_data/site_not_supported → browse manually; ambiguous_scope → retry with scopeHint; rate_limited → back off. Pass variants:{auth_state:'logged_in'} for signed-in surfaces. Intent, not a URL."
+      },
+      {
+        "name": "bowmark.report_outcome",
+        "summary": "After running a cheatsheet from ask, report whether every step ran exactly as written (envelope_id + success, optional evidence). success=true only if it ran clean — no retries, no raw-JS fallback, no extra clicks; false on any deviation, even if you still got the answer. Honest results trigger a re-crawl that keeps the cheatsheet fresh."
+      },
+      {
+        "name": "bowmark.help",
+        "summary": "Discovery: every method with params, kind, and latency class."
+      }
+    ],
+    "changelog": [
+      {
+        "version": "0.1.0",
+        "notes": [
+          "Initial release — REST adapter over the Bowmark API: bowmark.ask (/v1/ask) and bowmark.report_outcome (/v1/outcomes).",
+          "Free to use — no signup or API key; your agent runs the returned cheatsheet in its own browser."
+        ]
+      }
+    ],
+    "grants": [
+      "fs.read:$APP/config.json",
+      "key.sign:self",
+      "net.dial:broker.pilotprotocol.network",
+      "audit.log:*"
+    ],
+    "bundles": [
+      {
+        "platform": "darwin-arm64",
+        "bytes": 5374254
+      },
+      {
+        "platform": "darwin-amd64",
+        "bytes": 4968650
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": 5019350
+      },
+      {
+        "platform": "linux-amd64",
+        "bytes": 4613746
+      }
+    ],
+    "installedBytes": 9105408,
+    "depends": [],
+    "protection": "shareable",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "image",
+      "img": "/appicons/io.pilot.bowmark.png",
+      "fit": "cover",
+      "pos": "center",
+      "color": "#0b0b0a",
+      "ink": false,
+      "file": null,
+      "hue": 200
+    },
+    "minPilotVersion": "1.10.0",
+    "runtimes": [
+      "go"
+    ],
+    "publishedAt": "2026-07-03",
+    "updatedAt": "2026-07-03"
+  },
+  {
+    "id": "io.pilot.orthogonal",
+    "name": "Orthogonal",
+    "tagline": "One key, 851 paid APIs — described in English, metered per user",
+    "description": "# Orthogonal — a catalog of paid tools and APIs, for your agent\n\nOrthogonal is an **API marketplace / meta-API**: a single key fronts **58 third-party APIs across 851 endpoints** — lead & contact enrichment, work-email and phone finding, web & social scraping, AI web search, company / people / jobs data, weather, voice/phone, email inboxes, and more. You never sign up for the underlying providers and you never juggle their keys — you describe what you need, and pay Orthogonal per call. This Pilot app wraps Orthogonal's control plane behind the managed-key broker, so **your agent gets one metered, keyless surface** and a **per-user $5 budget**.\n\n## The workflow: discover → price → execute\n\n1. **Discover — `orthogonal.search`** (the natural-language router ★). Describe the task in plain English, e.g. *\"find the work email and phone for a person given their name and company\"*, and get back the ranked APIs and endpoints that can do it, grouped by API with a relevance score. This is the \"which API do I need?\" endpoint — you don't have to know the catalog.\n2. **Price — `orthogonal.details`.** Pass an `{api, path}` and get the full request schema (every path/query/body param, with types and required flags) **and the exact price in dollars**. This is the authoritative price source — search and list return `null` prices.\n3. **Execute — `orthogonal.run`.** Call `{api, path, body?, query?}` and Orthogonal dispatches to the provider, returns the provider's data, and reports the exact `priceCents` charged. This is the **only call that costs money**.\n\n`orthogonal.integrate` and `orthogonal.list` round out discovery (code snippets and full-catalog browse), and `orthogonal.balance` shows YOUR remaining per-user budget — all free.\n\n## What you can do (representative)\n\n- **Contact & lead enrichment** — apollo, contactout, company-enrich, peopledatalabs, coresignal, aviato, crustdata, ocean-io, influencers-club.\n- **Work-email & phone finding** — tomba, icypeas, contactout, company-enrich, hunter.\n- **Web & AI search** — serper, linkup, tavily, exa/perplexity.\n- **Web & social scraping** — olostep, serper-scrape, scrapecreators (107 endpoints), scrapegraphai, fiber (92 endpoints).\n- **Company / firmographic / jobs data** — predictleads, fantastic-jobs, openfunnel, edges, context-dev, brand-dev.\n- **Weather, voice/phone, email inboxes** — precip, agentphone, agentmail.\n\nRun `orthogonal.search` (or `orthogonal.list`) for the live, complete set.\n\n## Pricing — how you're billed (true to real usage)\n\n- **Only `orthogonal.run` costs money.** Every discovery, pricing, and account call is **free**.\n- Each run is billed the **target endpoint's real price**, debited from your **$5 per-user budget** in micro-dollars. The `priceCents` in the run response is the exact amount charged (real cents); `X-Pilot-Credits-Remaining` on every response is your remaining budget in micro-dollars ($5 = 5000000).\n- Prices span **$0.001 – $3.50**. Distribution across the 851 endpoints: **11 free, ~612 fixed-price, 104 \"dynamic\"** (priced only after the call). Common tiers: Basic $0.001–0.01, Standard $0.01–0.10, Premium $0.10–1.00. Cheap endpoints to start with: serper ($0.002), olostep / tomba / linkup ($0.01).\n- For a **known** cost up front, call `orthogonal.details` first. For **\"dynamic\"** endpoints the price is only knowable from the run response — so metering is done on the actual charged amount, and a single call may spend the last of your budget; after that, `orthogonal.run` returns **402** (the free discovery calls keep working).\n\n## Per-user budget & fair use\n\nEach Pilot user is seeded **$5 of credit** on first use, metered by the broker against their signed pilot identity. When the budget is exhausted, billable runs return 402. To keep the shared master account fair, the broker also enforces a **per-IP identity cap**: a small number of distinct pilot identities may claim a fresh $5 from any one network, so a depleted user can't farm new budgets by minting new identities. The Orthogonal account itself is the ultimate backstop — if it runs dry, runs return 402 until it's topped up.\n\n## Good to know\n\n- **Auth is fully managed.** The `orth_live_` master key lives only in the broker; the installed adapter is keyless and signs each request with your pilot identity. Nothing to configure.\n- **You only ever see your own budget.** The provider account is shared (no per-user sub-accounts on Orthogonal), so the broker deliberately does **not** expose the account-wide balance/usage/ledger. `orthogonal.balance` is answered by the broker from its own per-user ledger — you get your personal remaining budget (also on the `X-Pilot-Credits-Remaining` header), never the pooled account total.\n- Errors surface verbatim: 402 insufficient credit, 404 unknown api/path, 5xx upstream provider error, 429 rate-limited (back off).\n- `orthogonal.help` is the self-describing discovery contract: it lists every method with params, cost note, and latency class.\n\n## Endpoint pricing (grouped by price)\n\nDistribution across Orthogonal's priced endpoints (604 of the 851). Only `orthogonal.run` bills — the price shown is charged per successful call and debited from your $5 budget.\n\n- `█░░░░░░░░░░░░░░░░░░░░░░░` **Free ($0)** — 11 endpoints\n- `███████░░░░░░░░░░░░░░░░░` **$0.001–0.01** — 85 endpoints\n- `████████████████████████` **$0.01–0.05** — 280 endpoints\n- `█████░░░░░░░░░░░░░░░░░░░` **$0.05–0.20** — 64 endpoints\n- `████░░░░░░░░░░░░░░░░░░░░` **$0.20–1.00** — 51 endpoints\n- `█░░░░░░░░░░░░░░░░░░░░░░░` **$1.00–3.50** — 9 endpoints\n- `█████████░░░░░░░░░░░░░░░` **Dynamic (priced after the call)** — 104 endpoints\n\nMost calls are cheap: the single most common price is **$0.02** (123 endpoints), then **$0.04**, **$0.01**, and **$0.03**. A $5 budget covers hundreds of typical calls.",
+    "categories": [
+      "data"
+    ],
+    "primaryCategory": "data",
+    "keywords": [
+      "orthogonal",
+      "api-marketplace",
+      "enrichment",
+      "lead-enrichment",
+      "email-finder",
+      "scraping",
+      "web-search",
+      "people-data",
+      "company-data",
+      "meta-api",
+      "natural-language"
+    ],
+    "version": "0.1.1",
+    "vendor": "Orthogonal",
+    "vendorUrl": "https://orthogonal.com",
+    "license": "MIT",
+    "sourceUrl": "https://github.com/pilot-protocol/app-template/tree/main/submissions/io.pilot.orthogonal",
+    "homepage": "https://orthogonal.com",
+    "methods": [
+      {
+        "name": "orthogonal.search",
+        "summary": "★ Natural-language API router. Describe a task in plain English (prompt) and get back the ranked Orthogonal APIs + endpoints that can do it — grouped by API, each with slug, path, method and a 0–1 relevance score. FREE. Start here when you don't know which of the 851 endpoints to use, then price it with orthogonal.details and execute with orthogonal.run."
+      },
+      {
+        "name": "orthogonal.details",
+        "summary": "Full request schema (path/query/body params with types + required flags) AND the exact price in dollars for one endpoint. FREE. Call this before orthogonal.run to know the cost — it is the authoritative price source (prices are null in search/list). Price may be the string 'dynamic' for endpoints priced only after the call."
+      },
+      {
+        "name": "orthogonal.integrate",
+        "summary": "Ready-to-paste code snippets for one endpoint. FREE. format ∈ orth-sdk (default) | run-api | curl | x402-fetch | x402-python | all."
+      },
+      {
+        "name": "orthogonal.list",
+        "summary": "Browse the whole catalog — 58 APIs / 851 endpoints with descriptions and param schemas, paginated by limit/offset. FREE. Prices are null here; use orthogonal.details for the price of a specific endpoint."
+      },
+      {
+        "name": "orthogonal.run",
+        "summary": "★ Execute any of the 851 provider endpoints via a JSON payload {api, path, body?, query?} (the HTTP method is chosen automatically; body is the provider request body, query is its query-string params). THIS IS THE ONLY CALL THAT COSTS MONEY: you are billed the target endpoint's real price and it is debited from your $5 Pilot budget. The response returns priceCents (cents actually charged) alongside the provider data, and X-Pilot-Credits-Remaining shows your budget. Once your $5 is spent, run returns 402 while the free discovery calls keep working. Prices range $0.001–$3.50; 104 endpoints are 'dynamic' (priced only from the response) — check orthogonal.details first when you need the cost up front."
+      },
+      {
+        "name": "orthogonal.balance",
+        "summary": "YOUR remaining per-user budget on this app — returned by the broker from its own ledger as '$X.XX' plus credits_remaining (micro-USD; $5 = 5000000) and credits_seed. FREE, read-only, no upstream call. This is your personal budget, seeded at $5 on first use and debited by your own runs; the shared provider account's balance is never exposed. The same figure is on the X-Pilot-Credits-Remaining header of every response."
+      },
+      {
+        "name": "orthogonal.help",
+        "summary": "The self-describing discovery contract: every method with params, cost note, and latency class. Local, free, no backend call."
+      }
+    ],
+    "changelog": [
+      {
+        "version": "0.1.1",
+        "notes": [
+          "Per-user balance privacy: orthogonal.balance now shows YOUR budget, never the shared account. Dropped account-wide check/transactions/usage."
+        ]
+      },
+      {
+        "version": "0.1.0",
+        "notes": [
+          "Initial release — managed meta-API wrapper over Orthogonal (58 APIs / 851 endpoints), per-user $5 budget, NL router."
+        ]
+      }
+    ],
+    "grants": [],
+    "bundles": [
+      {
+        "platform": "darwin-arm64",
+        "bytes": 5378117
+      },
+      {
+        "platform": "darwin-amd64",
+        "bytes": 5175169
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": 4820010
+      },
+      {
+        "platform": "linux-amd64",
+        "bytes": 4820010
+      }
+    ],
+    "installedBytes": 9123313,
+    "depends": [],
+    "protection": "shareable",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "image",
+      "img": "/appicons/io.pilot.orthogonal.png",
+      "fit": "cover",
+      "pos": "center",
+      "color": "#e3e6df",
+      "ink": false,
+      "file": null,
+      "hue": 125
+    },
+    "minPilotVersion": "1.10.0",
+    "runtimes": [
+      "go"
+    ],
+    "publishedAt": "2026-07-07",
+    "updatedAt": "2026-07-07"
   }
 ];
 

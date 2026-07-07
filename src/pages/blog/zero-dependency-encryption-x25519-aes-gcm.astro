@@ -1,7 +1,9 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>Every encryption library is a dependency. Every dependency is an attack surface. When OpenSSL disclosed Heartbleed in 2014, it affected an estimated 17% of all TLS servers on the internet -- not because of a flaw in the cryptographic algorithms, but because of a buffer over-read in a library that virtually every project imported without auditing. The <a href="https://xz.tukaani.org/xz-utils/" target="_blank" rel="noopener">xz Utils backdoor</a> in 2024 demonstrated that even compression libraries can become supply chain weapons when a determined attacker gains commit access.</p>
+const bodyContent = `<p>Pilot Protocol implements its entire encryption stack -- X25519 key exchange plus AES-256-GCM authenticated encryption -- using nothing but Go's standard library. No OpenSSL, no libsodium, no third-party crypto module. This article shows exactly how that implementation works: the key exchange code, the wire format, nonce handling, and the security properties you get as a result.</p>
+
+  <p>Every encryption library is a dependency. Every dependency is an attack surface. When OpenSSL disclosed Heartbleed in 2014, it affected a large share of TLS servers on the internet -- not because of a flaw in the cryptographic algorithms, but because of a buffer over-read in a library that virtually every project imported without auditing. The <a href="https://xz.tukaani.org/xz-utils/" target="_blank" rel="noopener">xz Utils backdoor</a> in 2024 demonstrated that even compression libraries can become supply chain weapons when a determined attacker gains commit access.</p>
 
   <p>For AI agents, the stakes are higher. Agents exchange model parameters, training data, task instructions, and coordination messages. They often run unattended, without a human to notice when something looks wrong. If the encryption library they depend on is compromised, every message between every agent in the fleet is exposed -- silently, at scale.</p>
 
@@ -260,21 +262,78 @@ Message delivered</code></pre>
     <li><strong>Relay privacy:</strong> Even when traffic is relayed through the beacon for <a href="nat-traversal-ai-agents-deep-dive">NAT traversal</a>, encryption is end-to-end. The beacon sees only opaque ciphertext.</li>
   </ul>
 
-  <p>For how encryption integrates with Pilot's trust model and Ed25519 identity system, see <a href="secure-ai-agent-communication-zero-trust">Secure AI Agent Communication With Zero Trust</a>. For the full protocol architecture including addressing, transport, and services, see <a href="how-pilot-protocol-works">How Pilot Protocol Works</a>. For real-world applications of this encryption in sensitive environments, see <a href="/blog/secure-research-collaboration-share-models-not-data">Secure Research Collaboration: Share Models, Not Data</a> and <a href="/blog/private-agent-network-company">Building a Private Agent Network for Your Company</a>.</p>
+  <h2 id="aes-128-gcm-vs-aes-256-gcm">AES-128-GCM vs. AES-256-GCM: Why Pilot Pairs X25519 With the 256-bit Key</h2>
+
+  <p>X25519 key exchange is often paired with AES-128-GCM rather than AES-256-GCM. TLS 1.3 defines <code>TLS_AES_128_GCM_SHA256</code> as its mandatory-to-implement cipher suite, and WireGuard's Noise-based handshake also derives a 128-bit symmetric key for its ChaCha20-Poly1305 transport. Seeing X25519 next to AES-128-GCM in a protocol spec or a TLS handshake trace is common, and it is a deliberate, well-reasoned choice in those designs -- a 128-bit key already provides a security margin considered adequate against classical cryptanalysis, and a smaller key can mean marginally less work per block cipher round.</p>
+
+  <p>Pilot Protocol's key derivation from X25519 produces a 32-byte (256-bit) shared secret, and the daemon uses the full 32 bytes as the AES-256-GCM key rather than truncating to 16 bytes for AES-128-GCM. Go's <code>crypto/aes</code> package selects the cipher variant purely from key length -- <code>aes.NewCipher</code> returns an AES-128 cipher for a 16-byte key and an AES-256 cipher for a 32-byte key, with no separate code path required. Since X25519's ECDH output is already 32 bytes, using all of it for AES-256 avoids a truncation or key-derivation step that AES-128-GCM would otherwise need.</p>
+
+  <table>
+    <thead>
+      <tr><th>Aspect</th><th>AES-128-GCM</th><th>AES-256-GCM (Pilot)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Key size</td><td>16 bytes</td><td>32 bytes</td></tr>
+      <tr><td>Rounds (AES block cipher)</td><td>10</td><td>14</td></tr>
+      <tr><td>Common pairing</td><td>TLS 1.3 default suite, WireGuard-style handshakes</td><td>TLS 1.3 optional suite, protocols that use the full X25519 ECDH output directly</td></tr>
+      <tr><td>Hardware acceleration</td><td>AES-NI / ARMv8 Crypto Extensions</td><td>AES-NI / ARMv8 Crypto Extensions (same instruction set, more rounds executed)</td></tr>
+      <tr><td>Authentication</td><td>GCM tag, same construction</td><td>GCM tag, same construction</td></tr>
+    </tbody>
+  </table>
+
+  <p>Both variants use the identical GCM authenticated-encryption construction described above -- the same nonce format, the same 16-byte authentication tag, the same <code>Seal</code>/<code>Open</code> API in Go's standard library. The only difference is how many AES rounds the block cipher runs and how large the key is. Pilot's choice of AES-256-GCM is not a rejection of AES-128-GCM as insecure; it is simply the more direct fit for a design that already produces a 256-bit ECDH shared secret from X25519 and wants to use it in full, with a single, uniform key size across every tunnel, protocol version, and platform the daemon runs on.</p>
+
+  <p>For how encryption integrates with Pilot's trust model and Ed25519 identity system, see <a href="secure-ai-agent-communication-zero-trust">Secure AI Agent Communication With Zero Trust</a>. For the full protocol architecture including addressing, transport, and services, see <a href="how-pilot-protocol-works">How Pilot Protocol Works</a>. For real-world applications of this encryption in sensitive environments, see <a href="/blog/secure-research-collaboration-share-models-not-data">Secure Research Collaboration: Share Models, Not Data</a> and <a href="/blog/private-agent-network-company">Building a Private Agent Network for Your Company</a>. For a broader look at how this encrypted transport fits into peer discovery and reachability, see <a href="/blog/overlay-network-ai-agents">Overlay Network for AI Agents: Architecture and Trust Model</a>.</p>
 
   <div class="cta">
     <h3>Try Pilot Protocol</h3>
     <p>End-to-end encryption for AI agents with zero external dependencies. X25519 key exchange, AES-256-GCM authenticated encryption, and forward secrecy -- all built on Go's standard library.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
+
+const faqItems = [
+  {
+    question: "Does X25519 have to be paired with AES-128-GCM?",
+    answer: "No. X25519 key exchange produces a 32-byte (256-bit) shared secret, which can be used directly as an AES-256-GCM key or truncated/derived down to a 16-byte AES-128-GCM key. Both pairings are used in real protocols -- TLS 1.3's default cipher suite and WireGuard-style handshakes commonly pair X25519 with a 128-bit key, while Pilot Protocol uses the full 256-bit ECDH output for AES-256-GCM.",
+  },
+  {
+    question: "Why does Pilot Protocol use AES-256-GCM instead of AES-128-GCM?",
+    answer: "Pilot's X25519 key exchange already produces a 32-byte shared secret. Using all 32 bytes as the AES-256-GCM key avoids an extra truncation or key-derivation step, and Go's crypto/aes package selects the AES-256 code path automatically from a 32-byte key with no additional dependency or configuration.",
+  },
+  {
+    question: "Is AES-128-GCM less secure than AES-256-GCM?",
+    answer: "Both are authenticated encryption ciphers using the same GCM construction, nonce format, and authentication tag; the difference is key size (16 vs. 32 bytes) and the number of AES rounds (10 vs. 14). AES-128-GCM is considered secure and is the default cipher suite in TLS 1.3 -- it is not a lesser choice, just a different key-size trade-off than Pilot's design made.",
+  },
+  {
+    question: "How does X25519 + AES-GCM encryption work without external dependencies?",
+    answer: "Pilot Protocol uses Go's crypto/ecdh package for X25519 key exchange and crypto/aes plus crypto/cipher for AES-256-GCM authenticated encryption. Both are part of Go's standard library, maintained by the Go team, so there is no OpenSSL, libsodium, or third-party crypto module in the dependency tree.",
+  },
+  {
+    question: "What is X25519 key exchange used for?",
+    answer: "X25519 (RFC 7748) is an elliptic curve Diffie-Hellman function that lets two agents derive a shared secret from ephemeral key pairs without ever transmitting the secret itself. Pilot Protocol generates a fresh X25519 key pair for every tunnel, which provides forward secrecy: compromising one session's keys does not expose any other session.",
+  },
+  {
+    question: "Why use AES-256-GCM instead of AES-CBC or another mode?",
+    answer: "AES-256-GCM is an authenticated encryption mode, so it provides confidentiality and integrity in one pass -- any tampering with a packet is detected and the packet is discarded. It is the same cipher suite TLS 1.3 uses for HTTPS traffic, and Go's crypto/cipher implementation includes AES-NI hardware acceleration.",
+  },
+  {
+    question: "How does Pilot Protocol prevent nonce reuse in AES-GCM?",
+    answer: "Each connection gets a random 4-byte nonce prefix from crypto/rand, combined with an 8-byte monotonic counter that increments on every packet. This two-part construction means nonces never repeat within a connection, and different connections use different prefixes even if a key were ever reused.",
+  },
+  {
+    question: "Why not just use TLS for AI agent encryption?",
+    answer: "Standard TLS runs over TCP and depends on X.509 certificate issuance and revocation, which is operationally heavy for a fleet of ephemeral agents. Pilot Protocol runs over UDP and uses ephemeral X25519 keys with no certificates, avoiding the certificate lifecycle and the larger dependency surface that crypto/tls brings in (ASN.1 parsing, X.509 validation, cipher suite negotiation).",
+  },
+];
 ---
 <BlogLayout
-  title="Zero-Dependency Encryption: X25519 + AES-GCM"
-  description="How Pilot Protocol implements end-to-end encryption without a single external dependency. Pure Go cryptography."
+  title="X25519 + AES-GCM Encryption: Zero-Dependency Go Implementation Guide"
+  description="How to implement X25519 key exchange and AES-256-GCM encryption in Go with zero external dependencies -- full code, wire format, and security guarantees."
   date="February 12, 2026"
   tags={["cryptography", "security", "go"]}
   canonicalPath="/blog/zero-dependency-encryption-x25519-aes-gcm"
   bannerImage="/blog/banners/zero-dependency-encryption-x25519-aes-gcm.webp"
+  faqItems={faqItems}
 >
   <Fragment set:html={bodyContent} />
 </BlogLayout>

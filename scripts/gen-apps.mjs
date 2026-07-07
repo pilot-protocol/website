@@ -27,22 +27,25 @@ const CATEGORIES = [
   { id: 'infra',    name: 'Infrastructure',     blurb: 'Containers, microVMs, and deploys — the compute layer for agents.',     hue: 30  },
   { id: 'security', name: 'Security',           blurb: 'Guardrails and firewalls for agents and their inputs.',                 hue: 5   },
   { id: 'finance',  name: 'Finance & Payments', blurb: 'Settle value on-overlay and read the markets.',                        hue: 155 },
+  { id: 'comms',    name: 'Communications',     blurb: 'Give an agent its own phone number — voice, SMS/iMessage, and threaded conversations.', hue: 315 },
 ];
 const CAT_HUE = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.hue]));
 
 const CATMAP = {
-  'io.pilot.postgres': 'data', 'io.pilot.duckdb': 'data', 'io.pilot.redis': 'data', 'io.pilot.sixtyfour': 'data',
+  'io.pilot.postgres': 'data', 'io.pilot.duckdb': 'data', 'io.pilot.sqlite': 'data', 'io.pilot.redis': 'data', 'io.pilot.sixtyfour': 'data', 'io.pilot.orthogonal': 'data',
   'io.pilot.cosift': 'ai', 'io.telepat.ideon-free': 'ai',
-  'io.pilot.plainweb': 'web', 'io.pilot.otto': 'web',
+  'io.pilot.plainweb': 'web', 'io.pilot.otto': 'web', 'io.pilot.bowmark': 'web',
   'io.pilot.smol': 'infra', 'io.pilot.miren': 'infra', 'io.pilot.docker': 'infra',
   'io.pilot.aegis': 'security',
   'io.pilot.slipstream': 'finance', 'io.pilot.wallet': 'finance',
+  'io.pilot.agentphone': 'comms',
 };
 
 // ---------- icons: brand mark (Simple Icons), line glyph (Lucide), or real logo image ----------
 const ICON_MAP = {
   'io.pilot.postgres': { brand: 'postgresql', hex: '#4169E1' },
   'io.pilot.duckdb': { brand: 'duckdb', hex: '#FFF000' },
+  'io.pilot.sqlite': { brand: 'sqlite', hex: '#003B57' },
   'io.pilot.redis': { brand: 'redis', hex: '#FF4438' },
   'io.pilot.docker': { brand: 'docker', hex: '#2496ED' },
   'io.pilot.cosift': { image: 'png', fit: 'contain', bg: '#ffffff' },
@@ -55,6 +58,9 @@ const ICON_MAP = {
   'io.pilot.wallet': { image: 'png', fit: 'contain', bg: '#ffffff' },
   'io.telepat.ideon-free': { image: 'png', fit: 'cover', bg: '#0b0b0a' },
   'io.pilot.aegis': { image: 'svg', fit: 'contain', bg: '#ffffff' },
+  'io.pilot.bowmark': { image: 'png', fit: 'cover', bg: '#0b0b0a' },
+  'io.pilot.orthogonal': { image: 'png', fit: 'cover', bg: '#e3e6df' },
+  'io.pilot.agentphone': { image: 'png', fit: 'contain', bg: '#26B65A' },
 };
 
 function relLum(hex) {
@@ -80,15 +86,16 @@ function iconFor(id, hue) {
 
 // ---------- presentation config ----------
 const APP_IDS = [
-  'io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.redis', 'io.pilot.sixtyfour',
+  'io.pilot.agentphone',
+  'io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.sqlite', 'io.pilot.redis', 'io.pilot.sixtyfour',
   'io.pilot.cosift', 'io.telepat.ideon-free', 'io.pilot.plainweb', 'io.pilot.otto',
   'io.pilot.smol', 'io.pilot.miren', 'io.pilot.docker', 'io.pilot.aegis',
-  'io.pilot.slipstream', 'io.pilot.wallet',
+  'io.pilot.slipstream', 'io.pilot.wallet', 'io.pilot.bowmark', 'io.pilot.orthogonal',
 ];
 const FEATURED = ['io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.docker'];
 const LINUX_ONLY = new Set(['io.pilot.docker']);
 const PROTECTION_FALLBACK = {
-  'io.pilot.postgres': 'guarded', 'io.pilot.duckdb': 'guarded', 'io.pilot.redis': 'guarded',
+  'io.pilot.postgres': 'guarded', 'io.pilot.duckdb': 'guarded', 'io.pilot.sqlite': 'guarded', 'io.pilot.redis': 'guarded',
   'io.pilot.docker': 'guarded', 'io.pilot.miren': 'shareable', 'io.pilot.otto': 'guarded',
   'io.pilot.wallet': 'guarded', 'io.pilot.slipstream': 'shareable', 'io.telepat.ideon-free': 'guarded',
   'io.pilot.aegis': 'guarded',

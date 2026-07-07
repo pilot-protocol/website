@@ -63,7 +63,7 @@ async function handlePublish(request: Request, env: Env): Promise<Response> {
   };
 
   // 5. Check slug doesn't already exist (idempotency)
-  const astroPath = `web/src/pages/blog/${post.slug}.astro`;
+  const astroPath = `src/pages/blog/${post.slug}.astro`;
   const exists = await fileExists(ghEnv, astroPath);
   if (exists) {
     return json({ error: `Post with slug "${post.slug}" already exists` }, 409);
@@ -75,7 +75,7 @@ async function handlePublish(request: Request, env: Env): Promise<Response> {
 
   if (post.banner_base64) {
     bannerFiles.push({
-      path: `web/public/blog/banners/${post.slug}.webp`,
+      path: `public/blog/banners/${post.slug}.webp`,
       content: post.banner_base64,
       encoding: 'base64',
     });
@@ -88,7 +88,7 @@ async function handlePublish(request: Request, env: Env): Promise<Response> {
     const bannerHtml = renderBannerHTML(post, decoration);
     const bannerBase64 = await renderBannerImage(env.BROWSER, bannerHtml);
     bannerFiles.push({
-      path: `web/public/blog/banners/${post.slug}.png`,
+      path: `public/blog/banners/${post.slug}.png`,
       content: bannerBase64,
       encoding: 'base64',
     });
@@ -98,7 +98,7 @@ async function handlePublish(request: Request, env: Env): Promise<Response> {
   const astroContent = generateAstroFile(post, bannerExt);
 
   // 8. Fetch current blogPosts.ts and insert new entry
-  const blogPostsPath = 'web/src/data/blogPosts.ts';
+  const blogPostsPath = 'src/data/blogPosts.ts';
   const currentBlogPosts = await getFileContent(ghEnv, blogPostsPath);
   const entry = generateBlogPostEntry(post, bannerExt);
   const updatedBlogPosts = insertIntoBlogPosts(currentBlogPosts, entry);

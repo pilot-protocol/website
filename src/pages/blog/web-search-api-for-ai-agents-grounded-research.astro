@@ -1,0 +1,134 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>Give an agent a web search API and you've given it access to text. Give it <strong>grounded</strong> search — retrieval with citations, rerank, and an answer that traces back to a source — and you've given it something it can actually reason over without hallucinating a URL that doesn't exist. That distinction is the whole problem with wiring search into an agent loop: most "web search for agents" integrations are a thin wrapper around a search engine's API, returning a blob of snippets the agent has to parse, dedupe, and hope is current. Pilot Protocol's app store ships a purpose-built answer to this — <strong>cosift</strong>, a grounded web search and research app any agent installs with one command.</p>
+
+<p>This post covers why grounded search is a different problem than "call a search API," what cosift actually returns, and the exact <code>discover → install → call</code> commands to wire it into an agent today.</p>
+
+<section>
+<h2>The problem with bolting a search API onto an agent</h2>
+<p>A typical setup: the agent gets a tool definition, an API key for a search provider, and a system prompt telling it to "search when unsure." In practice this breaks down in a few predictable ways:</p>
+<ul>
+  <li><strong>Snippets, not answers.</strong> The agent gets ten blue-link-style results and has to synthesize an answer itself, often without enough context to weigh conflicting sources.</li>
+  <li><strong>No retrieval strategy.</strong> Keyword search (BM25) misses paraphrases; pure embedding search misses exact terms and acronyms. Most integrations pick one and live with the gaps.</li>
+  <li><strong>No provenance.</strong> If the agent's answer doesn't carry a source back to the underlying page, downstream consumers — including a human reviewing the agent's output — can't verify it.</li>
+  <li><strong>Per-project plumbing.</strong> Every team re-implements the same fetch → chunk → rerank → synthesize pipeline, with its own API key, its own rate limits, its own auth story.</li>
+</ul>
+<p>None of this is a knock on search APIs — they do what they're built to do. The gap is the layer between "raw results" and "something an agent can cite and act on," and that's what a grounded research tool is for.</p>
+</section>
+
+<section>
+<h2>What "grounded" means here</h2>
+<p>Grounded research for agents typically means three things working together:</p>
+<ol>
+  <li><strong>Hybrid retrieval.</strong> Combining keyword (BM25) and dense/embedding search so exact terms and paraphrased queries both land, then reranking the merged set.</li>
+  <li><strong>Cited synthesis.</strong> The final answer isn't just prose — each claim traces back to a specific source in the result set, so an agent (or the human reviewing its output) can verify it.</li>
+  <li><strong>Multi-step research when a single pass isn't enough.</strong> Some questions need iterative querying — search, read, refine the query, search again — rather than one round-trip.</li>
+</ol>
+<p>cosift, on the Pilot app store, is built around exactly this shape: fast keyword/hybrid search for links and snippets, a medium-latency "answer" mode for a grounded, cited response, and a slower multi-step "research" mode for deeper questions.</p>
+</section>
+
+<section>
+<h2>How it reaches the agent: discover → install → call</h2>
+<p>The mechanism matters as much as the tool. Every app on the Pilot app store follows the same three-step loop, and it's local: the app runs on your own daemon as a typed IPC service — JSON in, JSON out — not a remote API call you have to auth against yourself.</p>
+
+  <h3>1. Discover</h3>
+  <p>Browse the catalogue and inspect an app before installing it — description, vendor, the methods it exposes, permissions it requests, and where its source lives.</p>
+  <pre><code><span class="comment"># See what's installable</span>
+<span class="cmd">pilotctl appstore catalogue</span>
+
+<span class="comment"># Inspect cosift specifically</span>
+<span class="cmd">pilotctl appstore view io.pilot.cosift</span></code></pre>
+
+  <h3>2. Install</h3>
+  <p>One command. The daemon fetches the bundle, verifies its signature and hash against the manifest, requests the permissions the app declares, and auto-spawns it — no manual start step, no separate service to run.</p>
+  <pre><code><span class="cmd">pilotctl appstore install io.pilot.cosift</span>
+<span class="cmd">pilotctl appstore list</span>   <span class="comment"># confirm state: ready</span></code></pre>
+
+  <h3>3. Call</h3>
+  <p>Every app exposes a <code>&lt;app&gt;.help</code> method as a runtime discovery contract — it returns every method, its parameters, and a latency class (fast / medium / slow), so an agent (or you) can pick the cheapest method that answers the question instead of guessing.</p>
+  <pre><code><span class="comment"># Learn the interface at runtime — no docs required</span>
+<span class="cmd">pilotctl appstore call io.pilot.cosift cosift.help '{}'</span></code></pre>
+  <p>cosift's methods group into three latency classes:</p>
+  <ul>
+    <li><strong>Fast (under ~1s):</strong> keyword or hybrid search, fetching page contents, corpus stats, health checks.</li>
+    <li><strong>Medium (~1–5s):</strong> LLM rerank, a single-pass cited answer, finding similar documents.</li>
+    <li><strong>Slow (~5–30s):</strong> multi-step research across several queries and sources.</li>
+  </ul>
+</section>
+
+<section>
+<h2>Three calls, three jobs</h2>
+<p>Pick the method by what the agent actually needs, not the most powerful one available.</p>
+
+<h3>Links and snippets — <code>cosift.search</code></h3>
+<p>When the agent just needs candidate sources to reason over itself:</p>
+<pre><code><span class="cmd">pilotctl appstore call io.pilot.cosift cosift.search '{"q":"raft leader election","retriever":"hybrid","rerank":"true","k":"5"}'</span></code></pre>
+<p>The <code>retriever</code> parameter switches between keyword (<code>bm25</code>), embedding (<code>dense</code>), or combined (<code>hybrid</code>) search; <code>rerank</code> applies an LLM pass over the merged candidates before returning them.</p>
+
+<h3>A grounded, cited answer — <code>cosift.answer</code></h3>
+<p>When the agent needs a direct answer with sources attached, not a list to synthesize itself:</p>
+<pre><code><span class="cmd">pilotctl appstore call io.pilot.cosift cosift.answer '{"q":"What is HNSW and why use it?"}'</span></code></pre>
+<p>The response carries an <code>answer</code> field plus a <code>sources</code> array — each claim in the answer is traceable to a specific retrieved document, so the agent (or a human downstream) can verify before acting on it.</p>
+
+<h3>Deep, multi-source research — <code>cosift.research</code></h3>
+<p>For questions that need more than one search-and-read pass — comparing several sources, following up on an ambiguous first result — the slow, LLM-backed research method runs that loop for you. Expect it to take longer (on the order of ten-plus seconds); reserve it for questions where a single-pass answer genuinely isn't enough.</p>
+</section>
+
+<section>
+<h2>Chaining it with other apps</h2>
+<p>Because every app on the store speaks the same typed JSON-in/JSON-out shape, an agent can chain them in one workflow without bespoke glue code for each. A research task might look like: <code>cosift.search</code> to find candidate pages, <code>plainweb</code> to pull the full page as clean Markdown for anything cosift's snippet didn't fully cover, then hand the combined context to the agent's own reasoning step. Nothing about the chain requires new authentication or a new SDK — each app is installed the same way and called the same way.</p>
+</section>
+
+<section>
+<h2>Why this beats a raw search-API integration</h2>
+<p>None of this is exotic — hybrid retrieval, rerank, and cited synthesis are well-understood techniques. The value of installing cosift instead of building the pipeline yourself is what the app-store model removes:</p>
+<ul>
+  <li><strong>No pipeline to own.</strong> The retrieval, rerank, and synthesis logic lives in cosift's backend; the local adapter you install is a thin, stateless client.</li>
+  <li><strong>No key management per project.</strong> The app is installed once per daemon and any agent on that host can call it.</li>
+  <li><strong>Signature-verified, permission-scoped.</strong> The manifest pins a hash and signature the daemon re-checks on every spawn, and the app only gets the access it declared and you accepted at install time — no ambient authority.</li>
+  <li><strong>Discoverable at runtime.</strong> An agent that has never seen cosift before can still learn its full interface from <code>cosift.help</code> without a human writing custom tool-calling glue.</li>
+</ul>
+<p>This is also where the app store diverges from something like MCP: MCP standardizes how one agent reaches its own configured tools. The Pilot app store is a distributed catalogue — any of the network's 243k+ agents can discover, install, and call the same app the same way, supervised locally by their own daemon. The two are complementary, and a research-heavy agent can reasonably use both.</p>
+</section>
+
+<div class="cta">
+  <h3>Give your agent grounded search</h3>
+  <p>Install cosift and try the discover → install → call loop yourself.</p>
+  <a href="https://pilotprotocol.network/app-store">Browse the app store</a>
+</div>`;
+
+const faqItems = [
+  {
+    question: "What is cosift?",
+    answer: "cosift is a grounded web search and research app on the Pilot Protocol app store. It offers fast keyword/hybrid search, a medium-latency cited-answer mode, and a slower multi-step research mode, returned as structured JSON rather than raw HTML or unlinked snippets.",
+  },
+  {
+    question: "How is grounded search different from a normal search API?",
+    answer: "A raw search API returns snippets the agent must synthesize itself, with no guarantee of provenance. Grounded search combines hybrid retrieval (keyword plus embedding) with cited synthesis, so an answer traces back to specific sources an agent or a human reviewer can verify.",
+  },
+  {
+    question: "How does an agent install and call cosift?",
+    answer: "Three steps: pilotctl appstore catalogue to see what's installable, pilotctl appstore install io.pilot.cosift to install it, and pilotctl appstore call io.pilot.cosift with the method and JSON parameters. Every app also exposes a help method that returns its full interface at runtime.",
+  },
+  {
+    question: "Which cosift method should an agent use?",
+    answer: "Use search for links and snippets when the agent will do its own synthesis, answer for a single grounded and cited response, and research for questions that need multiple search-and-read passes across several sources. Pick the cheapest method that answers the question.",
+  },
+  {
+    question: "How does this compare to MCP-based search tools?",
+    answer: "MCP standardizes how a single agent reaches its own configured tools. The Pilot app store is a distributed catalogue — any agent on the overlay network can discover, install, and call the same signed app, supervised locally by its own daemon. The two approaches are complementary.",
+  },
+];
+---
+<BlogLayout
+  title="Web Search API for AI Agents: Grounded Research with cosift"
+  description="Why raw search APIs aren't enough for AI agents, what grounded research means, and how to install and call cosift's search, answer, and research methods."
+  date="July 2, 2026"
+  tags={["app-store", "search", "agents", "research"]}
+  canonicalPath="/blog/web-search-api-for-ai-agents-grounded-research"
+  bannerImage="/blog/banners/web-search-api-for-ai-agents-grounded-research.svg"
+  faqItems={faqItems}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
