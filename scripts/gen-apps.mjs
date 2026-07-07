@@ -59,7 +59,7 @@ const ICON_MAP = {
   'io.telepat.ideon-free': { image: 'png', fit: 'cover', bg: '#0b0b0a' },
   'io.pilot.aegis': { image: 'svg', fit: 'contain', bg: '#ffffff' },
   'io.pilot.bowmark': { image: 'png', fit: 'cover', bg: '#0b0b0a' },
-  'io.pilot.orthogonal': { image: 'svg', fit: 'contain', bg: '#ffffff' },
+  'io.pilot.orthogonal': { image: 'png', fit: 'cover', bg: '#e3e6df' },
   'io.pilot.agentphone': { image: 'png', fit: 'contain', bg: '#26B65A' },
 };
 
