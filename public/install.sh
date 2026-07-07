@@ -2,7 +2,7 @@
 set -e
 
 # Pilot Protocol installer
-# Source:     https://github.com/TeoSlayer/pilotprotocol  (AGPL-3.0)
+# Source:     https://github.com/pilot-protocol/pilotprotocol  (AGPL-3.0)
 # Hosted at:  https://pilotprotocol.network/install.sh
 #
 # Usage:
@@ -23,7 +23,7 @@ set -e
 #
 # WHAT THIS SCRIPT DOES (read before piping to sh):
 #   1. Detects OS/arch (Linux/Darwin × amd64/arm64)
-#   2. Resolves the latest release tag from github.com/TeoSlayer/pilotprotocol/releases
+#   2. Resolves the latest release tag from github.com/pilot-protocol/pilotprotocol/releases
 #   3. Downloads the release tarball + checksums.txt from that release
 #   4. *** Verifies SHA-256 of the tarball against checksums.txt (aborts on mismatch) ***
 #   5. Extracts binaries to ~/.pilot/bin (per-user, NOT system-wide)
@@ -57,8 +57,8 @@ set -e
 #   - Require any account credential or signup to install
 #
 # Verifiable provenance:
-#   - Source repo:  https://github.com/TeoSlayer/pilotprotocol
-#   - Release page: https://github.com/TeoSlayer/pilotprotocol/releases
+#   - Source repo:  https://github.com/pilot-protocol/pilotprotocol
+#   - Release page: https://github.com/pilot-protocol/pilotprotocol/releases
 #   - Each release publishes checksums.txt next to the tarball.
 #   - This script downloads BOTH and verifies SHA-256 before extracting.
 #
@@ -67,7 +67,7 @@ set -e
 # checksums.txt" further down. The script aborts on mismatch with a clear
 # error.
 
-REPO="TeoSlayer/pilotprotocol"
+REPO="pilot-protocol/pilotprotocol"
 REGISTRY="${PILOT_REGISTRY:-34.71.57.205:9000}"
 BEACON="${PILOT_BEACON:-34.71.57.205:9001}"
 PILOT_DIR="$HOME/.pilot"
@@ -441,6 +441,13 @@ if [ -z "$TAG" ]; then
         GOWORK=off CGO_ENABLED=0 go build -o "$TMPDIR/pilot-daemon" ./cmd/daemon
         echo "Building pilotctl..."
         GOWORK=off CGO_ENABLED=0 go build -o "$TMPDIR/pilotctl" ./cmd/pilotctl
+        # gateway was extracted to a sibling repo (pilot-protocol/gateway)
+        # — only build from source when ./cmd/gateway still exists in this
+        # checkout. Release tarballs ship daemon/pilotctl/updater only.
+        if [ -d ./cmd/gateway ]; then
+            echo "Building gateway..."
+            GOWORK=off CGO_ENABLED=0 go build -o "$TMPDIR/pilot-gateway" ./cmd/gateway
+        fi
         echo "Building updater..."
         GOWORK=off CGO_ENABLED=0 go build -o "$TMPDIR/pilot-updater" ./cmd/updater
     )
@@ -451,17 +458,16 @@ fi
 echo "Installing binaries..."
 mkdir -p "$BIN_DIR"
 
-# Handle both naming conventions (release: daemon/gateway, source: pilot-daemon/pilot-gateway).
-# pilot-gateway was extracted from the web4 release tarball as part of the sibling
-# cleanup (#155+) — keep the copy step but treat the binary as optional so newer
-# tarballs (v1.10.6+) install cleanly without it; older tarballs still get a working
-# gateway symlink.
+# Handle both naming conventions (release: daemon/gateway, source: pilot-daemon/pilot-gateway)
 if [ -f "$TMPDIR/daemon" ]; then
     cp "$TMPDIR/daemon" "$BIN_DIR/pilot-daemon"
 else
     cp "$TMPDIR/pilot-daemon" "$BIN_DIR/pilot-daemon"
 fi
 cp "$TMPDIR/pilotctl" "$BIN_DIR/pilotctl"
+# gateway is optional: extracted to a sibling repo, no longer ships in
+# release tarballs (release.yml BINS=daemon/pilotctl/updater) and the
+# source build only runs when ./cmd/gateway is present in the checkout.
 if [ -f "$TMPDIR/gateway" ]; then
     cp "$TMPDIR/gateway" "$BIN_DIR/pilot-gateway"
 elif [ -f "$TMPDIR/pilot-gateway" ]; then
@@ -728,11 +734,16 @@ echo "  pilotctl daemon start --hostname my-agent    # email already saved"
 echo "  pilotctl info"
 echo "  pilotctl ping <other-agent>"
 echo ""
-echo "Bridge IP traffic (requires root for ports < 1024):"
-echo ""
-echo "  sudo ${BIN_DIR}/pilotctl gateway start --ports 80,3000 <pilot-addr>"
-echo "  curl http://10.4.0.1:3000/status"
-echo ""
+# pilot-gateway no longer ships in release tarballs (extracted to the
+# sibling pilot-protocol/gateway repo) — only show the bridge hint when
+# the binary actually exists on this host.
+if [ -f "$BIN_DIR/pilot-gateway" ]; then
+    echo "Bridge IP traffic (requires root for ports < 1024):"
+    echo ""
+    echo "  sudo ${BIN_DIR}/pilotctl gateway start --ports 80,3000 <pilot-addr>"
+    echo "  curl http://10.4.0.1:3000/status"
+    echo ""
+fi
 echo "Agent skill auto-injection:"
 echo ""
 echo "  The daemon scans every 15 minutes and injects the Pilot Protocol"
