@@ -2295,10 +2295,10 @@ export const apps: App[] = [
     "inCatalogue": true,
     "icon": {
       "mode": "image",
-      "img": "/appicons/io.pilot.orthogonal.svg",
-      "fit": "contain",
+      "img": "/appicons/io.pilot.orthogonal.png",
+      "fit": "cover",
       "pos": "center",
-      "color": "#ffffff",
+      "color": "#e3e6df",
       "ink": false,
       "file": null,
       "hue": 125
