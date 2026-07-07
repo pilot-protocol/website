@@ -31,7 +31,7 @@ const CATEGORIES = [
 const CAT_HUE = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.hue]));
 
 const CATMAP = {
-  'io.pilot.postgres': 'data', 'io.pilot.duckdb': 'data', 'io.pilot.sqlite': 'data', 'io.pilot.redis': 'data', 'io.pilot.sixtyfour': 'data',
+  'io.pilot.postgres': 'data', 'io.pilot.duckdb': 'data', 'io.pilot.sqlite': 'data', 'io.pilot.redis': 'data', 'io.pilot.sixtyfour': 'data', 'io.pilot.orthogonal': 'data',
   'io.pilot.cosift': 'ai', 'io.telepat.ideon-free': 'ai',
   'io.pilot.plainweb': 'web', 'io.pilot.otto': 'web', 'io.pilot.bowmark': 'web',
   'io.pilot.smolmachines': 'infra', 'io.pilot.miren': 'infra', 'io.pilot.docker': 'infra',
