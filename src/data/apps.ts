@@ -1419,10 +1419,10 @@ export const apps: App[] = [
     "updatedAt": null
   },
   {
-    "id": "io.pilot.smolmachines",
+    "id": "io.pilot.smol",
     "name": "Smol Machines",
-    "tagline": "Fast, hardware-isolated microVMs on demand",
-    "description": "Smol Machines — the app-store front door for the smolmachines VM engine. It lets an agent spin up fast, hardware-isolated Linux microVMs on demand (sub-second boot, real hypervisor isolation — not shared-kernel containers), then run workloads in a disposable sandbox. Free to use. Portable .smolmachine artifacts run identically on macOS and Linux, locally or in the cloud.\n\nUse it to:\n- Run untrusted or AI-generated code safely, with networking off by default\n- Give an agent a real Linux shell — a stateful, isolated execution backend\n- Automate headless browsers (GPU-accelerated) for scraping, screenshots, and web tasks\n- Run GPU/compute jobs via Vulkan with container-like speed\n- Spin up disposable dev sandboxes — a clean VM per task, torn down after\n- Keep persistent dev VMs — installed packages survive restarts\n- Run CI-style jobs — build, test, lint in clean environments\n- Fan out parallel ephemeral workers thanks to sub-second boot\n- Analyze malware / suspicious files in a throwaway environment\n- Build once, run anywhere — same artifact local, cloud, or self-hosted\n\nDiscover the live method surface at runtime with smolmachines.help, which lists each method's parameters and latency class.",
+    "tagline": "Fast, hardware-isolated microVMs — local and cloud",
+    "description": "Smol Machines — fast, hardware-isolated Linux microVMs for agents, now local AND cloud. Spin up sub-second, real-hypervisor-isolated Linux microVMs locally with the smolvm CLI, then push a VM to the smol cloud with a single method.\n\nLocal (free, offline): run untrusted or AI-generated code safely (networking off by default), a real Linux shell, ephemeral or persistent VMs, portable .smolmachine artifacts, GPU/Vulkan.\n\nCloud (per-user, metered): smol.push sends a local VM (or an OCI image) to the smol cloud; Pilot provisions your own cloud key automatically on install — no account, no API key. Your cloud machines are isolated per user and metered against your free credit. The master key never leaves Pilot's broker.",
     "categories": [
       "infra"
     ],
@@ -1433,7 +1433,8 @@ export const apps: App[] = [
       "vm",
       "isolation",
       "gpu",
-      "ci"
+      "ci",
+      "cloud"
     ],
     "version": "1.2.0",
     "vendor": "smol machines",
@@ -1443,11 +1444,39 @@ export const apps: App[] = [
     "homepage": "https://smolmachines.com",
     "methods": [
       {
-        "name": "smolmachines.exec",
-        "summary": "Run any smolvm subcommand in a fast, hardware-isolated Linux microVM. Payload is {\"args\":[...]} — the verbatim smolvm argv. Command surface: `machine run` (ephemeral VM, one-off command), `machine create|start|exec|stop|delete|shell|status|ls|cp|update|monitor|prune` (persistent VMs; `exec` persists filesystem changes), `pack create|run` (portable .smolmachine artifacts), `serve` (HTTP API), `config`. Key flags: `--net` (networking is OFF by default), `--image <oci|./archive.tar|->`, `-v HOST:GUEST`, `-p HOST:GUEST`, `--gpu`, `--ssh-agent`, `--secret-env GUEST=HOST`. Example args: [\"machine\",\"run\",\"--net\",\"--image\",\"alpine\",\"--\",\"sh\",\"-c\",\"echo hi\"]. Not supported over IPC: interactive sessions (-it / `machine shell`) and long-running `serve`."
+        "name": "smol.exec",
+        "summary": "Run ANY smolvm subcommand in a fast, hardware-isolated Linux microVM LOCALLY. Payload is {\"args\":[...]} (verbatim smolvm argv) with optional {\"stdin\":\"...\"}. This one method exposes the whole smolvm CLI — for the complete agent reference call smol.exec {\"args\":[\"--help\"]}, and for any subcommand call smol.exec {\"args\":[\"<group>\",\"--help\"]}.\n\nCOMMAND SURFACE:\n• machine run — create an EPHEMERAL VM, run one command, tear down (nothing persists). e.g. [\"machine\",\"run\",\"--net\",\"--image\",\"alpine\",\"--\",\"sh\",\"-c\",\"echo hi\"].\n• machine create | start | stop | delete — lifecycle of a PERSISTENT named VM (--name, default \"default\").\n• machine exec — run a command in a persistent VM; FILESYSTEM CHANGES PERSIST across sessions (package installs stick). e.g. [\"machine\",\"exec\",\"--name\",\"myvm\",\"--\",\"apk\",\"add\",\"python3\"].\n• machine status | ls | images | monitor — read-only introspection (do NOT stop a running VM).\n• machine cp — copy files host↔VM (HOST:GUEST). machine update — change mounts/ports/env/cpu/memory on a STOPPED VM. machine prune — reclaim layers (prune --all needs the VM stopped).\n• pack create -o <out> — build a portable, self-contained .smolmachine executable; pack run — run one. machine create --from <artifact>.smolmachine for fast start.\n• serve start --listen <addr> — HTTP API server (POST/GET /api/v1/machines…); serve openapi — the spec.\n• config — manage registries + defaults.\n\nKEY FLAGS: --net (networking is OFF by default), --image <oci ref | ./archive.tar | ./rootfs/ | ->, -v HOST:GUEST[:ro] (mount; -v host:/workspace replaces the default workspace), -p HOST:GUEST (port), --gpu, --ssh-agent (forward host SSH agent; keys never enter the VM), --secret-env GUEST=HOST / --secret-file GUEST=/abs / -s Smolfile (inject secrets by reference), --from <artifact>, --cpus, --memory.\n\nDEFAULTS: network off; cpus 4; memory 8192 MiB; storage 20 GiB; name \"default\". Elastic memory/CPU via virtio balloon.\n\nNOT SUPPORTED OVER IPC: interactive sessions (-it / machine shell) and long-running serve (no attached TTY)."
       },
       {
-        "name": "smolmachines.help",
+        "name": "smol.version",
+        "summary": "Report the local smolvm engine version. This is `smolvm --version`."
+      },
+      {
+        "name": "smol.provision",
+        "summary": "Provision (or fetch) this Pilot user's proprietary smol cloud key and free credit balance. Runs automatically on install and on smol.help — you rarely call it directly. The key is bound to your Pilot identity, stored only in your app's private secrets, and used to push and isolate your cloud VMs. Returns {key, credits}."
+      },
+      {
+        "name": "smol.balance",
+        "summary": "Report your remaining smol cloud credit balance. Returns {credits}."
+      },
+      {
+        "name": "smol.push",
+        "summary": "Push a VM to the smol cloud as YOU (your provisioned key) and START it running. Provide either a local packed artifact (base64 of a `smolvm pack` output) OR an OCI `image` reference the cloud pulls; pass {\"net\":true} for outbound networking (off by default). BILLING: you must have credit to start (402 if empty); the running VM then drains your credit by REAL usage (CPU + memory + disk per the rate card in smol.help) and the broker STOPS it when your credit runs out. The machine is tagged as owned by you, so no other user can see or touch it. Returns the created machine."
+      },
+      {
+        "name": "smol.list",
+        "summary": "List YOUR smol cloud machines (only yours — the broker filters by owner). Free (no credit). Returns an array of machines."
+      },
+      {
+        "name": "smol.key",
+        "summary": "Get your current smol cloud key (the per-user credential bound to your Pilot identity). Idempotent — safe to call anytime. The key is also cached in your app's private secrets. Returns {key, credits}."
+      },
+      {
+        "name": "smol.rotate",
+        "summary": "Rotate your smol cloud key if it leaked. Your OLD key stops working immediately and a NEW key is issued — your credit and cloud machines are NOT affected (only the key changes). Returns {key, credits, rotated}."
+      },
+      {
+        "name": "smol.help",
         "summary": "Discovery: every method with params, kind, and latency class."
       }
     ],
@@ -1461,6 +1490,10 @@ export const apps: App[] = [
     ],
     "grants": [
       "fs.read:$APP/config.json",
+      "fs.read:$APP/secrets.json",
+      "fs.write:$APP/secrets.json",
+      "key.sign:self",
+      "net.dial:smol-broker.pilotprotocol.network",
       "proc.exec:smolvm",
       "fs.read:$APP/install.json",
       "fs.write:$APP",
@@ -1470,22 +1503,22 @@ export const apps: App[] = [
     "bundles": [
       {
         "platform": "darwin-arm64",
-        "bytes": 5132300
+        "bytes": 4861075
       },
       {
         "platform": "darwin-amd64",
-        "bytes": 5559992
+        "bytes": 4861075
       },
       {
         "platform": "linux-arm64",
-        "bytes": 5613453
+        "bytes": 5563230
       },
       {
         "platform": "linux-amd64",
-        "bytes": 5613453
+        "bytes": 5779278
       }
     ],
-    "installedBytes": 9140402,
+    "installedBytes": 9706567,
     "depends": [],
     "protection": "guarded",
     "featured": false,
@@ -1493,7 +1526,7 @@ export const apps: App[] = [
     "inCatalogue": true,
     "icon": {
       "mode": "image",
-      "img": "/appicons/io.pilot.smolmachines.png",
+      "img": "/appicons/io.pilot.smol.png",
       "fit": "cover",
       "pos": "center",
       "color": "#ffffff",
@@ -1501,7 +1534,7 @@ export const apps: App[] = [
       "file": null,
       "hue": 30
     },
-    "minPilotVersion": "1.0.0",
+    "minPilotVersion": "1.10.0",
     "runtimes": [
       "go"
     ],

@@ -403,13 +403,41 @@
 "summary": "Discovery: methods, params, and latency classes"
 }
 ],
-"io.pilot.smolmachines": [
+"io.pilot.smol": [
 {
-"name": "smolmachines.exec",
-"summary": "Run any smolvm subcommand in a fast, hardware-isolated Linux microVM. Payload is {\"args\":[...]} \u2014 the verbatim smolvm argv. Command surface: `machine run` (ephemeral VM, one-off command), `machine create|start|exec|stop|delete|shell|status|ls|cp|update|monitor|prune` (persistent VMs; `exec` persists filesystem changes), `pack create|run` (portable .smolmachine artifacts), `serve` (HTTP API), `config`. Key flags: `--net` (networking is OFF by default), `--image <oci|./archive.tar|->`, `-v HOST:GUEST`, `-p HOST:GUEST`, `--gpu`, `--ssh-agent`, `--secret-env GUEST=HOST`. Example args: [\"machine\",\"run\",\"--net\",\"--image\",\"alpine\",\"--\",\"sh\",\"-c\",\"echo hi\"]. Not supported over IPC: interactive sessions (-it / `machine shell`) and long-running `serve`."
+"name": "smol.exec",
+"summary": "Run ANY smolvm subcommand in a fast, hardware-isolated Linux microVM LOCALLY. Payload is {\"args\":[...]} (verbatim smolvm argv) with optional {\"stdin\":\"...\"}. This one method exposes the whole smolvm CLI \u2014 for the complete agent reference call smol.exec {\"args\":[\"--help\"]}, and for any subcommand call smol.exec {\"args\":[\"<group>\",\"--help\"]}.\n\nCOMMAND SURFACE:\n\u2022 machine run \u2014 create an EPHEMERAL VM, run one command, tear down (nothing persists). e.g. [\"machine\",\"run\",\"--net\",\"--image\",\"alpine\",\"--\",\"sh\",\"-c\",\"echo hi\"].\n\u2022 machine create | start | stop | delete \u2014 lifecycle of a PERSISTENT named VM (--name, default \"default\").\n\u2022 machine exec \u2014 run a command in a persistent VM; FILESYSTEM CHANGES PERSIST across sessions (package installs stick). e.g. [\"machine\",\"exec\",\"--name\",\"myvm\",\"--\",\"apk\",\"add\",\"python3\"].\n\u2022 machine status | ls | images | monitor \u2014 read-only introspection (do NOT stop a running VM).\n\u2022 machine cp \u2014 copy files host\u2194VM (HOST:GUEST). machine update \u2014 change mounts/ports/env/cpu/memory on a STOPPED VM. machine prune \u2014 reclaim layers (prune --all needs the VM stopped).\n\u2022 pack create -o <out> \u2014 build a portable, self-contained .smolmachine executable; pack run \u2014 run one. machine create --from <artifact>.smolmachine for fast start.\n\u2022 serve start --listen <addr> \u2014 HTTP API server (POST/GET /api/v1/machines\u2026); serve openapi \u2014 the spec.\n\u2022 config \u2014 manage registries + defaults.\n\nKEY FLAGS: --net (networking is OFF by default), --image <oci ref | ./archive.tar | ./rootfs/ | ->, -v HOST:GUEST[:ro] (mount; -v host:/workspace replaces the default workspace), -p HOST:GUEST (port), --gpu, --ssh-agent (forward host SSH agent; keys never enter the VM), --secret-env GUEST=HOST / --secret-file GUEST=/abs / -s Smolfile (inject secrets by reference), --from <artifact>, --cpus, --memory.\n\nDEFAULTS: network off; cpus 4; memory 8192 MiB; storage 20 GiB; name \"default\". Elastic memory/CPU via virtio balloon.\n\nNOT SUPPORTED OVER IPC: interactive sessions (-it / machine shell) and long-running serve (no attached TTY)."
 },
 {
-"name": "smolmachines.help",
+"name": "smol.version",
+"summary": "Report the local smolvm engine version. This is `smolvm --version`."
+},
+{
+"name": "smol.provision",
+"summary": "Provision (or fetch) this Pilot user's proprietary smol cloud key and free credit balance. Runs automatically on install and on smol.help \u2014 you rarely call it directly. The key is bound to your Pilot identity, stored only in your app's private secrets, and used to push and isolate your cloud VMs. Returns {key, credits}."
+},
+{
+"name": "smol.balance",
+"summary": "Report your remaining smol cloud credit balance. Returns {credits}."
+},
+{
+"name": "smol.push",
+"summary": "Push a VM to the smol cloud as YOU (your provisioned key) and START it running. Provide either a local packed artifact (base64 of a `smolvm pack` output) OR an OCI `image` reference the cloud pulls; pass {\"net\":true} for outbound networking (off by default). BILLING: you must have credit to start (402 if empty); the running VM then drains your credit by REAL usage (CPU + memory + disk per the rate card in smol.help) and the broker STOPS it when your credit runs out. The machine is tagged as owned by you, so no other user can see or touch it. Returns the created machine."
+},
+{
+"name": "smol.list",
+"summary": "List YOUR smol cloud machines (only yours \u2014 the broker filters by owner). Free (no credit). Returns an array of machines."
+},
+{
+"name": "smol.key",
+"summary": "Get your current smol cloud key (the per-user credential bound to your Pilot identity). Idempotent \u2014 safe to call anytime. The key is also cached in your app's private secrets. Returns {key, credits}."
+},
+{
+"name": "smol.rotate",
+"summary": "Rotate your smol cloud key if it leaked. Your OLD key stops working immediately and a NEW key is issued \u2014 your credit and cloud machines are NOT affected (only the key changes). Returns {key, credits, rotated}."
+},
+{
+"name": "smol.help",
 "summary": "Discovery: every method with params, kind, and latency class."
 }
 ],
@@ -792,34 +820,34 @@
 "summary": "Discovery: every method with its params, kind, and latency class \u2014 the self-describing contract."
 }
 ],
-  "io.pilot.orthogonal": [
-    {
-      "name": "orthogonal.search",
-      "summary": "★ Natural-language API router. Describe a task in plain English (prompt) and get back the ranked Orthogonal APIs + endpoints that can do it — grouped by API, each with slug, path, method and a 0–1 relevance score. FREE. Start here when you don't know which of the 851 endpoints to use, then price it with orthogonal.details and execute with orthogonal.run."
-    },
-    {
-      "name": "orthogonal.details",
-      "summary": "Full request schema (path/query/body params with types + required flags) AND the exact price in dollars for one endpoint. FREE. Call this before orthogonal.run to know the cost — it is the authoritative price source (prices are null in search/list). Price may be the string 'dynamic' for endpoints priced only after the call."
-    },
-    {
-      "name": "orthogonal.integrate",
-      "summary": "Ready-to-paste code snippets for one endpoint. FREE. format ∈ orth-sdk (default) | run-api | curl | x402-fetch | x402-python | all."
-    },
-    {
-      "name": "orthogonal.list",
-      "summary": "Browse the whole catalog — 58 APIs / 851 endpoints with descriptions and param schemas, paginated by limit/offset. FREE. Prices are null here; use orthogonal.details for the price of a specific endpoint."
-    },
-    {
-      "name": "orthogonal.run",
-      "summary": "★ Execute any of the 851 provider endpoints via a JSON payload {api, path, body?, query?} (the HTTP method is chosen automatically; body is the provider request body, query is its query-string params). THIS IS THE ONLY CALL THAT COSTS MONEY: you are billed the target endpoint's real price and it is debited from your $5 Pilot budget. The response returns priceCents (cents actually charged) alongside the provider data, and X-Pilot-Credits-Remaining shows your budget. Once your $5 is spent, run returns 402 while the free discovery calls keep working. Prices range $0.001–$3.50; 104 endpoints are 'dynamic' (priced only from the response) — check orthogonal.details first when you need the cost up front."
-    },
-    {
-      "name": "orthogonal.balance",
-      "summary": "YOUR remaining per-user budget on this app — returned by the broker from its own ledger as '$X.XX' plus credits_remaining (micro-USD; $5 = 5000000) and credits_seed. FREE, read-only, no upstream call. This is your personal budget, seeded at $5 on first use and debited by your own runs; the shared provider account's balance is never exposed. The same figure is on the X-Pilot-Credits-Remaining header of every response."
-    },
-    {
-      "name": "orthogonal.help",
-      "summary": "The self-describing discovery contract: every method with params, cost note, and latency class. Local, free, no backend call."
-    }
-  ]
+"io.pilot.orthogonal": [
+{
+"name": "orthogonal.search",
+"summary": "\u2605 Natural-language API router. Describe a task in plain English (prompt) and get back the ranked Orthogonal APIs + endpoints that can do it \u2014 grouped by API, each with slug, path, method and a 0\u20131 relevance score. FREE. Start here when you don't know which of the 851 endpoints to use, then price it with orthogonal.details and execute with orthogonal.run."
+},
+{
+"name": "orthogonal.details",
+"summary": "Full request schema (path/query/body params with types + required flags) AND the exact price in dollars for one endpoint. FREE. Call this before orthogonal.run to know the cost \u2014 it is the authoritative price source (prices are null in search/list). Price may be the string 'dynamic' for endpoints priced only after the call."
+},
+{
+"name": "orthogonal.integrate",
+"summary": "Ready-to-paste code snippets for one endpoint. FREE. format \u2208 orth-sdk (default) | run-api | curl | x402-fetch | x402-python | all."
+},
+{
+"name": "orthogonal.list",
+"summary": "Browse the whole catalog \u2014 58 APIs / 851 endpoints with descriptions and param schemas, paginated by limit/offset. FREE. Prices are null here; use orthogonal.details for the price of a specific endpoint."
+},
+{
+"name": "orthogonal.run",
+"summary": "\u2605 Execute any of the 851 provider endpoints via a JSON payload {api, path, body?, query?} (the HTTP method is chosen automatically; body is the provider request body, query is its query-string params). THIS IS THE ONLY CALL THAT COSTS MONEY: you are billed the target endpoint's real price and it is debited from your $5 Pilot budget. The response returns priceCents (cents actually charged) alongside the provider data, and X-Pilot-Credits-Remaining shows your budget. Once your $5 is spent, run returns 402 while the free discovery calls keep working. Prices range $0.001\u2013$3.50; 104 endpoints are 'dynamic' (priced only from the response) \u2014 check orthogonal.details first when you need the cost up front."
+},
+{
+"name": "orthogonal.balance",
+"summary": "YOUR remaining per-user budget on this app \u2014 returned by the broker from its own ledger as '$X.XX' plus credits_remaining (micro-USD; $5 = 5000000) and credits_seed. FREE, read-only, no upstream call. This is your personal budget, seeded at $5 on first use and debited by your own runs; the shared provider account's balance is never exposed. The same figure is on the X-Pilot-Credits-Remaining header of every response."
+},
+{
+"name": "orthogonal.help",
+"summary": "The self-describing discovery contract: every method with params, cost note, and latency class. Local, free, no backend call."
+}
+]
 }
