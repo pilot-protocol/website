@@ -1,7 +1,9 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>Every encryption library is a dependency. Every dependency is an attack surface. When OpenSSL disclosed Heartbleed in 2014, it affected an estimated 17% of all TLS servers on the internet -- not because of a flaw in the cryptographic algorithms, but because of a buffer over-read in a library that virtually every project imported without auditing. The <a href="https://xz.tukaani.org/xz-utils/" target="_blank" rel="noopener">xz Utils backdoor</a> in 2024 demonstrated that even compression libraries can become supply chain weapons when a determined attacker gains commit access.</p>
+const bodyContent = `<p>Pilot Protocol implements its entire encryption stack -- X25519 key exchange plus AES-256-GCM authenticated encryption -- using nothing but Go's standard library. No OpenSSL, no libsodium, no third-party crypto module. This article shows exactly how that implementation works: the key exchange code, the wire format, nonce handling, and the security properties you get as a result.</p>
+
+  <p>Every encryption library is a dependency. Every dependency is an attack surface. When OpenSSL disclosed Heartbleed in 2014, it affected a large share of TLS servers on the internet -- not because of a flaw in the cryptographic algorithms, but because of a buffer over-read in a library that virtually every project imported without auditing. The <a href="https://xz.tukaani.org/xz-utils/" target="_blank" rel="noopener">xz Utils backdoor</a> in 2024 demonstrated that even compression libraries can become supply chain weapons when a determined attacker gains commit access.</p>
 
   <p>For AI agents, the stakes are higher. Agents exchange model parameters, training data, task instructions, and coordination messages. They often run unattended, without a human to notice when something looks wrong. If the encryption library they depend on is compromised, every message between every agent in the fleet is exposed -- silently, at scale.</p>
 
@@ -267,14 +269,38 @@ Message delivered</code></pre>
     <p>End-to-end encryption for AI agents with zero external dependencies. X25519 key exchange, AES-256-GCM authenticated encryption, and forward secrecy -- all built on Go's standard library.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
+
+const faqItems = [
+  {
+    question: "How does X25519 + AES-GCM encryption work without external dependencies?",
+    answer: "Pilot Protocol uses Go's crypto/ecdh package for X25519 key exchange and crypto/aes plus crypto/cipher for AES-256-GCM authenticated encryption. Both are part of Go's standard library, maintained by the Go team, so there is no OpenSSL, libsodium, or third-party crypto module in the dependency tree.",
+  },
+  {
+    question: "What is X25519 key exchange used for?",
+    answer: "X25519 (RFC 7748) is an elliptic curve Diffie-Hellman function that lets two agents derive a shared secret from ephemeral key pairs without ever transmitting the secret itself. Pilot Protocol generates a fresh X25519 key pair for every tunnel, which provides forward secrecy: compromising one session's keys does not expose any other session.",
+  },
+  {
+    question: "Why use AES-256-GCM instead of AES-CBC or another mode?",
+    answer: "AES-256-GCM is an authenticated encryption mode, so it provides confidentiality and integrity in one pass -- any tampering with a packet is detected and the packet is discarded. It is the same cipher suite TLS 1.3 uses for HTTPS traffic, and Go's crypto/cipher implementation includes AES-NI hardware acceleration.",
+  },
+  {
+    question: "How does Pilot Protocol prevent nonce reuse in AES-GCM?",
+    answer: "Each connection gets a random 4-byte nonce prefix from crypto/rand, combined with an 8-byte monotonic counter that increments on every packet. This two-part construction means nonces never repeat within a connection, and different connections use different prefixes even if a key were ever reused.",
+  },
+  {
+    question: "Why not just use TLS for AI agent encryption?",
+    answer: "Standard TLS runs over TCP and depends on X.509 certificate issuance and revocation, which is operationally heavy for a fleet of ephemeral agents. Pilot Protocol runs over UDP and uses ephemeral X25519 keys with no certificates, avoiding the certificate lifecycle and the larger dependency surface that crypto/tls brings in (ASN.1 parsing, X.509 validation, cipher suite negotiation).",
+  },
+];
 ---
 <BlogLayout
-  title="Zero-Dependency Encryption: X25519 + AES-GCM"
-  description="How Pilot Protocol implements end-to-end encryption without a single external dependency. Pure Go cryptography."
+  title="X25519 + AES-GCM Encryption: Zero-Dependency Go Implementation Guide"
+  description="How to implement X25519 key exchange and AES-256-GCM encryption in Go with zero external dependencies -- full code, wire format, and security guarantees."
   date="February 12, 2026"
   tags={["cryptography", "security", "go"]}
   canonicalPath="/blog/zero-dependency-encryption-x25519-aes-gcm"
   bannerImage="/blog/banners/zero-dependency-encryption-x25519-aes-gcm.webp"
+  faqItems={faqItems}
 >
   <Fragment set:html={bodyContent} />
 </BlogLayout>
