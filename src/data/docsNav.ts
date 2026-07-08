@@ -20,6 +20,10 @@ export const docsNav: NavItem[] = [
     icon: '<svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>' },
   { label: 'Python SDK', href: '/docs/python-sdk', slug: 'python-sdk',
     icon: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 4.69 2 8v2c0 3.31 4.48 6 10 6s10-2.69 10-6V8c0-3.31-4.48-6-10-6z"/><path d="M2 14v2c0 3.31 4.48 6 10 6s10-2.69 10-6v-2"/></svg>' },
+  { label: 'Node.js SDK', href: '/docs/node-sdk', slug: 'node-sdk',
+    icon: '<svg viewBox="0 0 24 24"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 22V12"/><path d="M3 7l9 5 9-5"/></svg>' },
+  { label: 'Swift SDK', href: '/docs/swift-sdk', slug: 'swift-sdk',
+    icon: '<svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>' },
   { label: 'SDK Parity', href: '/docs/sdk-parity', slug: 'sdk-parity',
     icon: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>' },
   // Features
@@ -48,7 +52,9 @@ export const docsNav: NavItem[] = [
   { label: 'Consent & Privacy', href: '/docs/consent', slug: 'consent',
     icon: '<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>' },
   // Enterprise
-  { section: 'Enterprise', label: 'Enterprise Overview', href: '/docs/enterprise', slug: 'enterprise',
+  { section: 'Enterprise', label: 'Security', href: '/docs/security', slug: 'security',
+    icon: '<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>' },
+  { label: 'Enterprise Overview', href: '/docs/enterprise', slug: 'enterprise',
     icon: '<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>' },
   { label: 'RBAC & Access Control', href: '/docs/enterprise-rbac', slug: 'enterprise-rbac',
     icon: '<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>' },

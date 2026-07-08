@@ -1,0 +1,70 @@
+---
+import DocLayout from "../../layouts/DocLayout.astro";
+import PageNav from "../../components/PageNav.astro";
+---
+<DocLayout
+  title="Swift SDK"
+  description="End-to-end-encrypted P2P messaging for iOS and macOS apps — an embedded Pilot daemon inside an XCFramework, no separate process."
+  activePage="swift-sdk"
+  canonicalPath="/docs/swift-sdk"
+  prev={{ label: "SDK Parity", href: "/docs/sdk-parity" }}
+  next={{ label: "Messaging", href: "/docs/messaging" }}
+>
+<h1>Swift SDK</h1>
+  <p class="subtitle">A real Pilot node inside your iOS or macOS app — embedded daemon, no separate process, sandbox-clean.</p>
+
+  <div class="toc">
+    <h4>On this page</h4>
+    <ul>
+      <li><a href="#what">What you get</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#quickstart">Quick start</a></li>
+    </ul>
+  </div>
+
+  <h2 id="what">What you get</h2>
+
+  <ul>
+    <li>Ed25519 identity, generated on first launch and persisted to your app's <code>dataDir</code></li>
+    <li>Registration with the Pilot registry and the mutual-trust handshake</li>
+    <li>Encrypted UDP tunnels (X25519 + AES-256-GCM), NAT-traversed via beacons</li>
+    <li>Application-level <code>send</code> / <code>receive</code> — the same wire protocol the desktop <code>pilot-daemon</code> speaks</li>
+  </ul>
+
+  <p>The daemon is compiled to a static library inside an <code>XCFramework</code>; your app links it and calls a Swift API. Requires iOS 14+ or macOS 12+, Swift 5.9+.</p>
+
+  <h2 id="install">Install</h2>
+
+  <pre><code>dependencies: [
+    .package(url: "https://github.com/pilot-protocol/sdk-swift.git", from: "0.1.0"),
+],
+targets: [
+    .target(name: "YourApp", dependencies: [
+        .product(name: "Pilot", package: "sdk-swift"),
+    ]),
+]</code></pre>
+
+  <p>Or in Xcode: <strong>File → Add Package Dependencies…</strong> and paste the repo URL.</p>
+
+  <h2 id="quickstart">Quick start</h2>
+
+  <pre><code><span class="cmd">import</span> Pilot
+
+<span class="comment">// Start the embedded daemon (no separate process needed).</span>
+<span class="cmd">let</span> pilot = <span class="cmd">try</span> Pilot.start(.init(
+    dataDir: dataDir,
+    socketPath: "p.sock",
+    trustAutoApprove: <span class="cmd">true</span>,
+    keepaliveSeconds: 30
+))
+print("address=\(pilot.start.address)")
+
+<span class="comment">// Handshake, then send once trusted:</span>
+<span class="cmd">try</span> pilot.handshake(peerID: 12345, justification: "hello")
+_ = <span class="cmd">try</span> pilot.waitForTrust(peerID: 12345, timeoutMs: 30_000)
+<span class="cmd">try</span> pilot.send(to: "0:0000.0000.AAAA", port: 7777, data: Data("hi".utf8))</code></pre>
+
+  <p>Full API and examples: <a href="https://github.com/pilot-protocol/sdk-swift">pilot-protocol/sdk-swift</a>. Where the three SDKs differ, see <a href="sdk-parity">SDK Parity</a>.</p>
+
+  <PageNav prev={{ label: "SDK Parity", href: "/docs/sdk-parity" }} next={{ label: "Messaging", href: "/docs/messaging" }} />
+</DocLayout>
