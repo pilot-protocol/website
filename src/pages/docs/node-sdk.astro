@@ -1,0 +1,62 @@
+---
+import DocLayout from "../../layouts/DocLayout.astro";
+import PageNav from "../../components/PageNav.astro";
+---
+<DocLayout
+  title="Node.js SDK"
+  description="Node.js / TypeScript client for the Pilot overlay — permanent addresses, encrypted P2P channels, and the trust model from JavaScript."
+  activePage="node-sdk"
+  canonicalPath="/docs/node-sdk"
+  prev={{ label: "Python SDK", href: "/docs/python-sdk" }}
+  next={{ label: "SDK Parity", href: "/docs/sdk-parity" }}
+>
+<h1>Node.js SDK</h1>
+  <p class="subtitle">Talk to the Pilot daemon from Node.js or TypeScript — full type definitions included.</p>
+
+  <div class="toc">
+    <h4>On this page</h4>
+    <ul>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#quickstart">Quick start</a></li>
+      <li><a href="#api">API surface</a></li>
+    </ul>
+  </div>
+
+  <h2 id="install">Install</h2>
+
+  <pre><code><span class="cmd">npm</span> install pilotprotocol</code></pre>
+
+  <p>The SDK talks to a local <code>pilot-daemon</code> over a Unix domain socket through a pre-built <code>libpilot</code> shared library, pulled automatically as a platform-specific optional dependency (macOS arm64/x64, Linux arm64/x64; Windows is experimental). The <code>pilotctl</code>, <code>pilot-daemon</code>, and <code>pilot-updater</code> CLIs ship as <code>bin</code> entries, so <code>npx pilotctl daemon start</code> works out of the box.</p>
+
+  <h2 id="quickstart">Quick start</h2>
+
+  <p>Make sure a <a href="getting-started#install">daemon is running</a>, then:</p>
+
+  <pre><code><span class="cmd">import</span> &#123; Driver &#125; <span class="cmd">from</span> 'pilotprotocol';
+
+<span class="cmd">const</span> driver = <span class="cmd">new</span> Driver();
+<span class="cmd">const</span> info = driver.info();
+console.log(`address=$&#123;info.address&#125;`);
+
+driver.setHostname('my-node-agent');
+
+<span class="cmd">const</span> peer = driver.resolveHostname('other-agent');
+<span class="cmd">const</span> conn = driver.dial(`$&#123;peer.address&#125;:1000`);
+conn.write(Buffer.from('hello'));
+<span class="cmd">const</span> data = conn.read(4096);
+conn.close();
+driver.close();</code></pre>
+
+  <h2 id="api">API surface</h2>
+
+  <ul>
+    <li><code>Driver</code> — connection to the local daemon: <code>info</code>, <code>setHostname</code>, <code>setVisibility</code>, <code>setTags</code>, <code>resolveHostname</code>, <code>handshake</code>, <code>approveHandshake</code>, <code>dial</code>, <code>listen</code>, <code>sendTo</code>, <code>recvFrom</code></li>
+    <li><code>Conn</code> — bidirectional stream from <code>dial</code> / <code>Listener.accept</code>: <code>read</code>, <code>write</code>, <code>close</code></li>
+    <li><code>Listener</code> — server-side stream listener: <code>accept</code>, <code>close</code></li>
+    <li><code>PilotError</code> — thrown for any daemon-side error</li>
+  </ul>
+
+  <p>Examples (echo service, stream client/server, datagrams, messaging) live in the repo: <a href="https://github.com/pilot-protocol/sdk-node">pilot-protocol/sdk-node</a>. Where the three SDKs differ, see <a href="sdk-parity">SDK Parity</a>.</p>
+
+  <PageNav prev={{ label: "Python SDK", href: "/docs/python-sdk" }} next={{ label: "SDK Parity", href: "/docs/sdk-parity" }} />
+</DocLayout>
