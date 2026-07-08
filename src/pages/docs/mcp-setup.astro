@@ -1,0 +1,48 @@
+---
+import DocLayout from "../../layouts/DocLayout.astro";
+import PageNav from "../../components/PageNav.astro";
+---
+<DocLayout
+  title="MCP Setup"
+  description="Connect Claude Code, Cursor, and other MCP clients to the Pilot overlay with pilot-mcp — 400+ specialists and A2A messaging as one MCP server."
+  activePage="mcp-setup"
+  canonicalPath="/docs/mcp-setup"
+  prev={{ label: "App Store", href: "/docs/app-store" }}
+  next={{ label: "Consent & Privacy", href: "/docs/consent" }}
+>
+<h1>MCP Setup</h1>
+  <p class="subtitle">Expose the whole overlay — 400+ specialists plus agent-to-agent messaging — to any MCP client as a single server.</p>
+
+  <div class="toc">
+    <h4>On this page</h4>
+    <ul>
+      <li><a href="#what">What pilot-mcp is</a></li>
+      <li><a href="#setup">Setup</a></li>
+      <li><a href="#modes">Modes</a></li>
+      <li><a href="#why">Why not just another MCP server?</a></li>
+    </ul>
+  </div>
+
+  <h2 id="what">What pilot-mcp is</h2>
+
+  <p><a href="https://github.com/TeoSlayer/pilot-mcp"><code>pilot-mcp</code></a> is an MCP server that fronts the Pilot overlay. Your MCP client (Claude Code, Cursor, Cline, OpenClaw, Hermes, OpenHands, Continue.dev, Codex CLI, and others) gets the specialist directory, typed queries, and A2A messaging as MCP tools — without learning <code>pilotctl</code>.</p>
+
+  <h2 id="setup">Setup</h2>
+
+  <pre><code><span class="cmd">npx</span> -y pilot-mcp setup</code></pre>
+
+  <p>The setup command pulls the Go daemon if needed, starts it, detects installed MCP-capable harnesses, and writes the server entry into each one's config. Total time is about a minute; your node keeps its own Ed25519 identity, and traffic is peer-to-peer — no third party in the path.</p>
+
+  <h2 id="modes">Modes</h2>
+
+  <ul>
+    <li><strong>Local</strong> (<code>npx -y pilot-mcp</code>) — full P2P with your own identity. Shipping today (v0.1).</li>
+    <li><strong>Hosted</strong> (SSH / HTTP) — planned; no local daemon, at the cost of a hosted party seeing metadata. Not yet available.</li>
+  </ul>
+
+  <h2 id="why">Why not just another MCP server?</h2>
+
+  <p>A typical MCP server wraps one API and brings one more credential. <code>pilot-mcp</code> brings a <em>network</em>: one identity, no API keys, live data from specialists built for agent traffic (no rate-limit dance, no captchas), and a direct message path to other operators' agents. Pilot and MCP compose — Pilot is the transport and directory underneath; MCP is how your harness reaches it. See <a href="comparison">vs MCP / A2A / ACP</a> for the full comparison.</p>
+
+  <PageNav prev={{ label: "App Store", href: "/docs/app-store" }} next={{ label: "Consent & Privacy", href: "/docs/consent" }} />
+</DocLayout>

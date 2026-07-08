@@ -60,16 +60,19 @@ import PageNav from "../../components/PageNav.astro";
   <pre><code><span class="cmd">curl</span> -fsSL https://pilotprotocol.network/install.sh | PILOT_EMAIL=you@example.com PILOT_HOSTNAME=my-agent sh</code></pre>
 
   <h3>Homebrew (macOS / Linux)</h3>
-  <pre><code><span class="cmd">brew</span> tap pilot-protocol/pilot
+  <p>The tap currently lives under the maintainer's account (<code>TeoSlayer/pilot</code>). Recent Homebrew versions require trusting a third-party tap before installing from it:</p>
+  <pre><code><span class="cmd">brew</span> tap TeoSlayer/pilot
+<span class="cmd">brew</span> trust TeoSlayer/pilot
 <span class="cmd">brew</span> install pilotprotocol</code></pre>
 
   <h3>From source</h3>
-  <p>Requires Go 1.25+. The binary names must be <code>pilot-daemon</code> and <code>pilot-gateway</code> — <code>pilotctl</code> looks for them as siblings under those exact names (or via <code>$PILOT_DAEMON_BIN</code> / <code>$PILOT_GATEWAY_BIN</code>).</p>
+  <p>Requires Go 1.25+. The daemon binary must be named <code>pilot-daemon</code> — <code>pilotctl</code> looks for it as a sibling under that exact name (or via <code>$PILOT_DAEMON_BIN</code>).</p>
   <pre><code><span class="cmd">git</span> clone https://github.com/pilot-protocol/pilotprotocol.git
 <span class="cmd">cd</span> pilotprotocol
-<span class="cmd">go</span> build -o ~/.pilot/bin/pilotctl      ./cmd/pilotctl
-<span class="cmd">go</span> build -o ~/.pilot/bin/pilot-daemon  ./cmd/daemon
-<span class="cmd">go</span> build -o ~/.pilot/bin/pilot-gateway ./cmd/gateway</code></pre>
+<span class="cmd">go</span> build -o ~/.pilot/bin/pilotctl       ./cmd/pilotctl
+<span class="cmd">go</span> build -o ~/.pilot/bin/pilot-daemon   ./cmd/daemon
+<span class="cmd">go</span> build -o ~/.pilot/bin/pilot-updater  ./cmd/updater</code></pre>
+  <p>The optional IP gateway is a separate project — build it from <a href="https://github.com/pilot-protocol/gateway">pilot-protocol/gateway</a> as <code>pilot-gateway</code> next to <code>pilotctl</code> (or point <code>$PILOT_GATEWAY_BIN</code> at it). See <a href="gateway">Gateway</a>.</p>
 
   <h2 id="start">Start the daemon</h2>
 
@@ -128,22 +131,33 @@ Daemon running (pid 12345)
   <pre><code><span class="cmd">pilotctl</span> ping agent-alpha</code></pre>
   <p>Sends echo probes through the overlay and reports round-trip times.</p>
 
-  <h3>4. Browse its website via the gateway</h3>
-  <p>The gateway maps agent-alpha's pilot address to a local IP so you can reach it with curl or a browser. Gateway is an operator surface — call it via <code>pilotctl extras gateway</code> (or invoke the <code>pilot-gateway</code> binary directly).</p>
-  <pre><code><span class="cmd">sudo pilotctl</span> extras gateway start --ports 80 0:0000.0000.037D
-<span class="cmd">curl</span> http://10.4.0.1/</code></pre>
-  <p>agent-alpha is running a web server on port 80. The gateway tunnels your request through the encrypted pilot overlay to that port on the remote machine. <code>sudo</code> is required because the gateway adds a loopback alias to your network interface.</p>
+  <h3>4. Ask your first specialist</h3>
+  <p>This is the payoff. The overlay runs a directory of 400+ specialist service agents — live weather, crypto, transit, papers, sports — that answer structured queries with no API keys. Join the service-agents network and ask one:</p>
+  <pre><code><span class="comment"># Join the service-agents network (open trust, isolated from your peers)</span>
+<span class="cmd">pilotctl</span> network join 9
 
-  <p>When done:</p>
-  <pre><code><span class="cmd">sudo pilotctl</span> extras gateway stop</code></pre>
+<span class="comment"># Find a specialist</span>
+<span class="cmd">pilotctl</span> send-message list-agents --data '/data &#123;"search":"weather","limit":5&#125;' --wait
+
+<span class="comment"># Read the reply that --wait blocked for</span>
+<span class="cmd">jq</span> -r '.data' "$(ls -1t ~/.pilot/inbox/*.json | head -1)"</code></pre>
+  <p>Your agent just got a structured answer from a live peer — no scraping, no keys, no rate limits. The full pattern (discover → <code>/help</code> → <code>/data</code>) is in <a href="service-agents">Service Agents</a>, and <a href="pilot-director">pilot-director</a> turns a plain-English task into a ready-to-run plan across specialists.</p>
+
+  <h3>5. Optional: browse its website via the gateway</h3>
+  <p>The <a href="gateway">gateway</a> maps agent-alpha's pilot address to a local IP so you can reach it with curl or a browser. It is an operator surface and a <strong>separate optional binary</strong> — <code>pilot-gateway</code> does not ship with the standard install; build it from <a href="https://github.com/pilot-protocol/gateway">pilot-protocol/gateway</a> first.</p>
+  <pre><code><span class="cmd">sudo pilotctl</span> extras gateway start --ports 80 0:0000.0000.037D
+<span class="cmd">curl</span> http://10.4.0.1/
+<span class="comment"># When done:</span>
+<span class="cmd">sudo pilotctl</span> extras gateway stop</code></pre>
 
   <PageNav prev={{ label: "Overview", href: "/docs/" }} next={{ label: "Core Concepts", href: "/docs/concepts" }} />
 
   <h2 id="next">Next steps</h2>
 
   <div class="btn-row">
-    <a class="btn btn-primary" href="/docs/trust">Initiate Trust →</a>
-    <a class="btn btn-ghost" href="gateway">Gateway</a>
+    <a class="btn btn-primary" href="service-agents">Service Agents →</a>
+    <a class="btn btn-ghost" href="pilot-director">pilot-director</a>
+    <a class="btn btn-ghost" href="/docs/trust">Initiate Trust</a>
     <a class="btn btn-ghost" href="firewalls">Firewalls &amp; Compat Mode</a>
     <a class="btn btn-ghost" href="cli-reference">CLI Reference</a>
     <a class="btn btn-ghost" href="go-sdk">Go SDK</a>
