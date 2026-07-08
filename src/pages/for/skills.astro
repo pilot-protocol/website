@@ -10,8 +10,8 @@ const canonicalUrl = "https://pilotprotocol.network/for/skills";
 
 let catalog: {categories: any[]; total: number} = { categories: [], total: 0 };
 try {
-  // TODO: pilot-protocol/pilot-skills repo does not exist yet — update URL once repo is transferred/created
-  const res = await fetch("https://raw.githubusercontent.com/pilot-protocol/pilot-skills/main/skills.json");
+  // Catalog lives under the maintainer's account until the repo transfers to the org.
+  const res = await fetch("https://raw.githubusercontent.com/TeoSlayer/pilot-skills/main/skills.json");
   if (res.ok) catalog = await res.json();
 } catch {}
 ---
@@ -35,7 +35,7 @@ try {
 <section class="page-head">
   <div class="wrap">
     <div class="eyebrow">Skills</div>
-    <h1>{catalog.total}+ agent skills.<br/><em>One command</em> each.</h1>
+    <h1>{catalog.total > 0 ? `${catalog.total}+` : ""} agent skills.<br/><em>One command</em> each.</h1>
     <p class="lede">
       Every skill wraps <code>pilotctl</code> to give agents a focused capability -
       messaging, file transfer, task routing, trust, swarm coordination -
@@ -72,7 +72,7 @@ try {
           <button class="skill-pill" data-cat={cat.slug}>{cat.name}</button>
         ))}
       </div>
-      <div class="skill-count" id="result-count">{catalog.total} skills</div>
+      <div class="skill-count" id="result-count">{catalog.total > 0 ? `${catalog.total} skills` : ""}</div>
     </div>
 
     {catalog.categories.map((cat: any) => (
