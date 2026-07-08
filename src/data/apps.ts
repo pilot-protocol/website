@@ -2348,7 +2348,7 @@ export const apps: App[] = [
     "id": "io.pilot.didit",
     "name": "Didit",
     "tagline": "One API for identity and fraud \u2014 KYC, liveness, face match, AML, and more, with a no-broker key you mint in one call.",
-    "description": "**Didit is one API for identity and fraud** \u2014 KYC/ID verification, liveness, face match, AML screening, proof of address, database validation, and email/phone OTP, wrapped as a single Pilot app. It fronts Didit's full platform: **hosted verification sessions**, reusable **workflows**, **users**, **billing**, **blocklists**, **questionnaires**, and **webhooks** \u2014 40 methods in all.\n\n## No broker \u2014 your own key, minted in two calls\n\nUnlike managed apps, this app holds **no shared key** and routes through **no Pilot broker**. Instead it self-provisions a Didit account that is entirely *yours*, keyed by *your* email:\n\n1. **`didit.signup` `{email}`** registers you with Didit; Didit emails your inbox a 6-character code. (Use a real inbox \u2014 Didit rejects disposable mailboxes. The account email + password are cached locally so the account stays recoverable.)\n2. **`didit.verify` `{code}`** confirms the code and writes the returned `api_key` to `$APP/secrets.json`.\n\nAfter that, **every other method sends your key as `x-api-key` automatically** \u2014 you never handle it. Verifications bill to **your** Didit balance (top up with `didit.billing_topup`); Pilot adds no markup and sees no credentials. Each new account includes Didit's **500 free full-KYC checks/month**, and account creation, management, sessions CRUD, users, billing, blocklists, questionnaires and webhooks are all **free** \u2014 you only pay per verification you actually run.\n\n## The fast path\n\n1. `didit.signup` `{email:\"you@example.com\"}` \u2192 check that inbox for the code.\n2. `didit.verify` `{code:\"A3K9F2\"}` \u2192 your key is cached.\n3. `didit.create_workflow` `{workflow_label:\"KYC\", features:[{feature:\"OCR\"},{feature:\"LIVENESS\"},{feature:\"FACE_MATCH\"}]}` \u2192 get `uuid`.\n4. `didit.create_session` `{workflow_id, vendor_data:\"user-123\"}` \u2192 send the user to the returned `url`.\n5. `didit.get_decision` `{session_id}` (or a webhook) \u2192 read the Approved/Declined result and extracted data.\n\n## What each area does\n\n- **Sessions** \u2014 hosted flows where the user completes verification at a Didit URL, so you never handle document images: `create_session`, `get_decision`, `list_sessions`, `update_session_status` (approve/decline/resubmit), `delete_session`, `batch_delete_sessions`, `share_session` / `import_session` (B2B KYC reuse), `list_reviews`, `create_review`.\n- **Workflows** \u2014 templates built from an ordered `features` array (`OCR`, `LIVENESS`, `FACE_MATCH`, `AML`, `PROOF_OF_ADDRESS`, `PHONE_VERIFICATION`, `EMAIL_VERIFICATION`, `DATABASE_VALIDATION`, `IP_ANALYSIS`, `AGE_ESTIMATION`, `NFC`, `QUESTIONNAIRE`, `KYB_*`), each with an optional per-feature `config`: `create_workflow`, `list_workflows`, `get_workflow`, `update_workflow`, `delete_workflow`.\n- **Standalone checks (JSON, no session)** \u2014 `aml` (sanctions/PEP/adverse-media, $0.20), `database_validation` (gov sources, from $0.05).\n- **Contact** \u2014 `email_send`/`email_check` ($0.03) and `phone_send`/`phone_check` (from $0.03) OTP verification.\n- **Billing** \u2014 `billing_balance`, `billing_topup` (Stripe checkout URL).\n- **Governance** \u2014 `blocklist_*` (auto-flag repeat faces/docs/phones/emails), `questionnaire_*` (custom forms), `users_*` (people grouped by your `vendor_data`), `get_webhook`/`update_webhook` (set + rotate the HMAC secret programmatically).\n\n## Pricing\n\nPay-per-check on **your** Didit balance \u2014 no Pilot markup. See the full rate card in `didit.help`. Highlights: full KYC bundle **$0.33/check** (first **500/month free**), ID verification $0.15, passive liveness $0.10, face match $0.05, **face search free**, AML $0.20, PoA $0.20, email/phone from $0.03. Image-upload APIs (direct ID scan, liveness, face match, face search, age estimation, PoA) run through the **hosted session** flow rather than as direct methods.\n\n## Notes\n\n- Two hosts, one app: signup uses `apx.didit.me`; everything else uses `verification.didit.me`. The adapter only ever dials Didit and the temp-mail provider used for the one-time OTP.\n- Plain request/response REST \u2014 no websockets, no async jobs. Rate limits: ~600 session-creates/min, 300/min per other method; the account OTP register is 5/IP/hour.\n- Errors surface verbatim: `401` (run `didit.signup` first), `403` (top up credits), `429` (back off).\n",
+    "description": "**Didit is one API for identity and fraud** \u2014 KYC/ID verification, liveness, face match, AML screening, proof of address, database validation, and email/phone OTP, wrapped as a single Pilot app. It fronts Didit's full platform: **hosted verification sessions**, reusable **workflows**, **users**, **billing**, **blocklists**, **questionnaires**, and **webhooks** \u2014 40 methods in all.\n\n## Your own key, minted in one call \u2014 no email, no code\n\nThe hard part of using an identity provider is usually onboarding: signing up, confirming an email code, and wiring the key. This app removes all of it. **`didit.signup` takes no arguments** and returns a working key:\n\n- It signs a keyless request (your Pilot identity) to Pilot's Didit broker. The broker provisions a mailbox on Pilot infrastructure, registers a Didit account, reads Didit's one-time email code **server-side**, verifies it, and hands back your account's `api_key`.\n- The adapter caches `{email, api_key}` to `$APP/secrets.json`. From then on **every other method sends your key as `x-api-key` automatically** \u2014 you never see an inbox, a code, or the key unless you ask (`didit.account`).\n- **Idempotent:** the broker mints at most one Didit account per Pilot identity, so a repeat call \u2014 or a fresh install on another machine \u2014 returns the *same* account. The account is entirely **yours**: verifications bill to **your** Didit balance (top up with `didit.billing_topup`), and Pilot adds no markup. Each account includes Didit's **500 free full-KYC checks/month**; account creation, management, sessions CRUD, users, billing, blocklists, questionnaires and webhooks are all **free** \u2014 you pay only per verification you run.\n\n## The fast path\n\n1. `didit.signup {}` \u2192 your key is cached (one call, ~5s, no email).\n2. `didit.create_workflow` `{workflow_label:\"KYC\", features:[{feature:\"OCR\"},{feature:\"LIVENESS\"},{feature:\"FACE_MATCH\"}]}` \u2192 get `uuid`.\n3. `didit.create_session` `{workflow_id, vendor_data:\"user-123\"}` \u2192 send the user to the returned `url`.\n4. `didit.get_decision` `{session_id}` (or a webhook) \u2192 read the Approved/Declined result and extracted data.\n\n`didit.account` returns your provisioned email + key any time.\n\n## What each area does\n\n- **Sessions** \u2014 hosted flows where the user completes verification at a Didit URL, so you never handle document images: `create_session`, `get_decision`, `list_sessions`, `update_session_status` (approve/decline/resubmit), `delete_session`, `batch_delete_sessions`, `share_session` / `import_session` (B2B KYC reuse), `list_reviews`, `create_review`.\n- **Workflows** \u2014 templates built from an ordered `features` array (`OCR`, `LIVENESS`, `FACE_MATCH`, `AML`, `PROOF_OF_ADDRESS`, `PHONE_VERIFICATION`, `EMAIL_VERIFICATION`, `DATABASE_VALIDATION`, `IP_ANALYSIS`, `AGE_ESTIMATION`, `NFC`, `QUESTIONNAIRE`, `KYB_*`), each with an optional per-feature `config`: `create_workflow`, `list_workflows`, `get_workflow`, `update_workflow`, `delete_workflow`.\n- **Standalone checks (JSON, no session)** \u2014 `aml` (sanctions/PEP/adverse-media, $0.20), `database_validation` (gov sources, from $0.05).\n- **Contact** \u2014 `email_send`/`email_check` ($0.03) and `phone_send`/`phone_check` (from $0.03) OTP verification.\n- **Billing** \u2014 `billing_balance`, `billing_topup` (Stripe checkout URL).\n- **Governance** \u2014 `blocklist_*` (auto-flag repeat faces/docs/phones/emails), `questionnaire_*` (custom forms), `users_*` (people grouped by your `vendor_data`), `get_webhook`/`update_webhook` (set + rotate the HMAC secret programmatically).\n\n## Pricing\n\nPay-per-check on **your** Didit balance \u2014 no Pilot markup. See the full rate card in `didit.help`. Highlights: full KYC bundle **$0.33/check** (first **500/month free**), ID verification $0.15, passive liveness $0.10, face match $0.05, **face search free**, AML $0.20, PoA $0.20, email/phone from $0.03. Image-upload APIs (direct ID scan, liveness, face match, face search, age estimation, PoA) run through the **hosted session** flow rather than as direct methods.\n\n## Notes\n\n- The adapter dials exactly two hosts: Pilot's broker (`broker.pilotprotocol.network`) for the one-call `didit.signup`, and Didit (`verification.didit.me`) for every operational call with your cached key. It holds no shared secret; the broker signs you in, then steps out of the data path.\n- Plain request/response REST \u2014 no websockets, no async jobs. Rate limits: ~600 session-creates/min, 300/min per other method; the account OTP register is 5/IP/hour.\n- Errors surface verbatim: `401` (run `didit.signup` first), `403` (top up credits), `429` (back off).\n",
     "categories": [
       "security"
     ],
@@ -2379,11 +2379,11 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "didit.signup",
-        "summary": "STEP 1 of 2 \u2014 create a Didit account. Pass YOUR email; Didit emails it a 6-character one-time code. No broker: this hits Didit's programmatic register endpoint (POST /programmatic/register/) directly and caches the account email + password to $APP/secrets.json so the account stays recoverable. It does NOT return an API key \u2014 Didit only issues the key after you confirm the code. Then call didit.verify with that code. Why your own email (not a throwaway): Didit suppresses disposable mailboxes, so the code must land in an inbox you control. FREE \u2014 account creation costs nothing; you pay only per verification you run, and each new account includes Didit's 500 free full-KYC checks/month. Register is rate-limited to 5 attempts per IP per hour. Password is optional (a strong one is generated and cached if omitted)."
+        "summary": "Get your own Didit API key in ONE call \u2014 no email, no code, no human step. This signs a keyless request to Pilot's Didit broker, which provisions a mailbox on Pilot infrastructure, registers a Didit account, reads the emailed one-time code server-side, verifies it, and returns your account's api_key. The adapter caches {email, api_key} to $APP/secrets.json, and from then on EVERY other didit.* method authenticates automatically (x-api-key) \u2014 you never handle the key or an inbox. Idempotent: the broker mints at most one account per Pilot identity, so a repeat call (or a fresh install) returns the SAME account. Run this ONCE before any other method. FREE \u2014 account creation costs nothing; you pay only per verification you run, and each account includes Didit's 500 free full-KYC checks/month. The account (email + key) is retrievable any time via didit.account. Takes no arguments."
       },
       {
-        "name": "didit.verify",
-        "summary": "STEP 2 of 2 \u2014 confirm the code from didit.signup and mint your API key. Pass the 6-character code Didit emailed you; this POSTs to /programmatic/verify-email/, extracts application.api_key from the response, and writes it to $APP/secrets.json as DIDIT_API_KEY. From then on EVERY other didit.* method authenticates automatically (x-api-key) \u2014 you never handle the key yourself. Idempotent: if a key is already cached it returns {already:true} without re-verifying. email defaults to the address you registered with, so usually you only need to pass {code}. FREE."
+        "name": "didit.account",
+        "summary": "Retrieve your cached Didit account \u2014 the email the broker provisioned for you and your api_key \u2014 plus a signed_up flag. Local, instant, FREE (reads $APP/secrets.json; no backend call). Use it to confirm you're signed up or to read your key. If signed_up is false, call didit.signup first."
       },
       {
         "name": "didit.billing_balance",
@@ -2543,8 +2543,8 @@ export const apps: App[] = [
         "version": "1.0.0",
         "notes": [
           "Initial release \u2014 the full Didit identity platform over one byo HTTPS app: 39 methods + didit.help.",
-          "No-broker self-signup: didit.signup {email} + didit.verify {code} mint and cache a per-user Didit API key locally; every method then authenticates as you.",
-          "KYC/ID, liveness, face match, AML, proof-of-address, database validation, email/phone OTP, hosted sessions, workflows, billing, blocklist, questionnaires, users, webhooks \u2014 with per-endpoint pricing in didit.help."
+          "One-call broker signup: didit.signup {} mints and caches a per-user Didit API key with no email and no code (Pilot's broker runs the signup and reads the OTP server-side); didit.account retrieves it; ops stay direct to Didit.",
+          "KYC/ID, liveness, face match, AML, proof-of-address, database validation, email/phone OTP, hosted sessions, workflows, billing, blocklist, questionnaires, users, webhooks \u2014 per-endpoint pricing in didit.help."
         ]
       }
     ],
@@ -2552,29 +2552,30 @@ export const apps: App[] = [
       "fs.read:$APP/config.json",
       "fs.read:$APP/secrets.json",
       "fs.write:$APP/secrets.json",
+      "key.sign:self",
       "net.dial:verification.didit.me",
-      "net.dial:apx.didit.me",
+      "net.dial:broker.pilotprotocol.network",
       "audit.log:*"
     ],
     "bundles": [
       {
         "platform": "darwin-arm64",
-        "bytes": 4939105
+        "bytes": 4954879
       },
       {
         "platform": "darwin-amd64",
-        "bytes": 5267882
+        "bytes": 5287106
       },
       {
         "platform": "linux-arm64",
-        "bytes": 4682890
+        "bytes": 4696257
       },
       {
         "platform": "linux-amd64",
-        "bytes": 5110122
+        "bytes": 5130067
       }
     ],
-    "installedBytes": 9287497,
+    "installedBytes": 9324763,
     "depends": [],
     "protection": "shareable",
     "featured": false,
@@ -2595,7 +2596,7 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": "2026-07-07",
-    "updatedAt": "2026-07-07"
+    "updatedAt": "2026-07-08"
   }
 ];
 
