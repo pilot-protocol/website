@@ -1,7 +1,9 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>"How do IoT devices behind NAT communicate peer-to-peer?" This is one of the most searched networking questions on Stack Overflow, and it has been for years. The underlying problem is simple: 88% of networked devices sit behind a NAT. They can make outbound connections, but nothing from outside can reach them. And when two devices behind different NATs want to talk directly, neither can reach the other.</p>
+const bodyContent = `<p>You can connect AI agents behind NAT without a VPN, without port forwarding, and without a public IP. The short version: use STUN to discover each agent's public endpoint, coordinate hole-punching between the two NATs, and fall back to an encrypted relay only when hole-punching can't work. Pilot Protocol implements exactly this three-tier strategy automatically, so the agent developer never writes networking code. The rest of this article explains why NAT breaks peer-to-peer connections in the first place, why VPNs and port forwarding are the wrong fix for dynamic agent fleets, and how the three-tier approach works in practice.</p>
+
+  <p>Most networked devices today sit behind a NAT. They can make outbound connections, but nothing from outside can reach them. When two devices behind different NATs want to talk directly, neither can reach the other -- this is one of the most common networking questions developers run into once they move an agent fleet off a single LAN.</p>
 
   <p>The workarounds are well-known and universally disliked. VPNs work but require configuration on every device, a central server, and ongoing maintenance. Port forwarding works but requires router access, static IPs, and breaks when the network changes. Cloud relay services work but add latency, cost money per gigabyte, and become a single point of failure.</p>
 
@@ -183,7 +185,7 @@ Registered with fixed endpoint (STUN skipped)</code></pre>
 
   <h3>IoT Device Fleets</h3>
 
-  <p>Sensors, cameras, and edge devices behind residential or industrial NATs can form peer-to-peer networks without cloud relay. A sensor in a factory can stream data directly to a processing agent in the same building, or to an analytics agent in a different city. The NAT type does not matter -- Pilot handles it. No port forwarding, no VPN, no cloud dependency.</p>
+  <p>Sensors, cameras, and edge devices behind residential or industrial NATs can form peer-to-peer networks without cloud relay. A sensor in a factory can stream data directly to a processing agent in the same building, or to an analytics agent in a different city. The NAT type does not matter -- Pilot handles it. No port forwarding, no VPN, no cloud dependency. For a zero-config walkthrough of the same traversal applied to <a href="/blog/openclaw-agents-behind-nat-zero-config">OpenClaw agents behind NAT</a>, see the companion guide.</p>
 
   <h3>Federated Learning Nodes</h3>
 
@@ -243,14 +245,39 @@ PING home-agent-2 (1:0001.0000.0009):
     <p>Automatic NAT traversal for AI agents, IoT devices, and distributed systems. No VPN, no port forwarding, no cloud relay bills. Install and connect in under 5 minutes.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
+
+const faqItems = [
+  {
+    question: "How do you connect AI agents behind NAT without a VPN?",
+    answer: "Use STUN to discover each agent's public NAT-mapped endpoint, coordinate simultaneous outbound packets from both sides to punch a hole through the NATs, and fall back to an encrypted relay only if hole-punching fails (symmetric NAT). Pilot Protocol runs all three steps automatically inside the daemon -- the developer just calls pilotctl connect.",
+  },
+  {
+    question: "Can two agents behind different NATs always connect directly?",
+    answer: "Not always. Full Cone, Restricted Cone, and Port-Restricted Cone NATs support hole-punching and end up with a direct, peer-to-peer path. Symmetric NAT assigns a different external port per destination, which defeats hole-punching -- those connections need a relay fallback.",
+  },
+  {
+    question: "Is a VPN required to connect agents across different networks?",
+    answer: "No. A VPN is one way to solve it, but it requires installing and configuring software on every device and maintaining a coordination server. For dynamic, ephemeral agent fleets, automatic NAT traversal (STUN plus hole-punching plus relay fallback) avoids that per-device setup entirely.",
+  },
+  {
+    question: "Does hole-punching add latency compared to a direct connection?",
+    answer: "Once a hole-punched connection is established, traffic flows peer-to-peer with no added latency -- performance is the same as a direct connection. The only cost is a one-time setup delay while both sides coordinate the punch through the beacon.",
+  },
+  {
+    question: "Is traffic still encrypted when it falls back to relay mode?",
+    answer: "Yes. Pilot Protocol encrypts all traffic end-to-end with X25519 key exchange and AES-256-GCM regardless of traversal tier. In relay mode the beacon forwards only opaque encrypted bytes and cannot read the payload.",
+  },
+];
+
 ---
 <BlogLayout
-  title="Connect AI Agents Behind NAT - Without a VPN"
-  description="No VPN, no port forwarding, no public IP. Pilot Protocol connects agents behind any NAT automatically."
+  title="How to Connect AI Agents Behind NAT Without a VPN"
+  description="Agents behind NAT can't reach each other without a VPN or port forwarding. Here's how STUN, hole-punching, and relay fallback fix it automatically."
   date="February 22, 2026"
   tags={["NAT", "networking", "P2P"]}
   canonicalPath="/blog/connect-ai-agents-behind-nat-without-vpn"
   bannerImage="/blog/banners/connect-ai-agents-behind-nat-without-vpn.webp"
+  faqItems={faqItems}
 >
   <Fragment set:html={bodyContent} />
 </BlogLayout>
