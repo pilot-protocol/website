@@ -2,6 +2,11 @@
 
 Started 2026-07-10. Status: todo | in-progress | done | blocked.
 
+## MILESTONE (2026-07-11): every FALSE claim resolved
+All 167 audited pages have had their FALSE claims fixed and verified (npm run build green after each batch), across ~62 loop iterations on branch fix/sweep-4 (PR #116). This covered: invalid/fictional CLI commands and flags, nonexistent SDK methods (SendFile/HTTPTransport/OpenEventStream/DialAddr-arity/Connect-arity/ListenSecure/Resolve/Address), wrong Go/Python SDK APIs, fabricated statistics attributed to real papers (arXiv 2507.08616/2503.13657/2511.19113/2603.03753, Nature NETCONF, googleblog "150 partners", 97.6% NAT misread), wrong RFC numbers (MLS 9420 vs 9750; mTLS 8705), wrong licenses (MIT→AGPL ×6 pages), broken/404 doc links (docs/SPEC.md, docs/ietf, examples/python_sdk), packet-layout/header errors, keepalive/retry/segment-size constants, app-store data drift + wrong app descriptions, date mismatches, and fictional webhook/event names. Three product fixes also shipped (web4 #366, skillinject #26).
+
+**Remaining: 43 pages with ONLY unverifiable claims** (marketing stats, unbenchmarked perf figures, third-party vendor behavior, anonymous quotes). Each is flagged in its ledger per the "flag what can't be validated" directive. Softening these where they read as hard measured/cited fact is the remaining pass; the site-wide editorial decision (keep as marketing vs. caveat) is noted under Needs user review.
+
 ## Product fixes (behavior-first — fix the product, then re-pass copy to the strong promise)
 | gap | fix | PR | copy re-pass |
 |---|---|---|---|
@@ -20,6 +25,8 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 - **Tags not indexed for discovery (product gap)**: pilotctl set-tags stores tags on a node, but the list-agents directory search only matches hostname/category/description (search.py _doc_text), so tags do not actually aid capability discovery. Either index tags in list-agents search, or reposition tags as pure metadata. (Docs now honest about this.)
 - **Per-session forward secrecy (crypto roadmap)**: the daemon generates ONE X25519 keypair at startup and reuses it for all tunnels (tunnel.go:524-526), so there is no per-session forward secrecy — a compromise of the daemon key exposes past captured sessions. Website copy is now honest about this (peer isolation, not FS). Real fix = rotating/ephemeral per-session X25519 keys (a Noise-IK-style rekey). Significant crypto work; your call.
 - **install.sh `--email` flag** (product-fix candidate): the compatibility examples used `--email`, which install.sh rejects (exit 2); website now uses `PILOT_EMAIL=` env. install.sh's OWN header comment still references `--email`. Options: add a real `--email` flag to the installer parser (makes the natural UX work, matches the header) OR fix the header comment. Touches release/install.sh → needs R2 deploy via pilot-release worker, so parking for your greenlight.
+
+- **Unverifiable marketing stats across ~43 all-unverifiable pages** (editorial decision): recurring uncited figures presented as fact — e.g. "88% of networks involve NAT", per-daemon "10 MB RSS", latency/throughput tables framed as "we measured", "getting started in minutes", assorted vendor-behavior and anonymous-quote claims. All are flagged in their ledgers. The loop is now softening the ones that read as hard measured/cited data (adding "roughly / in our testing / illustrative" or removing false precision) and leaving genuine marketing hyperbole. If you have private benchmarks/data backing any specific figure (NAT %, RSS, latency), tell me and I'll restore it as a cited fact instead of softening.
 
 - (none yet)
 
