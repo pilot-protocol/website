@@ -25,3 +25,9 @@ Audited: 2026-07-10 · Sentences examined: 55 · verified: 37 · false: 3 · unv
 
 EXAMPLE items (not flagged): virtual addresses 1:0001.0A3F.7B21 / 1:0001.0B22.4E19, demo JSON outputs, hostname data-processor-42, Q4 pipeline scenario, publish payload numbers.
 OPINION: "SKILLS.md works better than API docs" callout framing, "natural sequence", CTA copy.
+
+## Resolutions (2026-07-11 iter 50)
+- L9/13/15/52-65 (SKILLS.md): skillinject writes SKILL.md (skillinject.go:184,408). Replaced all 6 occurrences with SKILL.md.
+- L75 (pilotctl send <addr> "..."): added required port + --data → `pilotctl send <addr> 1000 --data "..."` (matches the "port 1000 (stdio)" prose).
+- L78 (pilotctl recv --json): recv requires a port. Changed to `pilotctl --json recv 1000`.
+Build: npm run build green (345 pages).

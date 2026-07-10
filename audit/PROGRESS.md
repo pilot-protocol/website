@@ -81,7 +81,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/move-beyond-rest-persistent-connections-for-agents.md | 5 | 9 | done |
 | audit/blog/trust-model-agents-invisible-by-default.md | 6 | 6 | done |
 | audit/docs/enterprise-audit.md | 8 | 0 | done |
-| audit/blog/ai-agent-discovery-process-p2p-networks.md | 3 | 14 | todo |
+| audit/blog/ai-agent-discovery-process-p2p-networks.md | 3 | 14 | done |
 | audit/blog/ai-agent-network-examples-secure-scalable-connectivity.md | 1 | 20 | todo |
 | audit/blog/cross-company-agent-collaboration-without-shared-infrastructure.md | 5 | 8 | done |
 | audit/blog/how-pilot-protocol-works.md | 5 | 8 | done |
@@ -139,8 +139,8 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/enterprise-private-networks-roadmap.md | 1 | 9 | todo |
 | audit/blog/hipaa-compliant-agent-communication.md | 2 | 6 | todo |
 | audit/blog/ietf-internet-drafts-pilot-protocol-revision-01.md | 1 | 9 | todo |
-| audit/blog/multi-agent-pipelines-openclaw-encrypted-tunnels.md | 3 | 3 | todo |
-| audit/blog/openclaw-meets-pilot-agent-networking-one-command.md | 3 | 3 | todo |
+| audit/blog/multi-agent-pipelines-openclaw-encrypted-tunnels.md | 3 | 3 | done |
+| audit/blog/openclaw-meets-pilot-agent-networking-one-command.md | 3 | 3 | done |
 | audit/blog/overlay-networking-automation-secure-ai-agent-solutions.md | 0 | 12 | todo |
 | audit/blog/overlay-networking-secure-ai-agent-communication-explained.md | 0 | 12 | todo |
 | audit/blog/peer-to-peer-networking-examples-ai-engineers.md | 2 | 6 | todo |

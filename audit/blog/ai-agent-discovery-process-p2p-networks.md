@@ -30,3 +30,10 @@ Audited: 2026-07-10 · Sentences examined: 104 · verified: 66 · false: 3 · un
 - Pilot Protocol product claims (line 233: NAT traversal, encrypted tunnels, persistent virtual addresses, mutual trust establishment): verified against web4 pilotctl surface (handshake/trust/ping/map) and site docs — consistent with product.
 - JSON-LD datePublished 2026-04-23 matches frontmatter date "April 23, 2026".
 - OPINION (not flagged): "Solving it is not optional", "far less error-prone", Pro Tips, "Start building with confidence today", etc.
+
+## Resolutions (2026-07-11 iter 50)
+- L82 (OASF taxonomies + CIDs attributed to arxiv 2511.19113): the paper contains no OASF/CID/two-phase-taxonomy framing. Removed the OASF/CID mechanism attribution; kept the generic two-phase announce/query description (which the paper does support) and the standalone DHT/CID definitions.
+- L214 (fabricated "48.5% ... 4x ... 30x pressure-field" cited to arxiv 2603.03753): none of those figures/terms appear in the paper. Deleted the fabricated sentence; kept the risk-aware-vs-naive-trust robustness claim across the paper's tested Sybil range (up to 50%), which the paper does support.
+- L204 ("pressure-field methods scale better"): depended on the fabricated result. Reworded to a general implicit-coordination tradeoff statement, dropped "pressure-field".
+- L216 blockquote (fabricated verbatim "quote"): reworded from a quotation to an attributed paraphrase of the paper's sweep finding.
+Build: npm run build green (345 pages).

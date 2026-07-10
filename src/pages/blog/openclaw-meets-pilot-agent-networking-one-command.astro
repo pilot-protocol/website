@@ -6,13 +6,13 @@ const bodyContent = `<p><a href="https://github.com/openclaw/openclaw" target="_
   <section>
   <h2 id="installation">Installation: One Command</h2>
 
-  <p>Pilot Protocol is available on <a href="https://clawhub.ai" target="_blank" rel="noopener">ClawHub</a>, OpenClaw's skill marketplace. Installation downloads the <code>SKILLS.md</code> skill definition into the agent's skill directory:</p>
+  <p>Pilot Protocol is available on <a href="https://clawhub.ai" target="_blank" rel="noopener">ClawHub</a>, OpenClaw's skill marketplace. Installation downloads the <code>SKILL.md</code> skill definition into the agent's skill directory:</p>
 
   <pre><code><span class="cmd">clawhub install pilotprotocol</span></code></pre>
 
-  <p>That is the entire installation. No package manager dependencies. No Docker containers. No environment variables. The <code>SKILLS.md</code> file gives the agent a complete reference for every <code>pilotctl</code> command, including arguments, return types, error codes with retry guidance, and workflow examples.</p>
+  <p>That is the entire installation. No package manager dependencies. No Docker containers. No environment variables. The <code>SKILL.md</code> file gives the agent a complete reference for every <code>pilotctl</code> command, including arguments, return types, error codes with retry guidance, and workflow examples.</p>
 
-  <p>After installation, the agent can call <code>pilotctl --json context</code> at runtime to get a machine-readable manifest of all available commands. This enables dynamic capability discovery -- the agent does not need to parse the SKILLS.md file; it can query the tool's capabilities programmatically.</p>
+  <p>After installation, the agent can call <code>pilotctl --json context</code> at runtime to get a machine-readable manifest of all available commands. This enables dynamic capability discovery -- the agent does not need to parse the SKILL.md file; it can query the tool's capabilities programmatically.</p>
 
   <pre><code><span class="comment"># Agent queries available commands at runtime</span>
 <span class="cmd">pilotctl --json context</span>
@@ -49,9 +49,9 @@ const bodyContent = `<p><a href="https://github.com/openclaw/openclaw" target="_
   </section>
 
   <section>
-  <h2 id="skills-md">The SKILLS.md Pattern</h2>
+  <h2 id="skills-md">The SKILL.md Pattern</h2>
 
-  <p>The SKILLS.md file is the key to autonomous adoption. It is not documentation for humans -- it is an instruction manual for AI agents. Here is what makes it effective:</p>
+  <p>The SKILL.md file is the key to autonomous adoption. It is not documentation for humans -- it is an instruction manual for AI agents. Here is what makes it effective:</p>
 
   <p><strong>Every command is fully specified.</strong> Arguments, types, defaults, and required vs. optional are all explicit. An agent reading the file knows exactly what to pass and what to expect back.</p>
 
@@ -62,7 +62,7 @@ const bodyContent = `<p><a href="https://github.com/openclaw/openclaw" target="_
   <p><strong>The heartbeat checklist defines monitoring.</strong> A section lists periodic checks the agent should run: verify daemon is alive, confirm registry connectivity, check tunnel health. This enables proactive self-monitoring.</p>
 
   <div class="callout">
-    <p><strong>Why SKILLS.md works better than API docs:</strong> Traditional API documentation is written for human developers who understand context, can ask questions, and fill in gaps. SKILLS.md is written for AI agents that need complete, unambiguous specifications. Every implicit assumption is made explicit. Every edge case has a defined behavior. This is documentation as a machine interface.</p>
+    <p><strong>Why SKILL.md works better than API docs:</strong> Traditional API documentation is written for human developers who understand context, can ask questions, and fill in gaps. SKILL.md is written for AI agents that need complete, unambiguous specifications. Every implicit assumption is made explicit. Every edge case has a defined behavior. This is documentation as a machine interface.</p>
   </div>
   </section>
 
@@ -72,10 +72,10 @@ const bodyContent = `<p><a href="https://github.com/openclaw/openclaw" target="_
   <p>Once two OpenClaw agents have mutual trust, they can exchange messages over encrypted tunnels. The simplest form is direct messaging on port 1000 (stdio):</p>
 
   <pre><code><span class="comment"># Agent A sends a message to Agent B</span>
-<span class="cmd">pilotctl send 1:0001.0B22.4E19 "Analyze this dataset and return summary statistics"</span>
+<span class="cmd">pilotctl send 1:0001.0B22.4E19 1000 --data "Analyze this dataset and return summary statistics"</span>
 
 <span class="comment"># Agent B receives the message</span>
-<span class="cmd">pilotctl recv --json</span>
+<span class="cmd">pilotctl --json recv 1000</span>
 <span class="comment"># {"from":"1:0001.0A3F.7B21","data":"Analyze this dataset..."}</span></code></pre>
 
   <p>For structured data exchange, agents use port 1001 (data exchange):</p>

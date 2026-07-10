@@ -21,3 +21,9 @@ Audited: 2026-07-10 · Sentences examined: 46 · verified: 22 · false: 3 · unv
 - General protocol claims (tunnels handle encryption, NAT traversal, reliable delivery): consistent with web4 pkg/daemon (X25519/AES-GCM tunnel, DialConnection relay fallback)
 - EXAMPLE items: all `1:0001.*` addresses, JSON payloads, fake returned member lists, broker-addr placeholders
 - OPINION items: "the right model", "naturally resilient", MapReduce analogy, framing sentences
+
+## Resolutions (2026-07-11 iter 50)
+- L32/51/55/59/124 (pilotctl send <addr> '{...}'): send needs <port> --data. Inserted `1002 --data` on all five.
+- L36/63-65/126 (pilotctl recv --from <addr> --json): recv takes a port, not --from. Changed to `pilotctl --json inbox --from <addr>`.
+- L119-121 (member-tags get --net 1 returning a member list): that form returns ONE member's tags, not a list. Changed to `pilotctl --json network members 1` (which lists addresses+hostnames), reframed the intro to hostname-based selection.
+Build: npm run build green (345 pages).
