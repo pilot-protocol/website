@@ -28,3 +28,10 @@ Audited: 2026-07-10 · Sentences examined: 72 · verified: 49 · false: 4 · unv
 - Live URLs (HTTP 200): a2a-protocol.org (A2A = Google-originated protocol, JSON-RPC 2.0, SSE streaming, Agent Cards), jsonrpc.org.
 - Local site files: all internal hrefs (/blog/trust-model-agents-invisible-by-default, nat-traversal-ai-agents-deep-dive, how-pilot-protocol-works, mcp-plus-pilot-tools-and-network, why-ai-agents-need-network-stack) exist in src/pages/blog; banner public/blog/banners/a2a-agent-cards-over-pilot-tunnels.webp exists.
 - EXAMPLE items (not flagged): Agent Card JSON sample, Go code structure, demo addresses 1:0000.0042.00A1/00B3/00C7, research-agent.example.com.
+
+## Resolutions (2026-07-11 iter 48)
+- L8/142/174/187/229/253 (/.well-known/agent.json): corrected to /.well-known/agent-card.json (6 occurrences) — the live A2A spec uses agent-card.json exclusively.
+- L87 import: already common/driver (batch-fixed).
+- L171 (drv.ListenAndServeHTTP — no such method): replaced with ln, _ := drv.Listen(80); http.Serve(ln, http.DefaultServeMux).
+- L71/L244/L247-249/L263 (registry "capability flags"/task-ready + peers --search returning capabilities): peers --search matches node-ID/hostname substring, no capabilities field (main.go:4948-4964). Reframed to hostname-substring discovery (name task servers with a prefix); fixed command to `pilotctl --json peers --search "task"` and the example output to address+hostname.
+Build: npm run build green (345 pages).

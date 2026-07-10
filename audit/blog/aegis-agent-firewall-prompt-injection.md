@@ -24,3 +24,11 @@ Audited: 2026-07-10 · Sentences examined: 62 · verified: 40 · false: 4 · unv
 - Live URLs (HTTP 200): pilotprotocol.network, pilotprotocol.network/publish; local page src/pages/publish.astro exists; banner .svg exists in public/blog/banners.
 - General security content (direct vs indirect injection definitions, jailbreak description, defense-in-depth, FAQ definitions): standard, internally consistent — verified as accurate domain description / opinion where hortatory.
 - EXAMPLE (not flagged): hostile-page payload text, attacker.com sample, python safe_retrieve snippet structure (its API fields covered by FALSE rows above).
+
+## Resolutions (2026-07-11 iter 48) — re-verified against the live app 2026-07-11
+- L45-60/77/142/160/189 (app id "aegis"): corrected to io.pilot.aegis in every appstore view/install/call (bare "aegis" is not a catalogue id).
+- L57/L60/L77 (aegis.inspect — no such method): live aegis.help lists scan/health/status/help. Changed to aegis.scan.
+- L60-63/L78 (param "content" + "context"): live scan requires `text`. Changed to {"text": ...}, dropped the bogus context field.
+- L23/L65/L84 (verdict "pass/flag/block" + category + confidence): live aegis.scan returns {"verdict":"allow|block","rule":"","blocked":false,"latency":"..."}. Corrected verdict vocabulary to allow/block, fields to rule/blocked/latency, and log.get('category')→get('rule').
+- L167 ("243k+ agents"): stale (matches neither active 218k nor total 250k). Reworded to "distribution across the Pilot network".
+Build: npm run build green (345 pages).

@@ -117,7 +117,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/federated-learning-p2p-communication.md | 1 | 14 | todo |
 | audit/blog/peer-to-peer-file-transfer-agents.md | 5 | 2 | done |
 | audit/blog/secure-research-collaboration-share-models-not-data.md | 4 | 5 | todo |
-| audit/blog/a2a-agent-cards-over-pilot-tunnels.md | 4 | 4 | todo |
+| audit/blog/a2a-agent-cards-over-pilot-tunnels.md | 4 | 4 | done |
 | audit/blog/encryption-protocols-for-secure-ai-systems-a-practical-guide.md | 1 | 13 | todo |
 | audit/blog/sociology-of-machines-626-agents.md | 3 | 7 | todo |
 | audit/blog/connecting-mcp-servers-across-agents.md | 2 | 9 | todo |
@@ -126,14 +126,14 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/concepts.md | 5 | 0 | done |
 | audit/docs/diagnostics.md | 5 | 0 | done |
 | audit/docs/webhooks.md | 5 | 0 | done |
-| audit/blog/agent-communication-security-best-practices.md | 4 | 2 | todo |
+| audit/blog/agent-communication-security-best-practices.md | 4 | 2 | done |
 | audit/blog/clawhub-to-live-network-openclaw-discovery.md | 2 | 8 | todo |
 | audit/blog/how-ai-agents-discover-each-other.md | 2 | 8 | todo |
 | audit/blog/trustless-protocols-that-secure-decentralized-ai-systems.md | 0 | 14 | todo |
 | audit/blog/userspace-tcp-over-udp-stack-pure-go.md | 3 | 5 | todo |
 | audit/blog/virtual-network-addresses-for-secure-decentralized-ai.md | 2 | 8 | todo |
 | audit/blog/why-ai-agents-need-network-stack.md | 2 | 8 | todo |
-| audit/blog/aegis-agent-firewall-prompt-injection.md | 4 | 1 | todo |
+| audit/blog/aegis-agent-firewall-prompt-injection.md | 4 | 1 | done |
 | audit/docs/configuration.md | 4 | 1 | done |
 | audit/blog/autonomous-agent-networking-distributed-ai.md | 0 | 12 | todo |
 | audit/blog/enterprise-private-networks-roadmap.md | 1 | 9 | todo |

@@ -24,3 +24,10 @@ Audited: 2026-07-10 · Sentences examined: 64 · verified: 45 · false: 4 · unv
 - Live URLs (HTTP 200): vansah.com recommended link, all supabase images.
 - Local site files: internal hrefs (secure-communication-protocols-distributed-ai-systems, network-security-for-multi-agent-systems-key-strategies, secure-ai-agent-communication-zero-trust, decentralized-communication-protocols-ai-developers, trust-model-agents-invisible-by-default, multi-agent-system-networking-guide-ai-developers, secure-network-infrastructure-ai-agents-practical-guide, /for/p2p, and all Recommended posts) exist under src/pages; banner .jpg exists in public/blog/banners.
 - General cryptography/security facts (nonce definition, mTLS mutual certificates, digital signatures for async dispatch, cert pinning, bearer-token weakness, short-lived certs): standard practice, verified as accurate general knowledge; hortatory guidance counted as OPINION.
+
+## Resolutions (2026-07-11 iter 48)
+- L91 (citation arxiv 2410.07553v2 = "COMMA" benchmark, no leakage content): swapped to arxiv 2505.08807 "Security of Internet of Agents" (documents leakage 14×), reworded the anchor text. L202/L233 restate the (now correctly-cited) claim; left as-is.
+- L109 (MLS "defined in RFC 9750"): RFC 9750 is the MLS Architecture; the protocol is RFC 9420. Reworded to cite RFC 9420 for the protocol and RFC 9750 for the architecture, both linked to rfc-editor.org.
+- L224 (Pilot "support for mTLS"): Pilot uses X25519+AES-256-GCM tunnels with Ed25519 identity, no mTLS anywhere in web4. Changed to "X25519-encrypted tunnels". (L165/218/222 mention mTLS as a generic technique, not a Pilot claim — left.)
+- L26 vs L248 (datePublished 2026-05-05 vs frontmatter May 8): fixed JSON-LD datePublished to 2026-05-08.
+Build: npm run build green (345 pages).

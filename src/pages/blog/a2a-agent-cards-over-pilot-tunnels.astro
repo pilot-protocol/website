@@ -5,7 +5,7 @@ const bodyContent = `<p>Google's <a href="https://a2a-protocol.org/" target="_bl
 
   <p>What it does not answer is: how do they reach each other?</p>
 
-  <p>A2A assumes HTTP. Agent Cards are served at <code>/.well-known/agent.json</code>. Task requests are POST payloads. Streaming uses Server-Sent Events. This works when both agents have publicly routable URLs. It breaks when either agent is behind NAT, inside a container, on a laptop, or anywhere without a stable domain name. And that describes the vast majority of real agent deployments.</p>
+  <p>A2A assumes HTTP. Agent Cards are served at <code>/.well-known/agent-card.json</code>. Task requests are POST payloads. Streaming uses Server-Sent Events. This works when both agents have publicly routable URLs. It breaks when either agent is behind NAT, inside a container, on a laptop, or anywhere without a stable domain name. And that describes the vast majority of real agent deployments.</p>
 
   <p>Pilot Protocol solves exactly this gap. It provides the network layer -- virtual addressing, NAT traversal, encrypted tunnels, peer discovery, and trust management -- that A2A's application layer needs but does not provide. This article walks through the integration: A2A for semantics, Pilot for transport.</p>
 
@@ -68,7 +68,7 @@ const bodyContent = `<p>Google's <a href="https://a2a-protocol.org/" target="_bl
 
   <p>With Pilot, the <code>url</code> becomes a Pilot address. Instead of <code>https://research-agent.example.com</code>, the agent is reachable at its 48-bit virtual address, say <code>1:0000.0042.00A1</code>, on port 80 (Pilot's HTTP port). The Agent Card is served by a lightweight HTTP server running over the Pilot tunnel. Any peer that can resolve the agent's address can fetch the card and submit tasks.</p>
 
-  <p>Pilot's registry already stores capability metadata for every registered agent. When an agent joins the network with task-ready capabilities, that information is available to any trusted peer via the registry. The A2A Agent Card adds richer semantic detail -- skill descriptions, examples, content types -- on top of Pilot's structural capability flags. The two systems reinforce each other: Pilot tells you which agents exist and can accept tasks; the Agent Card tells you what those tasks should look like.</p>
+  <p>Pilot's registry stores each agent's hostname and tags, and peer discovery matches on node-ID/hostname substring. Name your task-serving agents with a recognizable prefix and any trusted peer can find them. The A2A Agent Card adds richer semantic detail -- skill descriptions, examples, content types -- on top of Pilot's structural presence. The two systems reinforce each other: Pilot tells you which agents exist and are reachable; the Agent Card tells you what those tasks should look like.</p>
   </section>
 
   <section>
@@ -139,7 +139,7 @@ func main() {
     }
 
     <span class="comment">// Serve the Agent Card at the A2A well-known path</span>
-    http.HandleFunc("/.well-known/agent.json", func(w http.ResponseWriter, r *http.Request) {
+    http.HandleFunc("/.well-known/agent-card.json", func(w http.ResponseWriter, r *http.Request) {
         w.Header().Set("Content-Type", "application/json")
         json.NewEncoder(w).Encode(card)
     })
@@ -168,10 +168,11 @@ func main() {
 
     <span class="comment">// Listen on Pilot's HTTP port (80)</span>
     log.Printf("A2A agent serving at pilot://%s:80", pilotAddr)
-    drv.ListenAndServeHTTP(80, http.DefaultServeMux)
+    ln, _ := drv.Listen(80)
+    http.Serve(ln, http.DefaultServeMux)
 }</code></pre>
 
-  <p>Any peer agent on the Pilot network can now fetch this agent's capabilities by requesting <code>/.well-known/agent.json</code> over a Pilot HTTP connection. The entire exchange -- the Agent Card fetch, the task submission, the result delivery -- travels over Pilot's encrypted UDP tunnel. No public IP required. No DNS. No TLS certificate management. The encryption is handled by Pilot's X25519 + AES-256-GCM layer, which is negotiated automatically during the tunnel handshake.</p>
+  <p>Any peer agent on the Pilot network can now fetch this agent's capabilities by requesting <code>/.well-known/agent-card.json</code> over a Pilot HTTP connection. The entire exchange -- the Agent Card fetch, the task submission, the result delivery -- travels over Pilot's encrypted UDP tunnel. No public IP required. No DNS. No TLS certificate management. The encryption is handled by Pilot's X25519 + AES-256-GCM layer, which is negotiated automatically during the tunnel handshake.</p>
   </section>
 
   <section>
@@ -184,7 +185,7 @@ func main() {
   <ol>
     <li><strong>Address resolution is trust-gated.</strong> An agent's Pilot address can only be resolved by peers who have completed a trust handshake. An untrusted agent cannot even discover that your agent exists, let alone fetch its Agent Card.</li>
     <li><strong>Connection establishment requires mutual trust.</strong> Even if a peer knows your address, it cannot open a connection unless the trust handshake succeeds. The handshake is signed with Ed25519 keys and verified by both sides.</li>
-    <li><strong>The Agent Card is served over the trusted connection.</strong> By the time a peer fetches <code>/.well-known/agent.json</code>, both agents have already authenticated each other. The card's contents are revealed only to verified peers.</li>
+    <li><strong>The Agent Card is served over the trusted connection.</strong> By the time a peer fetches <code>/.well-known/agent-card.json</code>, both agents have already authenticated each other. The card's contents are revealed only to verified peers.</li>
   </ol>
 
   <p>This creates a layered privacy model that standard A2A cannot provide. You control who sees your capabilities, not just who can submit tasks. An agent can be fully A2A-compliant in its application behavior while being completely invisible on the network to untrusted parties.</p>
@@ -226,7 +227,7 @@ func main() {
   <ol>
     <li><strong>Discovery.</strong> The client agent resolves the server agent's Pilot address through the registry, optionally filtering by capability tags that match A2A skill IDs.</li>
     <li><strong>Connection.</strong> The client opens a Pilot connection to the server on port 80. The tunnel is established through NAT, encryption is negotiated, and the trust handshake completes.</li>
-    <li><strong>Card fetch.</strong> The client sends an HTTP GET to <code>/.well-known/agent.json</code> to verify the server's capabilities before submitting work.</li>
+    <li><strong>Card fetch.</strong> The client sends an HTTP GET to <code>/.well-known/agent-card.json</code> to verify the server's capabilities before submitting work.</li>
     <li><strong>Task submission.</strong> The client POSTs a JSON-RPC <code>tasks/send</code> request. Pilot's flow control and congestion management ensure reliable delivery even for large payloads.</li>
     <li><strong>Streaming.</strong> If the task supports streaming, the server sends Server-Sent Events over the same HTTP connection. Pilot's sliding window transport guarantees ordered delivery of every event.</li>
     <li><strong>Completion.</strong> The server returns the final task result over the established tunnel.</li>
@@ -240,17 +241,17 @@ func main() {
 
   <p>One of the most powerful patterns that emerges from combining A2A and Pilot is multi-layer discovery. A client agent looking for a specific capability can search at both layers:</p>
 
-  <pre><code><span class="comment">// Step 1: Query Pilot registry for task-ready agents</span>
-<span class="cmd">pilotctl peers --search "task-ready"</span>
+  <pre><code><span class="comment">// Step 1: Find task-serving peers by hostname substring</span>
+<span class="cmd">pilotctl --json peers --search "task"</span>
 
-<span class="comment">// Returns: list of Pilot addresses with capability metadata</span>
-<span class="comment">// 1:0000.0042.00A1  capabilities=[task-ready]</span>
-<span class="comment">// 1:0000.0042.00B3  capabilities=[task-ready]</span>
-<span class="comment">// 1:0000.0042.00C7  capabilities=[task-ready]</span>
+<span class="comment">// Returns: matching peers by address + hostname</span>
+<span class="comment">// 1:0000.0042.00A1  task-worker-a</span>
+<span class="comment">// 1:0000.0042.00B3  task-worker-b</span>
+<span class="comment">// 1:0000.0042.00C7  task-worker-c</span>
 
 <span class="comment">// Step 2: Fetch Agent Cards from candidates</span>
 <span class="comment">// Filter by A2A skill tags for "summarization"</span>
-<span class="comment">// use pilotctl connect &lt;addr&gt; &lt;port&gt; for raw TCP to fetch /.well-known/agent.json</span>
+<span class="comment">// use pilotctl connect &lt;addr&gt; &lt;port&gt; for raw TCP to fetch /.well-known/agent-card.json</span>
 <span class="cmd">pilotctl connect 1:0000.0042.00A1 80</span>
 <span class="cmd">pilotctl connect 1:0000.0042.00C7 80</span>
 
@@ -260,7 +261,7 @@ func main() {
 <span class="comment">// use pilotctl connect &lt;addr&gt; &lt;port&gt; for raw TCP</span>
 <span class="cmd">pilotctl connect 1:0000.0042.00C7 80</span></code></pre>
 
-  <p>Pilot's registry narrows the search to task-ready agents in the network. A2A's Agent Cards provide the semantic filter -- which of those agents can actually do the specific work needed. This two-layer filtering (network presence, semantic capability) produces better matches than any single discovery mechanism alone.</p>
+  <p>Pilot's peer search narrows to agents matching the hostname prefix in the network. A2A's Agent Cards provide the semantic filter -- which of those agents can actually do the specific work needed. This two-layer filtering (network presence, semantic capability) produces better matches than any single discovery mechanism alone.</p>
 
   <p>For more on how Pilot's network layer provides the foundation for this kind of integration, see <a href="/blog/how-pilot-protocol-works">How Pilot Protocol Works</a>. For the complementary pattern using MCP for tool access alongside Pilot networking, see <a href="/blog/mcp-plus-pilot-tools-and-network">MCP + Pilot: Tools and Network</a>. And for a deeper look at why agents need a dedicated network layer in the first place, see <a href="/blog/why-ai-agents-need-network-stack">Why AI Agents Need Their Own Network Stack</a>.</p>
   </section>
