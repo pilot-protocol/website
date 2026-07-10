@@ -29,3 +29,10 @@ Audited: 2026-07-10 · Sentences examined: 58 · verified: 30 · false: 4 · unv
 - Local site files: banner public/blog/banners/building-custom-pilot-skills-openclaw.webp exists.
 - Opinion (not flagged): "everything is explicit" design-principle framing, best-practice advice (composable commands, JSON everywhere, write out flags, test with agents), good/bad error-hint pedagogy.
 - Example (not flagged): E101/E201 error codes, submit-review/recv-review/send-review-result custom commands (explicitly hypothetical skill), sample address, workflow steps.
+
+## Resolutions (2026-07-11 iter 49)
+- L64/L88 (pilotctl send $TO '{...}' — missing port + --data): fixed to `pilotctl send $TO 1002 --data '{...}'` (send usage: <address> <port> --data <msg>). Also fixed the sibling invalid `pilotctl recv --json` to `pilotctl --json recv 1002`.
+- L65 (recv --from — no such flag on recv): changed to `pilotctl --json inbox --from $TO` (--from belongs to inbox).
+- L100 (peers --search for capability discovery): reframed to `pilotctl --json peers --search "review"` with a note that it matches connected peers by node-ID/hostname (not tags).
+- L165 ("every command, argument, return type, and error code"): pilotctl context has command/args/description/return field names, no error codes. Reworded.
+Build: npm run build green (345 pages).

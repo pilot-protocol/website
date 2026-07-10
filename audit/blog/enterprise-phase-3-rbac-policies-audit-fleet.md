@@ -31,3 +31,10 @@ Audited: 2026-07-10 · Sentences examined: 102 · verified: 74 · false: 4 · un
 - Local site files: /docs/getting-started, /docs/networks, /plans pages exist; banner webp exists; canonicalPath matches.
 
 Example items: node IDs 685-687, network IDs 1/3, audit JSON sample, /healthz JSON sample (version "1.5.0", nodes_online 247 — illustrative), /var/log path, $TOKEN, "prod-fleet".
+
+## Resolutions (2026-07-11 iter 49)
+- L20-26 (network promote/demote/kick 1 --node N): the CLI is positional — `network promote <network_id> <node_id>`. Removed the --node flag (all three commands).
+- L43-46 (network set-policy): subcommand is `network policy`, not `set-policy` (main.go:1837). Fixed both.
+- L55/L189 (network invite 1 --node N): positional form — removed --node.
+- L161 ("64KB per message"): enforced MaxMessageSize is 64MB (common wire.go:39), not 64KB (a stale 64KB comment remains in source but is not the enforced value). Corrected to 64MB.
+Build: npm run build green (345 pages).

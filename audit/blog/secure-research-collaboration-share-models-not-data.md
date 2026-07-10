@@ -27,3 +27,9 @@ Audited: 2026-07-10 · Sentences examined: 110 · verified: 72 · false: 4 · un
 - Industry knowledge: Hugging Face Hub model sharing norms; Databricks Delta Sharing protocol; FL frameworks Flower/PySyft/NVIDIA FLARE and Opacus (DP) are real and provide ML machinery not network infra; FL star-topology aggregation; DUA/MOU/IRB concepts.
 - Example (not flagged): all terminal outputs, addresses 1:0001.0000.00xx, IRB #2026-0142, hostnames (johns-hopkins-trainer etc.), 142MB/4.2s/33.8 MB/s transfer figures, Python training script, layer-stack diagram, lab-a@university-a.edu emails.
 - Opinion (not flagged): "This is better audit evidence than most VPN approval forms", "The honest pitch...", "Connect in minutes, not months".
+
+## Resolutions (2026-07-11 iter 49)
+- L83/L89/L133 (~/pilot-received/): received files land in ~/.pilot/received/ (main.go:1244,6175). Fixed all three occurrences.
+- L163 ("Peer notified" on untrust): untrust does NOT notify the peer (untrust help). Corrected to "Peer not notified — it will see connection failures on its next attempt".
+- L179 ("encryption is mandatory -- no way to disable it"): the daemon has a --no-encrypt flag (main.go:1022,2643). Reworded to "on by default; only turned off with --no-encrypt, so leave it on".
+Build: npm run build green (345 pages).

@@ -17,13 +17,13 @@ const bodyContent = `
 <p>Authorization is checked on every mutation. The registry evaluates a three-step chain: global admin token, per-network admin token, then the node&rsquo;s RBAC role. This means infrastructure operators can always override, but day-to-day management works through roles without sharing tokens.</p>
 
 <pre><code><span class="comment"># Promote a member to admin</span>
-pilotctl network promote 1 --node 686
+pilotctl network promote 1 686
 
 <span class="comment"># Demote an admin back to member</span>
-pilotctl network demote 1 --node 686
+pilotctl network demote 1 686
 
 <span class="comment"># Kick a node from the network</span>
-pilotctl network kick 1 --node 687</code></pre>
+pilotctl network kick 1 687</code></pre>
 
 <p>Owners cannot be kicked. Admins cannot promote or demote - only owners can change roles. This prevents privilege escalation within the network.</p>
 
@@ -40,10 +40,10 @@ pilotctl network kick 1 --node 687</code></pre>
 <p>Policies use merge-on-update semantics. Setting <code>MaxMembers</code> does not reset <code>AllowedPorts</code>. Partial updates are safe.</p>
 
 <pre><code><span class="comment"># Set a membership cap</span>
-pilotctl network set-policy 1 --max-members 50
+pilotctl network policy 1 --max-members 50
 
 <span class="comment"># Restrict ports</span>
-pilotctl network set-policy 1 --allowed-ports 80,443,7</code></pre>
+pilotctl network policy 1 --allowed-ports 80,443,7</code></pre>
 
 <h2 id="invites">Consent-Based Invites</h2>
 
@@ -52,7 +52,7 @@ pilotctl network set-policy 1 --allowed-ports 80,443,7</code></pre>
 <p>The flow:</p>
 
 <ol>
-  <li>An admin invites a node: <code>pilotctl network invite 1 --node 686</code></li>
+  <li>An admin invites a node: <code>pilotctl network invite 1 686</code></li>
   <li>The target polls their inbox: <code>pilotctl network invites</code></li>
   <li>The target accepts or rejects: <code>pilotctl network accept 1</code> or <code>pilotctl network reject 1</code></li>
   <li>On acceptance, the node joins the network with <code>member</code> role.</li>
@@ -158,7 +158,7 @@ pilot-daemon -registry host:9000 -beacon host:9001 \\
 
 <ul>
   <li><strong>Connection limits.</strong> Maximum concurrent connections enforced at accept time.</li>
-  <li><strong>Message size cap.</strong> 64KB per message. Oversized messages are rejected immediately.</li>
+  <li><strong>Message size cap.</strong> 64MB per message (<code>MaxMessageSize</code>). Oversized messages are rejected immediately.</li>
   <li><strong>Per-operation rate limiting.</strong> Separate from connection rate limits. Prevents mutation flooding.</li>
   <li><strong>Snapshot checksums.</strong> Registry persistence files are integrity-checked on load. Corrupted snapshots are detected and rejected.</li>
 </ul>
@@ -186,7 +186,7 @@ pilotctl network leave 1
 pilotctl network members 1
 
 <span class="comment"># Invite a node (admin/owner only)</span>
-pilotctl network invite 1 --node 686
+pilotctl network invite 1 686
 
 <span class="comment"># Check pending invites</span>
 pilotctl network invites

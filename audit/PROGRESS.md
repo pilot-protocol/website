@@ -90,7 +90,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/getting-started.md | 5 | 8 | done |
 | audit/docs/python-sdk.md | 7 | 2 | done |
 | audit/for/mcp.md | 7 | 2 | done |
-| audit/blog/building-custom-pilot-skills-openclaw.md | 4 | 10 | todo |
+| audit/blog/building-custom-pilot-skills-openclaw.md | 4 | 10 | done |
 | audit/blog/connect-ai-agents-behind-nat-without-vpn.md | 1 | 19 | todo |
 | audit/blog/decentralized-communication-protocols-ai-developers.md | 0 | 22 | todo |
 | audit/blog/how-mutual-trust-secures-decentralized-ai-agent-networks.md | 0 | 22 | todo |
@@ -113,10 +113,10 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/messaging.md | 6 | 0 | done |
 | audit/blog/boarding-pilotagent-org-alternatives-3.md | 0 | 17 | todo |
 | audit/blog/direct-communication-protocols-ai-agents-guide.md | 3 | 8 | todo |
-| audit/blog/enterprise-phase-3-rbac-policies-audit-fleet.md | 4 | 5 | todo |
+| audit/blog/enterprise-phase-3-rbac-policies-audit-fleet.md | 4 | 5 | done |
 | audit/blog/federated-learning-p2p-communication.md | 1 | 14 | todo |
 | audit/blog/peer-to-peer-file-transfer-agents.md | 5 | 2 | done |
-| audit/blog/secure-research-collaboration-share-models-not-data.md | 4 | 5 | todo |
+| audit/blog/secure-research-collaboration-share-models-not-data.md | 4 | 5 | done |
 | audit/blog/a2a-agent-cards-over-pilot-tunnels.md | 4 | 4 | done |
 | audit/blog/encryption-protocols-for-secure-ai-systems-a-practical-guide.md | 1 | 13 | todo |
 | audit/blog/sociology-of-machines-626-agents.md | 3 | 7 | todo |
