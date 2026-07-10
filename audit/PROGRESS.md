@@ -19,6 +19,8 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 
 - **privacy.astro SMS section** (legal, needs decision): the privacy policy has a full SMS-data-collection section (phone numbers, consent records, STOP/HELP, provider DPA), but there is NO phone/SMS collection anywhere on the website or in the product. Keep as forward-looking boilerplate, or remove until an SMS program ships? (Not touched — legal-commitment change.)
 
+- **pilot-agents repo is private** (needs decision): docs/service-agents tells readers to `cp -r pilot-agents/template` but the repo is access-gated — make it public, or keep the "reach out for access" framing I added? Also the injected pilotctl skill (TeoSlayer/pilot-skills) still says search is "literal token match" — it is actually semantic; worth updating that skill repo too.
+
 ## Pages
 | ledger | false | unverifiable | status |
 |---|---:|---:|---|
@@ -32,7 +34,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/for/setups/[slug].md | 0 | 56 | todo |
 | audit/blog/zero-dependency-encryption-x25519-aes-gcm.md | 15 | 9 | todo |
 | audit/blog/github-com-alternatives-6.md | 3 | 43 | todo |
-| audit/docs/service-agents.md | 16 | 0 | todo |
+| audit/docs/service-agents.md | 16 | 0 | done |
 | audit/blog/lightweight-swarm-communication-drones-robots.md | 9 | 20 | todo |
 | audit/docs/tags.md | 15 | 2 | todo |
 | audit/docs/gateway.md | 15 | 1 | todo |
