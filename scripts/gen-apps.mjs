@@ -35,7 +35,7 @@ const CATMAP = {
   'io.pilot.postgres': 'data', 'io.pilot.duckdb': 'data', 'io.pilot.sqlite': 'data', 'io.pilot.mysql': 'data', 'io.pilot.redis': 'data', 'io.pilot.sixtyfour': 'data', 'io.pilot.orthogonal': 'data',
   'io.pilot.cosift': 'ai', 'io.telepat.ideon-free': 'ai',
   'io.pilot.plainweb': 'web', 'io.pilot.otto': 'web', 'io.pilot.bowmark': 'web',
-  'io.pilot.smol': 'infra', 'io.pilot.miren': 'infra', 'io.pilot.docker': 'infra',
+  'io.pilot.smol': 'infra', 'io.pilot.miren': 'infra', 'io.pilot.docker': 'infra', 'io.pilot.tldr': 'infra',
   'io.pilot.aegis': 'security',
   'io.pilot.slipstream': 'finance', 'io.pilot.wallet': 'finance',
   'io.pilot.agentphone': 'comms',
@@ -62,6 +62,7 @@ const ICON_MAP = {
   'io.pilot.bowmark': { image: 'png', fit: 'cover', bg: '#0b0b0a' },
   'io.pilot.orthogonal': { image: 'png', fit: 'cover', bg: '#e3e6df' },
   'io.pilot.agentphone': { image: 'png', fit: 'contain', bg: '#26B65A' },
+  'io.pilot.tldr': { image: 'png', fit: 'cover', bg: '#203050' },
 };
 
 function relLum(hex) {
@@ -92,6 +93,7 @@ const APP_IDS = [
   'io.pilot.cosift', 'io.telepat.ideon-free', 'io.pilot.plainweb', 'io.pilot.otto',
   'io.pilot.smol', 'io.pilot.miren', 'io.pilot.docker', 'io.pilot.aegis',
   'io.pilot.slipstream', 'io.pilot.wallet', 'io.pilot.bowmark', 'io.pilot.orthogonal',
+  'io.pilot.tldr',
 ];
 const FEATURED = ['io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.docker'];
 const LINUX_ONLY = new Set(['io.pilot.docker']);
@@ -99,7 +101,7 @@ const PROTECTION_FALLBACK = {
   'io.pilot.postgres': 'guarded', 'io.pilot.duckdb': 'guarded', 'io.pilot.sqlite': 'guarded', 'io.pilot.mysql': 'guarded', 'io.pilot.redis': 'guarded',
   'io.pilot.docker': 'guarded', 'io.pilot.miren': 'shareable', 'io.pilot.otto': 'guarded',
   'io.pilot.wallet': 'guarded', 'io.pilot.slipstream': 'shareable', 'io.telepat.ideon-free': 'guarded',
-  'io.pilot.aegis': 'guarded',
+  'io.pilot.aegis': 'guarded', 'io.pilot.tldr': 'guarded',
 };
 const ALL_PLATFORMS = ['darwin-arm64', 'darwin-amd64', 'linux-arm64', 'linux-amd64'];
 

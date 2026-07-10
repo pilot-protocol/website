@@ -2477,261 +2477,126 @@ export const apps: App[] = [
     ],
     "publishedAt": "2026-07-07",
     "updatedAt": "2026-07-07"
-  }
-  ,
+  },
   {
-    "id": "io.pilot.didit",
-    "name": "Didit",
-    "tagline": "One API for identity and fraud \u2014 KYC, liveness, face match, AML, and more, with a no-broker key you mint in one call.",
-    "description": "**Didit is one API for identity and fraud** \u2014 KYC/ID verification, liveness, face match, AML screening, proof of address, database validation, and email/phone OTP, wrapped as a single Pilot app. It fronts Didit's full platform: **hosted verification sessions**, reusable **workflows**, **users**, **billing**, **blocklists**, **questionnaires**, and **webhooks** \u2014 40 methods in all.\n\n## Your own key, minted in one call \u2014 no email, no code\n\nThe hard part of using an identity provider is usually onboarding: signing up, confirming an email code, and wiring the key. This app removes all of it. **`didit.signup` takes no arguments** and returns a working key:\n\n- It signs a keyless request (your Pilot identity) to Pilot's Didit broker. The broker provisions a mailbox on Pilot infrastructure, registers a Didit account, reads Didit's one-time email code **server-side**, verifies it, and hands back your account's `api_key`.\n- The adapter caches `{email, api_key}` to `$APP/secrets.json`. From then on **every other method sends your key as `x-api-key` automatically** \u2014 you never see an inbox, a code, or the key unless you ask (`didit.account`).\n- **Idempotent:** the broker mints at most one Didit account per Pilot identity, so a repeat call \u2014 or a fresh install on another machine \u2014 returns the *same* account. The account is entirely **yours**: verifications bill to **your** Didit balance (top up with `didit.billing_topup`), and Pilot adds no markup. Each account includes Didit's **500 free full-KYC checks/month**; account creation, management, sessions CRUD, users, billing, blocklists, questionnaires and webhooks are all **free** \u2014 you pay only per verification you run.\n\n## The fast path\n\n1. `didit.signup {}` \u2192 your key is cached (one call, ~5s, no email).\n2. `didit.create_workflow` `{workflow_label:\"KYC\", features:[{feature:\"OCR\"},{feature:\"LIVENESS\"},{feature:\"FACE_MATCH\"}]}` \u2192 get `uuid`.\n3. `didit.create_session` `{workflow_id, vendor_data:\"user-123\"}` \u2192 send the user to the returned `url`.\n4. `didit.get_decision` `{session_id}` (or a webhook) \u2192 read the Approved/Declined result and extracted data.\n\n`didit.account` returns your provisioned email + key any time.\n\n## What each area does\n\n- **Sessions** \u2014 hosted flows where the user completes verification at a Didit URL, so you never handle document images: `create_session`, `get_decision`, `list_sessions`, `update_session_status` (approve/decline/resubmit), `delete_session`, `batch_delete_sessions`, `share_session` / `import_session` (B2B KYC reuse), `list_reviews`, `create_review`.\n- **Workflows** \u2014 templates built from an ordered `features` array (`OCR`, `LIVENESS`, `FACE_MATCH`, `AML`, `PROOF_OF_ADDRESS`, `PHONE_VERIFICATION`, `EMAIL_VERIFICATION`, `DATABASE_VALIDATION`, `IP_ANALYSIS`, `AGE_ESTIMATION`, `NFC`, `QUESTIONNAIRE`, `KYB_*`), each with an optional per-feature `config`: `create_workflow`, `list_workflows`, `get_workflow`, `update_workflow`, `delete_workflow`.\n- **Standalone checks (JSON, no session)** \u2014 `aml` (sanctions/PEP/adverse-media, $0.20), `database_validation` (gov sources, from $0.05).\n- **Contact** \u2014 `email_send`/`email_check` ($0.03) and `phone_send`/`phone_check` (from $0.03) OTP verification.\n- **Billing** \u2014 `billing_balance`, `billing_topup` (Stripe checkout URL).\n- **Governance** \u2014 `blocklist_*` (auto-flag repeat faces/docs/phones/emails), `questionnaire_*` (custom forms), `users_*` (people grouped by your `vendor_data`), `get_webhook`/`update_webhook` (set + rotate the HMAC secret programmatically).\n\n## Pricing\n\nPay-per-check on **your** Didit balance \u2014 no Pilot markup. See the full rate card in `didit.help`. Highlights: full KYC bundle **$0.33/check** (first **500/month free**), ID verification $0.15, passive liveness $0.10, face match $0.05, **face search free**, AML $0.20, PoA $0.20, email/phone from $0.03. Image-upload APIs (direct ID scan, liveness, face match, face search, age estimation, PoA) run through the **hosted session** flow rather than as direct methods.\n\n## Notes\n\n- The adapter dials exactly two hosts: Pilot's broker (`broker.pilotprotocol.network`) for the one-call `didit.signup`, and Didit (`verification.didit.me`) for every operational call with your cached key. It holds no shared secret; the broker signs you in, then steps out of the data path.\n- Plain request/response REST \u2014 no websockets, no async jobs. Rate limits: ~600 session-creates/min, 300/min per other method; the account OTP register is 5/IP/hour.\n- Errors surface verbatim: `401` (run `didit.signup` first), `403` (top up credits), `429` (back off).\n",
+    "id": "io.pilot.tldr",
+    "name": "tldr",
+    "tagline": "Simplified man pages for ~7,350+ CLIs — instant, example-first command recall for agents",
+    "description": "# tldr — simplified man pages for almost every CLI, native for agents\n\nThis app installs the official **tldr-pages** client **tlrc v1.13.1** on the host and fronts it as typed\nmethods. tldr is *\"simplified, community-driven man pages\"* — concise, **example-first** cheat-sheets for\n**~7,350+ command-line tools**, the practical opposite of a dense `man` page. Instead of scrolling a manual,\nan agent asks `tldr docker` and gets the handful of commands it actually needs, each with a one-line\ndescription. The bundle is the upstream tlrc binary (sha-pinned per OS/arch, fetched from the Pilot artifact\nregistry at install) plus a tiny wrapper that serves a complete, color-free command-palette reference.\n\n**Open source, and every command is tested.** The tlrc client is **MIT**; the pages are written by the\ntldr-pages community and licensed **CC-BY-4.0**. The full page catalog (~3 MiB) auto-downloads on first use\nand then works offline.\n\n## Why an agent wants this\n\n- **Recall any CLI instantly.** `tldr <tool>` returns the 5–10 invocations that matter — no manual to parse,\n  no web search. The dictionary of man pages, for the whole toolbox an agent builds and deploys with.\n- **Discover tools by task.** `tldr.search <keyword>` does first-class full-text search across the catalog\n  (\"compress\", \"screenshot\", \"certificate\"); `tldr.list` prints the whole directory of documented commands.\n- **Machine-parseable.** `tldr.raw` returns raw Markdown so an agent can lift the exact example lines\n  programmatically; `tldr.get` returns clean rendered text for humans-in-the-loop.\n- **Self-contained + offline.** One static binary, no dependencies; after the first fetch, lookups need no\n  network. Runs on macOS and Linux (arm64 + amd64).\n- **The complete palette.** Every flag is reachable — platform overrides, languages, list/search, render a\n  local page — via curated methods plus a verbatim-argv `tldr.exec` passthrough.\n\n## What it documents (a taste — all verbatim from real tldr pages)\n\n**Version control & GitHub**\n- `git` — Clone a repository: `git clone https://example.com/repo.git` · View status: `git status`\n- `gh` — Clone a repo: `gh repo clone owner/repository` · List open issues: `gh issue list`\n\n**Containers, orchestration & IaC**\n- `docker` — List all containers: `docker ps -a` · Run a named container: `docker run --name name image`\n- `kubectl` — Wide resource listing: `kubectl get pods -o wide` · Everything: `kubectl get all`\n- `terraform` — Initialize: `terraform init` · Format config: `terraform fmt`\n- `ansible` — Ping a host group: `ansible group -m ping` · Gather facts: `ansible group -m setup`\n- `helm` — Create a chart: `helm create chart_name` · Add a repo: `helm repo add repository_name`\n\n**Cloud**\n- `aws` — Configure SSO: `aws configure sso` · Who am I: `aws sts get-caller-identity`\n- `ssh` — Connect: `ssh username@remote_host` · With an identity key: `ssh username@remote_host -i key`\n\n**Languages & package managers**\n- `npm` — Install deps: `npm install` · A pinned version: `npm install package@version`\n- `cargo` — Install a crate: `cargo install crate_name` · List installed: `cargo install --list`\n- `go` — Run a file: `go run file.go` · Build a binary: `go build -o executable file.go`\n\n**Data & text**\n- `jq` — Pretty-print JSON: `jq '.' file.json`\n- `sed` — Replace text: `command | sed 's/apple/mango/g'` · First line: `command | sed -n '1p'`\n- `awk` — Print a column: `awk '{print $5}' file` · Last field, comma-separated: `awk -F ',' '{print $NF}' file`\n- `grep` — Recursive search: `grep -rI \"pattern\" path/to/dir`\n- `psql` — Connect: `psql -h host -p port -U username database`\n\n**Networking, files & archives**\n- `curl` — GET a URL: `curl https://example.com` · Save to a file: `curl -O https://example.com/file.zip`\n- `rsync` — Archive-mode copy: `rsync -a path/to/source path/to/destination`\n- `tar` — Create a gzipped archive: `tar czf target.tar.gz file1 file2`\n- `find` — By extension: `find path/to/dir -name '*.ext'`\n- `openssl` — Self-signed cert: `openssl req -new -x509 -key private.key -out certificate.crt -days 365`\n- `ffmpeg` — Extract audio: `ffmpeg -i video.mp4 -vn sound.mp3`\n\n**System & services (Linux)**\n- `systemctl` — Failed units: `systemctl --failed` · Manage a service: `systemctl start|stop|status unit`\n- `journalctl` — Follow a unit's logs: `journalctl -u unit -f`\n\n…and ~7,300 more, across `common`, `linux`, `osx`, `windows`, `android`, and `sunos`.\n\n## Methods\n\n- `tldr.get` — a command's cheat-sheet as clean text.\n- `tldr.raw` — a page as raw Markdown (machine-parseable).\n- `tldr.search` — full-text search across the whole catalog for a keyword.\n- `tldr.list` — the directory of every documented command for this platform.\n- `tldr.info` — cache path / age / languages / page count.\n- `tldr.update` — refresh the local page cache.\n- `tldr.render` — render a local tldr-format `.md` page.\n- `tldr.exec` — run the client with a verbatim argv (any flag: `--platform`, `-L`, `--list-all`, …) + optional stdin.\n- `tldr.cli_help` — the complete command-palette reference as clean text.\n- `tldr.version` — the delivered client + spec version. `tldr.help` — the self-describing method list.\n\n## How to use it\n\n1. **Recall a tool (no setup):** `tldr.get` `{ \"command\": \"tar\" }` → the tar cheat-sheet. First call auto-downloads the cache.\n2. **Multi-word page:** `tldr.get` `{ \"command\": \"git-commit\" }` (hyphen-joined) or `tldr.exec` `{ \"args\": [\"git\",\"commit\"] }`.\n3. **Find a tool by task:** `tldr.search` `{ \"keyword\": \"compress\" }` → every page mentioning compression.\n4. **Browse the catalog:** `tldr.list` → all documented commands for this platform.\n5. **Anything else:** `tldr.exec` `{ \"args\": [\"--platform\",\"linux\",\"systemctl\"] }` to force a platform.\n\n## Good to know\n\n- The page cache (~3 MiB, ~7,350+ pages) auto-downloads on first use and refreshes when stale; progress goes\n  to stderr so method output on stdout stays clean. Use `tldr.update` to refresh, `--offline` (via `tldr.exec`)\n  to pin the current cache.\n- On a non-zero exit the reply is `{stdout, stderr, exit}` so the caller sees everything the CLI produced.\n- Runs on **macOS and Linux** (arm64 + amd64); the binary is fetched from the Pilot artifact registry and\n  sha-pinned on install. Client license **MIT** (tlrc); pages content **CC-BY-4.0**, © tldr-pages contributors.\n- `tldr.help` lists every method with its latency class — the self-describing discovery contract.\n\n## tldr command palette (`tldr.cli_help`)\n```\ntldr — simplified, community-driven man pages (io.pilot.tldr)\n================================================================================\nPowered by tlrc v1.13.1, the official tldr-pages client (tldr client spec v2.3).\ntldr gives you concise, example-first help for ~7,350+ command-line tools — a\npractical cheat-sheet for almost every CLI an agent uses to build, deploy, and\noperate software. Open source: the tlrc client is MIT; the pages are authored by\nthe tldr-pages community and licensed CC-BY-4.0. Every command below is tested.\n\nUSAGE\n--------------------------------------------------------------------------------\n  tldr [OPTIONS] [PAGE]...\n\n  PAGE            The command to look up, e.g. `tar`, `docker`, `kubectl`.\n                  Multi-word pages: join with a hyphen  ->  `git-commit`,\n                  `docker-compose`, `gh-repo`  (or pass the words as separate\n                  arguments via the passthrough method: [\"git\",\"commit\"]).\n\nOPERATIONS  (choose at most one per invocation)\n--------------------------------------------------------------------------------\n  <PAGE>                       Show the tldr page for a command (rendered).\n  -u, --update                 Update the local page cache (downloads only the\n                               languages that changed). Needs network.\n  -l, --list                   List every page for the current platform (plus\n                               the cross-platform `common` set) — a directory of\n                               all documented tools, one name per line.\n  -a, --list-all               List every page across ALL platforms.\n  -s, --search <KEYWORD>       Search page CONTENTS for a keyword and print each\n                               match as `language  platform  page`. First-class\n                               full-text search across the whole catalog.\n      --list-platforms         List the available platforms.\n      --list-languages         List the installed languages.\n  -i, --info                   Show cache info: path, age, installed languages,\n                               and total page count.\n  -r, --render <FILE>          Render a local tldr page file (`.md`) — preview a\n                               page you are authoring or one you fetched.\n      --clean-cache            Interactively delete the cache directory contents.\n      --gen-config             Print the default config (TOML) to stdout.\n      --config-path            Print the default config path (creates the dir).\n  -v, --version                Print the client + spec version.\n  -h, --help                   Print this complete command-palette reference.\n\nMODIFIERS  (change how an operation behaves)\n--------------------------------------------------------------------------------\n  -p, --platform <PLATFORM>    Force a platform instead of the host's.\n                               Values: linux, osx (macOS), windows, android,\n                               sunos, common.  Default: the OS you are on.\n  -L, --language <CODE>        Force a language (repeatable), e.g. `-L es`,\n                               `-L fr`, `-L ja`. Default: config, else $LANG.\n      --short-options          Prefer short option forms in placeholders (-s).\n      --long-options           Prefer long option forms in placeholders (--long).\n      --edit                   Show a GitHub \"edit this page\" link for the page.\n  -o, --offline                Never touch the network, even if the cache is\n                               stale (use the pages already downloaded).\n  -c, --compact                Strip empty lines from the output.\n      --no-compact             Keep empty lines (overrides --compact).\n  -R, --raw                    Print the page as raw Markdown (no rendering) —\n                               the most machine-parseable form.\n      --no-raw                 Render instead of raw (overrides --raw).\n  -q, --quiet                  Suppress status/progress messages and warnings.\n      --verbose                Print debug info (repeatable).\n      --color <WHEN>           Color output: auto (default), always, never.\n      --config <FILE>          Use an alternative config file path.\n\nPLATFORM VALUES\n--------------------------------------------------------------------------------\n  common   Cross-platform tools (the largest bucket: git, docker, curl, jq, ...)\n  linux    Linux-specific pages (systemctl, journalctl, apt, ip, ...)\n  osx      macOS-specific pages (brew, pbcopy, launchctl, ...)\n  windows  Windows-specific pages (choco, taskkill, ...)\n  android  Android tool pages (adb, pm, ...)\n  sunos    illumos / SunOS pages\n\nCACHE & OFFLINE\n--------------------------------------------------------------------------------\n  The page cache auto-downloads on first use (a ~3 MiB archive of ~7,350+ pages)\n  and thereafter refreshes automatically when it goes stale. After the first\n  fetch, lookups (`get`, `raw`, `search`, `list`, `info`, `render`) are fully\n  local and offline. Progress messages are written to stderr, so method output\n  on stdout stays clean. Use --offline to pin the current cache and --update to\n  refresh on demand. Cache path: `tldr --info`.\n\nEXAMPLES\n--------------------------------------------------------------------------------\n  tldr tar                     # show the tar cheat-sheet\n  tldr git-commit              # multi-word page (hyphen-joined)\n  tldr --raw docker            # raw Markdown for docker\n  tldr --search compress       # find every page mentioning \"compress\"\n  tldr --list                  # directory of all tools for this platform\n  tldr --list-all              # every page across all platforms\n  tldr --platform linux systemctl   # force the linux page\n  tldr --update                # refresh the cache\n  tldr --info                  # cache path / age / page count\n\nLICENSING\n--------------------------------------------------------------------------------\n  Client (tlrc): MIT — https://github.com/tldr-pages/tlrc\n  Pages content: CC-BY-4.0, (c) tldr-pages contributors —\n                 https://github.com/tldr-pages/tldr\n  Project home:  https://tldr.sh\n\n```\n",
     "categories": [
-      "security"
+      "infra"
     ],
-    "primaryCategory": "security",
+    "primaryCategory": "infra",
     "keywords": [
-      "kyc",
-      "identity",
-      "verification",
-      "aml",
-      "liveness",
-      "face-match",
-      "biometrics",
-      "proof-of-address",
-      "sanctions",
-      "pep",
-      "onboarding",
-      "fraud",
-      "kyb",
-      "otp",
-      "didit"
+      "tldr",
+      "tldr-pages",
+      "tlrc",
+      "man-pages",
+      "cheatsheet",
+      "cli-reference",
+      "documentation",
+      "examples",
+      "terminal",
+      "offline-docs",
+      "command-examples"
     ],
-    "version": "1.0.0",
-    "vendor": "Didit",
-    "vendorUrl": "https://didit.me",
-    "license": "Proprietary",
-    "sourceUrl": "https://github.com/didit-protocol/skills",
-    "homepage": "https://didit.me",
+    "version": "1.13.1",
+    "vendor": "Pilot Protocol",
+    "vendorUrl": "https://pilotprotocol.network",
+    "license": "MIT",
+    "sourceUrl": "https://github.com/tldr-pages/tldr",
+    "homepage": "https://tldr.sh",
     "methods": [
       {
-        "name": "didit.signup",
-        "summary": "Get your own Didit API key in ONE call \u2014 no email, no code, no human step. This signs a keyless request to Pilot's Didit broker, which provisions a mailbox on Pilot infrastructure, registers a Didit account, reads the emailed one-time code server-side, verifies it, and returns your account's api_key. The adapter caches {email, api_key} to $APP/secrets.json, and from then on EVERY other didit.* method authenticates automatically (x-api-key) \u2014 you never handle the key or an inbox. Idempotent: the broker mints at most one account per Pilot identity, so a repeat call (or a fresh install) returns the SAME account. Run this ONCE before any other method. FREE \u2014 account creation costs nothing; you pay only per verification you run, and each account includes Didit's 500 free full-KYC checks/month. The account (email + key) is retrievable any time via didit.account. Takes no arguments."
+        "name": "tldr.get",
+        "summary": "Look up a command's tldr page and return the concise, example-first cheat-sheet as clean text (color stripped). The fastest way to recall exactly how to invoke a CLI. This is `tldr --quiet --color never <command>`. The page cache auto-downloads on first use."
       },
       {
-        "name": "didit.account",
-        "summary": "Retrieve your cached Didit account \u2014 the email the broker provisioned for you and your api_key \u2014 plus a signed_up flag. Local, instant, FREE (reads $APP/secrets.json; no backend call). Use it to confirm you're signed up or to read your key. If signed_up is false, call didit.signup first."
+        "name": "tldr.raw",
+        "summary": "Return a page as raw Markdown (unrendered) — the most machine-parseable form, ideal for an agent that wants to extract the example commands programmatically. This is `tldr --quiet --raw <command>`."
       },
       {
-        "name": "didit.billing_balance",
-        "summary": "Check your remaining Didit credit balance (and auto-refill settings). FREE. Returns {balance, auto_refill_enabled, auto_refill_amount, auto_refill_threshold}. Verifications draw down this balance; check it before a batch of checks."
+        "name": "tldr.search",
+        "summary": "Full-text search across the entire tldr catalog for a keyword and return each matching page as `language  platform  page`. First-class content search — find the right tool when you only know the task (\"compress\", \"screenshot\", \"json\"). This is `tldr --quiet --search <keyword>`."
       },
       {
-        "name": "didit.billing_topup",
-        "summary": "Add credit to your Didit balance. FREE call \u2014 returns a Stripe checkout URL (checkout_session_url) to present to the user; the charge happens on Stripe, not through Pilot."
+        "name": "tldr.list",
+        "summary": "List every documented command for the current platform plus the cross-platform `common` set — a directory of all tools tldr covers, one name per line. Pair with tldr.search to explore the catalog. This is `tldr --quiet --list`. (Use tldr.exec with [\"--list-all\"] for every platform.)"
       },
       {
-        "name": "didit.create_workflow",
-        "summary": "Create a verification workflow \u2014 the reusable template that defines which checks a hosted session runs, in order. FREE to create; you're billed per feature only when a session actually runs it. Returns {uuid} \u2014 pass it as workflow_id to didit.create_session. The v3 API takes a `features` ARRAY (in the order users complete them); each item is {feature, config?} where feature is one of OCR, NFC, LIVENESS, FACE_MATCH, PROOF_OF_ADDRESS, QUESTIONNAIRE, DOCUMENT_AI, PHONE_VERIFICATION, EMAIL_VERIFICATION, DATABASE_VALIDATION, AML, IP_ANALYSIS, AGE_ESTIMATION, KYB_REGISTRY, KYB_DOCUMENTS, KYB_KEY_PEOPLE. Example: [{\"feature\":\"OCR\"},{\"feature\":\"LIVENESS\",\"config\":{\"face_liveness_method\":\"PASSIVE\"}},{\"feature\":\"FACE_MATCH\"}]. The API uses a strict field whitelist \u2014 any undeclared key (e.g. workflow_type) is a 400. Max 50 workflows per account."
+        "name": "tldr.info",
+        "summary": "Show cache information: the on-disk cache path, its age, the installed languages, and the total page count. This is `tldr --info`."
       },
       {
-        "name": "didit.list_workflows",
-        "summary": "List your verification workflows with their features and total_price. FREE."
+        "name": "tldr.update",
+        "summary": "Refresh the local page cache from the tldr-pages archive (downloads only the languages that changed). Needs network; the cache also auto-downloads on first use, so this is only for an explicit refresh. This is `tldr --update`."
       },
       {
-        "name": "didit.get_workflow",
-        "summary": "Get one workflow by id. FREE."
+        "name": "tldr.render",
+        "summary": "Render a local tldr page file (a `.md` in tldr format) as clean text — preview a page you are authoring or one written elsewhere. This is `tldr --quiet --color never --render <file>`."
       },
       {
-        "name": "didit.update_workflow",
-        "summary": "Update a workflow (partial \u2014 send only the fields to change; same field set as create_workflow, e.g. a replacement `features` array, workflow_label, status, is_default). FREE."
+        "name": "tldr.exec",
+        "summary": "Run the tldr client with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[...]} forwarded straight to `tldr`, plus optional {\"stdin\":\"...\"}. Use it for any flag or combination the curated methods don't cover: `--platform linux systemctl` to force a platform, `--list-all`/`--list-platforms`/`--list-languages`, `-L es` for another language, `--short-options`/`--long-options`, `--edit`, `--offline`, `--gen-config`, or a multi-word page as separate args. Examples: {\"args\":[\"--platform\",\"linux\",\"systemctl\"]}; {\"args\":[\"--list-all\"]}; {\"args\":[\"git\",\"commit\"]}; {\"args\":[\"-L\",\"es\",\"tar\"]}."
       },
       {
-        "name": "didit.delete_workflow",
-        "summary": "Delete a workflow. FREE. Existing sessions are unaffected. Returns 204."
+        "name": "tldr.cli_help",
+        "summary": "Return the complete tldr command-palette reference — every operation and modifier flag, its values and defaults, the platform list, cache/offline behavior, search & directory usage, worked examples, and licensing — as clean, color-free text. The full contract for what tldr.get / tldr.exec accept. This is `tldr --help`."
       },
       {
-        "name": "didit.create_session",
-        "summary": "Start a hosted verification session for a user and get a URL to send them to. This is Didit's recommended path for ID/liveness/face-match/AML/PoA/etc. \u2014 the user completes everything at the hosted URL, so you never handle document images yourself. COST is the sum of the features the workflow enables (e.g. a full KYC bundle \u2248 $0.33/check; 500 full-KYC checks/month are free), charged to your Didit balance when the session runs. Returns {session_id, session_token, url, status}. Poll didit.get_decision or set a webhook for the result. Nested objects (contact_details, expected_details) are passed as JSON objects."
-      },
-      {
-        "name": "didit.get_decision",
-        "summary": "Get the full decision and extracted data for a session \u2014 status plus id_verifications, liveness_checks, face_matches, aml_screenings, phone/email verifications, poa_verifications, database_validations, ip_analyses, and reviews. FREE (reading results). Image URLs in the response expire after 60 minutes. Statuses: Not Started | In Progress | In Review | Approved | Declined | Abandoned | Expired | Resubmitted."
-      },
-      {
-        "name": "didit.list_sessions",
-        "summary": "List/filter your sessions (paginated). FREE."
-      },
-      {
-        "name": "didit.update_session_status",
-        "summary": "Manually override a session's status (approve/decline/resubmit) \u2014 the programmatic-review action. FREE. For Resubmitted, pass nodes_to_resubmit; the session must be Declined, In Review, or Abandoned."
-      },
-      {
-        "name": "didit.delete_session",
-        "summary": "Permanently delete a session and all its data. FREE. Returns 204."
-      },
-      {
-        "name": "didit.batch_delete_sessions",
-        "summary": "Delete many sessions at once by number (or all). FREE."
-      },
-      {
-        "name": "didit.share_session",
-        "summary": "Generate a share_token so a partner can import a finished session (B2B KYC reuse). FREE. Works only for finished sessions."
-      },
-      {
-        "name": "didit.import_session",
-        "summary": "Import a session shared by a partner via its share_token. FREE."
-      },
-      {
-        "name": "didit.list_reviews",
-        "summary": "List the manual-review activity for a session (status changes, notes). FREE."
-      },
-      {
-        "name": "didit.create_review",
-        "summary": "Add a manual review decision to a session (Approved/Declined/In Review). FREE."
-      },
-      {
-        "name": "didit.aml",
-        "summary": "Screen a person or company against sanctions, PEP, and adverse-media watchlists (standalone, no session). COST $0.20/check on your Didit balance. Returns matches with scores and categories."
-      },
-      {
-        "name": "didit.database_validation",
-        "summary": "Cross-check identity fields against government / authoritative databases (standalone). COST from $0.05/check (1x1, single source) to $0.30 (2x2, two-source cross-validation); varies by country/source. Covers 1,000+ sources across 18+ countries."
-      },
-      {
-        "name": "didit.email_send",
-        "summary": "Send a one-time verification code to an email address. Part of email verification ($0.03 per completed verification, charged to your Didit balance)."
-      },
-      {
-        "name": "didit.email_check",
-        "summary": "Verify the email OTP the user received. Completes an email verification ($0.03)."
-      },
-      {
-        "name": "didit.phone_send",
-        "summary": "Send a one-time code by SMS / WhatsApp / Telegram. Part of phone verification (from $0.03 per completed verification, varies by channel)."
-      },
-      {
-        "name": "didit.phone_check",
-        "summary": "Verify the phone OTP the user received. Completes a phone verification (from $0.03)."
-      },
-      {
-        "name": "didit.blocklist_add",
-        "summary": "Add a session's face/document/phone/email to your blocklist so future matches auto-flag (FACE_IN_BLOCKLIST, etc.). FREE."
-      },
-      {
-        "name": "didit.blocklist_remove",
-        "summary": "Remove items from your blocklist. FREE."
-      },
-      {
-        "name": "didit.blocklist_list",
-        "summary": "List your blocklisted items. FREE."
-      },
-      {
-        "name": "didit.create_questionnaire",
-        "summary": "Create a custom form (7 element types) to attach to a questionnaire_verification workflow. FREE."
-      },
-      {
-        "name": "didit.list_questionnaires",
-        "summary": "List your questionnaires. FREE."
-      },
-      {
-        "name": "didit.get_questionnaire",
-        "summary": "Get one questionnaire. FREE."
-      },
-      {
-        "name": "didit.update_questionnaire",
-        "summary": "Update a questionnaire (partial). FREE."
-      },
-      {
-        "name": "didit.delete_questionnaire",
-        "summary": "Delete a questionnaire. FREE. Returns 204."
-      },
-      {
-        "name": "didit.list_users",
-        "summary": "List verified individuals (grouped by vendor_data) with status and session counts. FREE."
-      },
-      {
-        "name": "didit.get_user",
-        "summary": "Get one user by your vendor_data. FREE."
-      },
-      {
-        "name": "didit.update_user",
-        "summary": "Update a user's display name / manual status / metadata. FREE."
-      },
-      {
-        "name": "didit.batch_delete_users",
-        "summary": "Delete many users by vendor_data (or all). FREE."
-      },
-      {
-        "name": "didit.get_webhook",
-        "summary": "Get your webhook configuration (url, version, HMAC secret_shared_key, capture_method). FREE."
-      },
-      {
-        "name": "didit.update_webhook",
-        "summary": "Set/rotate your webhook config programmatically \u2014 no console needed. FREE."
-      },
-      {
-        "name": "didit.help",
-        "summary": "Discovery: every method with params, latency, and the per-endpoint pricing rate card."
+        "name": "tldr.version",
+        "summary": "Print the delivered client and tldr-client-spec version, e.g. \"tlrc v1.13.1 (implementing the tldr client specification v2.3)\". Needs no cache. This is `tldr --version`."
       }
     ],
     "changelog": [
       {
-        "version": "1.0.0",
+        "version": "1.13.1",
         "notes": [
-          "Initial release \u2014 the full Didit identity platform over one byo HTTPS app: 39 methods + didit.help.",
-          "One-call broker signup: didit.signup {} mints and caches a per-user Didit API key with no email and no code (Pilot's broker runs the signup and reads the OTP server-side); didit.account retrieves it; ops stay direct to Didit.",
-          "KYC/ID, liveness, face match, AML, proof-of-address, database validation, email/phone OTP, hosted sessions, workflows, billing, blocklist, questionnaires, users, webhooks \u2014 per-endpoint pricing in didit.help."
+          "Released v1.13.1 (tlrc client)"
         ]
       }
     ],
-    "grants": [
-      "fs.read:$APP/config.json",
-      "fs.read:$APP/secrets.json",
-      "fs.write:$APP/secrets.json",
-      "key.sign:self",
-      "net.dial:verification.didit.me",
-      "net.dial:broker.pilotprotocol.network",
-      "audit.log:*"
-    ],
+    "grants": [],
     "bundles": [
       {
         "platform": "darwin-arm64",
-        "bytes": 4954879
+        "bytes": 4873897
       },
       {
         "platform": "darwin-amd64",
-        "bytes": 5287106
+        "bytes": 5088134
       },
       {
         "platform": "linux-arm64",
-        "bytes": 4696257
+        "bytes": 5570168
       },
       {
         "platform": "linux-amd64",
-        "bytes": 5130067
+        "bytes": 4927457
       }
     ],
-    "installedBytes": 9324763,
+    "installedBytes": 9629519,
     "depends": [],
-    "protection": "shareable",
+    "protection": "guarded",
     "featured": false,
     "real": true,
     "inCatalogue": true,
     "icon": {
       "mode": "image",
-      "img": "/appicons/io.pilot.didit.png",
-      "fit": "contain",
+      "img": "/appicons/io.pilot.tldr.png",
+      "fit": "cover",
       "pos": "center",
-      "color": "#ffffff",
+      "color": "#203050",
       "ink": false,
       "file": null,
-      "hue": 220
+      "hue": 30
     },
-    "minPilotVersion": "1.10.0",
+    "minPilotVersion": "1.0.0",
     "runtimes": [
       "go"
     ],
-    "publishedAt": "2026-07-07",
-    "updatedAt": "2026-07-08"
+    "publishedAt": null,
+    "updatedAt": null
   }
 ];
 
