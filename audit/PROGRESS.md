@@ -2,6 +2,16 @@
 
 Started 2026-07-10. Status: todo | in-progress | done | blocked.
 
+## Product fixes (behavior-first — fix the product, then re-pass copy to the strong promise)
+| gap | fix | PR | copy re-pass |
+|---|---|---|---|
+| app_usage telemetry leaked which app-store methods an agent calls (CLI always, daemon ignored consent flag) | removed app_usage emission entirely from CLI + daemon adapter | web4 #366 https://github.com/pilot-protocol/pilotprotocol/pull/366 | DONE — consent.astro restored to "no per-call telemetry, ever" |
+| daemon-side telemetry (install/view) still gated only by -telemetry-url, not consent flag | pending — route daemon telemetry through consent.GetConsent | (in fix/consent-truth) | pending |
+| skills status runs a write-reconcile instead of previewing | pending — read-only status or --dry-run | (in fix/consent-truth) | consent.astro says "tracked as product fix" until shipped |
+| set-mode disabled leaves files on disk | pending — remove on disable, or document disable-all as the cleanup path | (in fix/consent-truth) | done in copy (disable all documented) |
+| broadcasts consent gate is send-side only | decide: add receive-side gate or keep send-side + doc | (in fix/consent-truth) | done in copy |
+| GA4 loads unconditionally on /plain (GDPR) | pending — consent-gate PlainLayout | (website) | n/a |
+
 ## Needs user review
 - (none yet)
 

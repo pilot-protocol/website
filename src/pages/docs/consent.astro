@@ -39,12 +39,11 @@ const bodyContent = `<h1>Consent &amp; Privacy Controls</h1>
   <p class="risk-badge risk-low-badge">Risk level: Low</p>
 
   <h3>What it does</h3>
-  <p>When you browse, install, or call apps from the app store, a small signed event is sent to <code>telemetry.pilotprotocol.network</code>. Four events are emitted:</p>
+  <p>When you browse or install apps from the app store, a small signed event is sent to <code>telemetry.pilotprotocol.network</code>. Three events are emitted:</p>
   <ul>
     <li><strong><code>catalogue_viewed</code></strong> — fired once when you run <code>pilotctl appstore catalogue</code>. Payload: <code>{"surface":"catalogue"}</code> plus the event envelope (node ID, timestamp, signature).</li>
     <li><strong><code>appstore_view</code></strong> — fired when you run <code>pilotctl appstore view &lt;app-id&gt;</code>. Payload: the app ID you viewed.</li>
     <li><strong><code>app_installed</code></strong> — fired after a successful <code>pilotctl appstore install &lt;app-id&gt;</code>. Payload: app ID, version installed, and install source (<code>catalogue</code> or <code>local</code>).</li>
-    <li><strong><code>app_usage</code></strong> — fired on every successful <code>pilotctl appstore call</code>, and by the daemon's app-store adapter when apps are called over the network. Payload: the app ID and the method invoked.</li>
   </ul>
   <p>Each event is signed with your daemon's Ed25519 identity key before transmission.</p>
 
@@ -56,8 +55,8 @@ const bodyContent = `<h1>Consent &amp; Privacy Controls</h1>
   </ul>
 
   <h3>Your risk profile</h3>
-  <p><strong>What we receive:</strong> The app ID, the action type, for <code>app_usage</code> the method name invoked, and the event envelope (node ID, timestamp, Ed25519 signature). Your Ed25519 public key is a pseudonymous identifier — it has no name or email unless you registered with one via <code>-email</code>. Your IP address is visible to the telemetry server during the TLS connection, as with any HTTPS request.</p>
-  <p><strong>What we do not receive:</strong> Message contents, agent conversation data, or peer history. Be aware that <code>app_usage</code> does reveal which app-store methods your agent calls — if that pattern is sensitive to you, opt out.</p>
+  <p><strong>What we receive:</strong> The app ID, the action type, and the event envelope (node ID, timestamp, Ed25519 signature). Your Ed25519 public key is a pseudonymous identifier — it has no name or email unless you registered with one via <code>-email</code>. Your IP address is visible to the telemetry server during the TLS connection, as with any HTTPS request.</p>
+  <p><strong>What we do not receive:</strong> Message contents, agent conversation data, peer history, or which app-store methods your agent invokes. What your agent <em>does</em> with an app is never reported — there is no per-call telemetry.</p>
   <p><strong>Who should turn this off:</strong> Users operating in high-sensitivity environments with strict no-telemetry policies, users who don't want any third party to know which apps they've looked at, or users running automated pipelines where even low-volume outbound telemetry is undesirable.</p>
 
   <h3>Commands</h3>
@@ -70,7 +69,7 @@ const bodyContent = `<h1>Consent &amp; Privacy Controls</h1>
 <span class="comment"># Set in ~/.pilot/config.json:</span>
 <span class="comment"># {"consent": {"telemetry": false}}</span></code></pre>
 
-  <p>Takes effect immediately for CLI commands — the flag is re-read on every invocation. <strong>Caveat:</strong> the daemon-side <code>app_usage</code> event is currently gated by the <code>-telemetry-url</code> flag rather than the consent flag; to silence the daemon too, start it with <code>-telemetry-url=""</code>. Aligning the daemon with <code>consent.telemetry</code> is tracked as a product fix.</p>
+  <p>Takes effect immediately — the consent flag is re-read on every invocation. All app-store telemetry is consent-gated on both the CLI and the daemon; per-call usage telemetry was removed entirely, so what your agent calls is never on the wire.</p>
 
   <hr class="section-divider">
 
@@ -265,7 +264,7 @@ pilot-daemon -sandbox -sandbox-dir /opt/pilot-data \\
   "skill_inject": {"mode": "disabled"}
 }</code></pre>
 
-  <p>Set in <code>~/.pilot/config.json</code> and restart the daemon. Peer routing, tunnel encryption, and peer-to-peer messaging are unaffected. Two follow-ups for a complete opt-out: run <code>pilotctl skills disable all</code> to also remove previously injected files, and start the daemon with <code>-telemetry-url=""</code> until daemon-side telemetry honors the consent flag.</p>
+  <p>Set in <code>~/.pilot/config.json</code> and restart the daemon. Peer routing, tunnel encryption, and peer-to-peer messaging are unaffected. To also remove previously injected skill files, run <code>pilotctl skills disable all</code>.</p>
 `;
 ---
 <DocLayout
