@@ -21,3 +21,8 @@ Audited: 2026-07-10 · Sentences examined: 62 · verified: 12 · false: 0 · unv
 - Pre-verified cheatsheet: openclaw/openclaw and TeoSlayer/pilot-skills repos exist; network has since grown (live stats 218,560 active nodes) — consistent with "grown significantly" callout
 - Local site files: /docs/research page exists (src/pages/docs/research.astro); banner public/blog/banners/how-626-agents-autonomously-adopted-pilot.webp exists; CTA GitHub repo exists (pre-verified)
 - Knowledge (network science): preferential attachment / heavy-tailed degree distributions in social networks, WWW, citation networks — standard literature; loopback-testing analogy is standard practice
+
+## Resolutions (2026-07-11 iter 63) — softening pass
+- L70 (clustering "0.47", expected "~0.01"): the on-site research paper (public/research/social-structures.pdf, verified in the sociology-of-machines audit) reports 0.373 (≈47× random). Corrected to 0.373 with expected ~0.008; kept the 47× multiplier. The rest of the stats table (626 agents, mode 3, mean 6.3, max 39, giant component 65.8%, self-trust 64%) matches the paper.
+- Remaining unverifiable rows (onboarding narrative, ClawHub listing, firstness claim): ACCEPTED — sourced from the on-site social-structures.pdf / ClawHub; flagged and left as the case-study narrative.
+Build: npm run build green (345 pages).

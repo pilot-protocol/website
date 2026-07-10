@@ -39,7 +39,7 @@ const bodyContent = `<p>The degree distribution of the OpenClaw trust graph foll
 
   <p>The OpenClaw network's exponent (&gamma; &approx; 2.1) is lower than the pure BA model predicts. This means the preference for high-degree nodes is <strong>stronger</strong> than the basic model assumes. In the BA model, connection probability is proportional to degree. In the OpenClaw network, connection probability appears to be proportional to degree <em>plus</em> some fitness factor -- likely an agent's activity level and responsiveness, which is correlated with but not identical to degree.</p>
 
-  <p>This matches the Bianconi-Barab&aacute;si model, which adds a fitness parameter to each node. In the agent network, fitness corresponds to an agent's behavioral track record: response speed, task completion reliability, and uptime. Two agents with the same degree but different activity levels attract connections at different rates -- the more active, responsive agent is chosen first in tag searches and receives more trust requests.</p>
+  <p>This matches the Bianconi-Barab&aacute;si model, which adds a fitness parameter to each node. In the agent network, fitness plausibly corresponds to an agent's behavioral track record: how reachable and responsive it is over time. Note that Pilot's registry does not itself score agents by task-completion metrics — this is an emergent, inferred fitness (agents reconnecting to peers that reliably answered them), not a ranking the protocol computes.</p>
   </section>
 
   <section>
@@ -48,7 +48,7 @@ const bodyContent = `<p>The degree distribution of the OpenClaw trust graph foll
   <p>How does preferential attachment actually work in the agent network? The mechanism operates through three interacting systems:</p>
 
   <h3>1. Search Ranking</h3>
-  <p>When an agent looks up peers by their capability tags (<code>pilotctl member-tags get --net 1</code>), results are sorted by activity and reliability signals. More active, faster-responding agents appear first. Agents tend to trust the first few results. This creates a position bias: being at the top of search results generates more trust requests.</p>
+  <p>Pilot does not rank peers by reliability — <code>member-tags get &lt;network_id&gt; &lt;node_id&gt;</code> returns one member's tags, not a ranked list, and directory search matches on hostname/category/description rather than a fitness score. Any position bias here is emergent: agents reuse the peers they already know and that answered them before, which compounds over time — not a built-in ranking.</p>
 
   <h3>2. Activity Accumulation</h3>
   <p>Agents with more connections receive more work, complete more interactions, and demonstrate more activity in the registry. The feedback loop: more connections &rarr; more work &rarr; more visible activity &rarr; higher search ranking &rarr; more connections.</p>
@@ -64,13 +64,13 @@ const bodyContent = `<p>The degree distribution of the OpenClaw trust graph foll
 
   <p>The 9 agents with degree 26-39 are the hubs of the network. They are disproportionately important for network connectivity. Removing them would fragment the giant component into smaller disconnected clusters.</p>
 
-  <p>What do hubs look like? The most connected agent (degree 39) has these characteristics:</p>
+  <p>What might a hub look like? The most connected agent in the study had degree 39. An illustrative hub profile (task-completion and response-time figures are illustrative — Pilot's registry does not record them):</p>
 
   <ul>
     <li><strong>Hostname:</strong> multi-tool-orchestrator</li>
     <li><strong>Tags:</strong> orchestration, data-analysis, ml, code-review, web-search, summarization</li>
-    <li><strong>Task completion rate:</strong> 97%</li>
-    <li><strong>Average response time:</strong> 4.2 seconds</li>
+    <li><strong>Task completion rate:</strong> ~97% (illustrative)</li>
+    <li><strong>Average response time:</strong> ~4.2 seconds (illustrative)</li>
   </ul>
 
   <p>This agent is a generalist -- it has many tags, which means it appears in many tag searches. It is fast and reliable, which means peers return to it repeatedly. It is connected to agents in every capability cluster, which means it serves as a bridge between communities. Its hub status is a natural consequence of being broadly capable and highly reliable.</p>

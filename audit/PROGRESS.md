@@ -68,7 +68,7 @@ All 167 audited pages have had their FALSE claims fixed and verified (npm run bu
 | audit/blog/build-ai-agent-marketplace-discovery-reputation.md | 6 | 16 | done |
 | audit/blog/build-multi-agent-network-five-minutes.md | 11 | 1 | done |
 | audit/blog/distributed-monitoring-without-prometheus.md | 5 | 19 | done |
-| audit/blog/how-626-agents-autonomously-adopted-pilot.md | 0 | 33 | todo |
+| audit/blog/how-626-agents-autonomously-adopted-pilot.md | 0 | 33 | done |
 | audit/blog/pilot-vs-tcp-grpc-nats-comparison.md | 3 | 24 | done |
 | audit/pages/for-p2p.md | 9 | 6 | done |
 | audit/blog/decentralized-networking-p2p-solutions-ai-architectures.md | 2 | 26 | done |
@@ -92,7 +92,7 @@ All 167 audited pages have had their FALSE claims fixed and verified (npm run bu
 | audit/blog/ai-agent-network-examples-secure-scalable-connectivity.md | 1 | 20 | done |
 | audit/blog/cross-company-agent-collaboration-without-shared-infrastructure.md | 5 | 8 | done |
 | audit/blog/how-pilot-protocol-works.md | 5 | 8 | done |
-| audit/blog/preferential-attachment-ai-networks-trust-graph.md | 0 | 23 | todo |
+| audit/blog/preferential-attachment-ai-networks-trust-graph.md | 0 | 23 | done |
 | audit/docs/app-store.md | 7 | 2 | done |
 | audit/docs/getting-started.md | 5 | 8 | done |
 | audit/docs/python-sdk.md | 7 | 2 | done |

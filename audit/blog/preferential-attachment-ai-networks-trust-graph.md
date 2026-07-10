@@ -25,3 +25,10 @@ Audited: 2026-07-10 · Sentences examined: 42 · verified: 13 · false: 0 · unv
 - web4/cmd/pilotctl/main.go:7924: `pilotctl member-tags get --net <id>` syntax is real.
 - Local site files: /docs/research (src/pages/docs/research.astro) and /docs/getting-started exist; banner public/blog/banners/preferential-attachment-ai-networks-trust-graph.webp exists.
 - Definitions (self-contained): degree definition, encapsulated mechanism descriptions of preferential attachment.
+
+## Resolutions (2026-07-11 iter 63) — softening pass
+- L42 (fitness = "task completion reliability" + "chosen first in tag searches"): Pilot's registry tracks no task-completion metric and does not rank search by fitness. Reworded to an emergent/inferred fitness, removing the false ranking mechanism.
+- L51 ("results are sorted by activity and reliability signals"): member-tags get returns one member's tags, not a ranked list; directory search matches hostname/category/description. Corrected to say Pilot does not rank by reliability; position bias is emergent (peer reuse).
+- L70-73 (hub profile "task completion 97%", "4.2s" as measurements): marked illustrative and noted the registry does not record them.
+- Remaining rows (degree table, γ≈2.1 fit, projections): ACCEPTED — power-law framing is paper-backed (social-structures.pdf); specific fits flagged as illustrative/derived.
+Build: npm run build green (345 pages).
