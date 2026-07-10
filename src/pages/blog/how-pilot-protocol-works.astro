@@ -69,18 +69,17 @@ const bodyContent = `<p>Every modern agent framework makes the same assumption: 
       <tr><th>Offset</th><th>Field</th><th>Size</th><th>Description</th></tr>
     </thead>
     <tbody>
-      <tr><td>0</td><td>Version</td><td>1 byte</td><td>Protocol version (currently 1)</td></tr>
-      <tr><td>1</td><td>Flags</td><td>1 byte</td><td>SYN, ACK, FIN, RST, PSH, URG</td></tr>
-      <tr><td>2</td><td>Protocol</td><td>1 byte</td><td>Upper-layer protocol identifier</td></tr>
-      <tr><td>3</td><td>SrcAddr</td><td>6 bytes</td><td>Source virtual address (48-bit)</td></tr>
-      <tr><td>9</td><td>DstAddr</td><td>6 bytes</td><td>Destination virtual address (48-bit)</td></tr>
-      <tr><td>15</td><td>SrcPort</td><td>2 bytes</td><td>Source port number</td></tr>
-      <tr><td>17</td><td>DstPort</td><td>2 bytes</td><td>Destination port number</td></tr>
-      <tr><td>19</td><td>SeqNum</td><td>4 bytes</td><td>Sequence number for ordering</td></tr>
-      <tr><td>23</td><td>AckNum</td><td>4 bytes</td><td>Acknowledgment number</td></tr>
-      <tr><td>27</td><td>Window</td><td>2 bytes</td><td>Advertised receive window (flow control)</td></tr>
-      <tr><td>29</td><td>Length</td><td>2 bytes</td><td>Payload length in bytes</td></tr>
-      <tr><td>31</td><td>Checksum</td><td>4 bytes</td><td><a href="https://en.wikipedia.org/wiki/Cyclic_redundancy_check" target="_blank" rel="noopener">CRC32</a> over header + payload</td></tr>
+      <tr><td>0</td><td>Version + Flags</td><td>1 byte</td><td>High nibble = version (currently 1); low nibble = flags (SYN, ACK, FIN, RST)</td></tr>
+      <tr><td>1</td><td>Protocol</td><td>1 byte</td><td>Upper-layer protocol (stream, datagram, control)</td></tr>
+      <tr><td>2</td><td>Length</td><td>2 bytes</td><td>Payload length in bytes</td></tr>
+      <tr><td>4</td><td>SrcAddr</td><td>6 bytes</td><td>Source virtual address (48-bit)</td></tr>
+      <tr><td>10</td><td>DstAddr</td><td>6 bytes</td><td>Destination virtual address (48-bit)</td></tr>
+      <tr><td>16</td><td>SrcPort</td><td>2 bytes</td><td>Source port number</td></tr>
+      <tr><td>18</td><td>DstPort</td><td>2 bytes</td><td>Destination port number</td></tr>
+      <tr><td>20</td><td>SeqNum</td><td>4 bytes</td><td>Sequence number for ordering</td></tr>
+      <tr><td>24</td><td>AckNum</td><td>4 bytes</td><td>Acknowledgment number</td></tr>
+      <tr><td>28</td><td>Window</td><td>2 bytes</td><td>Advertised receive window (in segments; 0 = no flow control)</td></tr>
+      <tr><td>30</td><td>Checksum</td><td>4 bytes</td><td><a href="https://en.wikipedia.org/wiki/Cyclic_redundancy_check" target="_blank" rel="noopener">CRC32</a> over header + payload</td></tr>
     </tbody>
   </table>
 
@@ -88,16 +87,15 @@ const bodyContent = `<p>Every modern agent framework makes the same assumption: 
 
   <pre><code><span class="comment"># Pilot Protocol SYN packet (34 bytes, no payload)</span>
 <span class="comment"># Offset  Hex                                     ASCII</span>
-00000000  <span class="cmd">01</span> <span class="cmd">02</span> <span class="cmd">00</span>                                <span class="comment">  Version=1 Flags=SYN Proto=0</span>
-00000003  <span class="cmd">00 00 00 00 00 01</span>                        <span class="comment">  SrcAddr=0:0000.0000.0001</span>
-00000009  <span class="cmd">00 00 00 00 00 02</span>                        <span class="comment">  DstAddr=0:0000.0000.0002</span>
-0000000F  <span class="cmd">03 E8</span>                                    <span class="comment">  SrcPort=1000</span>
-00000011  <span class="cmd">00 07</span>                                    <span class="comment">  DstPort=7 (echo)</span>
-00000013  <span class="cmd">00 00 00 01</span>                              <span class="comment">  SeqNum=1</span>
-00000017  <span class="cmd">00 00 00 00</span>                              <span class="comment">  AckNum=0</span>
-0000001B  <span class="cmd">FF FF</span>                                    <span class="comment">  Window=65535</span>
-0000001D  <span class="cmd">00 00</span>                                    <span class="comment">  Length=0 (no payload)</span>
-0000001F  <span class="cmd">A3 B2 C1 D0</span>                              <span class="comment">  Checksum (CRC32)</span></code></pre>
+00000000  <span class="cmd">11</span> <span class="cmd">01</span> <span class="cmd">00 00</span>                             <span class="comment">  Version=1 Flags=SYN Proto=stream Len=0</span>
+00000004  <span class="cmd">00 00 00 00 00 01</span>                        <span class="comment">  SrcAddr=0:0000.0000.0001</span>
+0000000A  <span class="cmd">00 00 00 00 00 02</span>                        <span class="comment">  DstAddr=0:0000.0000.0002</span>
+00000010  <span class="cmd">03 E8</span>                                    <span class="comment">  SrcPort=1000</span>
+00000012  <span class="cmd">00 07</span>                                    <span class="comment">  DstPort=7 (echo)</span>
+00000014  <span class="cmd">00 00 00 01</span>                              <span class="comment">  SeqNum=1</span>
+00000018  <span class="cmd">00 00 00 00</span>                              <span class="comment">  AckNum=0</span>
+0000001C  <span class="cmd">FF FF</span>                                    <span class="comment">  Window=65535 (segments)</span>
+0000001E  <span class="cmd">A3 B2 C1 D0</span>                              <span class="comment">  Checksum (CRC32)</span></code></pre>
 
   <p>The fixed header design means that every Pilot node -- from a Raspberry Pi to a cloud VM -- can parse packets with the same code, at the same speed. There is no negotiation, no capability exchange, no handshake to determine header format.</p>
 
@@ -112,7 +110,7 @@ const bodyContent = `<p>Every modern agent framework makes the same assumption: 
     <li><strong>Nagle algorithm</strong> to coalesce small writes into larger packets</li>
     <li><strong>Auto segmentation</strong> for payloads larger than the MTU</li>
     <li><strong>Zero-window probing</strong> to prevent deadlock when the receiver is full</li>
-    <li><strong>Keepalive probes</strong> every 30 seconds, with 120-second idle timeout</li>
+    <li><strong>Keepalive probes</strong> every 60 seconds, with 120-second idle timeout</li>
   </ul>
 
   <p>This gives application-layer code a reliable, ordered byte stream -- identical to what <code>net.Conn</code> provides in Go. In fact, Pilot connections implement the <code>net.Conn</code> interface directly, which means standard Go HTTP servers and clients work unmodified over Pilot tunnels. This transport layer is what makes it practical to <a href="/blog/chain-ai-models-across-machines">chain AI models across machines with persistent tunnels</a>, eliminating the per-request connection overhead that plagues HTTP-based pipelines.</p>
@@ -168,7 +166,7 @@ const bodyContent = `<p>Every modern agent framework makes the same assumption: 
   <pre><code><span class="comment"># MsgRelay format: [0x05][senderNodeID(4)][destNodeID(4)][payload...]</span>
 <span class="cmd">Agent A</span> --[relay]--> <span class="cmd">Beacon</span> --[relay]--> <span class="cmd">Agent B</span></code></pre>
 
-  <p>Relay mode is detected automatically. When an agent sends a <code>DialConnection</code>, it first attempts <strong>3 direct retries</strong>. If those fail, it automatically switches to relay mode and attempts <strong>3 relay retries</strong> through the beacon. The application layer never knows the difference -- it gets the same <code>net.Conn</code> interface either way.</p>
+  <p>Relay mode is detected automatically. When an agent sends a <code>DialConnection</code>, it first attempts <strong>3 direct retries</strong>. If those fail, it automatically switches to relay mode and attempts <strong>4 relay retries</strong> through the beacon (7 total dial attempts). The application layer never knows the difference -- it gets the same <code>net.Conn</code> interface either way.</p>
 
   <p>The tradeoff is latency: relay adds one extra hop through the beacon. But it guarantees connectivity for agents behind the most restrictive NATs, including carriers that use CGNAT (Carrier-Grade NAT) for mobile networks.</p>
 

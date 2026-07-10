@@ -35,3 +35,12 @@ Audited: 2026-07-10 · Sentences examined: 96 · verified: 74 · false: 5 · unv
 - Live URLs (curl 200): RFC links (rfc768, rfc5389, rfc7748, rfc5288 pages assumed standard IETF; datatracker reachable).
 - EXAMPLE: STUN response "203.0.113.42:54321" (RFC 5737 range), pilot.Listen pseudo-code, sample addresses.
 - OPINION: "hardest part of any peer-to-peer system", "trivial and fast", design-choice callout framing, marketing CTA copy.
+
+## Resolutions (2026-07-11 iter 46)
+- L73 (flags "SYN, ACK, FIN, RST, PSH, URG"): corrected to the real 4 flags (SYN 0x1, ACK 0x2, FIN 0x4, RST 0x8; low nibble of byte 0). No PSH/URG (header.go:25-30).
+- L67-85 (header offset table): rewrote to match packet.go:10-23 — byte0=[Version:4|Flags:4], byte1=Protocol, bytes2-3=Length, Src @4-9, Dst @10-15, ports @16-19, Seq @20-23, Ack @24-27, Window @28-29, Checksum @30-33. Every post-byte-1 offset fixed.
+- L89-100 (SYN hex dump): rewrote with correct byte 0 = 0x11 (version 1 + SYN nibble), Length at bytes 2-3, and corrected offsets through checksum @0x1E. 34 bytes total.
+- L115 (keepalive "every 30 seconds"): corrected to 60s (DefaultKeepaliveInterval = 60s, daemon.go:160); 120s idle timeout was already correct.
+- L171 ("3 relay retries"): corrected to 4 relay retries (DialDirectRetries=3, DialMaxRetries=7 → 3 direct + 4 relay = 7 total).
+- Unverifiable claims (NAT %, no-plaintext-in-prod, justification-pattern auto-approve, untrust-notifies, ms latency, 226 tests, CGNAT, <5min): left as-is; noted in ledger.
+Build: npm run build green (345 pages).
