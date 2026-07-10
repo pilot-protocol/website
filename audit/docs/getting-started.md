@@ -32,3 +32,6 @@ Audited: 2026-07-10 · Sentences examined: 96 · verified: 62 · false: 5 · unv
 - **Local site files (src/pages/**)**: all internal links resolve — /docs/{index,concepts,consent,firewalls,gateway,service-agents,pilot-director,cli-reference(#quickstart anchor at line 61),trust,go-sdk,python-sdk}, /for/compatibility, /blog/build-multi-agent-network-five-minutes; TOC anchors all present in-page; consent.astro does document the defaults and exact files (26 consent-term mentions, 9 file-path mentions).
 - **src/pages/for/compatibility.astro**: serverless "wrong runtime — 15-min hard timeout / frozen between invocations" (lines 43, 456); hostile-state DPI "out of scope" (line 111).
 - **brew trust --help (live)**: subcommand exists and trusts non-official taps (partially supports the Homebrew paragraph; the "require" wording flagged above).
+
+## Resolutions (2026-07-10, loop iteration 36)
+5 FALSE fixed (verified vs live install.sh + pilotctl source): installer does NOT auto-start the service (prints the start command); pilotctl info has no heartbeat field → reworded the diagnostic to peers/connections; trust output has no "mutual: yes" (mutual is the untagged norm; JSON is "mutual": true); gateway example address → generic placeholder (0x037D was a different node); log path is ~/.pilot/pilot-<pid>.log not pilot.log. 8 unverifiable accepted.

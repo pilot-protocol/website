@@ -84,7 +84,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/how-pilot-protocol-works.md | 5 | 8 | todo |
 | audit/blog/preferential-attachment-ai-networks-trust-graph.md | 0 | 23 | todo |
 | audit/docs/app-store.md | 7 | 2 | done |
-| audit/docs/getting-started.md | 5 | 8 | todo |
+| audit/docs/getting-started.md | 5 | 8 | done |
 | audit/docs/python-sdk.md | 7 | 2 | done |
 | audit/for/mcp.md | 7 | 2 | todo |
 | audit/blog/building-custom-pilot-skills-openclaw.md | 4 | 10 | todo |
@@ -103,7 +103,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/ai-networking-best-practices-secure-scalable-systems.md | 0 | 19 | todo |
 | audit/blog/distributed-rag-without-central-knowledge-base.md | 4 | 7 | todo |
 | audit/blog/smart-home-without-cloud-local-device-communication.md | 3 | 10 | todo |
-| audit/docs/enterprise-rbac.md | 6 | 1 | todo |
+| audit/docs/enterprise-rbac.md | 6 | 1 | done |
 | audit/blog/ietf-internet-draft-pilot-protocol.md | 2 | 12 | todo |
 | audit/blog/legacy-protocol-integration-for-secure-distributed-ai.md | 1 | 15 | todo |
 | audit/blog/multi-cloud-networking-decentralized-ai-systems.md | 1 | 15 | todo |
@@ -122,7 +122,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/scaling-openclaw-fleets-thousands-agents.md | 1 | 12 | todo |
 | audit/docs/concepts.md | 5 | 0 | todo |
 | audit/docs/diagnostics.md | 5 | 0 | todo |
-| audit/docs/webhooks.md | 5 | 0 | todo |
+| audit/docs/webhooks.md | 5 | 0 | done |
 | audit/blog/agent-communication-security-best-practices.md | 4 | 2 | todo |
 | audit/blog/clawhub-to-live-network-openclaw-discovery.md | 2 | 8 | todo |
 | audit/blog/how-ai-agents-discover-each-other.md | 2 | 8 | todo |

@@ -47,7 +47,7 @@ const bodyContent = `<h1>RBAC & Access Control</h1>
       <tr><td>Transfer ownership</td><td>Yes</td><td>No</td><td>No</td></tr>
       <tr><td>Delete the network</td><td>Yes</td><td>No</td><td>No</td></tr>
       <tr><td>Rename the network</td><td>Yes</td><td>Yes</td><td>No</td></tr>
-      <tr><td>Toggle enterprise mode</td><td>Yes</td><td>No</td><td>No</td></tr>
+      <tr><td>Toggle enterprise mode <small>(admin token, not a role)</small></td><td>—</td><td>—</td><td>—</td></tr>
     </tbody>
   </table>
 
@@ -105,14 +105,14 @@ const bodyContent = `<h1>RBAC & Access Control</h1>
 
   <pre><code><span class="cmd">pilotctl</span> network invites</code></pre>
 
-  <p>Protocol command: <code>get_invites</code>. Returns pending invitations with network name, inviter ID, and expiry timestamp.</p>
+  <p>Protocol command: <code>poll_invites</code>. Returns pending invitations with <code>network_id</code>, <code>inviter_id</code>, and <code>timestamp</code> (invite creation time).</p>
 
   <h3>Accept or reject</h3>
 
   <pre><code><span class="cmd">pilotctl</span> network accept &lt;network_id&gt;
 <span class="cmd">pilotctl</span> network reject &lt;network_id&gt;</code></pre>
 
-  <p>Protocol command: <code>respond_to_invite</code>. Accepting joins the agent to the network with the <strong>member</strong> role. Rejecting removes the invitation from the inbox.</p>
+  <p>Protocol command: <code>respond_invite</code>. Accepting joins the agent to the network with the <strong>member</strong> role. Rejecting removes the invitation from the inbox.</p>
 
   <h3>Invite rules</h3>
 
@@ -136,7 +136,7 @@ const bodyContent = `<h1>RBAC & Access Control</h1>
     <li><strong>Global admin token</strong> - the registry-level admin token set with <code>--admin-token</code>. Has full access to all operations across all networks.</li>
     <li><strong>Per-network admin token</strong> - scoped to a single network. Grants admin-level operations on that network only.</li>
     <li><strong>RBAC role</strong> - the agent&rsquo;s role in the specific network (owner, admin, member). Checked for all network-scoped operations.</li>
-    <li><strong>Ed25519 signature</strong> - protocol commands that modify state (set-hostname, set-visibility, deregister, promote, demote, kick) are signed with the agent&rsquo;s private key to prevent spoofing.</li>
+    <li><strong>Ed25519 signature</strong> - identity-changing commands (set-hostname, set-visibility, deregister) are signed with the agent&rsquo;s private key to prevent spoofing. Network role changes (promote, demote, kick) are authorized by the caller&rsquo;s network role, not a per-command signature.</li>
   </ol>
 
   <p>Each layer is checked in order. If any layer grants the required permission, the operation proceeds. For example, the global admin token can promote a member even without being the network owner.</p>
@@ -151,7 +151,7 @@ const bodyContent = `<h1>RBAC & Access Control</h1>
     <li><strong>Clear expiry</strong> - <code>set_key_expiry</code> with no expiry date clears the deadline.</li>
   </ul>
 
-  <p>Key expiry enables automated credential rotation policies: set an expiry date, and the agent must rotate its key before that date to remain active.</p>
+  <p>Key expiry lets you set an <code>ExpiresAt</code> after which the node is blocked at heartbeat. Note: rotating the key does not by itself clear the expiry — call <code>set_key_expiry</code> again (or with no expiry) to extend it.</p>
 
   <div class="callout">
     <strong>See also:</strong> <a href="enterprise-identity">Identity &amp; SSO</a> - connect external identity providers for centralized authentication. <a href="enterprise-policies">Network Policies</a> - enforce membership caps and port restrictions.

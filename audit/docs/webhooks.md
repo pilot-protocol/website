@@ -28,3 +28,6 @@ Audited: 2026-07-10 · Sentences examined: 96 · verified: 88 · false: 5 · unv
 - Lines 146-155: sample payload JSON (event_id 1, node_id 5, peer_node_id 7, "want to collaborate") — illustrative; structure and handshake.received data fields match source.
 - Lines 172-200: Python receiver — demo code; all data field names it reads were verified against plugin sources.
 - Lines 202-204: receiver-start terminal block — demo commands; `pilotctl set-webhook` verified to exist.
+
+## Resolutions (2026-07-10, loop iteration 36)
+5 FALSE fixed (verified vs webhook@v0.2.0): NOT "no queuing" — 1024-event buffer + 3 retries + circuit breaker (dropped only after retries); agent.registered/agent.heartbeat are the DAEMON's own registration/liveness, not an attached driver client; event_id is a per-webhook-client counter that restarts on URL hot-swap (not unique per daemon lifetime); data is OMITTED (omitempty) not null, and there is no daemon.started event. 0 unverifiable.
