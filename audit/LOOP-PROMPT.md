@@ -34,5 +34,8 @@ You are resolving the sentence-level claim audit in `/Users/calinteodor/Developm
 - Temp files go to the session scratchpad directory, not /tmp.
 - `pilotctl` is installed locally — you can run real commands (`pilotctl appstore catalogue`, `pilotctl skills status` etc.) to verify live behavior. Prefer read-only commands; do not change the local daemon's trust/config state.
 
+## Notifications (keep the user in the loop remotely)
+After each iteration's push, send a one-line SMS via `~/bin/pilot-sms` (configured per the "SMS / voice updates" section of the user's global `~/.claude/CLAUDE.md`): pages fixed this round, running totals, and **full URLs** — always include `https://github.com/pilot-protocol/website/pull/116` and, when relevant, the branch preview `https://fix-sweep-4.pilotprotocol.pages.dev/`. If an iteration hits a true blocker, follow the escalation ladder in that CLAUDE.md section (SMS → ~15 min → voice call → park and continue). Batch: one SMS per iteration, not per commit.
+
 ## Stop condition
 When every ledger row in every file is resolved (`FIXED`/`ACCEPTED`) and the build is green: write a final summary at the top of `audit/PROGRESS.md` (totals, product PRs opened, items under "Needs user review"), comment that summary on PR #116 via `gh pr comment 116`, push, and **stop the loop**. If genuinely blocked on something only the user can decide, add it to "Needs user review", skip it, and continue with the rest — only stop early if ALL remaining work is user-blocked.
