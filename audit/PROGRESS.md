@@ -19,7 +19,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | ledger | false | unverifiable | status |
 |---|---:|---:|---|
 | audit/docs/consent.md | 33 | 6 | done |
-| audit/for/compatibility.md | 16 | 33 | todo |
+| audit/for/compatibility.md | 16 | 33 | done |
 | audit/docs/enterprise-blueprints.md | 24 | 0 | todo |
 | audit/pages/privacy.md | 11 | 37 | todo |
 | audit/docs/cli-reference.md | 21 | 6 | done |
