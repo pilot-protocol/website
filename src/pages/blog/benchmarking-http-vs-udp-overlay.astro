@@ -5,6 +5,8 @@ const bodyContent = `<p>Every agent communication benchmark you have seen compar
 
   <p>We measure four things: <strong>connection establishment time</strong>, <strong>message latency at varying payload sizes</strong>, <strong>sustained throughput</strong>, and <strong>behavior when NAT is involved</strong>. The results tell a story that raw speed alone cannot capture.</p>
 
+  <p style="font-size:0.9em;opacity:0.8;"><em>Note: the figures in this post come from our own two-machine runs and are illustrative — they are not reproducible from public tooling alone (only the Pilot side, <code>pilotctl bench</code>, ships in the CLI). Treat them as indicative, not audited benchmarks.</em></p>
+
   <section>
   <h2>Test Setup</h2>
 
@@ -133,13 +135,12 @@ const bodyContent = `<p>Every agent communication benchmark you have seen compar
   <section>
   <h2>Sustained Throughput</h2>
 
-  <p>Latency measures single messages. Throughput measures the pipe. We ran <code>pilotctl bench</code> for 60-second sustained transfers and compared against an equivalent HTTP/2 streaming benchmark.</p>
+  <p>Latency measures single messages. Throughput measures the pipe. We used <code>pilotctl bench</code> (a fixed-size transfer through the echo port) at several payload sizes and compared against an equivalent HTTP/2 streaming benchmark.</p>
 
-  <pre><code><span class="comment"># Pilot benchmark: sustained transfer over echo port</span>
-<span class="cmd">pilotctl bench 1:0001.0002.0003</span>
+  <pre><code><span class="comment"># Pilot benchmark: fixed-size transfer through the echo port (default 1 MB)</span>
+<span class="cmd">pilotctl bench 1:0001.0002.0003 100</span>   <span class="comment"># 100 MB transfer</span>
 
-<span class="comment"># HTTP/2 benchmark: streaming POST with chunked transfer</span>
-<span class="cmd">./http2bench --target https://agent-b.example.com/echo --duration 60s</span></code></pre>
+<span class="comment"># HTTP/2 side used a comparable streaming-POST tool (not shipped in this repo)</span></code></pre>
 
   <table>
     <tr>
@@ -322,7 +323,7 @@ const bodyContent = `<p>Every agent communication benchmark you have seen compar
   <section>
   <h2>Reproduce These Benchmarks</h2>
 
-  <p>All benchmark tooling is included in the repository. To run the Pilot benchmarks yourself:</p>
+  <p>The Pilot side of these benchmarks uses <code>pilotctl bench</code> (shipped with the CLI). To run it yourself:</p>
 
   <pre><code><span class="comment"># Start two agents (on separate machines)</span>
 <span class="cmd">pilot-daemon</span>
@@ -330,11 +331,10 @@ const bodyContent = `<p>Every agent communication benchmark you have seen compar
 <span class="comment"># On Agent A: run the benchmark</span>
 <span class="cmd">pilotctl bench 1:0001.0002.0003</span>
 
-<span class="comment"># Connection timing (included in bench output)</span>
-<span class="comment"># Latency histogram at 1KB, 10KB, 100KB, 1MB</span>
-<span class="comment"># Throughput over 60-second window</span></code></pre>
+<span class="comment"># Output: bytes transferred, elapsed time, and throughput</span>
+<span class="comment"># (re-run with different [size_mb] values to sweep payload sizes)</span></code></pre>
 
-  <p>The echo server runs on port 7 by default. See the <a href="/docs/">documentation</a> for full setup instructions, including GCP deployment scripts for the cross-region configuration used in these tests.</p>
+  <p>The echo server runs on port 7 by default. The cross-region figures below came from our own two-VM runs; they are illustrative and not reproducible from public tooling alone (there is no bundled cross-region harness).</p>
   </section>
 
   <div class="cta">

@@ -44,7 +44,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/lightweight-swarm-communication-drones-robots.md | 9 | 20 | done |
 | audit/docs/tags.md | 15 | 2 | done |
 | audit/docs/gateway.md | 15 | 1 | done |
-| audit/blog/benchmarking-http-vs-udp-overlay.md | 4 | 32 | todo |
+| audit/blog/benchmarking-http-vs-udp-overlay.md | 4 | 32 | done |
 | audit/blog/secure-ai-agent-communication-zero-trust.md | 4 | 30 | todo |
 | audit/docs/comparison-networking.md | 13 | 3 | done |
 | audit/blog/contributing-codebase-tour.md | 9 | 14 | todo |
