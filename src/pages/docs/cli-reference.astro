@@ -234,6 +234,11 @@ const bodyContent = `<h1>CLI Reference</h1>
 <span class="cmd">pilotctl</span> recovery new-key &lt;...&gt;
 <span class="cmd">pilotctl</span> recovery recover &lt;...&gt;</code></pre>
   <p>Reclaim a node's address if its identity key is lost. <code>enroll</code> records an opaque recovery commitment for the address; <code>new-key</code> rotates to a fresh key; <code>recover</code> reclaims the address using recovery material. Enrollment and signatures come from the <code>pilot-verify</code> tool.</p>
+
+  <h3 id="sign-request">sign-request / verify-request</h3>
+  <pre><code><span class="cmd">pilotctl</span> sign-request --audience &lt;a&gt; (--body-file &lt;f&gt; | --body-hash &lt;64hex&gt; | --body '&lt;string&gt;')
+<span class="cmd">pilotctl</span> verify-request --envelope '&lt;canonical&gt;' --signature '&lt;b64&gt;' [--standing] [--max-skew &lt;secs&gt;]</code></pre>
+  <p>Sign an arbitrary request payload with your node's Ed25519 identity so a peer can verify who sent it — and verify an envelope a peer produced with <code>sign-request</code>. Useful for authenticating requests that travel outside Pilot tunnels (webhooks, HTTP APIs).</p>
   <p>Returns: <code>status</code>, <code>node_id</code>, <code>address</code></p>
 
   <h2 id="webhooks">Webhooks</h2>
@@ -308,6 +313,23 @@ const bodyContent = `<h1>CLI Reference</h1>
   <h3 id="network-reject">network reject</h3>
   <pre><code><span class="cmd">pilotctl</span> network reject &lt;network_id&gt;</code></pre>
   <p>Decline a pending invite.</p>
+
+  <h3 id="network-admin">network create / delete / rename</h3>
+  <pre><code><span class="cmd">pilotctl</span> network create --name &lt;name&gt; [--join-rule open|token|invite] [--token &lt;t&gt;] [--enterprise]
+<span class="cmd">pilotctl</span> network delete &lt;network_id&gt;
+<span class="cmd">pilotctl</span> network rename &lt;network_id&gt; &lt;new_name&gt;</code></pre>
+  <p>Create, delete, or rename a network you administer. <code>--enterprise</code> enables the <a href="enterprise">enterprise control suite</a> at creation time.</p>
+
+  <h3 id="network-roles">network promote / demote / kick / role</h3>
+  <pre><code><span class="cmd">pilotctl</span> network promote &lt;network_id&gt; &lt;node_id&gt;
+<span class="cmd">pilotctl</span> network demote &lt;network_id&gt; &lt;node_id&gt;
+<span class="cmd">pilotctl</span> network kick &lt;network_id&gt; &lt;node_id&gt;
+<span class="cmd">pilotctl</span> network role &lt;network_id&gt; &lt;node_id&gt;</code></pre>
+  <p>Membership administration: promote a member to admin, demote an admin, remove a member, or inspect a member's role. Requires admin (or owner) on the network — see <a href="enterprise-rbac">RBAC</a>.</p>
+
+  <h3 id="network-policy">network policy</h3>
+  <pre><code><span class="cmd">pilotctl</span> network policy &lt;network_id&gt; [--set '&lt;json&gt;']</code></pre>
+  <p>Get or set the network policy document (membership caps, port whitelists, description). See <a href="enterprise-policies">Policies</a>.</p>
 
   <h2 id="service-agents">Service Agents</h2>
 
@@ -551,12 +573,13 @@ const bodyContent = `<h1>CLI Reference</h1>
   <p>Reads the published Pilot Protocol changelog feed and prints recent entries (default: 5). <code>--scope</code> filters by tag (e.g. <code>protocol</code>, <code>cli</code>, <code>networks</code>).</p>
 
   <h3 id="skills">skills</h3>
-  <pre><code><span class="cmd">pilotctl</span> skills [status|paths|check|disable|enable]</code></pre>
+  <pre><code><span class="cmd">pilotctl</span> skills [status|paths|check|set-mode|disable|enable]</code></pre>
   <p>Manages the <code>SKILL.md</code> files the daemon installs for each detected agent tool (Claude Code, OpenClaw, PicoClaw, OpenHands, Hermes). Without a subcommand, defaults to <code>status</code>.</p>
   <ul>
     <li><code>status</code> — show install state per detected tool.</li>
     <li><code>paths</code> — print install paths only, one per line.</li>
-    <li><code>check</code> — run one reconcile pass immediately (the daemon also reconciles every 15 min).</li>
+    <li><code>check</code> — run one reconcile pass immediately (in <code>auto</code> mode the daemon also reconciles every 15 min).</li>
+    <li><code>set-mode &lt;auto|manual|disabled&gt;</code> — switch the injection mode. <code>auto</code> (fresh-install default) reconciles every 15 minutes; <code>manual</code> updates only on <code>pilotctl update</code> / <code>skills check</code>; <code>disabled</code> removes injected content. See <a href="consent#skillinject">Consent &amp; Privacy</a>.</li>
     <li><code>disable</code> — remove every file the daemon has ever written and persist an opt-out in <code>~/.pilot/config.json</code> so future ticks are no-ops. Files in pilot-owned subdirs (<code>~/.&lt;tool&gt;/skills/pilot-protocol/</code>, <code>~/.pilot/bin/</code>, plugin install dirs) are deleted; files co-inhabited with the user (<code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>AGENT.md</code>, <code>SOUL.md</code>) only have the <code>&lt;!-- pilot:begin --&gt;</code> marker block stripped — the file itself is never deleted, even if it becomes empty. OpenClaw <code>openclaw.json</code> is restored from the <code>.pilot-bak</code> snapshot when present, otherwise inverse-merged.</li>
     <li><code>enable</code> — re-enables injection and runs one reconcile pass.</li>
   </ul>

@@ -129,7 +129,7 @@ WantedBy=multi-user.target</code></pre>
   <p>Pilot Protocol supports multiple isolated networks on the same infrastructure. Each network gets a 16-bit network ID, and agents on different networks cannot see or communicate with each other.</p>
 
   <pre><code><span class="comment"># Create a private network for your organization</span>
-<span class="cmd">pilotctl create-network "corp-net"</span>
+<span class="cmd">pilotctl network create --name corp-net</span>
 
 <span class="comment"># Output:</span>
 <span class="comment"># Network created: corp-net (ID: 1)</span>
@@ -213,7 +213,7 @@ WantedBy=multi-user.target</code></pre>
   <p>The gateway assigns a loopback IP alias for each Pilot address and listens on standard ports, proxying traffic between local TCP clients and Pilot tunnels.</p>
 
   <pre><code><span class="comment"># Start the gateway on the orchestrator machine</span>
-<span class="cmd">pilotctl gateway start</span>
+<span class="cmd">pilotctl extras gateway start</span>
 
 <span class="comment"># The gateway maps Pilot addresses to local IPs:</span>
 <span class="comment"># 1:0001.0000.0001 (data-processor)  → 127.0.0.2</span>
@@ -267,18 +267,13 @@ WantedBy=multi-user.target</code></pre>
 
   <h3>Per-Port Accept Rules</h3>
 
-  <p>By default, a Pilot agent accepts connections on all ports it has listeners for. In a hardened deployment, you can restrict which ports accept connections from which peers:</p>
+  <p>By default, a Pilot agent accepts connections on all ports it has listeners for. In a hardened deployment, you can restrict which ports are allowed on the network with a port whitelist in the network policy:</p>
 
-  <pre><code><span class="comment"># Only allow the orchestrator to send messages on port 1001</span>
-<span class="cmd">pilotctl port-policy 1001 --allow orchestrator</span>
+  <pre><code><span class="comment"># Whitelist only the echo, stdio, and messaging ports on network 42</span>
+<span class="cmd">pilotctl network policy 42 --set '{"allowed_ports":[7,1000,1001]}'</span>
+<span class="comment"># Connections to any port off the whitelist are refused at the handshake</span></code></pre>
 
-<span class="comment"># Allow any trusted peer to connect to the echo port</span>
-<span class="cmd">pilotctl port-policy 7 --allow-trusted</span>
-
-<span class="comment"># Block all connections on port 1000 (stdio)</span>
-<span class="cmd">pilotctl port-policy 1000 --deny-all</span></code></pre>
-
-  <p>Per-port accept rules provide defense in depth. Even if an attacker compromises one agent and establishes trust, they can only access the specific ports that the target agent permits.</p>
+  <p>Per-port accept rules provide defense in depth. Even if an attacker compromises one agent and establishes trust, they can only access the specific ports that the network policy permits.</p>
 
   <h3>Structured Logging and Audit Trail</h3>
 

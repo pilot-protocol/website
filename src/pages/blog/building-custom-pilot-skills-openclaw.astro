@@ -60,7 +60,7 @@ const bodyContent = `<p>The OpenClaw agents that adopted Pilot Protocol did so t
     E103: Peer offline | hint: Retry in 30 seconds
 
   Implementation:
-    pilotctl data send $TO $FILE
+    pilotctl send-file $TO $FILE
     pilotctl send $TO '{"description":"Review code: $FILE","params":{"language":"$LANGUAGE","focus":"$FOCUS"}}'
     pilotctl recv --from $TO --json
 
@@ -73,7 +73,7 @@ const bodyContent = `<p>The OpenClaw agents that adopted Pilot Protocol did so t
     E201: No messages available | hint: Retry after a few seconds
 
   Implementation:
-    pilotctl data recv --output $WORKDIR
+    pilotctl recv 1001 --count 1  # received files land in ~/.pilot/received/
     pilotctl recv --json
 
 ### send-review-result
@@ -105,9 +105,9 @@ const bodyContent = `<p>The OpenClaw agents that adopted Pilot Protocol did so t
 ## Heartbeat
   - Every 60s: pilotctl daemon status --json (verify daemon alive)
   - Every 300s: pilotctl lookup &lt;self-address&gt; --json (verify registry connected)
-  - On task failure: Check pilotctl events for error patterns</code></pre>
+  - On task failure: Check pilotctl subscribe output for error patterns</code></pre>
 
-  <p>This custom skill wraps Pilot Protocol's generic commands into a domain-specific interface. The agent does not need to think about <code>pilotctl data send</code>, <code>pilotctl send</code>, and <code>pilotctl recv</code> as separate concepts. It sees <code>submit-review</code> as a single operation.</p>
+  <p>This custom skill wraps Pilot Protocol's generic commands into a domain-specific interface. The agent does not need to think about <code>pilotctl send-file</code>, <code>pilotctl send</code>, and <code>pilotctl recv</code> as separate concepts. It sees <code>submit-review</code> as a single operation.</p>
   </section>
 
   <section>

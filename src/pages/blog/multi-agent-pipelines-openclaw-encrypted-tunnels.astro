@@ -28,7 +28,7 @@ const bodyContent = `<p>A single AI agent can answer questions. A pipeline of sp
   <p>The simplest pipeline: one agent sends work to another and waits for results.</p>
 
   <pre><code><span class="comment"># Agent A: Send file and work description to Agent B</span>
-<span class="cmd">pilotctl data send 1:0001.0B22.4E19 ./raw-data.csv</span>
+<span class="cmd">pilotctl send-file 1:0001.0B22.4E19 ./raw-data.csv</span>
 <span class="cmd">pilotctl send 1:0001.0B22.4E19 \\
   '{"description":"Clean and normalize the CSV: remove nulls, standardize dates, convert currencies to USD","params":{"input":"raw-data.csv","output_format":"parquet"}}'</span>
 
@@ -115,8 +115,8 @@ const bodyContent = `<p>A single AI agent can answer questions. A pipeline of sp
 
   <p>Hard-coded agent addresses work for fixed pipelines. For dynamic pipelines, use tag-based discovery to find the best available agent at runtime:</p>
 
-  <pre><code><span class="comment"># Find an available ML agent with GPU capabilities</span>
-<span class="cmd">pilotctl search --tag ml --tag gpu --json</span>
+  <pre><code><span class="comment"># List member tags on the network, then filter for ml + gpu</span>
+<span class="cmd">pilotctl --json member-tags get --net 1</span>
 <span class="comment"># Returns: [{"address":"1:0001.0C11.2A33","hostname":"gpu-trainer-1"},
 #           {"address":"1:0001.0C11.5D66","hostname":"gpu-trainer-2"}]</span>
 

@@ -88,7 +88,7 @@ const groups: CategoryGroup[] = [
       { name: 'macOS (LaunchAgent)',    mode: 'udp', modeClass: 'udp', note: '~/Library/LaunchAgents/network.pilotprotocol.daemon.plist auto-loaded.' },
       { name: 'Linux (systemd)',        mode: 'udp', modeClass: 'udp', note: 'sudo install enables the system unit + auto-updater.' },
       { name: 'tmux / screen',          mode: 'udp', modeClass: 'udp', note: 'Ad-hoc dev only — no auto-restart.' },
-      { name: 'Windows',                mode: 'not shipped', modeClass: 'wrong', note: 'No Windows binary in v1.10.3.' },
+      { name: 'Windows',                mode: 'not shipped', modeClass: 'wrong', note: 'No Windows binary yet — use WSL2 (Linux mode).' },
     ],
   },
   {
@@ -105,7 +105,7 @@ const egress = [
   { model: 'Open egress',                  examples: 'home wifi, most cloud VMs, default Docker',     today: '✓ UDP works — use default',                                                                  needed: 'nothing' },
   { model: 'Default-deny, TCP/443 only',   examples: 'hotel / airport / locked corp wifi',            today: '✓ Compat works as-is — single TCP/443 outbound',                                              needed: '-transport=compat' },
   { model: 'HTTP CONNECT proxy',           examples: 'corp networks with explicit proxy URL',         today: '~ WSS dial honors HTTPS_PROXY; registry TLS dial does not',                                   needed: 'tracked on GitHub — registry over HTTPS_PROXY' },
-  { model: 'Transparent TLS interception', examples: 'Zscaler, Fortinet, Palo Alto, BlueCoat, Netskope', today: '✓ Works with -tls-trust=system (corp CA in OS store — v1.10.3 default)',                  needed: 'already supported' },
+  { model: 'Transparent TLS interception', examples: 'Zscaler, Fortinet, Palo Alto, BlueCoat, Netskope', today: '✓ Works with -tls-trust=system (corp CA in OS store — current default)',                  needed: 'already supported' },
   { model: 'HTTP-proxy-only sandbox',      examples: 'Replit Agent, Devin, Docker AI Sandbox',        today: '✗ Blocked — daemon needs raw TCP to :443',                                                    needed: 'tracked on GitHub — HTTPS_PROXY via CONNECT' },
   { model: 'Domain-name allowlist',        examples: 'Cursor Cloud Agents, Zscaler PAC',              today: '✓ Works after adding *.pilotprotocol.network + 34.71.57.205',                                 needed: 'doc-only' },
   { model: 'DPI / protocol allowlist',     examples: 'Great Firewall, Iran-style filters',            today: '✗ Blocked — no domain fronting / ECH today',                                                  needed: 'out of scope' },
@@ -289,7 +289,7 @@ const egress = [
 </head>
 <body>
 
-<Nav active="for" />
+<Nav active="tech" />
 
 <section class="page-head">
   <div class="wrap">
@@ -333,7 +333,7 @@ const egress = [
       <a class="zoo-card" href="/docs/firewalls">
         <div class="zoo-top">
           <div class="zoo-id">-transport=compat</div>
-          <div class="zoo-badge">v1.10.3</div>
+          <div class="zoo-badge">Since v1.10.3</div>
         </div>
         <div class="zoo-name">Compat mode</div>
         <div class="zoo-desc">
@@ -361,6 +361,7 @@ const egress = [
       <span><span class="sw" style="background: oklch(0.80 0.16 75);"></span><b>compat+proxy</b> — needs HTTPS_PROXY (<a href="https://github.com/pilot-protocol/pilotprotocol/issues" style="color: inherit; text-decoration: underline; text-decoration-color: var(--ink-faint);">tracked on GitHub</a>)</span>
       <span><span class="sw" style="background: var(--ink-faint);"></span><b>wrong runtime</b> — no daemon</span>
     </div>
+    <p style="color: var(--ink-faint); font-size: 12px; margin: -16px 0 24px;">Vendor behavior last verified June 2026. Platforms change their network policies — if a cell is out of date, <a href="https://github.com/pilot-protocol/pilotprotocol/issues" style="color: inherit;">tell us</a>.</p>
 
     {groups.map((g) => (
       <div class="compat-cat">
@@ -418,7 +419,7 @@ const egress = [
 <section class="section">
   <div class="wrap">
     <div class="section-head">
-      <div class="eyebrow">v1.10.3</div>
+      <div class="eyebrow">Single-port 443</div>
       <h2>How <em>single-port-443</em> works.</h2>
     </div>
     <div class="compat-prose">

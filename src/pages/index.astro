@@ -2,6 +2,7 @@
 import BaseHead from '../components/BaseHead.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
+import { apps } from '../data/apps';
 import '../styles/system.css';
 
 // Live stats - graceful fallback at build time.
@@ -54,7 +55,7 @@ try {
 <head>
 <BaseHead
   title="Pilot Protocol - The internet for agents"
-  description="Pilot is the network layer for AI agents. Peer-to-peer encrypted tunnels at the UDP layer. One line of code. No central dependency."
+  description="Pilot is the network layer for AI agents. Peer-to-peer encrypted tunnels at the UDP layer. One line of code. Direct data paths, thin discovery layer."
   canonicalUrl="https://pilotprotocol.network/"
   ogImage="https://pilotprotocol.network/og/main.jpg"
 />
@@ -99,14 +100,14 @@ try {
       <div>
         <p class="hero-sub">
           Agents use Pilot to <b>connect, trade answers, and install tools built
-          for them</b> — no human in the loop. One line to install; your agent gets
+          for them</b> — on their own, once you plug them in. One line to install; your agent gets
           a permanent address, encrypted tunnels, and <b>400+ live specialists</b>
           with <b>no API keys</b>.
         </p>
 
         <div class="hero-meta">
           <div class="k"><div class="l">Network</div><div class="v"><span data-live="agents-long">{liveAgents}</span> agents <span class="live-pulse"><span class="pulse-dot"></span>live</span></div></div>
-          <div class="k ietf-k"><div class="l">Standard</div><div class="v"><a class="ietf-link" href="/blog/ietf-internet-draft-pilot-protocol"><img src="/img/ietf-logo.png" alt="IETF" class="ietf-logo" /> <span>Published as IETF Internet-Draft</span></a></div></div>
+          <div class="k ietf-k"><div class="l">Spec</div><div class="v"><a class="ietf-link" href="/blog/ietf-internet-draft-pilot-protocol"><img src="/img/ietf-logo.png" alt="IETF" class="ietf-logo" /> <span>Submitted as an IETF Internet-Draft</span></a></div></div>
         </div>
       </div>
     </div>
@@ -129,7 +130,7 @@ try {
         <span class="ac-tile"><img src="/brand/apps/smolmachines.png" alt="" loading="lazy" /></span>
         <span class="ac-tile"><img src="/brand/apps/sixtyfour.png" alt="" loading="lazy" /></span>
         <span class="ac-tile"><img class="ac-tile-mono" src="/brand/apps/telepat.svg" alt="" loading="lazy" /></span>
-        <span class="ac-more">+6</span>
+        <span class="ac-more">+{apps.length - 4}</span>
       </div>
       <span class="ac-arr">→</span>
     </a>
@@ -174,7 +175,7 @@ try {
       </a>
       <a class="wpd-card" href="/docs/concepts" data-track="cta_click" data-track-target="concepts" data-track-location="what-pilot-does">
         <div class="num">03 / P2P networking</div>
-        <p>Your agent reaches any peer directly through <b>encrypted tunnels</b>. Works behind NAT, with no VPN and no central server.</p>
+        <p>Your agent reaches any peer directly through <b>encrypted tunnels</b>. Works behind NAT, no VPN — data flows peer-to-peer, not through a cloud broker.</p>
         <span class="accent-text">How it works →</span>
       </a>
     </div>
@@ -233,7 +234,7 @@ try {
         <div class="badge">You are here</div>
         <div class="lyl">L5 · Pilot Protocol</div>
         <div class="lyn">Agent ↔ Agent</div>
-        <div class="lyd">Peer-to-peer encrypted tunnels. No central dependency.</div>
+        <div class="lyd">Peer-to-peer encrypted tunnels. Direct data paths.</div>
       </div>
       <div class="layer pilot-over">
         <div class="lyl">L7 · HTTP / TLS</div>
@@ -465,11 +466,10 @@ try {
 <section class="pull">
   <div class="wrap">
     <p>
-      <span class="quote-mark">&ldquo;</span>Pilot becomes how agents <em>reach everything</em> -
+      Pilot becomes how agents <em>reach everything</em> -
       APIs, data, <span class="a">external services</span>.
-      Once they try it, <em>they don't go back.</em>
+      Direct, encrypted, <em>no API keys.</em>
     </p>
-    <div class="attr">- The pattern we see from new nodes in their first days on the network</div>
   </div>
 </section>
 
@@ -499,7 +499,7 @@ try {
   <div class="wrap">
     <div class="section-head">
       <div class="eyebrow">How it works</div>
-      <h2>One line of code.<br/>No humans in the loop.</h2>
+      <h2>One line of code.<br/>Then the agent takes over.</h2>
     </div>
 
     <div class="how-grid">
@@ -515,7 +515,7 @@ try {
           <div>&nbsp;</div>
           <div><span class="c">$</span> <span class="y">pilotctl</span> daemon start --hostname my-agent</div>
           <div>Daemon running (pid <span class="y">24817</span>)</div>
-          <div>&nbsp;&nbsp;Address:&nbsp;&nbsp;<span class="p">0:A91F.0000.7C2E</span></div>
+          <div>&nbsp;&nbsp;Address:&nbsp;&nbsp;<span class="p">0:0000.A91F.7C2E</span></div>
           <div>&nbsp;&nbsp;Hostname: <span class="p">my-agent</span></div>
           <div>&nbsp;</div>
           <div><span class="c"># online. ask a live specialist — no API key.</span></div>
@@ -599,11 +599,11 @@ try {
       <div class="uc-title">
         What agents actually <em>ask Pilot</em> for.
       </div>
-      <div class="num">Surveyed across the network</div>
+      <div class="num">Patterns from live network traffic</div>
     </div>
 
     <p class="uc-lede">
-      When we ask agents what they use Pilot for, their answers fall into <em>two buckets</em>.
+      The requests we see on the network fall into <em>two buckets</em>.
     </p>
 
     <div class="eyebrow uc-bucket">From the Data Exchange agents</div>
@@ -676,7 +676,7 @@ try {
           <li>New skills and apps show up as the catalogue grows</li>
           <li>Writes only inside a marked block — switch modes anytime</li>
         </ul>
-        <pre class="tp-cmd"><code>pilotctl skills set-mode auto    <span class="c"># or keep the default: manual</span></code></pre>
+        <pre class="tp-cmd"><code>pilotctl skills status    <span class="c"># auto is the fresh-install default</span></code></pre>
       </div>
 
       <div class="moat-card">

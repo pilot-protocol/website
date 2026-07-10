@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p><a href="https://github.com/pilotprotocol/openclaw" target="_blank" rel="noopener">OpenClaw</a> agents need peer communication. They need to find other agents, establish secure channels, exchange data, and delegate tasks. Until now, building this required custom HTTP servers, message brokers, or manual WebSocket plumbing. Pilot Protocol reduces it to one command: <code>clawhub install pilotprotocol</code>. This article walks through the full integration -- from installation to a working multi-agent pipeline.</p>
+const bodyContent = `<p><a href="https://github.com/openclaw/openclaw" target="_blank" rel="noopener">OpenClaw</a> agents need peer communication. They need to find other agents, establish secure channels, exchange data, and delegate tasks. Until now, building this required custom HTTP servers, message brokers, or manual WebSocket plumbing. Pilot Protocol reduces it to one command: <code>clawhub install pilotprotocol</code>. This article walks through the full integration -- from installation to a working multi-agent pipeline.</p>
 
   <section>
   <h2 id="installation">Installation: One Command</h2>
@@ -81,19 +81,19 @@ const bodyContent = `<p><a href="https://github.com/pilotprotocol/openclaw" targ
   <p>For structured data exchange, agents use port 1001 (data exchange):</p>
 
   <pre><code><span class="comment"># Send a file</span>
-<span class="cmd">pilotctl data send 1:0001.0B22.4E19 ./dataset.csv</span>
+<span class="cmd">pilotctl send-file 1:0001.0B22.4E19 ./dataset.csv</span>
 
-<span class="comment"># Receive a file</span>
-<span class="cmd">pilotctl data recv --output ./results/</span></code></pre>
+<span class="comment"># Receive a file (lands in ~/.pilot/received/)</span>
+<span class="cmd">pilotctl recv 1001 --count 1</span></code></pre>
 
   <p>For event-driven patterns, agents use port 1002 (event stream) with pub/sub:</p>
 
   <pre><code><span class="comment"># Agent A publishes analysis results</span>
-<span class="cmd">pilotctl events publish --topic "analysis.complete" \\
+<span class="cmd">pilotctl publish 1:0001.0B22.4E19 analysis.complete \\
   --data '{"rows": 50000, "columns": 12, "anomalies": 3}'</span>
 
-<span class="comment"># Agent B subscribes to analysis events</span>
-<span class="cmd">pilotctl events subscribe --topic "analysis.*"</span></code></pre>
+<span class="comment"># Agent B subscribes to the analysis topic</span>
+<span class="cmd">pilotctl subscribe 1:0001.0B22.4E19 analysis.complete</span></code></pre>
 
   <p>All communication is encrypted end-to-end with X25519 + AES-256-GCM. The agents do not need to configure encryption -- it is the default. Every message, file transfer, and event is automatically encrypted through the tunnel.</p>
   </section>
@@ -107,7 +107,7 @@ const bodyContent = `<p><a href="https://github.com/pilotprotocol/openclaw" targ
   <ol>
     <li><strong>Orchestrator agent</strong> receives a request: "Analyze Q4 sales data and produce a report"</li>
     <li>It searches for a data processing agent: <code>pilotctl peers --search "data-analysis"</code></li>
-    <li>It sends the raw data via <code>pilotctl data send</code> and a processing request via <code>pilotctl send</code></li>
+    <li>It sends the raw data via <code>pilotctl send-file</code> and a processing request via <code>pilotctl send</code></li>
     <li>The data agent cleans and transforms the data, returns structured results</li>
     <li>The orchestrator forwards the clean data to an ML agent for trend detection</li>
     <li>The ML agent runs analysis, returns predictions and anomalies</li>
