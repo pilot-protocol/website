@@ -100,7 +100,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/error-codes.md | 6 | 3 | done |
 | audit/docs/networks.md | 7 | 0 | done |
 | audit/docs/pubsub.md | 7 | 0 | done |
-| audit/blog/multi-agent-system-networking-guide-ai-developers.md | 2 | 14 | todo |
+| audit/blog/multi-agent-system-networking-guide-ai-developers.md | 2 | 14 | done |
 | audit/docs/pilot-director.md | 6 | 2 | done |
 | audit/pages/for-networks.md | 5 | 5 | done |
 | audit/blog/ai-networking-best-practices-secure-scalable-systems.md | 0 | 19 | todo |
@@ -143,7 +143,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/openclaw-meets-pilot-agent-networking-one-command.md | 3 | 3 | done |
 | audit/blog/overlay-networking-automation-secure-ai-agent-solutions.md | 0 | 12 | todo |
 | audit/blog/overlay-networking-secure-ai-agent-communication-explained.md | 0 | 12 | todo |
-| audit/blog/peer-to-peer-networking-examples-ai-engineers.md | 2 | 6 | todo |
+| audit/blog/peer-to-peer-networking-examples-ai-engineers.md | 2 | 6 | done |
 | audit/blog/persistent-address-strategies-for-distributed-ai-systems.md | 1 | 9 | todo |
 | audit/blog/protocol-wrapping-secure-peer-to-peer-ai-systems.md | 0 | 12 | todo |
 | audit/blog/python-sdk-pilot-protocol.md | 3 | 3 | done |
@@ -153,7 +153,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/why-autonomous-agents-need-private-discovery.md | 0 | 11 | todo |
 | audit/pages/index.md | 2 | 5 | done |
 | audit/blog/advanced-network-automation-tips-secure-ai-systems.md | 2 | 4 | todo |
-| audit/blog/claude-agent-teams-over-pilot.md | 2 | 4 | todo |
+| audit/blog/claude-agent-teams-over-pilot.md | 2 | 4 | done |
 | audit/blog/peer-to-peer-agent-communication-no-server.md | 2 | 4 | done |
 | audit/docs/firewalls.md | 2 | 4 | done |
 | audit/docs/mcp-setup.md | 3 | 1 | done |

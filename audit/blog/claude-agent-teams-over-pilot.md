@@ -24,3 +24,8 @@ Audited: 2026-07-10 · Sentences examined: 95 · verified: 61 · false: 2 · unv
 - Local site files: internal links nat-traversal-ai-agents-deep-dive, zero-dependency-encryption-x25519-aes-gcm, trust-model-agents-invisible-by-default, peer-to-peer-file-transfer-agents, replace-message-broker-twelve-lines-go, mcp-plus-pilot-tools-and-network, contributing-codebase-tour all exist in src/pages/blog; /docs/ exists; banner webp exists in public/blog/banners.
 - Product knowledge (Claude/Anthropic): Claude Code agent teams (manager + specialists, per-specialist context windows, git worktree isolation) is a real shipped feature; 200K token context window; model ID `claude-sonnet-4-20250514` is a real Anthropic model; claude.ai, anthropic.com, modelcontextprotocol.io are correct URLs.
 - EXAMPLE items: all 1:0001.0000.000X addresses, GCP machine types, worker Python script, system prompt text, MacBook/CI scenario, 2FA walkthrough.
+
+## Resolutions (2026-07-11 iter 57)
+- L94/133/209/329/335/341 (pilotctl send <addr> '{...}' — missing port + --data): inserted `1002 --data` on all send commands (manager tool, placeholder block, worker Python subprocess).
+- L98/134/176/331/337/343 (pilotctl recv --from <addr> --json / recv --json — no --from, port required): changed peer-filtered receives to `pilotctl --json inbox --from <addr>` and the worker's port-less recv to `pilotctl --json recv 1002`.
+Build: npm run build green (345 pages).

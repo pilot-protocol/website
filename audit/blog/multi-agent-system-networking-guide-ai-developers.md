@@ -28,3 +28,8 @@ Audited: 2026-07-10 · Sentences examined: 74 · verified: 38 · false: 2 · unv
 - Pre-verified/web4: Pilot gives persistent virtual addresses, encrypted P2P tunnels, NAT traversal, mutual trust (pkg/daemon); wraps HTTP/gRPC/SSH via net.Conn overlay (common@v0.5.0/driver/conn.go); Python and Go SDKs exist (sdk-python repo, common/driver)
 - Local: banner public/blog/banners/multi-agent-system-networking-guide-ai-developers.jpg exists
 - OPINION items: Key-takeaways framing, pro tips, architecture-comparison table rows (qualitative), FAQ hedged answers
+
+## Resolutions (2026-07-11 iter 57)
+- L50 (arxiv 2507.08616 = AgentsNet, cited for 41%-86.7% failure rates): wrong paper. Repointed to arxiv 2503.13657 "Why Do Multi-Agent LLM Systems Fail?" (which contains the 86.7% figure); reworded range to "up to 86.7%" (41% lower bound unconfirmed).
+- L180 (arxiv 2503.13657 cited for "MAS productivity gains"): that paper is the failure-taxonomy paper, no productivity content. Removed the misattributed citation; kept the (unsourced but hedged) statement as plain prose.
+Build: npm run build green (345 pages).

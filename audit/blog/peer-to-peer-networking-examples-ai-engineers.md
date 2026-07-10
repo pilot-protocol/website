@@ -27,3 +27,8 @@ Audited: 2026-07-10 · Sentences examined: 110 · verified: 62 · false: 2 · un
 - Local site files: all pilotprotocol.network internal links resolve to src/pages/blog/*.astro or src/pages (verified with filesystem check); banner jpg exists.
 - Live curl: geeksforgeeks, medium (403 bot-block but page exists), inria hole-punch paper, dl.ifip.org PDF, dev.to — all reachable; Supabase images 200.
 - JSON-LD datePublished 2026-04-17 matches frontmatter date "April 17, 2026".
+
+## Resolutions (2026-07-11 iter 57)
+- L107 ("NAT hole punching built into the DHT spec"): BitTorrent DHT (BEP 5) has no hole-punching; that's the separate BEP 55 extension. Corrected.
+- L143-145 (table row "TCP + QUIC combined | 97.6% first try | Best for production"): 97.6% is the share of *successful* connections landing on the first attempt (overall TCP/QUIC ~70%, equivalent). Fixed the row to "~70% (equivalent)" with the 97.6% moved to Notes as a first-attempt figure.
+Build: npm run build green (345 pages).
