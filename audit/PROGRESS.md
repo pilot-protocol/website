@@ -17,13 +17,15 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 
 - (none yet)
 
+- **privacy.astro SMS section** (legal, needs decision): the privacy policy has a full SMS-data-collection section (phone numbers, consent records, STOP/HELP, provider DPA), but there is NO phone/SMS collection anywhere on the website or in the product. Keep as forward-looking boilerplate, or remove until an SMS program ships? (Not touched — legal-commitment change.)
+
 ## Pages
 | ledger | false | unverifiable | status |
 |---|---:|---:|---|
 | audit/docs/consent.md | 33 | 6 | done |
 | audit/for/compatibility.md | 16 | 33 | done |
 | audit/docs/enterprise-blueprints.md | 24 | 0 | done |
-| audit/pages/privacy.md | 11 | 37 | todo |
+| audit/pages/privacy.md | 11 | 37 | done |
 | audit/docs/cli-reference.md | 21 | 6 | done |
 | audit/docs/enterprise-identity.md | 22 | 0 | todo |
 | audit/blog/enterprise-production-complete-identity-directory-audit-export.md | 0 | 62 | todo |
