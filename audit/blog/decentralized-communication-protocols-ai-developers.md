@@ -27,3 +27,7 @@ Audited: 2026-07-10 · Sentences examined: 96 · verified: 55 · false: 0 · unv
 - Local site files: all internal blog links exist (peer-to-peer-file-transfer-agents, how-pilot-protocol-works, clawhub-to-live-network-openclaw-discovery, nat-traversal-ai-agents-deep-dive, openclaw-agents-behind-nat-zero-config, connect-ai-agents-behind-nat-without-vpn, connect-agents-across-aws-gcp-azure-without-vpn, zero-dependency-encryption-x25519-aes-gcm, http-services-over-encrypted-overlay, why-ai-agents-need-network-stack, secure-ai-agent-communication-zero-trust, openclaw-meets-pilot-agent-networking-one-command); public/research/ietf/draft-teodor-pilot-{protocol,problem-statement}-01.html exist; banner .jpg exists
 - web4 source + pre-verified: Pilot handles peer discovery, NAT traversal, encrypted tunnels, trust establishment; persistent virtual addresses + encrypted overlay; SDKs for Go (common/driver) and Python (sdk-python repo) and unified CLI (pilotctl)
 - Frontmatter: datePublished 2026-03-31 matches date "March 31, 2026"
+
+## Resolutions (2026-07-11 iter 64) — softening pass
+- No edits needed: the 97.6%-first-attempt figure is stated correctly here (share of successful connections), frontmatter date matches, and the remaining unverifiable rows are third-party P2P/libp2p/blockchain descriptions citing real papers/PRs. ACCEPTED — flagged as ecosystem framing, no Pilot overclaim.
+Build: npm run build green (345 pages).

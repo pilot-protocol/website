@@ -23,3 +23,8 @@ Audited: 2026-07-10 · Sentences examined: 88 · verified: 42 · false: 0 · unv
 - web4 source + pre-verified: closing product paragraph — virtual addresses, encrypted tunnels, NAT traversal, built-in trust establishment, no central broker in data path; CLI + Python SDK (pilot-protocol/sdk-python) + Go SDK (common/driver) exist
 - Knowledge (established literature): EigenTrust (eigenvector-based global trust), TNA-SL (subjective-logic trust network analysis), Sybil attacks, ballot stuffing/whitewashing, blockchain immutability/transparency properties, cold-start problem — standard, accurately described
 - OPINION items: TL;DR, Key Takeaways table, "Our take" section, Pro Tips — advisory/subjective, not flagged
+
+## Resolutions (2026-07-11 iter 64) — softening pass
+- L27 vs L299 (datePublished 2026-05-03 vs "May 6, 2026"): fixed JSON-LD to 2026-05-06.
+- All other unverifiable rows: ACCEPTED — third-party trust-model research summaries (AntTrust/EigenTrust/BARM/RNNTM/CA, and the 0.82/0.31 DoS-trust figures) that cite real, live papers; not Pilot claims. Flagged and left as literature review.
+Build: npm run build green (345 pages).

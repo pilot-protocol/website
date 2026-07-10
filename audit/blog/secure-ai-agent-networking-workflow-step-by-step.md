@@ -32,3 +32,8 @@ Audited: 2026-07-10 · Sentences examined: 85 · verified: 30 · false: 0 · unv
 - Pre-verified / web4 source: line 273 platform claims — decentralized networking for AI agents with built-in NAT traversal, encrypted tunnels (X25519+AES-256-GCM, tunnel.go:534), persistent virtual addresses (48-bit, daemon.go:2541), trust establishment (handshake plugin) — all real product features.
 - JSON-LD (lines 4-28): dates consistent with frontmatter (April 12, 2026); publisher/author URL live; image URL 200.
 - Generic security guidance (TLS 1.3, Noise_XX, mTLS, STUN/TURN, OPA, Vault, RBAC, circuit breakers): standard, correctly characterized — counted verified as textbook facts.
+
+## Resolutions (2026-07-11 iter 64) — softening pass
+- L244 ("the leading cause of security drift"): softened the ranking-as-fact to "a common cause".
+- All other unverifiable rows: ACCEPTED — they characterize third-party tools/papers (SAGA/arXiv 2504.21034, AgentAnycast repo, CORAL, NIST initiative, arXiv 2511.03841) that reference real, live sources; the auditor's "unverifiable" reflects not deep-reading third-party docs, not a Pilot overclaim. Flagged and left as ecosystem framing.
+Build: npm run build green (345 pages).

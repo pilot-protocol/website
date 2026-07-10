@@ -64,7 +64,7 @@ All 167 audited pages have had their FALSE claims fixed and verified (npm run bu
 | audit/blog/openanp-ai-alternatives-6.md | 1 | 34 | done |
 | audit/blog/nat-traversal-ai-agents-deep-dive.md | 8 | 12 | done |
 | audit/docs/comparison.md | 10 | 6 | done |
-| audit/blog/secure-ai-agent-networking-workflow-step-by-step.md | 0 | 35 | todo |
+| audit/blog/secure-ai-agent-networking-workflow-step-by-step.md | 0 | 35 | done |
 | audit/blog/build-ai-agent-marketplace-discovery-reputation.md | 6 | 16 | done |
 | audit/blog/build-multi-agent-network-five-minutes.md | 11 | 1 | done |
 | audit/blog/distributed-monitoring-without-prometheus.md | 5 | 19 | done |
@@ -99,8 +99,8 @@ All 167 audited pages have had their FALSE claims fixed and verified (npm run bu
 | audit/for/mcp.md | 7 | 2 | done |
 | audit/blog/building-custom-pilot-skills-openclaw.md | 4 | 10 | done |
 | audit/blog/connect-ai-agents-behind-nat-without-vpn.md | 1 | 19 | done |
-| audit/blog/decentralized-communication-protocols-ai-developers.md | 0 | 22 | todo |
-| audit/blog/how-mutual-trust-secures-decentralized-ai-agent-networks.md | 0 | 22 | todo |
+| audit/blog/decentralized-communication-protocols-ai-developers.md | 0 | 22 | done |
+| audit/blog/how-mutual-trust-secures-decentralized-ai-agent-networks.md | 0 | 22 | done |
 | audit/blog/scriptorium-replace-agentic-active-research-ready-intelligence.md | 2 | 16 | done |
 | audit/blog/chain-ai-models-across-machines.md | 4 | 9 | done |
 | audit/blog/http-services-over-encrypted-overlay.md | 6 | 3 | done |
