@@ -50,3 +50,6 @@ version pinned by web4/go.mod. Abbreviated below as `rv/`.
 
 ## EXAMPLE (not flagged)
 - Placeholder values in all seven code blocks: `accounts.example.com`, `pilot-network-prod`, `your-admin-token`, `eyJhbGciOiJSUzI1NiIs...`, `auth.example.com`, `user@example.com`, `alice@example.com`, `bob@example.com`, node IDs 5/8, network_id 1.
+
+## Resolutions (2026-07-10, loop iteration 12)
+All 22 FALSE resolved against rendezvous@v0.2.5 identity.go + directory_sync.go (re-verified): IDP is registry-global not per-network (single idpConfig field); RPC envelope key is "type" not "command" (8 blocks); provider type is "idp_type" not "type"; validate_token returns verified/subject/issuer not valid/claims; iat is never validated (removed from claim list + clock-skew); issuer matches configured issuer not URL; JWKS refresh only on TTL/URL-change/empty (missing kid in fresh cache errors); algorithm-confusion blocked via JWKS kty/alg cross-check not a configured alg; directory sync matches by external_id not node_id, never adds members (pre-assigns unmatched), owner IS assignable, no tags handling; command is directory_status not get_directory_status; status/audit return-key lists corrected. Removed node_id/tags from sync-entry example (kept node_id in set_external_id/get_identity where it's valid).
