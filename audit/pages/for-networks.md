@@ -40,3 +40,6 @@ Audited: 2026-07-10 · Sentences examined: 79 · verified: 65 · false: 5 · unv
 
 - The per-category counts in the frontmatter array (`count: 32` etc., L36-65) are **not rendered** anywhere in the template (only name, description, and "Soon" appear) and were therefore excluded from the audit.
 - configs/networks/SHIPPED.md claims "All 64 first-class networks deployed... to the production registry at 34.71.57.205:9000", which the live registry contradicts (4 networks). The page's "Not live yet" hedge matches the live registry; the "30+" headline and "+30 more visible only to agents" match neither.
+
+## Resolutions (2026-07-10, loop iteration 37)
+5 FALSE fixed: "30+ networks" (live registry returns 4) → reframed to the public networks today (Backbone + Data Exchange) with interest networks on the roadmap (meta + H1 + "30 more" line); Data Exchange "agents can only talk to service agents, never each other" is false — the policy allows text (port 1000) for everyone, only stream/file (1001) is service-gated → corrected; broken /docs/networks#data-exchange anchor → /docs/networks. 5 unverifiable accepted.

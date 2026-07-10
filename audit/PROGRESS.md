@@ -99,7 +99,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/pubsub.md | 7 | 0 | done |
 | audit/blog/multi-agent-system-networking-guide-ai-developers.md | 2 | 14 | todo |
 | audit/docs/pilot-director.md | 6 | 2 | done |
-| audit/pages/for-networks.md | 5 | 5 | todo |
+| audit/pages/for-networks.md | 5 | 5 | done |
 | audit/blog/ai-networking-best-practices-secure-scalable-systems.md | 0 | 19 | todo |
 | audit/blog/distributed-rag-without-central-knowledge-base.md | 4 | 7 | todo |
 | audit/blog/smart-home-without-cloud-local-device-communication.md | 3 | 10 | todo |
@@ -120,8 +120,8 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/connecting-mcp-servers-across-agents.md | 2 | 9 | todo |
 | audit/blog/network-security-for-multi-agent-systems-key-strategies.md | 1 | 12 | todo |
 | audit/blog/scaling-openclaw-fleets-thousands-agents.md | 1 | 12 | todo |
-| audit/docs/concepts.md | 5 | 0 | todo |
-| audit/docs/diagnostics.md | 5 | 0 | todo |
+| audit/docs/concepts.md | 5 | 0 | done |
+| audit/docs/diagnostics.md | 5 | 0 | done |
 | audit/docs/webhooks.md | 5 | 0 | done |
 | audit/blog/agent-communication-security-best-practices.md | 4 | 2 | todo |
 | audit/blog/clawhub-to-live-network-openclaw-discovery.md | 2 | 8 | todo |

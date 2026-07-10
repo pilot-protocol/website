@@ -24,3 +24,6 @@ Audited: 2026-07-10 · Sentences examined: 37 · verified: 31 · false: 5 · unv
 
 ## Example content (not flagged)
 - Lines 75-78 bench example output: format matches current cmdBench output (values invented, hyphen vs em dash immaterial). Addresses like `0:0000.0000.0005` / `0:0000.0000.037D` in command lines are illustrative.
+
+## Resolutions (2026-07-10, loop iteration 37)
+5 FALSE fixed: health output format (● pilot-daemon ok / uptime·connections / peers / traffic, not "Daemon Health/Status:/Bytes Sent:"); peers --search filters by node-ID substring not tag/query; peers Returns shape ({peers[node_id,encrypted,authenticated,relay],total,encrypted} — no path/aggregates); endpoints stripped client-side not by daemon; ping output includes [dial= echo=] breakdown, no indent. 0 unverifiable.

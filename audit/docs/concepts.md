@@ -26,3 +26,6 @@ Audited: 2026-07-10 · Sentences examined: 81 · verified: 74 · false: 5 · unv
 - Local site files: /docs/getting-started, /docs/cli-reference (src/pages/docs/), /blog/how-pilot-protocol-works.astro (src/pages/blog/) all exist; all 6 TOC anchors present on page.
 - Pre-verified cheatsheet: network 0 = public Backbone; well-known ports echo 7 / stdio 1000 / dataexchange 1001 / eventstream 1002; untrust/pending/approve/broadcast commands exist.
 - EXAMPLE (not flagged): lines 41-42 example addresses 0:0000.0000.0001 / 0:0000.0000.0005.
+
+## Resolutions (2026-07-10, loop iteration 37)
+5 FALSE fixed: no pilot-XXXX SHA-256 fallback hostname — unset hostname is empty (set later with set-hostname); keepalive is 60s not 30s (daemon.go:171); "services only coordinate" corrected (beacon relays encrypted data when no direct path); NAT-type detection does NOT exist (removed both claims — fallback ladder is automatic, no classification). 0 unverifiable.
