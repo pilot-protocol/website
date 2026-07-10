@@ -31,3 +31,6 @@ Audited: 2026-07-10 · Sentences examined: 108 · verified: 44 · false: 5 · un
 - Pre-verified cheatsheet: beacon relay + STUN NAT traversal (registry 34.71.57.205:9000, beacon :9001), github.com/pilot-protocol/pilotprotocol exists.
 - Local site files: internal links replace-message-broker-twelve-lines-go and nat-traversal-ai-agents-deep-dive exist in src/pages/blog/; banner public/blog/banners/distributed-monitoring-without-prometheus.webp exists.
 - General knowledge: /proc/loadavg, /proc/meminfo, df, ioping usage in the shell agent is standard Linux (EXAMPLE code, plausible); Prometheus stack components (node_exporter, Alertmanager, Grafana) accurately described.
+
+## Resolutions (2026-07-10, loop iteration 28)
+5 FALSE fixed (verified): keepalive is 60s not 30s (daemon.go:171); event stream matches an exact topic or "*" only — no "metrics/*" prefix wildcard (protocol@v1.10.5 eventstream/server.go:15-18) → reframed to subscribe "*" + client-side filter; pilotctl peers --search filters connected peers by node-ID substring not tags, and shows a direct/relay summary not a registry fleet table with tags/OFFLINE columns → corrected the description + example output. 19 unverifiable (illustrative monitoring scenario numbers) accepted.

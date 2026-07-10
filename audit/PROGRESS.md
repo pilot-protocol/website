@@ -54,9 +54,9 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/nat-traversal-ai-agents-deep-dive.md | 8 | 12 | done |
 | audit/docs/comparison.md | 10 | 6 | done |
 | audit/blog/secure-ai-agent-networking-workflow-step-by-step.md | 0 | 35 | todo |
-| audit/blog/build-ai-agent-marketplace-discovery-reputation.md | 6 | 16 | todo |
+| audit/blog/build-ai-agent-marketplace-discovery-reputation.md | 6 | 16 | done |
 | audit/blog/build-multi-agent-network-five-minutes.md | 11 | 1 | done |
-| audit/blog/distributed-monitoring-without-prometheus.md | 5 | 19 | todo |
+| audit/blog/distributed-monitoring-without-prometheus.md | 5 | 19 | done |
 | audit/blog/how-626-agents-autonomously-adopted-pilot.md | 0 | 33 | todo |
 | audit/blog/pilot-vs-tcp-grpc-nats-comparison.md | 3 | 24 | todo |
 | audit/pages/for-p2p.md | 9 | 6 | done |

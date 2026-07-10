@@ -197,7 +197,7 @@ if __name__ == "__main__":
     <span class="comment"># Block on subscription stream</span>
     subscribe_metrics()</code></pre>
 
-  <p>The aggregator subscribes to <code>metrics/*</code> (wildcard) and receives every metric from every host. It maintains an in-memory map of the latest values, checks thresholds on every update, and publishes alerts to <code>alerts/*</code> topics. Any interested party -- a Slack bot, an email script, a pager integration -- can subscribe to <code>alerts/*</code> and receive notifications.</p>
+  <p>The aggregator subscribes to <code>*</code> (the event stream matches an exact topic or the catch-all <code>*</code> — there is no prefix wildcard, so use <code>*</code> and filter by topic name client-side, or subscribe to each exact topic). It maintains an in-memory map of the latest values, checks thresholds on every update, and publishes alerts to an <code>alerts</code> topic. Any interested party -- a Slack bot, an email script, a pager integration -- can subscribe to <code>alerts</code> and receive notifications.</p>
 
   <pre><code><span class="comment"># Subscribe to all alerts (from any monitoring consumer)</span>
 <span class="cmd">$ pilotctl subscribe <aggregator-addr> "alerts/*"</span>
@@ -234,7 +234,7 @@ pilotctl publish "$AGGREGATOR_ADDR" "metrics/io_latency/$HOSTNAME" \\
 
   <h2 id="dashboard">The Built-In Dashboard</h2>
 
-  <p>The Pilot registry already provides a fleet overview. Every node registered on the network appears with its hostname, address, tags, and online status. For basic monitoring -- "which of my servers are up?" -- the <code>pilotctl peers</code> command works without any additional setup.</p>
+  <p>For a quick "which of my peers am I connected to?" view, <code>pilotctl peers</code> lists your connected peers with a direct/relay/encrypted summary (it shows connected peers, not a registry-wide fleet table; a downed peer simply drops off the list).</p>
 
   <p>Tag your servers by role, and the dashboard becomes a filtered view of your infrastructure:</p>
 
@@ -244,13 +244,14 @@ pilotctl publish "$AGGREGATOR_ADDR" "metrics/io_latency/$HOSTNAME" \\
 <span class="cmd">$ pilotctl extras set-tags cache-server production us-east redis</span>
 
 <span class="comment"># View all production servers</span>
-<span class="cmd">$ pilotctl peers --search "production"</span>
-1:0001.0000.0001  web-server-01    [web-server, production, us-east]          online
-1:0001.0000.0002  web-server-02    [web-server, production, us-east]          online
-1:0001.0000.0003  db-server-01     [db-server, production, us-east, postgres] online
-1:0001.0000.0004  cache-server-01  [cache-server, production, us-east, redis] OFFLINE</code></pre>
+<span class="cmd">$ pilotctl peers</span>   <span class="comment"># lists your connected peers (--search filters by node-ID substring, not tags)</span>
+# Connected peers (secure/relay/direct summary; endpoints redacted)
+1:0001.0000.0001  direct   encrypted
+1:0001.0000.0002  direct   encrypted
+1:0001.0000.0003  relay    encrypted
+# (a peer that drops off is simply absent from the list)</code></pre>
 
-  <p>The "OFFLINE" status is detected automatically. The Pilot daemon sends keepalive probes every 30 seconds, with an idle timeout of 120 seconds. If a node stops responding, the registry marks it offline. No configuration needed. No separate health check system.</p>
+  <p>The "OFFLINE" status is detected automatically. The Pilot daemon sends keepalive probes every 60 seconds, with an idle timeout of 120 seconds. If a node stops responding, the registry marks it offline. No configuration needed. No separate health check system.</p>
 
   <h2 id="cross-network">Cross-Network Monitoring Without VPNs</h2>
 

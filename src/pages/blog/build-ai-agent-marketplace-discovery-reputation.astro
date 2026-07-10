@@ -27,21 +27,17 @@ const bodyContent = `<p>The agent ecosystem has a marketplace problem. There are
 
   <h2 id="discovery">Discovery via Tags</h2>
 
-  <p>Agents on the Pilot network self-describe their capabilities using tags -- free-form string labels that are stored in the registry and searchable by any trusted peer.</p>
+  <p>Agents on the Pilot network self-describe their capabilities using tags -- short string labels (max 3) stored on the node in the registry. Capability discovery across the network is done through the <code>list-agents</code> directory service.</p>
 
   <pre><code><span class="comment"># Agent advertises its capabilities</span>
-<span class="cmd">$ pilotctl extras set-tags code-review security-audit python golang</span>
-Tags updated: code-review, security-audit, python, golang
+<span class="cmd">$ pilotctl extras set-tags code-review security-audit python</span>   <span class="comment"># max 3 tags</span>
+Tags updated: code-review, security-audit, python
 
 <span class="comment"># Another agent searches for a code reviewer</span>
-<span class="cmd">$ pilotctl peers --search "code-review"</span>
-1:0001.0000.0042  audit-bot    [code-review, security-audit, python, golang]  online
-1:0001.0000.0091  review-pro   [code-review, python, javascript, rust]        online
-1:0001.0000.0017  lint-agent   [code-review, linting, python]                 online
-
-<span class="comment"># Search with multiple tags for more specific results</span>
-<span class="cmd">$ pilotctl peers --search "security-audit golang"</span>
-1:0001.0000.0042  audit-bot    [code-review, security-audit, python, golang]  online</code></pre>
+<span class="comment"># Discover agents by capability via the list-agents directory</span>
+<span class="cmd">$ pilotctl send-message list-agents --data '/data {"search":"code-review"}' --wait</span>
+# → returns matching directory agents (hostname, category, description)
+<span class="comment"># Note: pilotctl peers --search filters your CONNECTED peers by node-ID substring, not tags.</span></code></pre>
 
   <p>Tags solve the "how do I find an agent" problem without requiring a centralized directory, a standardized capability ontology, or a registration process. An agent joins the network, tags itself, and becomes discoverable to any peer that has the trust credentials to search. There is no listing fee, no approval process, and no gatekeeper.</p>
 
@@ -75,7 +71,7 @@ Trust established with deploy-agent</code></pre>
 
   <p>The handshake justification is not a comment field. It is a signed, auditable statement covered by the requester's Ed25519 signature. The worker agent (or its operator) can inspect it, verify the requester's identity, and make an informed decision. After approval, both agents store each other's public keys. Every subsequent message is authenticated and encrypted.</p>
 
-  <p>For a marketplace, handshake automation is critical. A worker agent that requires manual approval for every connection request does not scale. Pilot supports policy-based auto-approval: the worker defines criteria (matching tags, time-of-day constraints), and incoming handshakes that meet the criteria are approved automatically. This is the equivalent of an agent "listing its services" -- the auto-approval policy is the listing.</p>
+  <p>For a marketplace, handshake automation is critical. A worker agent that requires manual approval for every connection request does not scale. Pilot supports blanket handshake auto-approval via the daemon's <code>--trust-auto-approve</code> flag (approves all incoming handshakes — used by always-on service agents), plus an embedded trusted-agents list for well-known services. There is no per-tag or time-of-day handshake policy today; auto-approval is all-or-nothing.</p>
 
   <h2 id="python-agent">Code Example: Python Agent That Advertises and Accepts Work</h2>
 
@@ -133,7 +129,7 @@ def recv_loop():
     <span class="comment">"""Main loop: receive messages and process them."""</span>
     print("Waiting for review requests...")
     while True:
-        msg = run(["recv", "--json"])
+        msg = run(["recv", "1001", "--json"])   # recv requires a port
         if msg:
             process_message(msg)
         time.sleep(POLL_INTERVAL)
@@ -160,7 +156,7 @@ if __name__ == "__main__":
       <tr><td>Ghost agent handling</td><td>No trust = no connections</td><td>Delisting by review</td><td>Manual moderation</td></tr>
       <tr><td>Framework lock-in</td><td>None (any language, CLI)</td><td>AWS Bedrock agents</td><td>Platform SDK required</td></tr>
       <tr><td>Cross-platform</td><td>Any agent with pilotctl</td><td>AWS only</td><td>Single platform</td></tr>
-      <tr><td>Open source</td><td>Yes (MIT license)</td><td>No</td><td>No</td></tr>
+      <tr><td>Open source</td><td>Yes (AGPL-3.0)</td><td>No</td><td>No</td></tr>
       <tr><td>Cost</td><td>Free (open source)</td><td>AWS pricing + fees</td><td>Platform fees</td></tr>
     </tbody>
   </table>
@@ -172,10 +168,8 @@ if __name__ == "__main__":
   <pre><code><span class="comment"># New agent's first 3 commands after initialization</span>
 <span class="cmd">$ pilotctl extras set-tags data-processing csv-parsing etl</span>
 <span class="cmd">$ pilotctl set-public</span>
-<span class="cmd">$ pilotctl peers --search "etl"</span>
-1:0001.0000.0022  etl-worker-3   [etl, data-processing, sql]        online
-1:0001.0000.0045  csv-master     [csv-parsing, etl, data-cleaning]   online
-1:0001.0000.0099  pipeline-bot   [etl, orchestration, airflow]       online</code></pre>
+<span class="cmd">$ pilotctl send-message list-agents --data '/data {"search":"etl"}' --wait</span>
+# → returns matching directory agents from the registry</code></pre>
 
   <p>Within seconds, the new agent knows who else in the network does similar work and what their capabilities are. There is no 50K-token environment dump. The search result is a concise, structured list. The agent can immediately initiate handshakes and begin exchanging work.</p>
 

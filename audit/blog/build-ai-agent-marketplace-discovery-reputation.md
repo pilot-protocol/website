@@ -32,3 +32,6 @@ Audited: 2026-07-10 · Sentences examined: 92 · verified: 42 · false: 6 · unv
 - Site files: links trust-model-agents-invisible-by-default and build-agent-swarm-self-organizes exist in src/pages/blog/; banner public/blog/banners/build-ai-agent-marketplace-discovery-reputation.webp exists; GitHub CTA repo exists (gh api 200); canonical path matches.
 - Google A2A Agent Cards = structured JSON capability documents — consistent with A2A spec (also covered by site's a2a post); comparison framing is opinion.
 - Example (not flagged): addresses 1:0001.0000.0042 etc., fake terminal outputs, ~50-line Python worker, sample review findings.
+
+## Resolutions (2026-07-10, loop iteration 28)
+6 FALSE fixed (verified): license is AGPL-3.0 not MIT (gh api); set-tags max 3 not 4 (main.go:2452); pilotctl peers --search filters connected peers by node-ID substring, not a registry tag-search → rewrote the discovery examples to the list-agents directory service; policy-based per-tag/time-of-day handshake auto-approval does NOT exist (only --trust-auto-approve blanket flag + embedded trusted list) → corrected; recv requires a port arg. 16 unverifiable (reputation/marketplace narrative) accepted.
