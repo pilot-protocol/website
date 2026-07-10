@@ -38,3 +38,7 @@ Audited: 2026-07-10 · Sentences examined: 52 · verified: 35 · false: 7 · unv
 - L101 both sentences ("We will post changes…", "…we will re-prompt for consent where required by law.") — future commitments.
 - L104 "Questions about cookies or our use of analytics?" — rhetorical.
 - L108 "This policy was drafted for transparency…" — self-characterization.
+
+## Resolutions (2026-07-10, loop iteration 10)
+FALSE: GA4-on-/plain rows (64/71/85/87) resolved by product fix (GA4 removed from PlainLayout — verified grep gtag=0), so "_ga set only after consent" is now true. Inventory completed: added pilot-theme, pilot.publish.draft.v1, pilot.publish.ui.v1 localStorage rows (grep confirms these + pilot_consent are the only storage keys site-wide), so "every cookie/browser-storage entry" (line 34) + meta description are now accurate. "Cookie Preferences at bottom of every page" → corrected to "in the footer on marketing pages" (DocsFooter/PlainLayout have no such link) + pointed to clearing pilot_consent.
+UNVERIFIABLE: __cf_bm not observed in live Set-Cookie (curl 2026-07-10) → softened to "may be set when bot protection is active"; CF Web Analytics "no personal data collected" → reworded to cookieless/no-fingerprint + honest IP/UA-to-Cloudflare note; policy effective dates (May 28 2026) → ACCEPTED (operator's legal declaration, not code-verifiable).

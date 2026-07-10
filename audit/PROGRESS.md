@@ -61,7 +61,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/openclaw-agents-behind-nat-zero-config.md | 4 | 14 | todo |
 | audit/blog/replace-message-broker-twelve-lines-go.md | 6 | 8 | todo |
 | audit/blog/run-agent-network-without-cloud-dependency.md | 4 | 13 | todo |
-| audit/pages/cookies.md | 7 | 4 | todo |
+| audit/pages/cookies.md | 7 | 4 | done |
 | audit/pages/publish.md | 3 | 16 | todo |
 | audit/blog/move-beyond-rest-persistent-connections-for-agents.md | 5 | 9 | todo |
 | audit/blog/trust-model-agents-invisible-by-default.md | 6 | 6 | todo |
