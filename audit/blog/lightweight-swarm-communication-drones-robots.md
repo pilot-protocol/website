@@ -46,3 +46,6 @@ Audited: 2026-07-10 · Sentences examined: 118 · verified: 46 · false: 9 · un
 - Public protocol knowledge: DDS/SPDP multicast discovery, WiFi multicast = broadcast without ACK, N-robot discovery arithmetic, MAVLink point-to-point design, ROS2-on-DDS architecture — consistent with public specs (OMG DDS, 802.11, MAVLink docs)
 - Local site: banner public/blog/banners/lightweight-swarm-communication-drones-robots.webp exists; GitHub CTA link 200
 - EXAMPLE: Go telemetry/waypoint code values, 37.7749/-122.4194 coords, address 1:0001.0002.0001, scp to 192.168.1.42 (RFC 1918)
+
+## Resolutions (2026-07-10, loop iteration 20)
+9 FALSE fixed (source-verified): set-tags examples reduced to max 3 (main.go:2452); subscribe/publish given required <address> + --data (main.go:1331,1339); driver import → common/driver; driver.Connect() → Connect(""); the fictional stream.OpenEventStream/Subscribe/Publish API caveated as illustrative pseudocode (real SDK is SendTo/RecvFrom; pub/sub is via pilotctl publish/subscribe + eventstream service). 20 UNVERIFIABLE: anonymous "grinds to a halt 90%" quote de-attributed; uncited "50% latency overhead" softened to directional; memory figures marked illustrative (own runs, not published benchmarks). Remaining ROS2/Zenoh/MAVLink comparison figures accepted as illustrative typical values in a comparison post.

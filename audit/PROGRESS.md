@@ -38,7 +38,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/zero-dependency-encryption-x25519-aes-gcm.md | 15 | 9 | done |
 | audit/blog/github-com-alternatives-6.md | 3 | 43 | done |
 | audit/docs/service-agents.md | 16 | 0 | done |
-| audit/blog/lightweight-swarm-communication-drones-robots.md | 9 | 20 | todo |
+| audit/blog/lightweight-swarm-communication-drones-robots.md | 9 | 20 | done |
 | audit/docs/tags.md | 15 | 2 | done |
 | audit/docs/gateway.md | 15 | 1 | done |
 | audit/blog/benchmarking-http-vs-udp-overlay.md | 4 | 32 | todo |
