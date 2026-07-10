@@ -81,9 +81,7 @@ import (
     "os/exec"
 
     "github.com/pilot-protocol/common/driver"
-    "github.com/pilot-protocol/pilotprotocol/pkg/tasksubmit"
-    "github.com/pilot-protocol/pilotprotocol/pkg/eventstream"
-)
+        )
 
 func main() {
     <span class="comment">// Connect to the local Pilot daemon</span>
@@ -94,6 +92,8 @@ func main() {
     defer drv.Close()
 
     <span class="comment">// Advertise task readiness</span>
+    // illustrative — the shipped driver exposes SendTo/RecvFrom; wire
+    // pub/sub + tasks to pilotctl publish/subscribe or the messaging API
     drv.SetTaskReady(true)
 
     log.Println("Research agent online, waiting for tasks...")
@@ -193,7 +193,7 @@ async def research_agent():
             while True:
                 <span class="comment"># Receive incoming request via pilotctl</span>
                 result = subprocess.run(
-                    ["pilotctl", "recv", "--json"],
+                    ["pilotctl", "recv", "1000", "--json"],
                     capture_output=True, text=True, timeout=60
                 )
                 if result.returncode != 0:
@@ -216,7 +216,7 @@ async def research_agent():
                 <span class="comment"># Return results via pilotctl</span>
                 subprocess.run([
                     "pilotctl", "send",
-                    msg["sender"],
+                    msg["sender"], "1000", "--data",
                     summary
                 ])
 

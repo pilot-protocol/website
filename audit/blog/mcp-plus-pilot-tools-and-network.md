@@ -30,3 +30,6 @@ Audited: 2026-07-10 · Sentences examined: 84 · verified: 38 · false: 7 · unv
 - MCP public docs: client-server model, stdio/HTTP transports, MCP Python SDK ClientSession/stdio_client — consistent with modelcontextprotocol.io SDK
 - OPINION: "half an agent", "eyes and hands / voice and ears", vertical/horizontal framing, "this separation is a feature"
 - EXAMPLE: SQL queries, research-agent scenario, mcp CLI wrapper (explicitly labeled "In production, use the MCP Go SDK"), <broker-addr> placeholder
+
+## Resolutions (2026-07-10, loop iteration 31)
+7 FALSE fixed: pkg/driver→common/driver import + removed nonexistent pkg/tasksubmit & pkg/eventstream imports; Connect(""); caveated the fictional driver methods (SetTaskReady/Recv/Send/Publish — real API is SendTo/RecvFrom) as illustrative; recv needs a port (1000); send needs <addr> <port> --data. 5 unverifiable accepted.

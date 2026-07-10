@@ -66,9 +66,9 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/build-agent-swarm-self-organizes.md | 7 | 9 | done |
 | audit/blog/connect-agents-across-aws-gcp-azure-without-vpn.md | 3 | 21 | todo |
 | audit/blog/encrypted-data-exchange-for-decentralized-ai-systems.md | 6 | 11 | done |
-| audit/blog/build-openclaw-agent-self-organizes-pilot.md | 7 | 5 | todo |
-| audit/blog/cloud-networking-secure-peer-to-peer-distributed-ai.md | 6 | 8 | todo |
-| audit/blog/mcp-plus-pilot-tools-and-network.md | 7 | 5 | todo |
+| audit/blog/build-openclaw-agent-self-organizes-pilot.md | 7 | 5 | done |
+| audit/blog/cloud-networking-secure-peer-to-peer-distributed-ai.md | 6 | 8 | done |
+| audit/blog/mcp-plus-pilot-tools-and-network.md | 7 | 5 | done |
 | audit/blog/openclaw-agents-behind-nat-zero-config.md | 4 | 14 | todo |
 | audit/blog/replace-message-broker-twelve-lines-go.md | 6 | 8 | done |
 | audit/blog/run-agent-network-without-cloud-dependency.md | 4 | 13 | todo |

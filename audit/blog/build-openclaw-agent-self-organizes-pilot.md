@@ -28,3 +28,6 @@ Audited: 2026-07-10 · Sentences examined: 62 · verified: 37 · false: 7 · unv
 - Anthropic API knowledge: `anthropic` Python SDK, ANTHROPIC_API_KEY, model id claude-sonnet-4-20250514, messages.create shape — all real.
 - Local site files: blog link emergent-trust-networks-agents-choose-peers exists; banner webp exists; GitHub link pilot-protocol/pilotprotocol exists (pre-verified).
 - Example (not flagged): worker-{pid} hostnames, sample addresses 1:0001.0B22.4E19 etc., sample run output, sk-ant-... key placeholder.
+
+## Resolutions (2026-07-10, loop iteration 31)
+7 FALSE fixed: rendezvous.pilotprotocol.network → registry.pilotprotocol.network:443 (correct compat DNS); peers --search is node-ID not tag search → discovery via list-agents; recv needs a port; send needs <port> --data; "discoverable by peers searching tags" corrected to the directory; "50 lines" (actually ~150) softened. 14 unverifiable accepted.
