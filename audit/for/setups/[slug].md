@@ -27,3 +27,6 @@ This is a dynamic template that renders 56 org-setup pages from an external cata
 
 ## Opinion (not flagged)
 - L113 CTA "Ready to deploy {name}?" — marketing prompt, no factual content.
+
+## Resolutions (2026-07-10, loop iteration 15)
+0 FALSE. The 56 UNVERIFIABLE flags are all one class — each setup's efficacy lede ("automate campaign strategy…") sourced from the catalog data (TeoSlayer/pilot-skills setups.json); the structural half (agent count/roles/skills/flows) was verified consistent, and the efficacy framing is the catalog author's claim, not website-invented → ACCEPTED (catalog-sourced; can't deploy 56 setups to test each workflow). FIXED the real quality bug the auditor flagged: meta description used setup.tagline (a hard ~100-char cut breaking mid-word on 40/56 pages) → now a clean word-boundary truncation of setup.description (≤155 chars). Build green.
