@@ -109,7 +109,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/enterprise-rbac.md | 6 | 1 | done |
 | audit/blog/ietf-internet-draft-pilot-protocol.md | 2 | 12 | done |
 | audit/blog/legacy-protocol-integration-for-secure-distributed-ai.md | 1 | 15 | todo |
-| audit/blog/multi-cloud-networking-decentralized-ai-systems.md | 1 | 15 | todo |
+| audit/blog/multi-cloud-networking-decentralized-ai-systems.md | 1 | 15 | done |
 | audit/docs/messaging.md | 6 | 0 | done |
 | audit/blog/boarding-pilotagent-org-alternatives-3.md | 0 | 17 | todo |
 | audit/blog/direct-communication-protocols-ai-agents-guide.md | 3 | 8 | done |
@@ -121,7 +121,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/encryption-protocols-for-secure-ai-systems-a-practical-guide.md | 1 | 13 | todo |
 | audit/blog/sociology-of-machines-626-agents.md | 3 | 7 | done |
 | audit/blog/connecting-mcp-servers-across-agents.md | 2 | 9 | done |
-| audit/blog/network-security-for-multi-agent-systems-key-strategies.md | 1 | 12 | todo |
+| audit/blog/network-security-for-multi-agent-systems-key-strategies.md | 1 | 12 | done |
 | audit/blog/scaling-openclaw-fleets-thousands-agents.md | 1 | 12 | done |
 | audit/docs/concepts.md | 5 | 0 | done |
 | audit/docs/diagnostics.md | 5 | 0 | done |
@@ -144,7 +144,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/overlay-networking-automation-secure-ai-agent-solutions.md | 0 | 12 | todo |
 | audit/blog/overlay-networking-secure-ai-agent-communication-explained.md | 0 | 12 | todo |
 | audit/blog/peer-to-peer-networking-examples-ai-engineers.md | 2 | 6 | done |
-| audit/blog/persistent-address-strategies-for-distributed-ai-systems.md | 1 | 9 | todo |
+| audit/blog/persistent-address-strategies-for-distributed-ai-systems.md | 1 | 9 | done |
 | audit/blog/protocol-wrapping-secure-peer-to-peer-ai-systems.md | 0 | 12 | todo |
 | audit/blog/python-sdk-pilot-protocol.md | 3 | 3 | done |
 | audit/docs/integration.md | 4 | 0 | done |

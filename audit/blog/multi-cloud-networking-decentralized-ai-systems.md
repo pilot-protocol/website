@@ -28,3 +28,7 @@ Audited: 2026-07-10 · Sentences examined: 88 · verified: 34 · false: 1 · unv
 - Local: banner public/blog/banners/multi-cloud-networking-decentralized-ai-systems.jpg exists
 - Generally accepted networking facts: non-transitive VPC peering (AWS documented behavior); overlays operate at application layer
 - OPINION items: TL;DR bullets, key-takeaways table, "new era" section, pro tips, FAQ answers, closing marketing
+
+## Resolutions (2026-07-11 iter 60)
+- L146 ("find and verify peers without a central directory"): Pilot peer discovery IS via a central registry (find/lookup query it). Trust is P2P. Reworded to "verify peers directly, peer-to-peer; a thin registry handles discovery, but trust is established between the agents themselves — no central authority owns the trust decision."
+Build: npm run build green (345 pages).

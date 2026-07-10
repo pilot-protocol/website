@@ -31,3 +31,7 @@ Audited: 2026-07-10 · Sentences examined: 115 · verified: 70 · false: 1 · un
 - web4 product source: Pilot Protocol claim "encrypted peer-to-peer tunnels, mutual trust establishment, NAT traversal, persistent virtual addresses" matches pkg/daemon (tunnel.go, routing/beacon.go, trust surface in cmd/pilotctl/main.go).
 - Self-consistent metadata: JSON-LD headline/description/date match frontmatter; meta description matches articleBody.
 - OPINION (not flagged): marketing framing ("highest-leverage decisions", "uncomfortable truth", "Our strong recommendation", key-takeaways editorial cells, Pro Tips).
+
+## Resolutions (2026-07-11 iter 60)
+- L181 ("Delegated Orchestration Engine"): arXiv 2508.01332 names it the Defense Orchestration Engine (DOE). Corrected "Delegated" -> "Defense".
+Build: npm run build green (345 pages).

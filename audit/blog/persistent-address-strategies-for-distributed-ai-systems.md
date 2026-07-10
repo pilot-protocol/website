@@ -27,3 +27,7 @@ Audited: 2026-07-10 · Sentences examined: 118 · verified: 45 · false: 1 · un
 - Local site files: all internal links (/blog/persistent-addresses-distributed-autonomous-systems, persistent-network-addressing-secure-ai-systems, peer-to-peer-agent-communication-no-server, ai-networking-challenges-decentralized-systems, decentralized-networking-p2p-solutions-ai-architectures, autonomous-agent-networking-distributed-ai, trust-model-agents-invisible-by-default, cloud-networking-secure-peer-to-peer-distributed-ai, decentralized-communication-protocols-ai-developers, /for/p2p) exist; banner jpg exists.
 - JSON-LD datePublished 2026-04-28 matches frontmatter "April 28, 2026".
 - OPINION: evaluation-criteria framing, pro tips, hybrid-strategy advocacy, comparison-table qualitative ratings (Medium/High/Low), decision-process steps.
+
+## Resolutions (2026-07-11 iter 60)
+- L164 (DHT churn/"20% per hour" claim cited to benchmarking-http-vs-udp-overlay): the linked post has no DHT/churn/20% content. Removed the false internal citation and the fabricated 20%/hour threshold; kept a general (accurate) statement about cluster-based DHTs holding consistency better under high churn.
+Build: npm run build green (345 pages).
