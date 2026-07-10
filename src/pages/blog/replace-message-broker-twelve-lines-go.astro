@@ -3,7 +3,7 @@ import BlogLayout from '../../layouts/BlogLayout.astro';
 
 const bodyContent = `<p>You have three agents. Agent A monitors CPU. Agent B monitors memory. Agent C needs to aggregate both streams and trigger alerts. The conventional answer is <a href="https://kafka.apache.org" target="_blank" rel="noopener">Kafka</a>, <a href="https://www.rabbitmq.com" target="_blank" rel="noopener">RabbitMQ</a>, or <a href="https://redis.io" target="_blank" rel="noopener">Redis</a> Streams. That means another service to deploy, configure, secure, and keep running. For fewer than 1,000 agents, that is infrastructure overkill.</p>
 
-  <p>Pilot Protocol has a built-in event stream on <strong>port 1002</strong>. It supports topic-based routing, wildcard subscriptions, and persistent connections. The publish side is 6 lines of Go. The subscribe side is 6 lines. Twelve lines total, and you have a working <strong>agent pub/sub system</strong> in <a href="https://go.dev" target="_blank" rel="noopener">Go</a> with encrypted transport and NAT traversal included.</p>
+  <p>Pilot Protocol has a built-in event stream on <strong>port 1002</strong>. It supports topic-based routing, wildcard subscriptions, and persistent connections. Pub/sub is a few commands: <code>pilotctl publish &lt;peer&gt; &lt;topic&gt; --data …</code> and <code>pilotctl subscribe &lt;peer&gt; &lt;topic&gt;</code>, with encrypted transport and NAT traversal included. (The Go snippets below use an illustrative <code>stream</code> API for the pattern; the shipped Go SDK exposes datagram primitives — wire the pattern to the CLI publish/subscribe or the messaging API.)</p>
 
   <section>
   <h2>The Problem with Brokers for Agents</h2>
@@ -377,7 +377,7 @@ stream.Publish("pipeline.stage2.result.anomaly", data)</code></pre>
 <span class="comment"># Subscribe to only anomalies</span>
 <span class="cmd">pilotctl subscribe <broker-addr> "pipeline.stage2.result.anomaly"</span></code></pre>
 
-  <p>The CLI commands connect to the same daemon and use the same event stream as the Go API. They are interchangeable.</p>
+  <p>The <code>pilotctl publish</code>/<code>subscribe</code> commands are the supported way to use the event stream; the Go snippets above illustrate the pattern.</p>
   </section>
 
   <section>
@@ -455,7 +455,7 @@ stream.Publish("pipeline.stage2.result.anomaly", data)</code></pre>
     <li>Coordination signals ("I am ready", "start next phase")</li>
   </ul>
 
-  <p>For these patterns, 12 lines of Go and zero broker infrastructure is the right answer. Save Kafka for when you actually need Kafka.</p>
+  <p>For these patterns, a couple of Pilot pub/sub commands and zero broker infrastructure is the right answer. Save Kafka for when you actually need Kafka.</p>
   </section>
 
   <section>

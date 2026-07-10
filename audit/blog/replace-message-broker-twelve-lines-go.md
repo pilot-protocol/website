@@ -31,3 +31,6 @@ Audited: 2026-07-10 · Sentences examined: 72 · verified: 42 · false: 6 · unv
 - External: kafka.apache.org, rabbitmq.com, redis.io, go.dev — well-known live sites; Mosquitto is open source (EPL) — "Yes (Mosquitto, etc.)" for MQTT open source holds.
 - EXAMPLE: monitoring-pipeline agents A/B/C, CPU/memory metrics JSON, pipeline stage code, topic names, alert thresholds.
 - OPINION: "infrastructure overkill", "Honesty matters", "the right answer", "trivial".
+
+## Resolutions (2026-07-10, loop iteration 30)
+6 FALSE: import/Connect fixed by the iter-21 batch (pkg/driver→common/driver, Connect("")); remaining prose corrected — the "12 lines with OpenEventStream/Publish/Subscribe" API doesn't exist in the Go SDK (SendTo/RecvFrom only) → reframed to pilotctl publish/subscribe with the Go snippets marked illustrative; "interchangeable Go API" and "pkg/driver package" claims fixed. 8 unverifiable accepted.

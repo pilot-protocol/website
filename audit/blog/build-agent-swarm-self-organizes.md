@@ -34,3 +34,6 @@ Audited: 2026-07-10 · Sentences examined: 96 · verified: 52 · false: 7 · unv
 - Site files: internal links build-ai-agent-marketplace-discovery-reputation, distributed-monitoring-without-prometheus, trust-model-agents-invisible-by-default, benchmarking-http-vs-udp-overlay, how-pilot-protocol-works all exist in src/pages/blog/; banner .webp exists; GitHub CTA repo exists.
 - benchmarking-http-vs-udp-overlay.astro:174,307: the "benchmark data confirms" cross-reference accurately reflects what the linked post says (the underlying numbers remain unverifiable).
 - Example (not flagged): Python glue code structure, gpt-4o-mini usage, sample payloads, rendezvous.example.com, role lists, run commands.
+
+## Resolutions (2026-07-10, loop iteration 30)
+7 FALSE fixed: no `pilotctl data send/recv` command → send-file/recv; `send` needs <addr> <port> --data; peers --search is node-ID not a registry tag query → discovery via list-agents directory; set-tags is space-separated max 3 (not one comma-joined string). 9 unverifiable accepted.
