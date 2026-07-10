@@ -61,3 +61,13 @@ This page has severe drift from source. The three headline problems: (1) the rev
 - **Pre-verified cheatsheet**: consent defaults all true; skill_inject default auto; marker block format; injection toolchains Claude Code/OpenClaw/OpenHands/PicoClaw/Hermes (line 152); repos pilot-protocol/skillinject and TeoSlayer/pilot-skills exist (lines 164, 225).
 - **Local site files**: /docs/mcp-setup and /docs/security pages exist (src/pages/docs/mcp-setup.astro, security.astro) → prev/next links; all TOC anchors (#model…#disable-all) resolve in-page; title/description/frontmatter consistent with verified defaults.
 - **EXAMPLE items (not flagged)**: "2-star app with 'crashes on arm64'" (120), review text "Fast search, clean API" (134), /opt/pilot-data sandbox dir (243-248).
+
+## Resolutions (2026-07-10, loop iteration 1)
+All 33 FALSE rows → FIXED in src/pages/docs/consent.astro; all 6 UNVERIFIABLE rows → resolved. Verification: every replaced sentence grep-confirmed gone (residue check = 0); page rebuilt green; evidence re-verified in source before editing (skillinject.go startup-tick/ForceTick, skills.go:57-63, daemon.go:4345 send-side gate, cmd/daemon/main.go:111 -telemetry-url).
+- Telemetry: 4 events incl. app_usage disclosed (payload = app ID + method); catalogue_viewed payload corrected; "what we receive/do not receive" made accurate; daemon-side -telemetry-url caveat + workaround disclosed; unverifiable server-verification sentence dropped.
+- Broadcasts: rewritten to the real sender-side authorization model; opt-out correctly described as send-path gate; no-restart-needed corrected; O(1)-only claim softened.
+- Reviews: default-off feature flags disclosed (prompts don't fire on default installs); intercept honestly described as replacing output; false "--json suppresses prompts" removed with automation guidance.
+- Skill injection: outside-marker writes disclosed (SKILL.md files, ~/.pilot/bin helpers, openclaw.json merge); manual-mode semantics corrected (startup tick + skills check; no preview claim — status side-effect disclosed, read-only preview marked as tracked product fix); auto marked default; set-mode disabled vs disable all semantics fixed; pilotctl update vs skills check untangled; restart-required-for-ticker corrected.
+- Sandbox: rewritten as startup path validation (no chroot/seccomp/Landlock; no auto-redirect — /tmp/pilot.sock caveat added); container/systemd guidance added for real confinement.
+- Disable-all: skills disable all + -telemetry-url="" follow-ups added.
+- Softened to first-party-intent wording (curation/ranking/fleet-usage claims): 3 rows.
