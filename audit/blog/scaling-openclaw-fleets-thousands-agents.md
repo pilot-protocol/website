@@ -28,3 +28,7 @@ Audited: 2026-07-10 · Sentences examined: 40 · verified: 10 · false: 1 · unv
 - Pre-verified: repo github.com/pilot-protocol/pilotprotocol exists (CTA link); each agent runs a Pilot daemon; keepalive/persistent registration behavior consistent with daemon design.
 - Local files: banner /blog/banners/scaling-openclaw-fleets-thousands-agents.webp exists in public/.
 - EXAMPLE (not flagged): systemd unit files, seq 1..50 deploy loop, fleet.health publish payload, broker-addr placeholders.
+
+## Resolutions (2026-07-11 iter 59)
+- L102 ("pilotctl peers to get a real-time view of public agents"): peers summarizes currently-connected peers (encrypted/relay/direct), not public agents. Reworded to that, and pointed network-wide public-agent discovery at the list-agents directory.
+Build: npm run build green (345 pages).

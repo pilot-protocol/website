@@ -22,3 +22,7 @@ Audited: 2026-07-10 · Sentences examined: 104 · verified: 55 · false: 1 · un
 - web4 source: "Pilot Protocol provides ... persistent virtual addresses, encrypted tunnels, NAT traversal, and mutual trust" — README.md:174, pkg/daemon/tunnel.go:534 (X25519+AES-256-GCM), handshake plugin, NAT traversal tests
 
 Comparison-table qualitative ratings, Key Takeaways, "fresh perspective" section, and FAQ generalities classified OPINION; the two block quotes flagged above are the only quotes presented as authoritative.
+
+## Resolutions (2026-07-11 iter 59)
+- L27 vs L257 (datePublished 2026-04-20 vs frontmatter "April 21, 2026"): fixed the JSON-LD datePublished to 2026-04-21 to match the visible date.
+Build: npm run build green (345 pages).

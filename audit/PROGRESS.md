@@ -122,7 +122,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/sociology-of-machines-626-agents.md | 3 | 7 | done |
 | audit/blog/connecting-mcp-servers-across-agents.md | 2 | 9 | done |
 | audit/blog/network-security-for-multi-agent-systems-key-strategies.md | 1 | 12 | todo |
-| audit/blog/scaling-openclaw-fleets-thousands-agents.md | 1 | 12 | todo |
+| audit/blog/scaling-openclaw-fleets-thousands-agents.md | 1 | 12 | done |
 | audit/docs/concepts.md | 5 | 0 | done |
 | audit/docs/diagnostics.md | 5 | 0 | done |
 | audit/docs/webhooks.md | 5 | 0 | done |
@@ -164,7 +164,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/sdk-parity.md | 3 | 0 | done |
 | audit/docs/services.md | 3 | 0 | done |
 | audit/pages/terms.md | 2 | 3 | done |
-| audit/blog/persistent-network-addressing-secure-ai-systems.md | 1 | 5 | todo |
+| audit/blog/persistent-network-addressing-secure-ai-systems.md | 1 | 5 | done |
 | audit/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents.md | 2 | 2 | done |
 | audit/blog/trust-network-protocols-secure-decentralized-systems.md | 0 | 8 | todo |
 | audit/docs/troubleshooting.md | 2 | 2 | done |
@@ -180,7 +180,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/go-sdk.md | 2 | 0 | done |
 | audit/pages/app-store.md | 1 | 3 | done |
 | audit/blog/persistent-addresses-distributed-autonomous-systems.md | 0 | 5 | todo |
-| audit/blog/secure-communication-protocols-distributed-ai-systems.md | 1 | 2 | todo |
+| audit/blog/secure-communication-protocols-distributed-ai-systems.md | 1 | 2 | done |
 | audit/blog/what-is-protocol-overlay-fundamentals-practical.md | 0 | 5 | todo |
 | audit/blog/why-secure-direct-p2p-connections-matter-for-ai-agents.md | 0 | 5 | todo |
 | audit/pages/aup.md | 0 | 4 | todo |

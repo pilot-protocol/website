@@ -22,3 +22,7 @@ Audited: 2026-07-10 · Sentences examined: 95 · verified: 78 · false: 1 · unv
 - web4 source (pre-verified + pkg/daemon/keyexchange/derive.go): Pilot Protocol virtual addresses, encrypted tunnels, NAT traversal, protocol wrapping (HTTP/gRPC/SSH), mutual trust model.
 - Opinion/marketing (not flagged): "decisions...define resilience", pull quotes, "decentralized models are generally the stronger choice", Pro Tips, practitioner-perspective section generalities.
 - Example (not flagged): none material beyond illustrative table framings.
+
+## Resolutions (2026-07-11 iter 59)
+- L151 ("mTLS (RFC 8705) extends TLS"): RFC 8705 is OAuth 2.0 Mutual-TLS Client Authentication, not a TLS extension; mutual auth is native to TLS (RFC 8446). Reworded to "mTLS uses client certificates — mutual authentication is native to TLS itself (RFC 8446)".
+Build: npm run build green (345 pages).
