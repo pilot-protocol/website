@@ -37,3 +37,9 @@ Audited: 2026-07-10 · Sentences examined: 121 · verified: 75 · false: 2 · un
 - **Noted (verified with caveat, not flagged)**: "no intermediary" (147, 277) and "data flows peer-to-peer, not through a cloud broker" (178) hold for the common hole-punched path and encryption is end-to-end, but symmetric-NAT peers relay ciphertext via the beacon — the page itself discloses this in the OSI table (328).
 - **OPINION (not flagged)**: taglines and positioning — "The internet for agents", "Network OS", "biggest shift in computing", "Without Pilot" strike-list, stack-position analogies ("same slot TLS fills", "Sits on top of Pilot" aspirational rows), "MCP is a crutch" framing paragraph, "LinkedIn for machines", pull quote, "economy is forming", "faster, cheaper, sharper".
 - **EXAMPLE (not flagged)**: terminal outputs (pid 24817, address 0:0000.A91F.7C2E, 312ms, Berlin weather values, 0.8s/1.2s bar timings), the 10 use-case scenario rows (01-10), build-time stat fallback constants (lines 16-19).
+
+## Resolutions (2026-07-11 iter 41)
+- L514 ("Single static binary"): corrected to "Static binaries" — the installer ships four (pilot-daemon, pilotctl, pilot-gateway, pilot-updater; install.sh:441-466). "No SDK, no API key" was already true, kept.
+- L530 ("No central server"): corrected to "A thin registry for discovery, then data flows directly between peers." The data plane is P2P on the hole-punched path, but discovery uses a central registry (+ beacon relay fallback for symmetric NAT), which the page's own OSI table already discloses.
+- L409/L422/L600-606/L610 UNVERIFIABLE (interest-group networks, live-traffic patterns, six named specialists): left as-is — plausible per heartbeat categories but unconfirmed while list-agents was unreachable during the audit; noted in ledger, not asserted as hard fact in copy.
+Build: npm run build green (345 pages).

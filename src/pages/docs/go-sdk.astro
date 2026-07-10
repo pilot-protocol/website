@@ -70,7 +70,7 @@ func main() {
 
   <h3>Connect</h3>
   <pre><code>func Connect(socketPath string) (*Driver, error)</code></pre>
-  <p>Creates a new driver connected to the local daemon. Pass <code>""</code> for the default socket path (<code>/tmp/pilot.sock</code>). Override with a custom path or set the <code>PILOT_SOCKET</code> environment variable.</p>
+  <p>Creates a new driver connected to the local daemon. Pass <code>""</code> for the default socket path (<code>/tmp/pilot.sock</code>, or <code>$XDG_RUNTIME_DIR/pilot.sock</code> when that is set on Linux). Override by passing a custom path. Note: the <code>PILOT_SOCKET</code> environment variable is read by the <code>pilotctl</code> CLI only — it has no effect on the SDK.</p>
 
   <h3>Dial</h3>
   <pre><code>func (d *Driver) Dial(addr string) (*Conn, error)</code></pre>
@@ -108,7 +108,7 @@ func main() {
       <tr><td><code>Close() error</code></td><td>Close the connection (sends FIN to remote).</td></tr>
       <tr><td><code>LocalAddr() net.Addr</code></td><td>Returns the local pilot address.</td></tr>
       <tr><td><code>RemoteAddr() net.Addr</code></td><td>Returns the remote pilot address.</td></tr>
-      <tr><td><code>SetDeadline(t time.Time) error</code></td><td>Sets both read and write deadlines.</td></tr>
+      <tr><td><code>SetDeadline(t time.Time) error</code></td><td>Sets the read deadline. Write deadlines are a no-op in the current driver, so this effectively sets the read deadline only.</td></tr>
       <tr><td><code>SetReadDeadline(t time.Time) error</code></td><td>Sets the read deadline. A zero value means no deadline.</td></tr>
     </tbody>
   </table>

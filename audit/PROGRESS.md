@@ -149,7 +149,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/apps/[id].md | 3 | 2 | todo |
 | audit/blog/overlay-network-ai-agents.md | 3 | 2 | todo |
 | audit/blog/why-autonomous-agents-need-private-discovery.md | 0 | 11 | todo |
-| audit/pages/index.md | 2 | 5 | todo |
+| audit/pages/index.md | 2 | 5 | done |
 | audit/blog/advanced-network-automation-tips-secure-ai-systems.md | 2 | 4 | todo |
 | audit/blog/claude-agent-teams-over-pilot.md | 2 | 4 | todo |
 | audit/blog/peer-to-peer-agent-communication-no-server.md | 2 | 4 | todo |
@@ -174,8 +174,8 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/secure-network-infrastructure-ai-agents-practical-guide.md | 0 | 6 | todo |
 | audit/blog/securing-ai-agent-networks-multi-cloud-environments.md | 0 | 6 | todo |
 | audit/blog/why-direct-p2p-connections-power-secure-ai-networking.md | 0 | 6 | todo |
-| audit/docs/enterprise.md | 2 | 0 | todo |
-| audit/docs/go-sdk.md | 2 | 0 | todo |
+| audit/docs/enterprise.md | 2 | 0 | done |
+| audit/docs/go-sdk.md | 2 | 0 | done |
 | audit/pages/app-store.md | 1 | 3 | todo |
 | audit/blog/persistent-addresses-distributed-autonomous-systems.md | 0 | 5 | todo |
 | audit/blog/secure-communication-protocols-distributed-ai-systems.md | 1 | 2 | todo |

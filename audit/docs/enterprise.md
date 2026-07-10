@@ -25,3 +25,8 @@ Audited: 2026-07-10 · Sentences examined: 58 · verified: 56 · false: 2 · unv
 - Aggregate of above: h1/subtitle, overview paragraphs, feature-summary descriptions, meta description, and "What's next" list items restate verified features.
 
 Notes: "prod-fleet" in the code block is an illustrative network name inside an otherwise verified command syntax. Line 30's "promotes the creator to the owner role" holds for both paths (owner role assigned at creation, membership.go:325; toggle-on assigns owner to first roleless member, membership.go:673-693).
+
+## Resolutions (2026-07-11 iter 41)
+- L58 (Per-network admin tokens under "Requires enterprise"): moved to the "Available to all networks" column. Admin tokens are settable at create with no enterprise gate (membership.go:243,327).
+- L62 (Blueprint provisioning under "Requires enterprise"): moved to "Available to all networks". provision_network is admin-token-gated, not enterprise-gated; ApplyBlueprint provisions a plain network and only enables enterprise when the blueprint requests it (provision.go:92-122). Added a clarifying note that both are admin-token-gated, not enterprise-gated.
+Build: npm run build green (345 pages).

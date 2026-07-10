@@ -22,3 +22,8 @@ Audited: 2026-07-10 · Sentences examined: 92 · verified: 86 · false: 2 · unv
 
 ## Example content (not flagged)
 - Lines 35-65 quick-start code, 197-212 echo server, 216-226 send-message, 230-238 HTTP server: illustrative code using address `0:0000.0000.0005:1000` and demo strings — API calls in all four blocks match verified signatures.
+
+## Resolutions (2026-07-11 iter 41)
+- L73 (PILOT_SOCKET env var for the SDK): corrected. driver.Connect never reads PILOT_SOCKET (that env var is consumed by the pilotctl CLI only, main.go:261). Copy now says default is /tmp/pilot.sock (or $XDG_RUNTIME_DIR/pilot.sock on Linux), override via a custom path arg, and PILOT_SOCKET has no effect on the SDK.
+- L111 (SetDeadline "sets both read and write deadlines"): corrected to "sets the read deadline; write deadlines are a no-op in the current driver" (conn.go:127-130,144 — SetDeadline only calls SetReadDeadline).
+Build: npm run build green (345 pages).
