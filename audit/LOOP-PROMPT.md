@@ -42,5 +42,18 @@ Reply to every drained message via `~/bin/pilot-sms` (answer + what you did abou
 ## Notifications (keep the user in the loop remotely)
 After each iteration's push, send a one-line SMS via `~/bin/pilot-sms` (configured per the "SMS / voice updates" section of the user's global `~/.claude/CLAUDE.md`): pages fixed this round, running totals, and **full URLs** — always include `https://github.com/pilot-protocol/website/pull/116` and, when relevant, the branch preview `https://fix-sweep-4.pilotprotocol.pages.dev/`. If an iteration hits a true blocker, follow the escalation ladder in that CLAUDE.md section (SMS → ~15 min → voice call → park and continue). Batch: one SMS per iteration, not per commit.
 
+## Standing goals beyond the ledger (work these in when a ledger iteration is short, or once ledgers run dry)
+1. **GA4 consent gate on `/plain/*`** (`src/layouts/PlainLayout.astro:19-24`) — highest priority non-ledger item (GDPR).
+2. **web4 `fix/consent-truth` PR** — per the Fix policy section above.
+3. **PR #116 CI**: full build/plain checks only run after PR #115 merges (stacked base). Until then `npm run build` locally is the gate. After #115 merges, watch #116 retarget to main, let plain-sync regen twins, do the empty-commit retrigger if checks stall, and text the user when #116 is fully green.
+4. Blog index `readTime` (every card shows "3 min read" — compute from post body length) and the 500-page "We've been notified" claim — both in ledgers; noting here so they aren't skipped as "minor".
+
+## Needs user (park here, never guess)
+- Merge PR #115 then #116 (user merges, always).
+- Anthropic API key for the live voice bridge (voicemail→inbox works without it).
+- Transfer `TeoSlayer/pilot-skills`, `pilot-mcp`, homebrew tap to the `pilot-protocol` org.
+- Ed25519 skill-content signing enablement (key management decision).
+- Any legal-policy commitment changes surfaced by ledger work.
+
 ## Stop condition
 When every ledger row in every file is resolved (`FIXED`/`ACCEPTED`) and the build is green: write a final summary at the top of `audit/PROGRESS.md` (totals, product PRs opened, items under "Needs user review"), comment that summary on PR #116 via `gh pr comment 116`, push, and **stop the loop**. If genuinely blocked on something only the user can decide, add it to "Needs user review", skip it, and continue with the rest — only stop early if ALL remaining work is user-blocked.
