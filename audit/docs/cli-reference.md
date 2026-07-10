@@ -67,3 +67,13 @@ All source references below: `main.go` = web4/cmd/pilotctl/main.go; `ipc.go`/`da
 
 - The page omits existing subcommands (`appstore outdated/upgrade`, `inbox read`, `set-email`, `network policy` registry variant flags, broadcast's admin-token requirement) — omissions, not false claims.
 - Several FALSE "Returns:" rows trace back to the binary's own stale `pilotctl context` catalog (main.go:2098-2420), which disagrees with the actual command implementations — worth fixing at the source, not just on the website.
+
+## Resolutions (2026-07-10, loop iteration 4)
+All 21 FALSE + 6 UNVERIFIABLE rows resolved in src/pages/docs/cli-reference.astro. Evidence re-verified live before editing: `pilotctl quickstart --json` emits the ASCII banner (no JSON); `pilotctl trusted` errors "usage: pilotctl trusted list"; updates.go:133 count default 10; main.go:5430-5432 peers JSON keys {peers,total,encrypted}; main.go:6626-6638 inbox keys {id,from,type,bytes,received_at,preview}; gateway stop/unmap error, start/map/list exec pilot-gateway; verify.go keys; sign_request.go returns envelope/signature/address.
+- quickstart: described as a static banner; --json emits no structured output.
+- --email persists to account.json (not config.json).
+- verify / sign-request / verify-request / peers / inbox / lookup / gateway(×5) Returns shapes corrected to actual source output.
+- network promote/demote/kick/role: admin-token auth (not RBAC); role needs no auth.
+- network policy: real key flags (--max-members/--description/--allowed-ports), not --set json.
+- inbox --trace removed (no such flag); trusted -> "trusted list"; updates default 10.
+- UNVERIFIABLE (registry-server-side): hostname/tag charset, network-leave messaging, rotate-key trust, set-private searchable fields — reworded to what local source proves, dropping unverifiable server-side specifics.

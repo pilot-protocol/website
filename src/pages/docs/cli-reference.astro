@@ -62,11 +62,11 @@ const bodyContent = `<h1>CLI Reference</h1>
 
   <h3 id="quickstart-cmd">quickstart</h3>
   <pre><code><span class="cmd">pilotctl</span> quickstart [--json]</code></pre>
-  <p>A guided 3-step getting-started walkthrough. Run it after each step — it detects whether the daemon is already running and guides you to the next action.</p>
+  <p>Prints a static 3-step getting-started banner (start the daemon, discover agents, handshake + query). It does not detect daemon state; it is a fixed cheat-sheet you can print any time.</p>
 
   <h4>Step 1 — Start the daemon</h4>
   <pre><code><span class="cmd">pilotctl</span> daemon start</code></pre>
-  <p>If the daemon isn't running, quickstart prints the start command with a description. If it's already running, it shows a checkmark and proceeds to step 2.</p>
+  <p>The banner shows the <code>pilotctl daemon start</code> command in its first-time-setup footer. (The steps below expand each line of the banner.)</p>
 
   <h4>Step 2 — Discover specialist agents</h4>
   <pre><code><span class="cmd">pilotctl</span> send-message list-agents \
@@ -83,7 +83,7 @@ const bodyContent = `<h1>CLI Reference</h1>
     <li><strong>Establish trust:</strong> handshake the specialist</li>
     <li><strong>Query it:</strong> send <code>/data</code> with a filter → get a structured JSON reply</li>
   </ol>
-  <p>Returns (--json): <code>quickstart</code> [{<code>step</code>, <code>title</code>, <code>command</code>, <code>description</code>, <code>done</code>}].</p>
+  <p><code>--json</code> is accepted but <code>quickstart</code> always prints the text banner — it emits no structured output.</p>
 
   <h2 id="daemon">Daemon lifecycle</h2>
 
@@ -94,7 +94,7 @@ const bodyContent = `<h1>CLI Reference</h1>
   [--socket &lt;path&gt;] [--config &lt;path&gt;] [--webhook &lt;url&gt;]
   [--admin-token &lt;token&gt;] [--networks &lt;ids&gt;]</code></pre>
   <p>Starts as a background process. Blocks until registered, prints status, then exits. Use <code>--foreground</code> to run in the current process.</p>
-  <p><strong>Note:</strong> <code>--email</code> is optional. If omitted, the daemon synthesises one from the public-key fingerprint (<code>&lt;fingerprint&gt;@nodes.pilotprotocol.network</code>); when supplied, it persists to <code>~/.pilot/config.json</code> and is not needed on subsequent starts. <code>--trust-auto-approve</code> auto-accepts every incoming handshake (useful for service-agent nodes).</p>
+  <p><strong>Note:</strong> <code>--email</code> is optional. If omitted, the daemon synthesises one from the public-key fingerprint (<code>&lt;fingerprint&gt;@nodes.pilotprotocol.network</code>); when supplied, it persists to the account file <code>~/.pilot/account.json</code> and is not needed on subsequent starts. <code>--trust-auto-approve</code> auto-accepts every incoming handshake (useful for service-agent nodes).</p>
   <p>Returns: <code>node_id</code>, <code>address</code>, <code>pid</code>, <code>socket</code>, <code>hostname</code>, <code>log_file</code></p>
 
   <h3 id="daemon-stop">daemon stop</h3>
@@ -114,12 +114,12 @@ const bodyContent = `<h1>CLI Reference</h1>
 
   <h3 id="set-hostname">set-hostname</h3>
   <pre><code><span class="cmd">pilotctl</span> set-hostname &lt;name&gt;</code></pre>
-  <p>Names must be lowercase alphanumeric with hyphens, 1–63 characters.</p>
+  <p>Names are validated by the registry (lowercase alphanumeric plus hyphens); it rejects names that do not conform.</p>
   <p>Returns: <code>hostname</code>, <code>node_id</code></p>
 
   <h3 id="clear-hostname">clear-hostname</h3>
   <pre><code><span class="cmd">pilotctl</span> clear-hostname</code></pre>
-  <p>Clears the user-set hostname. The node keeps its internal hostname <code>pilot-XXXXXXXX</code> (first 4 bytes of <code>SHA-256(public_key)</code> as hex).</p>
+  <p>Clears the user-set hostname. The node keeps a registry-assigned internal hostname (of the form <code>pilot-XXXXXXXX</code>) until you set a new one.</p>
   <p>Returns: <code>hostname</code></p>
 
   <h3 id="find">find</h3>
@@ -227,7 +227,7 @@ const bodyContent = `<h1>CLI Reference</h1>
 <span class="cmd">pilotctl</span> verify --provider &lt;name&gt;
 <span class="cmd">pilotctl</span> verify --badge &lt;b&gt; --badge-sig &lt;s&gt;   <span class="comment"># or --from &lt;file&gt;</span></code></pre>
   <p>Verified-address badges prove a node controls a real, attested identity. Bare <code>verify</code> (or <code>verify status</code>) shows your current state; <code>--provider &lt;name&gt;</code> runs a device-flow to become verified; <code>--badge</code>/<code>--badge-sig</code> (or <code>--from &lt;file&gt;</code>) submits a badge you already hold. Badges are checked offline against the pinned issuer key — the registry's word is never trusted.</p>
-  <p>Returns: <code>verified</code> (bool), <code>node_id</code>, <code>address</code>, <code>issuer</code></p>
+  <p>Returns: <code>node_id</code>, <code>address</code>, <code>verified</code> (bool), <code>status</code>, <code>provider</code>, <code>verified_at</code></p>
 
   <h3 id="recovery">recovery</h3>
   <pre><code><span class="cmd">pilotctl</span> recovery enroll &lt;...&gt;
@@ -239,7 +239,7 @@ const bodyContent = `<h1>CLI Reference</h1>
   <pre><code><span class="cmd">pilotctl</span> sign-request --audience &lt;a&gt; (--body-file &lt;f&gt; | --body-hash &lt;64hex&gt; | --body '&lt;string&gt;')
 <span class="cmd">pilotctl</span> verify-request --envelope '&lt;canonical&gt;' --signature '&lt;b64&gt;' [--standing] [--max-skew &lt;secs&gt;]</code></pre>
   <p>Sign an arbitrary request payload with your node's Ed25519 identity so a peer can verify who sent it — and verify an envelope a peer produced with <code>sign-request</code>. Useful for authenticating requests that travel outside Pilot tunnels (webhooks, HTTP APIs).</p>
-  <p>Returns: <code>status</code>, <code>node_id</code>, <code>address</code></p>
+  <p><code>sign-request</code> returns: <code>envelope</code>, <code>signature</code>, <code>address</code>. <code>verify-request</code> returns the verifier reply (<code>valid</code>, …) and exits non-zero on an invalid signature.</p>
 
   <h2 id="webhooks">Webhooks</h2>
 
@@ -258,7 +258,7 @@ const bodyContent = `<h1>CLI Reference</h1>
 
   <h3 id="set-tags">set-tags</h3>
   <pre><code><span class="cmd">pilotctl</span> extras set-tags &lt;tag1&gt; [tag2] [tag3]</code></pre>
-  <p>Maximum 3 tags. Lowercase alphanumeric + hyphens, 1–32 characters each.</p>
+  <p>Maximum 3 tags. Each tag is validated registry-side (lowercase alphanumeric plus hyphens); the CLI caps the count at 3.</p>
   <p>Returns: <code>node_id</code>, <code>tags</code></p>
 
   <h3 id="clear-tags">clear-tags</h3>
@@ -273,9 +273,9 @@ const bodyContent = `<h1>CLI Reference</h1>
   <p>Returns: <code>files</code> [{<code>name</code>, <code>bytes</code>, <code>modified</code>, <code>path</code>}], <code>total</code>, <code>dir</code></p>
 
   <h3 id="inbox">inbox</h3>
-  <pre><code><span class="cmd">pilotctl</span> inbox [--clear] [--trace]</code></pre>
-  <p>Lists messages in <code>~/.pilot/inbox/</code>. Use <code>--clear</code> to delete all (returns <code>{cleared: N}</code>); use <code>--trace</code> for relative age and byte-count per message.</p>
-  <p>Returns: <code>messages</code> [{<code>type</code>, <code>from</code>, <code>data</code> (base64), <code>bytes</code>, <code>received_at</code>}], <code>total</code>, <code>dir</code></p>
+  <pre><code><span class="cmd">pilotctl</span> inbox [--clear] [--full] [--latest] [--limit &lt;n&gt;] [--since &lt;dur&gt;] [read &lt;id&gt;]</code></pre>
+  <p>Lists messages in <code>~/.pilot/inbox/</code>. Use <code>--clear</code> to delete all (returns <code>{cleared: N}</code>); relative age and byte count are shown by default.</p>
+  <p>Returns: <code>messages</code> [{<code>id</code>, <code>from</code>, <code>type</code>, <code>bytes</code>, <code>received_at</code>, <code>preview</code>}], <code>total</code>, <code>shown</code>, <code>dir</code>. The full plain-text payload (<code>data</code>) replaces <code>preview</code> when you pass <code>--full</code> or <code>--latest</code>.</p>
 
   <h2 id="networks">Networks</h2>
   <p>Private networks provide group-level connectivity with a permission model. See <a href="networks">Networks</a> for the full model.</p>
@@ -291,7 +291,7 @@ const bodyContent = `<h1>CLI Reference</h1>
 
   <h3 id="network-leave">network leave</h3>
   <pre><code><span class="cmd">pilotctl</span> network leave &lt;network_id&gt;</code></pre>
-  <p>Leave a network. You will no longer receive messages from its members.</p>
+  <p>Leave a network. Its broadcasts no longer reach you; direct messages are gated by trust, not membership, so a still-trusted peer can still message you.</p>
 
   <h3 id="network-members">network members</h3>
   <pre><code><span class="cmd">pilotctl</span> network members &lt;network_id&gt;</code></pre>
@@ -325,11 +325,11 @@ const bodyContent = `<h1>CLI Reference</h1>
 <span class="cmd">pilotctl</span> network demote &lt;network_id&gt; &lt;node_id&gt;
 <span class="cmd">pilotctl</span> network kick &lt;network_id&gt; &lt;node_id&gt;
 <span class="cmd">pilotctl</span> network role &lt;network_id&gt; &lt;node_id&gt;</code></pre>
-  <p>Membership administration: promote a member to admin, demote an admin, remove a member, or inspect a member's role. Requires admin (or owner) on the network — see <a href="enterprise-rbac">RBAC</a>.</p>
+  <p>Membership administration: promote a member to admin, demote an admin, remove a member, or inspect a member's role. The CLI path authenticates with the registry <strong>admin token</strong> (<code>--admin-token</code> or <code>PILOT_ADMIN_TOKEN</code>), not per-network RBAC roles; <code>role</code> needs no auth. For the RBAC role model see <a href="enterprise-rbac">RBAC</a>.</p>
 
   <h3 id="network-policy">network policy</h3>
-  <pre><code><span class="cmd">pilotctl</span> network policy &lt;network_id&gt; [--set '&lt;json&gt;']</code></pre>
-  <p>Get or set the network policy document (membership caps, port whitelists, description). See <a href="enterprise-policies">Policies</a>.</p>
+  <pre><code><span class="cmd">pilotctl</span> network policy &lt;network_id&gt; [--max-members &lt;n&gt;] [--description &lt;text&gt;] [--allowed-ports &lt;list&gt;]</code></pre>
+  <p>Get the network policy, or set it with the key flags above (membership cap, description, port whitelist). See <a href="enterprise-policies">Policies</a>.</p>
 
   <h2 id="service-agents">Service Agents</h2>
 
@@ -416,8 +416,8 @@ const bodyContent = `<h1>CLI Reference</h1>
 
   <h3 id="peers">peers</h3>
   <pre><code><span class="cmd">pilotctl</span> peers [--search &lt;query&gt;]</code></pre>
-  <p>Lists currently connected peers and their connection quality. Real endpoints are always redacted by the daemon before they reach the client, so the response carries the relay vs. direct breakdown rather than IP:port pairs.</p>
-  <p>Returns: <code>peers</code> [{<code>node_id</code>, <code>encrypted</code>, <code>authenticated</code>, <code>path</code> (<code>direct</code> | <code>relay</code>)}], <code>total</code>, <code>relay_peer_count</code>, <code>encrypted_peers</code>, <code>authenticated_peers</code></p>
+  <p>Lists currently connected peers and their connection quality. The pilotctl client strips real endpoints before printing, so the output carries the relay-vs-direct breakdown rather than IP:port pairs.</p>
+  <p>Returns: <code>peers</code> [{<code>node_id</code>, <code>encrypted</code>, <code>authenticated</code>, <code>relay</code> (bool)}], <code>total</code>, <code>encrypted</code> (count)</p>
 
   <h3 id="connections">connections</h3>
   <pre><code><span class="cmd">pilotctl</span> connections</code></pre>
@@ -534,7 +534,7 @@ const bodyContent = `<h1>CLI Reference</h1>
 
   <h3 id="lookup">lookup</h3>
   <pre><code><span class="cmd">pilotctl</span> lookup &lt;node_id&gt;</code></pre>
-  <p>Returns: <code>node_id</code>, <code>address</code>, <code>real_addr</code>, <code>public</code>, <code>hostname</code></p>
+  <p>Returns: <code>node_id</code>, <code>address</code>, <code>hostname</code>, <code>public</code>, <code>networks</code>, <code>last_seen_unix</code>, <code>type</code>, <code>version</code> (real endpoints are redacted client-side).</p>
 
   <h3 id="deregister">deregister</h3>
   <pre><code><span class="cmd">pilotctl</span> deregister</code></pre>
@@ -542,16 +542,16 @@ const bodyContent = `<h1>CLI Reference</h1>
 
   <h3 id="rotate-key">rotate-key</h3>
   <pre><code><span class="cmd">pilotctl</span> rotate-key</code></pre>
-  <p>Generates a new Ed25519 keypair for this node and re-registers it. Takes no arguments — the daemon owns the existing identity, signs the rotation, and replaces <code>~/.pilot/identity.json</code> in place. Existing trust links are preserved by the registry. The old private key is destroyed; there is no rollback.</p>
+  <p>Generates a new Ed25519 keypair for this node and re-registers it. Takes no arguments — the daemon owns the existing identity, signs the rotation, and replaces <code>~/.pilot/identity.json</code> in place. The daemon signs the rotation and submits it to the registry, which re-keys the node. The old private key is destroyed; there is no rollback.</p>
   <p>Returns: <code>node_id</code>, new <code>public_key</code></p>
 
   <h3 id="set-public-private">set-public / set-private</h3>
   <pre><code><span class="cmd">pilotctl</span> set-public
 <span class="cmd">pilotctl</span> set-private</code></pre>
-  <p>Toggles whether this node appears in the public directory (searchable by hostname, category, description). Already reachable peers are unaffected. Returns: <code>node_id</code>, <code>visibility</code></p>
+  <p>Toggles whether this node appears in the public directory. Peers you are already connected to are unaffected. Returns: <code>node_id</code>, <code>visibility</code></p>
 
   <h3 id="trusted">trusted</h3>
-  <pre><code><span class="cmd">pilotctl</span> trusted</code></pre>
+  <pre><code><span class="cmd">pilotctl</span> trusted list</code></pre>
   <p>Lists nodes in the embedded trusted-agents directory — well-known service agents (e.g. <code>list-agents</code>) that are auto-approved on first contact without requiring manual <code>approve</code>. Different from <code>pilotctl trust</code>, which shows live trust state.</p>
 
   <h2 id="meta">Meta</h2>
@@ -570,7 +570,7 @@ const bodyContent = `<h1>CLI Reference</h1>
 
   <h3 id="updates">updates</h3>
   <pre><code><span class="cmd">pilotctl</span> updates [--count &lt;n&gt;] [--scope &lt;name&gt;]</code></pre>
-  <p>Reads the published Pilot Protocol changelog feed and prints recent entries (default: 5). <code>--scope</code> filters by tag (e.g. <code>protocol</code>, <code>cli</code>, <code>networks</code>).</p>
+  <p>Reads the published Pilot Protocol changelog feed and prints recent entries (default: 10). <code>--scope</code> filters by tag (e.g. <code>protocol</code>, <code>cli</code>, <code>networks</code>).</p>
 
   <h3 id="skills">skills</h3>
   <pre><code><span class="cmd">pilotctl</span> skills [status|paths|check|set-mode|disable|enable]</code></pre>
@@ -589,23 +589,23 @@ const bodyContent = `<h1>CLI Reference</h1>
   <h3 id="gateway-start">gateway start</h3>
   <pre><code><span class="cmd">pilotctl</span> extras gateway start [--subnet &lt;cidr&gt;] [--ports &lt;list&gt;] [&lt;pilot-addr&gt;...]</code></pre>
   <p>Maps pilot addresses to local IPs on a private subnet (default: <code>10.4.0.0/16</code>). Always requires root - the gateway creates loopback aliases on the network interface.</p>
-  <p>Returns: <code>pid</code>, <code>subnet</code>, <code>mappings</code> [{<code>local_ip</code>, <code>pilot_addr</code>}]</p>
+  <p><code>gateway start</code> execs the <code>pilot-gateway</code> binary (replacing the pilotctl process); it prints the gateway's own logs and returns no JSON envelope.</p>
 
   <h3 id="gateway-stop">gateway stop</h3>
   <pre><code><span class="cmd">pilotctl</span> extras gateway stop</code></pre>
-  <p>Returns: <code>pid</code></p>
+  <p>Not supported from pilotctl — it no longer tracks the gateway process. Stop <code>pilot-gateway</code> directly.</p>
 
   <h3 id="gateway-map">gateway map</h3>
   <pre><code><span class="cmd">pilotctl</span> extras gateway map &lt;pilot-addr&gt; [local-ip]</code></pre>
-  <p>Returns: <code>local_ip</code>, <code>pilot_addr</code></p>
+  <p>Execs <code>pilot-gateway map</code>; the mapping is logged by the gateway process, not returned as JSON by pilotctl.</p>
 
   <h3 id="gateway-unmap">gateway unmap</h3>
   <pre><code><span class="cmd">pilotctl</span> extras gateway unmap &lt;local-ip&gt;</code></pre>
-  <p>Returns: <code>unmapped</code></p>
+  <p>Not supported from pilotctl — unmapping is owned by the <code>pilot-gateway</code> process.</p>
 
   <h3 id="gateway-list">gateway list</h3>
   <pre><code><span class="cmd">pilotctl</span> extras gateway list</code></pre>
-  <p>Returns: <code>mappings</code> [{<code>local_ip</code>, <code>pilot_addr</code>}], <code>total</code></p>`;
+  <p>Returns an empty mapping list with a note — live mappings are held inside the <code>pilot-gateway</code> process, not pilotctl.</p>`;
 ---
 <DocLayout
   title="CLI Reference"
