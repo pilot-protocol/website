@@ -28,3 +28,11 @@ Audited: 2026-07-10 · Sentences examined: 78 · verified: 52 · false: 6 · unv
 - Pre-verified: GitHub repo pilot-protocol/pilotprotocol exists (CTA link).
 - EXAMPLE: all sample addresses (1:0001.0002.000x), users/orders/inventory data, curl outputs, gateway output lines, alice@example.com emails.
 - OPINION: "The HTTP ecosystem is enormous", "more ergonomic", "just work", CTA copy.
+
+## Resolutions (2026-07-11 iter 44)
+- L20/imports + Connect(): already fixed in the iter-21 batch (common/driver + Connect("")).
+- L88/L401 (DialAddr("addr", 80) — wrong signature): DialAddr takes a parsed protocol.Addr; switched to d.Dial("N:XXXX.YYYY.YYYY:80"), the string-form dial (driver.go:77 doc comment).
+- L134 (d.Resolve — no such method): switched to d.ResolveHostname(host) + d.Dial(fmt.Sprintf("%s:80", info["address"])).
+- L42/L54/L472 (d.Address() — no such method): capture the agent's address from d.Info() ("address" key) into a local var and use that.
+- L455/L479 (ListenSecure/DialSecure — don't exist): switched to Listen(443)/Dial(":443") and added a Roadmap callout that the per-connection "pilot-secure-v1" layer is IETF-draft §11.4, not yet a distinct driver API; softened the secure-handler JSON so it no longer asserts active double-encryption.
+Build: npm run build green (345 pages).

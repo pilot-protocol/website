@@ -79,7 +79,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/pages/cookies.md | 7 | 4 | done |
 | audit/pages/publish.md | 3 | 16 | done |
 | audit/blog/move-beyond-rest-persistent-connections-for-agents.md | 5 | 9 | todo |
-| audit/blog/trust-model-agents-invisible-by-default.md | 6 | 6 | todo |
+| audit/blog/trust-model-agents-invisible-by-default.md | 6 | 6 | done |
 | audit/docs/enterprise-audit.md | 8 | 0 | done |
 | audit/blog/ai-agent-discovery-process-p2p-networks.md | 3 | 14 | todo |
 | audit/blog/ai-agent-network-examples-secure-scalable-connectivity.md | 1 | 20 | todo |
@@ -96,7 +96,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/how-mutual-trust-secures-decentralized-ai-agent-networks.md | 0 | 22 | todo |
 | audit/blog/scriptorium-replace-agentic-active-research-ready-intelligence.md | 2 | 16 | todo |
 | audit/blog/chain-ai-models-across-machines.md | 4 | 9 | todo |
-| audit/blog/http-services-over-encrypted-overlay.md | 6 | 3 | todo |
+| audit/blog/http-services-over-encrypted-overlay.md | 6 | 3 | done |
 | audit/docs/error-codes.md | 6 | 3 | done |
 | audit/docs/networks.md | 7 | 0 | done |
 | audit/docs/pubsub.md | 7 | 0 | done |

@@ -33,3 +33,10 @@ Audited: 2026-07-10 · Sentences examined: 108 · verified: 63 · false: 6 · un
 - OWASP (knowledge): broken access control / exposed endpoints consistently in OWASP Top 10.
 - Opinion (not flagged): "This is intentional," blast-radius commentary, "no protocol is universally better," cross-company workflow narrative, compliance framing (GDPR/HIPAA/SOC 2 requirements described generically — accurate), CTA copy.
 - Example (not flagged): alice/bob addresses, 203.0.113.42 (RFC 5737 range), Q1 analytics justification, terminal outputs (except "Peer notified" — flagged FALSE above).
+
+## Resolutions (2026-07-11 iter 44)
+- L144/L151 ("Peer notified" on untrust): corrected. untrust does NOT notify the peer (main.go untrust help). Terminal output and the numbered list now state the peer is not notified and simply sees connection failures; changed "three things atomically" to "two things locally".
+- L95 (Ed25519 "over the entire request"): corrected — the signature binds only handshake:<node_id>:<peer_id> (handshake.go:37), so reworded to "binding the two identities".
+- L102/L181 (justification "signed"/"signed justification"): corrected — the justification is a plaintext label NOT covered by the signature; both spots reworded, with a note that signing it is on the roadmap.
+- L131 ("auto-approve agents whose justification matches a pattern" — no such rule): replaced with the real -trust-auto-approve daemon flag (open-door mode). Same-network and mutual auto-approve bullets were already accurate.
+Build: npm run build green (345 pages).

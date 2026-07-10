@@ -26,6 +26,10 @@ func main() {
         panic(err)
     }
 
+    <span class="comment">// The daemon reports this agent's own address via Info()</span>
+    info, _ := d.Info()
+    addr, _ := info["address"].(string)
+
     <span class="comment">// Listen on Pilot port 80</span>
     ln, err := d.Listen(80)
     if err != nil {
@@ -39,7 +43,7 @@ func main() {
         w.Header().Set("Content-Type", "application/json")
         json.NewEncoder(w).Encode(map[string]any{
             "status":  "healthy",
-            "agent":   d.Address().String(),
+            "agent":   addr,
             "version": "1.0.0",
         })
     })
@@ -51,7 +55,7 @@ func main() {
         json.NewEncoder(w).Encode(body)
     })
 
-    fmt.Printf("HTTP server listening on pilot port 80 (%s)\\n", d.Address())
+    fmt.Printf("HTTP server listening on pilot port 80 (%s)\\n", addr)
     http.Serve(ln, mux)
 }</code></pre>
 
@@ -84,8 +88,8 @@ func main() {
         panic(err)
     }
 
-    <span class="comment">// Dial Agent A's address on port 80</span>
-    conn, err := d.DialAddr("1:0001.0002.0003", 80)
+    <span class="comment">// Dial Agent A's address on port 80 (addr string is "N:XXXX.YYYY.YYYY:PORT")</span>
+    conn, err := d.Dial("1:0001.0002.0003:80")
     if err != nil {
         panic(err)
     }
@@ -131,11 +135,11 @@ func main() {
         DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
             <span class="comment">// addr is "hostname:port" - resolve hostname via registry</span>
             host, _, _ := net.SplitHostPort(addr)
-            resolved, err := d.Resolve(host)
+            info, err := d.ResolveHostname(host)
             if err != nil {
                 return nil, err
             }
-            return d.DialAddr(resolved, 80)
+            return d.Dial(fmt.Sprintf("%s:80", info["address"]))
         },
     }
 
@@ -398,7 +402,7 @@ func main() {
 
   <pre><code><span class="comment">// Inside the Orders service: enrich order with user details</span>
 func enrichOrder(d *driver.Driver, order Order) map[string]any {
-    conn, _ := d.DialAddr("1:0001.0002.0001", 80) <span class="comment">// Users service</span>
+    conn, _ := d.Dial("1:0001.0002.0001:80") <span class="comment">// Users service</span>
     defer conn.Close()
 
     req, _ := http.NewRequest("GET",
@@ -423,11 +427,15 @@ func enrichOrder(d *driver.Driver, order Order) map[string]any {
   <section>
   <h2>Port 443: Double Encryption</h2>
 
-  <p>Pilot port 80 uses the tunnel's AES-256-GCM encryption. Port 443 adds a second layer: a per-connection <a href="https://datatracker.ietf.org/doc/html/rfc7748" target="_blank" rel="noopener">X25519</a> key exchange followed by <a href="https://datatracker.ietf.org/doc/html/rfc5288" target="_blank" rel="noopener">AES-256-GCM</a> encryption on the connection itself. This is <strong>double encryption</strong> -- the tunnel encrypts the outer packet, and the connection encrypts the inner payload.</p>
+  <p>Pilot port 80 uses the tunnel's AES-256-GCM encryption. The protocol spec also defines a secure port 443 that adds a second layer: a per-connection <a href="https://datatracker.ietf.org/doc/html/rfc7748" target="_blank" rel="noopener">X25519</a> key exchange followed by <a href="https://datatracker.ietf.org/doc/html/rfc5288" target="_blank" rel="noopener">AES-256-GCM</a> encryption on the connection itself. This is <strong>double encryption</strong> -- the tunnel encrypts the outer packet, and the connection encrypts the inner payload.</p>
+
+  <div class="callout">
+    <p><strong>Roadmap note.</strong> The per-connection secure layer ("pilot-secure-v1") is specified in the <a href="/docs/research">IETF Internet-Draft</a> (§11.4) but is <strong>not yet exposed as a distinct driver API</strong> — there is no <code>ListenSecure</code>/<code>DialSecure</code> in the current Go SDK. Today, listening on port 443 rides the same tunnel encryption as port 80. The code below shows the intended shape using the shipping <code>Listen</code>/<code>Dial</code> calls; the second encryption layer lands when the secure-port API ships.</p>
+  </div>
 
   <h3>Why Double Encryption?</h3>
 
-  <p>The tunnel encryption key is shared across all connections between two daemons. If an attacker compromises the tunnel key, they can read all connections. Port 443's per-connection encryption means each connection has its own key derived from a fresh X25519 exchange. Compromising one connection does not affect others.</p>
+  <p>The tunnel encryption key is shared across all connections between two daemons. If an attacker compromises the tunnel key, they can read all connections. A per-connection key derived from a fresh X25519 exchange means compromising one connection does not affect others.</p>
 
   <p>This is the same defense-in-depth approach as running TLS inside a VPN tunnel. It protects against key compromise at any single layer.</p>
 
@@ -449,10 +457,12 @@ func main() {
         panic(err)
     }
 
-    <span class="comment">// Listen on secure port 443</span>
-    <span class="comment">// The driver automatically performs X25519 key exchange</span>
-    <span class="comment">// for each incoming connection</span>
-    ln, err := d.ListenSecure(443)
+    info, _ := d.Info()
+    addr, _ := info["address"].(string)
+
+    <span class="comment">// Listen on secure port 443 (rides tunnel encryption today;</span>
+    <span class="comment">// the per-connection X25519 layer lands with the secure-port API)</span>
+    ln, err := d.Listen(443)
     if err != nil {
         panic(err)
     }
@@ -463,20 +473,20 @@ func main() {
     mux.HandleFunc("/api/secrets", func(w http.ResponseWriter, r *http.Request) {
         w.Header().Set("Content-Type", "application/json")
         json.NewEncoder(w).Encode(map[string]string{
-            "message": "This payload is double-encrypted",
+            "message": "Encrypted by the Pilot tunnel today; per-connection layer on the roadmap",
             "tunnel":  "AES-256-GCM (shared tunnel key)",
-            "conn":    "AES-256-GCM (per-connection X25519 key)",
+            "conn":    "per-connection X25519 key (pilot-secure-v1, planned)",
         })
     })
 
-    fmt.Printf("Secure HTTP server on pilot port 443 (%s)\\n", d.Address())
+    fmt.Printf("Secure HTTP server on pilot port 443 (%s)\\n", addr)
     http.Serve(ln, mux)
 }</code></pre>
 
-  <p>The client side uses <code>DialSecure</code> instead of <code>DialAddr</code>:</p>
+  <p>The client side dials the <code>:443</code> port the same way as any other:</p>
 
   <pre><code><span class="comment">// Client: connect to secure port</span>
-conn, err := d.DialSecure("1:0001.0002.0003", 443)
+conn, err := d.Dial("1:0001.0002.0003:443")
 if err != nil {
     panic(err)
 }
