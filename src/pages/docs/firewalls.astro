@@ -33,7 +33,7 @@ const bodyContent = `<h1>Running pilot behind a firewall</h1>
 
   <pre><code><span class="cmd">pilot-daemon</span> -transport=compat</code></pre>
 
-  <p>That's it — every other flag has a working default. As of v1.10.3 the daemon uses <strong>a single outbound TCP/443 connection</strong> for everything: the beacon WSS bridge AND the registry. Explicit form:</p>
+  <p>That's it — every other flag has a working default. As of v1.10.3 the daemon uses <strong>a single outbound port — TCP/443</strong> for everything: the beacon WSS bridge AND the registry (one long-lived WSS connection to the beacon, plus a small TLS connection pool to the registry, all on 443). Explicit form:</p>
 
   <pre><code><span class="cmd">pilot-daemon</span> \\
   -transport=compat \\
@@ -85,7 +85,7 @@ const bodyContent = `<h1>Running pilot behind a firewall</h1>
     <li><strong>Latency:</strong> Compat-mode traffic always traverses the beacon — there is no direct path. Expect ~50-200 ms one-way to the nearest beacon region, plus the beacon → specialist hop. UDP mode reaches specialists directly when NAT allows it.</li>
     <li><strong>Bandwidth:</strong> Compat traffic costs the beacon roughly 2× the bytes of UDP relay (TCP/TLS framing overhead, and the beacon pays for both legs). Sustained heavy throughput is better served by a UDP-capable environment.</li>
     <li><strong>Hostile-state DPI:</strong> Networks that block arbitrary outbound TLS (Great Firewall, some government deployments) will block compat mode. Domain fronting / ECH / Snowflake-style obfuscation is out of scope.</li>
-    <li><strong>One beacon per session:</strong> The daemon holds one WSS connection at a time. On disconnect it reconnects with exponential backoff, optionally selecting a different beacon hostname from the configured list.</li>
+    <li><strong>One beacon per session:</strong> The daemon holds one WSS connection at a time. On disconnect it reconnects to the same configured beacon with exponential backoff (250 ms up to a 30 s cap).</li>
   </ul>
 
   <p>For the full protocol design — transport matrix, PKI, wire format — see the <a href="/docs/research">research page</a> and the IETF Internet-Draft linked there.</p>`;

@@ -31,3 +31,12 @@ Audited: 2026-07-10 · Sentences examined: 58 · verified: 33 · false: 7 · unv
 - **MCP spec (modelcontextprotocol.io, general knowledge)**: "MCP gives agents tools" (lines 8, 33); "MCP · tool-calling"; "Agents call tools exposed by a local server" / "Single-machine scope by default" (stdio transport default); "No peer discovery" — MCP defines client↔server tool calling, no peer-discovery mechanism (lines 54-57).
 - **Opinion / marketing (not flagged)**: title (line 7), H1 (31), "Pilot gives agents each other" (8, 33), "MCP handles vertical / Pilot handles horizontal" (50), "Great vertical: one agent, many tools" (58), "Horizontal: many agents, one network" (65), "MCP servers, networked" (75), "MCP + Pilot in one command" (161), "Three steps" (page does list three steps), section eyebrows.
 - **Example values (not flagged)**: terminal bar "mcp-host ~ expose MCP server over pilot" / "0.8s" (122-123), comments (126, 132), pid 24817 and address 0:0000.A91F.7C2E (129-130 — format verified, values illustrative), scenario setups "Keep the vector store… on the GPU box" (96), "Same MCP API, deployed in three regions" (106), "Behind a double NAT" (101).
+
+## Resolutions (2026-07-11 iter 40)
+- L133/L150 (`gateway start --ports 8080 self`): removed. `self` is not a parseable pilot address (ParseAddr fatals). Rewrote the "Up and running" terminal to the verified docs/gateway "Access a remote server" flow: client installs, `handshake 0:0000.0000.037D`, `sudo pilotctl extras gateway start --ports 8080 0:0000.0000.037D`, then `curl http://10.4.0.1:8080/`.
+- L138/L151 (hostname positional `mcp-host` to gateway start): now uses the pilot address form everywhere for gateway start (handshake still uses the address too). Step 03 shows `--ports 8080 <pilot-addr>`.
+- L139/L146/L151 (`localhost:8080` / "localhost on the other"): corrected to the `10.4.0.1` loopback alias. Output line now `mapped 0:0000.0000.037D → 10.4.0.1 (encrypted)`; lede reads "a local 10.4.x.x address on the other".
+- L134 (fake gateway-running output): removed with the rewrite.
+- L106 (UNVERIFIABLE "reachable and fastest"): dropped the unverified latency-selection claim → "route to whichever deployment they've handshaked and can reach".
+- L116 (UNVERIFIABLE "Thirty seconds"): changed subhead to "One handshake." (no timing claim).
+Build: npm run build green (345 pages).

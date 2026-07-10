@@ -87,7 +87,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/app-store.md | 7 | 2 | done |
 | audit/docs/getting-started.md | 5 | 8 | done |
 | audit/docs/python-sdk.md | 7 | 2 | done |
-| audit/for/mcp.md | 7 | 2 | todo |
+| audit/for/mcp.md | 7 | 2 | done |
 | audit/blog/building-custom-pilot-skills-openclaw.md | 4 | 10 | todo |
 | audit/blog/connect-ai-agents-behind-nat-without-vpn.md | 1 | 19 | todo |
 | audit/blog/decentralized-communication-protocols-ai-developers.md | 0 | 22 | todo |
@@ -153,11 +153,11 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/advanced-network-automation-tips-secure-ai-systems.md | 2 | 4 | todo |
 | audit/blog/claude-agent-teams-over-pilot.md | 2 | 4 | todo |
 | audit/blog/peer-to-peer-agent-communication-no-server.md | 2 | 4 | todo |
-| audit/docs/firewalls.md | 2 | 4 | todo |
+| audit/docs/firewalls.md | 2 | 4 | done |
 | audit/docs/mcp-setup.md | 3 | 1 | done |
 | audit/blog/ai-networking-challenges-decentralized-systems.md | 0 | 9 | todo |
 | audit/blog/network-tunnels-ai-secure-communication-autonomous-agents.md | 0 | 9 | todo |
-| audit/docs/enterprise-policies.md | 3 | 0 | todo |
+| audit/docs/enterprise-policies.md | 3 | 0 | done |
 | audit/docs/research.md | 3 | 0 | done |
 | audit/docs/sdk-parity.md | 3 | 0 | done |
 | audit/docs/services.md | 3 | 0 | done |

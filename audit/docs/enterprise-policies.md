@@ -26,3 +26,9 @@ No unverifiable claims.
 ## Notes
 - L63 "Use it for human-readable context: purpose, team name, environment, or compliance notes." — advisory guidance, counted as OPINION.
 - L102-107 "# Example response" — counted as EXAMPLE. Fields shown are real, but the actual `get_network_policy_ok` response also carries `"type"` and `"network_id"` keys not shown.
+
+## Resolutions (2026-07-11 iter 40)
+- L35 (reducing below current count "Allowed, no kick"): corrected to "Rejected - the registry refuses to set max_members below the current member count" with the exact error string; advises removing members first (server.go:5323-5325).
+- L83-92 (JSON wire format): fixed `"command"` → `"type"` and un-nested the policy fields from the `"policy"` object to flat top-level (max_members/allowed_ports/description), matching client.go:785-795 + server.go dispatch. Added a sentence explaining the dispatch-on-type + flat-fields shape.
+- L111 (audit event fields): corrected to state it records network_id, old/new max_members, and old/new allowed_ports COUNTS (not values), and that description changes are not recorded (server.go:5361-5363).
+Build: npm run build green (345 pages).

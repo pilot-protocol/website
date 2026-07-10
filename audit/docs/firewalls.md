@@ -27,3 +27,9 @@ Audited: 2026-07-10 · Sentences examined: 69 · verified: 46 · false: 2 · unv
 - **web4 git log 8b9feaa7 (NAT hole-punch direct-upgrade)**: UDP mode reaches peers directly when NAT allows / beacon hole-punch (L20, L85).
 - **By design**: outbound-UDP-blocked and TLS-only networks defeat the UDP transport (L24, L25 scenario, L87 first sentence — compat requires outbound TLS/443 by construction); no domain-fronting/ECH/Snowflake code in the daemon, so "out of scope" is accurate (L87).
 - **website/src/pages/docs/**: `research.astro` exists and contains an "IETF Internet-Drafts" section with draft links (L91); `enterprise-blueprints.astro` and `diagnostics.astro` exist for prev/next links (L98-99); meta description restates the verified subtitle (L95).
+
+## Resolutions (2026-07-11 iter 40)
+- L36 ("single outbound TCP/443 connection"): corrected to "single outbound port — TCP/443" and spelled out it is one WSS connection to the beacon plus a small TLS pool to the registry, all on 443 (matches L59/L63 which already said "connections"/"pool"). Fixes the connection-vs-port conflation.
+- L88 ("selecting a different beacon hostname from the configured list"): removed the false half (no beacon list exists in compat/WSS mode; wss.go redials the same cfg.URL). Kept the real exponential backoff and added the verified 250ms→30s cap.
+- L20/L23/L85/L86 UNVERIFIABLE claims: left as-is (third-party env compatibility, vendor UDP behavior, latency/bandwidth figures) — honest and clearly framed; noted in ledger.
+Build: npm run build green (345 pages).
