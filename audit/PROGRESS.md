@@ -6,11 +6,11 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | gap | fix | PR | copy re-pass |
 |---|---|---|---|
 | app_usage telemetry leaked which app-store methods an agent calls (CLI always, daemon ignored consent flag) | removed app_usage emission entirely from CLI + daemon adapter | web4 #366 https://github.com/pilot-protocol/pilotprotocol/pull/366 | DONE — consent.astro restored to "no per-call telemetry, ever" |
-| daemon-side telemetry (install/view) still gated only by -telemetry-url, not consent flag | pending — route daemon telemetry through consent.GetConsent | (in fix/consent-truth) | pending |
-| skills status runs a write-reconcile instead of previewing | pending — read-only status or --dry-run | (in fix/consent-truth) | consent.astro says "tracked as product fix" until shipped |
-| set-mode disabled leaves files on disk | pending — remove on disable, or document disable-all as the cleanup path | (in fix/consent-truth) | done in copy (disable all documented) |
+| daemon-side telemetry (install/view) | RESOLVED — daemon emitted no install/view events; only app_usage, now removed (#366). install/view are CLI-only + already consent-gated | web4 #366 | done |
+| skills status runs a write-reconcile instead of previewing | FIXED — added skillinject.Plan (read-only dry run); web4 wiring deferred until skillinject releases | skillinject #26 https://github.com/pilot-protocol/skillinject/pull/26 (+ web4 follow-up) | pending release |
+| set-mode disabled leaves files on disk | FIXED — set-mode disabled now runs Uninstall | web4 #366 (fix/consent-truth) | DONE — consent.astro restored to "nothing left on disk" |
 | broadcasts consent gate is send-side only | decide: add receive-side gate or keep send-side + doc | (in fix/consent-truth) | done in copy |
-| GA4 loads unconditionally on /plain (GDPR) | pending — consent-gate PlainLayout | (website) | n/a |
+| GA4 loads unconditionally on /plain (GDPR) | FIXED — removed GA4 from PlainLayout entirely (plain = JS-stripped agent surface) | website #116 | n/a |
 
 ## Needs user review
 - (none yet)
