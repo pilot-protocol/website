@@ -28,7 +28,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/pages/privacy.md | 11 | 37 | done |
 | audit/docs/cli-reference.md | 21 | 6 | done |
 | audit/docs/enterprise-identity.md | 22 | 0 | done |
-| audit/blog/enterprise-production-complete-identity-directory-audit-export.md | 0 | 62 | todo |
+| audit/blog/enterprise-production-complete-identity-directory-audit-export.md | 0 | 62 | done |
 | audit/for/setups/[slug].md | 0 | 56 | todo |
 | audit/blog/zero-dependency-encryption-x25519-aes-gcm.md | 15 | 9 | todo |
 | audit/blog/github-com-alternatives-6.md | 3 | 43 | todo |
