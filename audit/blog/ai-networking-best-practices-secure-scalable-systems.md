@@ -1,0 +1,29 @@
+# Claim audit: src/pages/blog/ai-networking-best-practices-secure-scalable-systems.astro
+Audited: 2026-07-10 · Sentences examined: 102 · verified: 61 · false: 0 · unverifiable: 19 · opinion: 20 · example: 2
+
+## FLAGGED — UNVERIFIABLE
+| Line | Sentence | Why it can't be verified | What WOULD verify it |
+|---|---|---|---|
+| 149, 162-181, 223 | "OpenCLAW-P2P results show knowledge propagation converges in just 3 gossip rounds (under 10 seconds), with full consensus in 60 seconds even under 20% Byzantine faults" (+ comparison table + FAQ repeat) | Cited academia.edu page returns 403 (bot-blocked); figures unconfirmable; "OpenCLAW-P2P" framework not corroborated anywhere else (openclaw/openclaw is a real repo, but no P2P-AGI paper verified) | Accessible copy of the paper |
+| 164-175 | Table column "Traditional Multi-Agent: 8+ rounds, 30 to 60 seconds, Fails or degrades" | No source given for the comparison baseline at all | The same paper's baseline table |
+| 72 | "Use proven frameworks like OpenCLAW and AgentNet to accelerate consensus and resist adversarial faults" | "Proven" rests on the unverifiable OpenCLAW-P2P and AgentNet benchmarks | Published, accessible benchmarks |
+| 82 | "Dynamic DAGs and DHTs are proven for fault-tolerant, scalable agent coordination without central orchestrators" (cites openreview.net PDF) | openreview PDF returns 403 (bot-blocked); attribution unconfirmable (the general statement is plausible) | Accessible copy of the cited paper |
+| 128 | "Policy-based and homomorphic encryption combined with consensus mechanisms are the recommended approach for preventing collusion…" (cites eprint 2025/2216) | eprint 2025/2216 (AgentCrypt) is real and covers homomorphic encryption + tiered privacy levels, but its abstract mentions neither consensus mechanisms nor collusion; PDF itself 403 | Full paper text supporting the consensus/collusion clause |
+| 85-116 | A2A vs ANP comparison table + "A2A suits enterprise and centralized discovery, while ANP excels in fully decentralized, trust-minimized open networks" (cites medium.com/@gathright) | Medium 403 (bot-blocked); ANP characterization ("Community", "trust-minimized") not confirmed; "A2A (Google/Cisco-backed)" — Cisco backing not verified | Accessible source on ANP governance/design |
+| 121 | "Centralized registries (A2A) are faster; decentralized discovery (ANP) is more resilient" | Latency/resilience comparison with no benchmark | Measured comparison |
+| 150, 177-179 | "AgentNet… outperforms traditional multi-agent frameworks in dynamic task efficiency, specialization stability, and adaptive learning speed" (+ table row "Adaptive learning speed: High vs Moderate") | No source cited in this article; AgentNet repo README not retrievable | AgentNet paper results |
+| 185 | "A fan-out of 3 to 5 works well for most fleets" | Rule-of-thumb with no source | Gossip-protocol tuning literature |
+| 208 | "Evaluating AI agents holistically means… hybrid LLM-judge and human review" (cites infoq) | infoq URL live (200) but article content vs the specific framing not checked in depth | Reading the article |
+| 210 | Blockquote: "The agents that fail in production are rarely the ones with the weakest models…" | Unattributed quote, no source | Attribution |
+| 143 | Blockquote: "Consensus mechanisms are not just about agreement. They are your primary defense against coordinated agent manipulation at scale." | Unattributed quote, no source | Attribution |
+
+## Verified claims (grouped by source)
+- github.com/cisco-ai-defense/a2a-scanner README (fetched raw, 200): A2A Scanner is real, from Cisco AI Defense, and does YARA rules, spec-compliance checks, heuristic analysis, LLM-based scanning, and HTTPS/security-header enforcement — verifies lines 76, 194, 198-202, 225 in full.
+- eprint.iacr.org/2025/2216 abstract (fetched, 200): AgentCrypt paper exists; homomorphic encryption for computation on encrypted data, tiered privacy for agent collaboration — supports lines 130-131 (policy-based/attribute-tied decryption and homomorphic definitions are also standard crypto ground truth).
+- Standard distributed-systems ground truth: Kademlia is a DHT with O(log n) lookups scaling to very large networks (line 64, 82, 120, 219 — Maymounkov & Mazières 2002); gossip protocols spread information in O(log n) rounds (line 149 first half); BFT/PBFT/HotStuff definitions and guarantees (lines 132, 138); TLS 1.3 for transport, mTLS for mutual auth, key rotation limiting blast radius, CRDTs/vector clocks for coordination-free merge (lines 137-140, 186, 197) — all textbook-correct.
+- arxiv 2603.03753 / general: decentralized vs pure P2P distinction, DAG/DHT patterns (lines 81-83) — standard, correct.
+- web4 pilotctl source + site docs: Pilot Protocol closing claims (line 216: encrypted P2P tunnels, NAT traversal, virtual addresses, mutual trust, no centralized brokers, multi-cloud) match the product; "wraps HTTP, gRPC, and SSH inside its overlay" is consistent with pilotctl's TCP port mapping (`map`/`unmap`), which carries any TCP protocol.
+- Local site files: all internal links exist in src/pages/blog/ (decentralized-networking-p2p-solutions…, decentralized-communication-protocols…, secure-network-infrastructure…, secure-ai-agent-networking-workflow…, autonomous-agent-networking…, network-tunnels-ai…, secure-ai-agent-communication-zero-trust, ai-networking-terminology…, advanced-network-automation…); banner .jpg exists.
+- Live URLs (curl 2026-07-10): all 3 supabase images 200; infoq 200; eprint abstract 200. Blocked (403, likely bot-block not dead): medium @gathright, academia.edu, openreview PDF, eprint PDF direct.
+- JSON-LD datePublished 2026-04-13 matches frontmatter "April 13, 2026".
+- OPINION (not flagged): "Encryption is not optional", "the tradeoff is not worth it", Pro Tips, "That reframe changes how you design…", etc.
