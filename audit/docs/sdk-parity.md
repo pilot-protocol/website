@@ -21,3 +21,6 @@ Audited: 2026-07-10 · Sentences examined: 65 · verified: 59 · false: 3 · unv
 - Line 32: "The reference surface alongside Python." — descriptive framing.
 - Line 84: "Naming differences across languages are not gaps." — definitional stance.
 - Line 91: "A real gap is an operation that one SDK does not expose at all." — definitional stance.
+
+## Resolutions (2026-07-10, loop iteration 39)
+3 FALSE fixed: matrix.csv is not checked in (script writes ./inventory/ locally) → reworded; "three intentional rows (…socket-path default…)" → two rows (no socket-path row exists); Swift has no sendMessage → attributed to Node only with a note. 0 unverifiable.

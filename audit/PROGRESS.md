@@ -158,9 +158,9 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/ai-networking-challenges-decentralized-systems.md | 0 | 9 | todo |
 | audit/blog/network-tunnels-ai-secure-communication-autonomous-agents.md | 0 | 9 | todo |
 | audit/docs/enterprise-policies.md | 3 | 0 | todo |
-| audit/docs/research.md | 3 | 0 | todo |
-| audit/docs/sdk-parity.md | 3 | 0 | todo |
-| audit/docs/services.md | 3 | 0 | todo |
+| audit/docs/research.md | 3 | 0 | done |
+| audit/docs/sdk-parity.md | 3 | 0 | done |
+| audit/docs/services.md | 3 | 0 | done |
 | audit/pages/terms.md | 2 | 3 | todo |
 | audit/blog/persistent-network-addressing-secure-ai-systems.md | 1 | 5 | todo |
 | audit/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents.md | 2 | 2 | todo |

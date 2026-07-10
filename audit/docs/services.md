@@ -21,3 +21,6 @@ Audited: 2026-07-10 · Sentences examined: 79 · verified: 74 · false: 3 · unv
 - Pre-verified cheatsheet: well-known ports echo 7, stdio 1000, dataexchange 1001, eventstream 1002; ping/bench/send-message/send-file/inbox/received/subscribe/publish/connect/send/daemon are real pilotctl subcommands.
 - Local site files: internal links resolve — src/pages/docs/{messaging,pubsub,go-sdk,python-sdk,configuration,networks}.astro and src/pages/blog/http-services-over-encrypted-overlay.astro all exist; anchors messaging#connect, messaging#send-recv, messaging#send-message, configuration#daemon-flags all present (grep id="..."). TOC anchors #choosing/#echo/#dataexchange/#eventstream/#custom/#disabling all present on-page. prev/next (/docs/networks, /docs/pubsub) valid.
 - Opinion (not flagged): "Pick the one that matches your need" (line 21, instructional). Example (not flagged): "# Example: listen on port 3000 using the Go SDK" framing (line 95); the snippet body itself is flagged FALSE above for API arity.
+
+## Resolutions (2026-07-10, loop iteration 39)
+3 FALSE fixed: max payload not 16 MB — frame cap default 1 GiB (PILOT_DATAEXCHANGE_MAX_FRAME), send-file chunked/uncapped; Listen returns (listener, err) → `listener, _ := d.Listen(3000)`; broken messaging#inbox-file-format anchor → added the id to messaging's h3. 0 unverifiable.
