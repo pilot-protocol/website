@@ -108,8 +108,7 @@ const bodyContent = `<p>Your company has an AI research agent. A partner company
   <ul>
     <li><strong>Requester's Ed25519 public key:</strong> Proves identity cryptographically</li>
     <li><strong>Justification text:</strong> Human-readable reason for the trust request (audit trail)</li>
-    <li><strong>Requester's tags:</strong> Capability descriptors the other side can inspect</li>
-    <li><strong>Ed25519 signature:</strong> Proves the request was not tampered with</li>
+    <li><strong>Ed25519 signature:</strong> Binds the two identities (<code>handshake:&lt;node_id&gt;:&lt;peer_id&gt;</code>), proving the requester controls the claimed key</li>
   </ul>
 
   <p>The approver verifies the signature, reviews the justification, and decides whether to accept. Once accepted, both sides store each other's public key. All subsequent communication is encrypted end-to-end with X25519 key exchange and AES-256-GCM.</p>
@@ -198,15 +197,20 @@ func main() {
         },
     }
 
-    result, err := d.SubmitTask("1:0001.0000.0042", task)
+    <span class="comment">// Dial the partner's data agent on the data-exchange port (1001)</span>
+    conn, err := d.Dial("1:0001.0000.0042:1001")
     if err != nil {
         log.Fatal(err)
     }
+    defer conn.Close()
 
-    <span class="comment">// Result arrived over encrypted tunnel</span>
+    <span class="comment">// Send the task as JSON over the encrypted tunnel</span>
+    json.NewEncoder(conn).Encode(task)
+
+    <span class="comment">// Result arrives over the same encrypted tunnel</span>
     <span class="comment">// No shared API, no API keys, no firewall rules</span>
     var analysis map[string]any
-    json.Unmarshal(result, &analysis)
+    json.NewDecoder(conn).Decode(&analysis)
     fmt.Printf("Analysis: %v\\n", analysis)
 }</code></pre>
 
@@ -222,7 +226,7 @@ func main() {
 
   <p>Every connection between trusted agents is encrypted with <strong>X25519 key exchange + AES-256-GCM</strong>. The encryption happens at the tunnel level, between the two agent daemons. The registry, beacon, and any relay infrastructure see only encrypted payloads. Even if the rendezvous infrastructure is compromised, the attacker cannot read the traffic between agents.</p>
 
-  <p>Each connection uses a <strong>random nonce prefix</strong>, preventing nonce reuse across sessions. The key exchange happens during the secure handshake (port 443), and the resulting symmetric key is used for all subsequent communication on that connection.</p>
+  <p>Each connection uses a <strong>random nonce prefix</strong>, preventing nonce reuse across sessions. The X25519 key exchange happens when the encrypted UDP tunnel is established between the two daemons, and the resulting symmetric key is used for subsequent communication on that tunnel.</p>
 
   <h3>Trust revocation</h3>
 
@@ -235,8 +239,8 @@ func main() {
   <pre><code><span class="comment"># Forward all agent events to your monitoring system</span>
 <span class="cmd">pilotctl set-webhook http://localhost:9090/siem-ingest</span>
 
-<span class="comment"># Events include: trust.request, trust.approve, trust.revoke,</span>
-<span class="comment"># connection.open, connection.close, task.submit, task.complete</span></code></pre>
+<span class="comment"># Events include: handshake.received, handshake.approved,</span>
+<span class="comment"># handshake.rejected, node.registered, network.joined, network.left</span></code></pre>
 
   <h3>No prompt injection surface</h3>
 

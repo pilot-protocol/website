@@ -25,3 +25,11 @@ Audited: 2026-07-10 · Sentences examined: 105 · verified: 58 · false: 5 · un
 - Arithmetic: 2 GB checkpoint → 4 GB total bandwidth via cloud relay.
 - Local site files: /blog/secure-research-collaboration-share-models-not-data, /blog/nat-traversal-ai-agents-deep-dive, /docs/ (src/pages/docs/index.astro), banner webp all exist. Wikipedia P2P file sharing link → 200.
 - OPINION: compliance framing, "most compelling advantage", use-case narratives. EXAMPLE: all remaining code listings, chunk sizes, progress logging.
+
+## Resolutions (2026-07-11 iter 45)
+- L45/L173 import: already fixed in the iter-21 batch (common/driver).
+- L84 (drv.Dial(targetAddr, 1001) — wrong arity): switched to drv.Dial(targetAddr + ":1001"), the single-string form (driver.go:77).
+- L98/L103-105/L137 (missing encoding/json import + conn.Read([]byte{ack}) never sets ack): added encoding/json to the sender imports; changed to ack := make([]byte, 1); conn.Read(ack); test ack[0] (both spots).
+- L265 ("MTU-sized segments 1200-1400 bytes"): corrected to Pilot's MaxSegmentSize = 4096 (ports.go:204).
+- L271 ("no option to disable encryption"): corrected — the daemon has a -encrypt flag (default true); reworded to note it can be turned off with -encrypt=false but shouldn't. Also softened the "random nonce prefix" line (unverifiable) to "per-connection nonce scheme".
+Build: npm run build green (345 pages).

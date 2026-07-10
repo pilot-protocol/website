@@ -83,7 +83,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/enterprise-audit.md | 8 | 0 | done |
 | audit/blog/ai-agent-discovery-process-p2p-networks.md | 3 | 14 | todo |
 | audit/blog/ai-agent-network-examples-secure-scalable-connectivity.md | 1 | 20 | todo |
-| audit/blog/cross-company-agent-collaboration-without-shared-infrastructure.md | 5 | 8 | todo |
+| audit/blog/cross-company-agent-collaboration-without-shared-infrastructure.md | 5 | 8 | done |
 | audit/blog/how-pilot-protocol-works.md | 5 | 8 | todo |
 | audit/blog/preferential-attachment-ai-networks-trust-graph.md | 0 | 23 | todo |
 | audit/docs/app-store.md | 7 | 2 | done |
@@ -115,7 +115,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/direct-communication-protocols-ai-agents-guide.md | 3 | 8 | todo |
 | audit/blog/enterprise-phase-3-rbac-policies-audit-fleet.md | 4 | 5 | todo |
 | audit/blog/federated-learning-p2p-communication.md | 1 | 14 | todo |
-| audit/blog/peer-to-peer-file-transfer-agents.md | 5 | 2 | todo |
+| audit/blog/peer-to-peer-file-transfer-agents.md | 5 | 2 | done |
 | audit/blog/secure-research-collaboration-share-models-not-data.md | 4 | 5 | todo |
 | audit/blog/a2a-agent-cards-over-pilot-tunnels.md | 4 | 4 | todo |
 | audit/blog/encryption-protocols-for-secure-ai-systems-a-practical-guide.md | 1 | 13 | todo |

@@ -37,6 +37,7 @@ import (
     "crypto/sha256"
     "encoding/binary"
     "encoding/hex"
+    "encoding/json"
     "fmt"
     "io"
     "log"
@@ -81,7 +82,8 @@ func main() {
     defer drv.Close()
 
     <span class="comment">// Open a connection to the receiver on port 1001 (data exchange)</span>
-    conn, err := drv.Dial(targetAddr, 1001)
+    <span class="comment">// Dial takes a single "N:XXXX.YYYY.YYYY:PORT" address string</span>
+    conn, err := drv.Dial(targetAddr + ":1001")
     if err != nil {
         log.Fatalf("dial %s:1001: %v", targetAddr, err)
     }
@@ -99,10 +101,10 @@ func main() {
     binary.Write(conn, binary.BigEndian, uint32(len(headerBytes)))
     conn.Write(headerBytes)
 
-    <span class="comment">// Read confirmation from receiver</span>
-    var ack byte
-    conn.Read([]byte{ack})
-    if ack != 0x01 {
+    <span class="comment">// Read confirmation from receiver (read into a slice so ack is set)</span>
+    ack := make([]byte, 1)
+    conn.Read(ack)
+    if ack[0] != 0x01 {
         log.Fatal("receiver rejected transfer")
     }
 
@@ -134,8 +136,8 @@ func main() {
     }
 
     <span class="comment">// Wait for receiver's checksum confirmation</span>
-    conn.Read([]byte{ack})
-    if ack == 0x01 {
+    conn.Read(ack)
+    if ack[0] == 0x01 {
         log.Printf("Transfer complete: %s (%d bytes, checksum verified)", stat.Name(), sent)
     } else {
         log.Printf("Transfer complete but checksum mismatch")
@@ -262,13 +264,13 @@ func receiveFile(conn io.ReadWriteCloser, outputDir string) {
 
   <p>Beneath the simple <code>Read</code>/<code>Write</code> API, Pilot's transport layer performs several operations that make file transfer reliable over unreliable networks:</p>
 
-  <p><strong>Auto segmentation.</strong> When the sender writes a 64 KB chunk, Pilot's transport layer splits it into MTU-sized segments (typically 1200-1400 bytes for UDP). Each segment gets a sequence number in the 34-byte packet header. The receiver reassembles segments in order, handling reordering and duplicates. The application never sees individual packets.</p>
+  <p><strong>Auto segmentation.</strong> When the sender writes a 64 KB chunk, Pilot's transport layer splits it into virtual segments (Pilot's <code>MaxSegmentSize</code> is 4096 bytes). Each segment gets a sequence number in the 34-byte packet header. The receiver reassembles segments in order, handling reordering and duplicates. The application never sees individual packets.</p>
 
   <p><strong>Sliding window.</strong> Pilot maintains a send window that limits how many unacknowledged segments can be in flight. This prevents the sender from flooding the network. The window size adapts dynamically using AIMD (Additive Increase, Multiplicative Decrease) congestion control -- the same algorithm family that TCP uses, tuned for UDP overlay characteristics.</p>
 
   <p><strong>Flow control.</strong> The receiver advertises its available buffer space in every acknowledgment packet (the 2-byte Window field in the packet header). If the receiver's buffer fills up -- because disk I/O is slow or the receiver is processing other connections -- the sender pauses until the receiver signals it has space. This prevents the receiver from being overwhelmed regardless of how fast the sender can produce data.</p>
 
-  <p><strong>Encryption.</strong> Every segment is encrypted with AES-256-GCM before transmission. The encryption key is established during the initial X25519 key exchange when the tunnel is created. There is no option to disable encryption -- it is always on. A random nonce prefix per connection prevents nonce reuse across sessions.</p>
+  <p><strong>Encryption.</strong> Every segment is encrypted with AES-256-GCM before transmission. The encryption key is established during the initial X25519 key exchange when the tunnel is created. Encryption is on by default; it can be turned off with the daemon's <code>-encrypt=false</code> flag, but leaving it on is strongly recommended. A per-connection nonce scheme prevents nonce reuse across sessions.</p>
 
   <p>These mechanisms work together to make file transfer over Pilot as reliable as TCP while maintaining the NAT traversal properties of UDP. The sender and receiver code does not need to implement any of this -- it is handled by the Pilot daemon and driver library.</p>
   </section>

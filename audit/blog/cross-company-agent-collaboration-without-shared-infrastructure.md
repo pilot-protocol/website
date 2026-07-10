@@ -34,3 +34,11 @@ Audited: 2026-07-10 · Sentences examined: 108 · verified: 71 · false: 5 · un
 - gh pre-verified: github.com/pilot-protocol/pilotprotocol exists (CTA link)
 - Local files: banner /blog/banners/cross-company-...webp exists; canonicalPath matches file
 - EXAMPLE: addresses 1:0001.0000.0042 / 0017, JSON payloads, Go snippet flow, MSA date — illustrative
+
+## Resolutions (2026-07-11 iter 45)
+- L182 import + L186 Connect(): already fixed in the iter-21 batch.
+- L201 (d.SubmitTask — no such method): rewrote to the real flow — d.Dial("1:0001.0000.0042:1001") then json.NewEncoder(conn).Encode(task) / json.NewDecoder(conn).Decode(&analysis).
+- L111 (handshake includes "requester's tags"): removed — handshake payload is PublicKey/Justification/Signature only (handshake.go:35-37). Reworded the signature bullet to note it binds the identity pair.
+- L225 ("key exchange during secure handshake (port 443)"): corrected — X25519 happens when the encrypted UDP tunnel is established between daemons; 443 is only the SNI compat path.
+- L238-239 (fictional webhook events trust.request/task.submit/etc): replaced with real rendezvous event names (handshake.received/approved/rejected, node.registered, network.joined/left).
+Build: npm run build green (345 pages).
