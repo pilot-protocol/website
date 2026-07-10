@@ -24,6 +24,9 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 
 - **pilot-agents repo is private** (needs decision): docs/service-agents tells readers to `cp -r pilot-agents/template` but the repo is access-gated — make it public, or keep the "reach out for access" framing I added? Also the injected pilotctl skill (TeoSlayer/pilot-skills) still says search is "literal token match" — it is actually semantic; worth updating that skill repo too.
 
+## Batch fixes (repo-wide, applied across all blogs)
+- 2026-07-10 iter 21: fixed recurring templated errors site-wide — github.com/pilot-protocol/pilotprotocol/pkg/driver → common/driver (12 posts, incl. shorthand variant); driver.Connect() → Connect("") (21 occurrences); fictional stream.OpenEventStream pub/sub API caveated as illustrative in 4 posts (real SDK = SendTo/RecvFrom, pub/sub via pilotctl publish/subscribe). Verified against common@v0.5.7/driver (no Subscribe/Publish/EventStream method) + public pkg/ (no driver). Individual blog ledgers stay todo for their unique issues.
+
 ## Pages
 | ledger | false | unverifiable | status |
 |---|---:|---:|---|

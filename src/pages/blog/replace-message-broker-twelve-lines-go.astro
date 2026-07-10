@@ -30,14 +30,14 @@ const bodyContent = `<p>You have three agents. Agent A monitors CPU. Agent B mon
   <pre><code>package main
 
 import (
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
     "encoding/json"
     "time"
 )
 
 func main() {
-    d, _ := driver.Connect()            <span class="comment">// Connect to local daemon</span>
-    stream, _ := d.OpenEventStream()     <span class="comment">// Open port 1002</span>
+    d, _ := driver.Connect("")            <span class="comment">// Connect to local daemon</span>
+    stream, _ := d.OpenEventStream()     <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
 
     for {
         event := map[string]any{
@@ -56,13 +56,13 @@ func main() {
   <pre><code>package main
 
 import (
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
     "fmt"
 )
 
 func main() {
-    d, _ := driver.Connect()             <span class="comment">// Connect to local daemon</span>
-    stream, _ := d.OpenEventStream()      <span class="comment">// Open port 1002</span>
+    d, _ := driver.Connect("")             <span class="comment">// Connect to local daemon</span>
+    stream, _ := d.OpenEventStream()     <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
     ch, _ := stream.Subscribe("metrics.*") <span class="comment">// Wildcard subscription</span>
 
     for event := range ch {
@@ -70,7 +70,7 @@ func main() {
     }
 }</code></pre>
 
-  <p>That is the complete pub/sub system. The <code>driver.Connect()</code> call connects to the local Pilot daemon via IPC socket. <code>OpenEventStream()</code> opens the event stream on port 1002. <code>Publish</code> sends a message to a topic. <code>Subscribe</code> returns a channel that delivers matching events.</p>
+  <p>That is the complete pub/sub system. The <code>driver.Connect("")</code> call connects to the local Pilot daemon via IPC socket. <code>OpenEventStream()</code> opens the event stream on port 1002. <code>Publish</code> sends a message to a topic. <code>Subscribe</code> returns a channel that delivers matching events.</p>
 
   <div class="callout">
     <p><strong>What you get for free:</strong> Encryption (AES-256-GCM tunnel), NAT traversal (STUN + hole-punching), peer discovery (registry lookup), and access control (only trusted peers can subscribe). No broker configuration, no TLS certificates, no firewall rules.</p>
@@ -99,7 +99,7 @@ import (
     "strings"
     "time"
 
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
 )
 
 type CPUMetric struct {
@@ -110,11 +110,11 @@ type CPUMetric struct {
 }
 
 func main() {
-    d, err := driver.Connect()
+    d, err := driver.Connect("")
     if err != nil {
         panic(err)
     }
-    stream, err := d.OpenEventStream()
+    stream, err := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
     if err != nil {
         panic(err)
     }
@@ -152,7 +152,7 @@ import (
     "runtime"
     "time"
 
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
 )
 
 type MemMetric struct {
@@ -164,11 +164,11 @@ type MemMetric struct {
 }
 
 func main() {
-    d, err := driver.Connect()
+    d, err := driver.Connect("")
     if err != nil {
         panic(err)
     }
-    stream, err := d.OpenEventStream()
+    stream, err := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
     if err != nil {
         panic(err)
     }
@@ -201,7 +201,7 @@ import (
     "fmt"
     "time"
 
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
 )
 
 type Alert struct {
@@ -212,11 +212,11 @@ type Alert struct {
 }
 
 func main() {
-    d, err := driver.Connect()
+    d, err := driver.Connect("")
     if err != nil {
         panic(err)
     }
-    stream, err := d.OpenEventStream()
+    stream, err := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
     if err != nil {
         panic(err)
     }
@@ -287,7 +287,7 @@ import (
     "encoding/json"
     "fmt"
 
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
 )
 
 type StageEvent struct {
@@ -297,8 +297,8 @@ type StageEvent struct {
 }
 
 func main() {
-    d, _ := driver.Connect()
-    stream, _ := d.OpenEventStream()
+    d, _ := driver.Connect("")
+    stream, _ := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
 
     <span class="comment">// Wait for stage 1 to complete</span>
     ch, _ := stream.Subscribe("pipeline.stage1.complete")
