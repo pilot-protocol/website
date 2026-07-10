@@ -127,7 +127,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/diagnostics.md | 5 | 0 | done |
 | audit/docs/webhooks.md | 5 | 0 | done |
 | audit/blog/agent-communication-security-best-practices.md | 4 | 2 | done |
-| audit/blog/clawhub-to-live-network-openclaw-discovery.md | 2 | 8 | todo |
+| audit/blog/clawhub-to-live-network-openclaw-discovery.md | 2 | 8 | done |
 | audit/blog/how-ai-agents-discover-each-other.md | 2 | 8 | done |
 | audit/blog/trustless-protocols-that-secure-decentralized-ai-systems.md | 0 | 14 | todo |
 | audit/blog/userspace-tcp-over-udp-stack-pure-go.md | 3 | 5 | done |
@@ -152,7 +152,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/overlay-network-ai-agents.md | 3 | 2 | done |
 | audit/blog/why-autonomous-agents-need-private-discovery.md | 0 | 11 | todo |
 | audit/pages/index.md | 2 | 5 | done |
-| audit/blog/advanced-network-automation-tips-secure-ai-systems.md | 2 | 4 | todo |
+| audit/blog/advanced-network-automation-tips-secure-ai-systems.md | 2 | 4 | done |
 | audit/blog/claude-agent-teams-over-pilot.md | 2 | 4 | done |
 | audit/blog/peer-to-peer-agent-communication-no-server.md | 2 | 4 | done |
 | audit/docs/firewalls.md | 2 | 4 | done |
@@ -172,7 +172,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/pages/plans.md | 0 | 7 | todo |
 | audit/blog/ai-networking-terminology-a2a-mcp-anp-protocols.md | 0 | 6 | todo |
 | audit/blog/encrypted-tunnel-advantages-peer-to-peer-ai-networks.md | 0 | 6 | todo |
-| audit/blog/index.md | 2 | 0 | todo |
+| audit/blog/index.md | 2 | 0 | done |
 | audit/blog/secure-network-infrastructure-ai-agents-practical-guide.md | 0 | 6 | todo |
 | audit/blog/securing-ai-agent-networks-multi-cloud-environments.md | 0 | 6 | todo |
 | audit/blog/why-direct-p2p-connections-power-secure-ai-networking.md | 0 | 6 | todo |

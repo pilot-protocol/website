@@ -29,3 +29,8 @@ Audited: 2026-07-10 · Sentences examined: 70 · verified: 49 · false: 2 · unv
 - cmd/pilotctl peers help: symmetric-NAT peers relay through beacon (+~50-150ms) — supports three-tier model (direct / hole-punch / beacon relay); pkg/daemon/tunnel.go:614 beacon used for hole-punching and relay.
 - Pre-verified: beacon is the STUN server (UDP :9001); registry at :9000; github repo link.
 - EXAMPLE items: addresses 1:0001.0B22.4E19 etc., hostnames ml-trainer-8, sample JSON output, 34.148.103.117:4000 endpoint.
+
+## Resolutions (2026-07-11 iter 58)
+- L13/L134 (SKILLS.md): skillinject writes SKILL.md. Corrected both.
+- L55-57/L65 (peers --search as registry tag search returning tags): peers --search filters connected peers by node-ID substring, no tags. Replaced with the real list-agents directory query (`pilotctl send-message list-agents --data '/data {"search":"ml"}' --wait`), changed the output to a directory response (hostname/category), and reworded the prose: directory matches hostname/category/description, tags are node metadata not indexed.
+Build: npm run build green (345 pages).

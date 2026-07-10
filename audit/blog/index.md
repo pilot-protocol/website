@@ -18,3 +18,8 @@ Audited: 2026-07-10 · Sentences examined: 21 · verified: 17 · false: 2 · unv
 ## Opinion (not flagged)
 - Line 29 "Journal" — section label, no factual content.
 - Line 30 "AI agent networking, explained." — marketing heading.
+
+## Resolutions (2026-07-11 iter 58)
+- L31 ("working pilotctl commands in every post"): 50 of 107 posts contain zero pilotctl. Softened to "in many posts".
+- L77 (fabricated "{readTime} min read"): readTime was computed from post.description (a blurb, floored at 3), so every card showed "3 min read". blogPosts.json has no body/wordcount, so removed the read-time computation and badge entirely rather than display a fabricated number.
+Build: npm run build green (345 pages).

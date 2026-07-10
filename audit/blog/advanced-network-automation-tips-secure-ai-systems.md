@@ -24,3 +24,8 @@ Audited: 2026-07-10 · Sentences examined: 66 · verified: 50 · false: 2 · unv
 - General/uncontroversial tool facts (Ansible config mgmt/agentless, Terraform declarative provisioning, Nornir Python-native, Nautobot NSoT, NetBox NSoT, gRPC bidirectional streaming + strong typing, MLS n/a here): standard vendor documentation, treated as verified general knowledge.
 - Frontmatter/JSON-LD dates consistent (2026-03-29 both).
 - Advice/opinion sentences (modular scripts, parameterization, dry-run, "decision fatigue", IBN framing quotes) counted as OPINION.
+
+## Resolutions (2026-07-11 iter 58)
+- L182 ("NETCONF is 10x faster than MD-CLI"): the cited Nature article says 3x faster than MD-CLI (and 11x faster than CLI). Corrected to 3x.
+- L202 (table MD-CLI "~10x"): inconsistent with NETCONF being only 3x faster than MD-CLI. Corrected MD-CLI to ~3.7x (11/3 of the CLI baseline), keeping NETCONF ~11x.
+Build: npm run build green (345 pages).
