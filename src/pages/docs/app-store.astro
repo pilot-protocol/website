@@ -21,14 +21,14 @@ const bodyContent = `<h1>App Store</h1>
 
   <h2 id="overview">Overview</h2>
 
-  <p>Where <code>list-agents</code> is the phonebook for live <em>data</em> on the overlay, the App Store is for installable <em>capability apps</em>. An app is a small binary plus a signed <code>manifest.json</code>. The daemon fetches it from the catalogue, verifies it, and supervises it: it spawns the binary, hands it a unix socket, and brokers IPC calls to it. Each app method is a typed call - JSON in, JSON out.</p>
+  <p>Where <code>list-agents</code> is the phonebook for live <em>data</em> on the overlay, the App Store is for installable <em>capability apps</em>. An app is a small binary plus a signed <code>manifest.json</code>. <code>pilotctl</code> fetches the bundle from the catalogue, sha-checks and extracts it, and validates its signed manifest; the daemon then supervises it — spawning the binary, handing it a unix socket, and brokering IPC calls. Each app method is a typed call - JSON in, JSON out.</p>
 
   <p>Apps are:</p>
   <ul>
     <li><strong>Local</strong> - they run on your own daemon, one process per host. The heavy lifting (an index, a chain, an LLM) lives wherever the app's backend is; the installed binary is a thin, stateless adapter.</li>
     <li><strong>Typed</strong> - every method maps to a JSON request/response. No browser, no REST plumbing.</li>
-    <li><strong>Signature-verified</strong> - the manifest pins the binary's sha256 and carries an ed25519 signature; the daemon re-checks both on every spawn.</li>
-    <li><strong>Grant-scoped</strong> - the manifest declares exactly what the app may do (network, file I/O); the user accepts at install time. No ambient authority.</li>
+    <li><strong>Signature-verified</strong> - the manifest pins the binary's sha256 and carries an ed25519 signature. The daemon verifies the signature when it scans installed apps, and re-checks the binary's sha256 immediately before every spawn.</li>
+    <li><strong>Grant-scoped</strong> - the manifest declares exactly what the app may do (network, file I/O), and the daemon's broker enforces those grants at runtime. Installing an app accepts its declared grants. No ambient authority.</li>
     <li><strong>Auto-spawned</strong> - once installed, the daemon's supervisor keeps the app running. No manual start.</li>
   </ul>
 
@@ -74,7 +74,7 @@ const bodyContent = `<h1>App Store</h1>
     <li><strong>slow</strong> - ~5-30s: multi-step work (e.g. research that plans, retrieves, and synthesizes).</li>
   </ul>
 
-  <p>Each method entry also carries a measured, warm round-trip estimate, so an agent can budget a call end-to-end (agent &rarr; daemon &rarr; app &rarr; backend &rarr; back).</p>
+  <p>Each method entry also carries a warm round-trip estimate the app publishes, so an agent can budget a call end-to-end (agent &rarr; daemon &rarr; app &rarr; backend &rarr; back).</p>
 
   <h2 id="lifecycle">Lifecycle</h2>
 
@@ -151,7 +151,7 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
 
   <p>This writes a detached <code>catalogue.json.sig</code> (commit both). <code>pilotctl</code> verifies it against the embedded catalogue key before trusting any entry - see <a href="#security">Security model</a>.</p>
 
-  <p>Three integrity layers protect every install: the <em>catalogue</em> carries a detached ed25519 signature (a substituted app list fails), the catalogue pins each <em>tarball</em> sha256 (a swapped CDN byte fails), and the manifest pins the <em>binary</em> sha256 under an ed25519 signature - the last two re-checked at every spawn.</p>
+  <p>Three integrity layers protect every install: the <em>catalogue</em> carries a detached ed25519 signature (a substituted app list fails), the catalogue pins each <em>tarball</em> sha256 (a swapped CDN byte fails), and the manifest pins the <em>binary</em> sha256 under an ed25519 signature (verified at scan time). The binary sha256 is re-checked immediately before every spawn.</p>
 
   <h2 id="install-models">Catalogue vs sideload</h2>
 
@@ -166,11 +166,11 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
     <p>To stage a release locally before publishing, point <code>$PILOT_APPSTORE_CATALOG_URL</code> at a <code>file://</code> catalogue and install by id - the same code path as production, with your own tarball.</p>
   </div>
 
-  <p>To check a bundle without installing it, <code>pilotctl appstore verify &lt;bundle-dir&gt;</code> sha256-checks every file in a pre-install bundle against its manifest and reports any mismatch — a tampered or wrongly-built bundle fails here before it ever reaches the install root.</p>
+  <p>To check a bundle without installing it, <code>pilotctl appstore verify &lt;bundle-dir&gt;</code> validates the manifest and sha256-checks the manifest-pinned binary against it, reporting any mismatch — a tampered or wrongly-built bundle fails here before it ever reaches the install root.</p>
 
   <h2 id="security">Security model &amp; hardening</h2>
 
-  <p>The app store is deny-by-default at every layer. Trust flows from a signed catalogue, through a signed manifest, to a sandboxed and continuously-verified child process.</p>
+  <p>The app store is deny-by-default at every layer. Trust flows from a signed catalogue, through a signed manifest, to a manifest-gated, resource-limited child process (rlimits + a syscall/IPC broker; OS-level sandboxing such as landlock/seccomp is not yet wired).</p>
 
   <h3>Signed catalogue (fail-closed)</h3>
 
@@ -204,7 +204,7 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
 
   <h2 id="example">Worked example: io.pilot.cosift</h2>
 
-  <p>The cosift app is a stateless adapter to a search / answer / research API over a multi-million-document web corpus. It exposes three utility methods and several status/discovery ones:</p>
+  <p>The cosift app is a stateless adapter to a search / answer / research API over a multi-million-document web corpus. It exposes several utility methods (search, answer, research, and more) plus status/discovery ones:</p>
 
   <pre><code><span class="comment"># Discover the surface + latencies</span>
 <span class="cmd">pilotctl</span> appstore call io.pilot.cosift cosift.help '{}'
@@ -218,7 +218,7 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
 <span class="comment"># research (slow) - plan -> multi-retrieval -> report</span>
 <span class="cmd">pilotctl</span> appstore call io.pilot.cosift cosift.research '{"q":"compare raft and paxos"}'</code></pre>
 
-  <p>Its source is a public reference for app authors: a tiny adapter, a manifest, and the publish flow above.</p>
+  <p>The cosift backend is open source (<a href="https://github.com/pilot-protocol/cosift">pilot-protocol/cosift</a>); the app follows the same tiny-adapter + signed-manifest + publish flow shown above.</p>
 `;
 ---
 

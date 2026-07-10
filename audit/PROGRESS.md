@@ -69,7 +69,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/cross-company-agent-collaboration-without-shared-infrastructure.md | 5 | 8 | todo |
 | audit/blog/how-pilot-protocol-works.md | 5 | 8 | todo |
 | audit/blog/preferential-attachment-ai-networks-trust-graph.md | 0 | 23 | todo |
-| audit/docs/app-store.md | 7 | 2 | todo |
+| audit/docs/app-store.md | 7 | 2 | done |
 | audit/docs/getting-started.md | 5 | 8 | todo |
 | audit/docs/python-sdk.md | 7 | 2 | todo |
 | audit/for/mcp.md | 7 | 2 | todo |
