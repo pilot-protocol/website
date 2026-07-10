@@ -847,8 +847,8 @@ export const apps: App[] = [
     "depends": [],
     "protection": "guarded",
     "featured": false,
-    "real": true,
-    "inCatalogue": true,
+    "real": false,
+    "inCatalogue": false,
     "icon": {
       "mode": "mask",
       "img": null,
@@ -2061,7 +2061,17 @@ export const apps: App[] = [
     "license": "MIT",
     "sourceUrl": "https://github.com/pilot-protocol/catalog",
     "homepage": null,
-    "methods": [],
+    "methods": [
+      { "name": "slipstream.leaderboard", "summary": null },
+      { "name": "slipstream.signals", "summary": null },
+      { "name": "slipstream.tape", "summary": null },
+      { "name": "slipstream.markets", "summary": null },
+      { "name": "slipstream.wallet", "summary": null },
+      { "name": "slipstream.skilled", "summary": null },
+      { "name": "slipstream.opportunities", "summary": null },
+      { "name": "slipstream.stats", "summary": null },
+      { "name": "slipstream.help", "summary": null }
+    ],
     "changelog": [],
     "grants": [],
     "bundles": [
@@ -2714,8 +2724,8 @@ export const apps: App[] = [
     "depends": [],
     "protection": "shareable",
     "featured": false,
-    "real": true,
-    "inCatalogue": true,
+    "real": false,
+    "inCatalogue": false,
     "icon": {
       "mode": "image",
       "img": "/appicons/io.pilot.didit.png",

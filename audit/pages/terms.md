@@ -29,3 +29,9 @@ Note on method: this is a legal page. Performative/contractual clauses ("You agr
 - dig MX pilotprotocol.network (Google Workspace MX present) + 25 site-wide uses: founders@pilotprotocol.network contact address (L52, L102, L111, L122, L125).
 - git log (website repo): Effective date May 28, 2026 matches page creation commit of 2026-05-28 (the "Last updated" half of L25 is FALSE, see above).
 - Page self-description: title (L7) and meta description (L8, 2 sentences) accurately summarize the page's scope and the §1 P2P exclusion; H1 (L23).
+
+## Resolutions (2026-07-11 iter 41)
+- L25 ("Last updated: June 26, 2026" stale): bumped to "July 10, 2026" to reflect the 2026-07-10 parties-clause change (Vulture Labs → Vulture Labs, Inc., a Delaware corporation, commit 18ade06), honoring the page's own §12 promise to update the date on changes.
+- L57 ("not open-source licensed" for website/docs/branding): NOT auto-edited — this is a legal-commitment clause and the website repo is public under AGPL-3.0 with no content carve-out, so the clause is factually contradicted. Routed to PROGRESS.md "Needs user review" (either add a content-license exception to the repo, or reword the clause — a legal decision, not mine to invent).
+- L28/L37/L105 UNVERIFIABLE (Delaware registration, Pilot-operated agents list, SMS program): left as-is; unverifiable with available tools, not asserted beyond the legal text.
+Build: npm run build green (345 pages).

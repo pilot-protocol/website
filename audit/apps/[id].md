@@ -37,3 +37,10 @@ Template page — one static frame rendered for each app in `src/data/apps.ts` (
 - "Coming soon" badge (line 95): dead branch — every app in apps.ts is `inCatalogue: true`, so it never renders (counted as example).
 - UI labels with no factual content (Copy, Read more/Show less, section headings, "You might also like", toast text, "Built something agents need?") counted as opinion.
 - Data staleness worth fixing though not itself a rendered false claim: slipstream shows "—" methods while the live catalogue publishes 9; apps.ts is missing live app io.pilot.smolmachines.
+
+## Resolutions (2026-07-11 iter 41)
+- L94 (Live-on-catalogue badge for non-live apps): fixed the underlying data drift in src/data/apps.ts. Verified live catalogue on 2026-07-11 (pilotctl appstore catalogue --json = 19 apps): io.pilot.mysql and io.pilot.didit are NOT live -> set real:false + inCatalogue:false on both, so their [id] pages now render the "Coming soon" badge instead of "Live on catalogue".
+- L163 (slipstream "publishes at runtime"): populated io.pilot.slipstream.methods with the 9 method names the catalogue publishes statically (leaderboard, signals, tape, markets, wallet, skilled, opportunities, stats, help; summaries null pending install). methods.length>0 now, so the page lists the real method surface instead of the runtime-only fallback copy.
+- L246 (hardcoded "GitHub" for non-GitHub sourceUrl): label is now dynamic -- github.com -> "GitHub", otherwise "Source". Fixes sixtyfour (docs.sixtyfour.ai), sqlite (sqlite.org/src), telepat (telepat.io).
+- L170/L174 (pricing dead branch): left as-is -- the pricing field is absent from every app, so the section never renders (dead code, not a rendered false claim); noted for a future data-model cleanup.
+Build: npm run build green (345 pages).

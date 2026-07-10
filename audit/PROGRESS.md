@@ -25,6 +25,8 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 
 - **privacy.astro SMS section** (legal, needs decision): the privacy policy has a full SMS-data-collection section (phone numbers, consent records, STOP/HELP, provider DPA), but there is NO phone/SMS collection anywhere on the website or in the product. Keep as forward-looking boilerplate, or remove until an SMS program ships? (Not touched — legal-commitment change.)
 
+- **terms.astro §5 "not open-source licensed"** (legal, needs decision): the Terms say the website, documentation, and branding "are not open-source licensed," but the website source repo is public under AGPL-3.0 with no content/branding carve-out in LICENSE — so the blanket claim is contradicted by the repo's own license. Trademark on the name/logo survives AGPL, but the clause as written is false. Fix: either add a documented content-license exception to the repo (keeping code AGPL, content proprietary), or reword the clause to match reality. Legal-commitment change, not auto-edited.
+
 - **pilot-agents repo is private** (needs decision): docs/service-agents tells readers to `cp -r pilot-agents/template` but the repo is access-gated — make it public, or keep the "reach out for access" framing I added? Also the injected pilotctl skill (TeoSlayer/pilot-skills) still says search is "literal token match" — it is actually semantic; worth updating that skill repo too.
 
 ## Batch fixes (repo-wide, applied across all blogs)
@@ -146,7 +148,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/protocol-wrapping-secure-peer-to-peer-ai-systems.md | 0 | 12 | todo |
 | audit/blog/python-sdk-pilot-protocol.md | 3 | 3 | todo |
 | audit/docs/integration.md | 4 | 0 | done |
-| audit/apps/[id].md | 3 | 2 | todo |
+| audit/apps/[id].md | 3 | 2 | done |
 | audit/blog/overlay-network-ai-agents.md | 3 | 2 | todo |
 | audit/blog/why-autonomous-agents-need-private-discovery.md | 0 | 11 | todo |
 | audit/pages/index.md | 2 | 5 | done |
@@ -161,7 +163,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/research.md | 3 | 0 | done |
 | audit/docs/sdk-parity.md | 3 | 0 | done |
 | audit/docs/services.md | 3 | 0 | done |
-| audit/pages/terms.md | 2 | 3 | todo |
+| audit/pages/terms.md | 2 | 3 | done |
 | audit/blog/persistent-network-addressing-secure-ai-systems.md | 1 | 5 | todo |
 | audit/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents.md | 2 | 2 | todo |
 | audit/blog/trust-network-protocols-secure-decentralized-systems.md | 0 | 8 | todo |
@@ -176,7 +178,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/why-direct-p2p-connections-power-secure-ai-networking.md | 0 | 6 | todo |
 | audit/docs/enterprise.md | 2 | 0 | done |
 | audit/docs/go-sdk.md | 2 | 0 | done |
-| audit/pages/app-store.md | 1 | 3 | todo |
+| audit/pages/app-store.md | 1 | 3 | done |
 | audit/blog/persistent-addresses-distributed-autonomous-systems.md | 0 | 5 | todo |
 | audit/blog/secure-communication-protocols-distributed-ai-systems.md | 1 | 2 | todo |
 | audit/blog/what-is-protocol-overlay-fundamentals-practical.md | 0 | 5 | todo |

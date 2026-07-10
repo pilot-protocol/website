@@ -25,3 +25,8 @@ Audited: 2026-07-10 · Sentences examined: 30 · verified: 24 · false: 1 · unv
 ## Opinion (not flagged)
 - L63 "Agent apps. One command away." — marketing (the command itself is verified).
 - L64 "Experiences built for agents, not browsers." — positioning language.
+
+## Resolutions (2026-07-11 iter 41)
+- L68 ("{liveCount} / Live now" = 20): fixed via the same apps.ts data correction — io.pilot.mysql and io.pilot.didit set real:false (not in the live 19-app catalogue), so liveCount now renders 18, matching the live count of on-site apps. (io.pilot.smolmachines is live but absent from apps.ts; adding a full fabricated entry would be worse than the omission, so left out — completeness gap, not a false claim. Noted.)
+- L64/L103/L146 UNVERIFIABLE ("in seconds", "Latest Featured App", "Fresh" shelf dating): left as-is — hand-curated shelves and an unbenchmarked latency word; honest as marketing, no hard false assertion. Noted in ledger.
+Build: npm run build green (345 pages).
