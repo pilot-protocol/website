@@ -26,3 +26,8 @@ Audited: 2026-07-10 · Sentences examined: 62 · verified: 51 · false: 3 · unv
 
 OPINION: "earns its keep", "neither approach is wrong", VPN-comparison framing rows characterizing Tailscale/Nebula/ZeroTier trust models (general characterization, accepted).
 EXAMPLE: search "weather" query, install snippet placeholders.
+
+## Resolutions (2026-07-11 iter 52)
+- L58/L118 ("zero external dependencies — standard library only"): web4 go.mod requires coder/websocket + pilot modules. Both spots reworded to "single static binary (CGO-free)".
+- L81-82 (appstore install/call cosift — short id): catalogue id is io.pilot.cosift; short id doesn't resolve. Fixed both to io.pilot.cosift.
+Build: npm run build green (345 pages).

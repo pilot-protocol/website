@@ -130,7 +130,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/clawhub-to-live-network-openclaw-discovery.md | 2 | 8 | todo |
 | audit/blog/how-ai-agents-discover-each-other.md | 2 | 8 | todo |
 | audit/blog/trustless-protocols-that-secure-decentralized-ai-systems.md | 0 | 14 | todo |
-| audit/blog/userspace-tcp-over-udp-stack-pure-go.md | 3 | 5 | todo |
+| audit/blog/userspace-tcp-over-udp-stack-pure-go.md | 3 | 5 | done |
 | audit/blog/virtual-network-addresses-for-secure-decentralized-ai.md | 2 | 8 | todo |
 | audit/blog/why-ai-agents-need-network-stack.md | 2 | 8 | todo |
 | audit/blog/aegis-agent-firewall-prompt-injection.md | 4 | 1 | done |
@@ -146,10 +146,10 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/peer-to-peer-networking-examples-ai-engineers.md | 2 | 6 | todo |
 | audit/blog/persistent-address-strategies-for-distributed-ai-systems.md | 1 | 9 | todo |
 | audit/blog/protocol-wrapping-secure-peer-to-peer-ai-systems.md | 0 | 12 | todo |
-| audit/blog/python-sdk-pilot-protocol.md | 3 | 3 | todo |
+| audit/blog/python-sdk-pilot-protocol.md | 3 | 3 | done |
 | audit/docs/integration.md | 4 | 0 | done |
 | audit/apps/[id].md | 3 | 2 | done |
-| audit/blog/overlay-network-ai-agents.md | 3 | 2 | todo |
+| audit/blog/overlay-network-ai-agents.md | 3 | 2 | done |
 | audit/blog/why-autonomous-agents-need-private-discovery.md | 0 | 11 | todo |
 | audit/pages/index.md | 2 | 5 | done |
 | audit/blog/advanced-network-automation-tips-secure-ai-systems.md | 2 | 4 | todo |

@@ -22,3 +22,9 @@ Audited: 2026-07-10 · Sentences examined: 54 · verified: 41 · false: 3 · unv
 - web4 source: X25519 + AES-256-GCM tunnel encryption (cmd/daemon/main.go:65 -encrypt flag description).
 - EXAMPLE: code snippets (hello world, echo server, error-handling, type-hint samples), "other-agent:1000" addresses, agent@example.com.
 - OPINION: "not a real integration", "Pythonic", "exactly what you'd expect", marketing CTA copy.
+
+## Resolutions (2026-07-11 iter 52)
+- L15 ("Python 3.10+"): PyPI requires_python is >=3.9. Corrected to 3.9+.
+- L121 (pilot-daemon start --hostname): the daemon binary has no `start` subcommand and no -hostname flag; hostname is set via pilotctl init. Changed to `pilotctl init --hostname my-agent` + `pilotctl daemon start`, noting the daemon's -email flag.
+- L126 (examples/python_sdk link 404): neither pilotprotocol nor sdk-python has an examples/ dir (verified via gh api). Repointed to the on-site /docs/python-sdk guide and the sdk-python README.
+Build: npm run build green (345 pages).

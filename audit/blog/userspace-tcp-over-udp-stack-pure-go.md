@@ -28,3 +28,7 @@ Audited: 2026-07-10 · Sentences examined: 58 · verified: 34 · false: 3 · unv
 - Internal links on disk: /docs/enterprise, /docs/getting-started, / (lines 162, 168, 4) exist; banner public/blog/banners/why-ai-agents-need-network-stack.webp exists (line 177).
 
 Code blocks are simplified excerpts of real source (EXAMPLE where they diverge cosmetically, e.g. omitted error handling); MCP/A2A framing and UDP hole-punching descriptions are accurate general statements (RFC-consistent).
+
+## Resolutions (2026-07-11 iter 52)
+- L10/L114/L160 ("zero external dependencies" / "dependency-free" / "without a single third-party dependency"): web4 go.mod requires coder/websocket, expr-lang/expr, golang.org/x/*. The transport achievement is real (they wrote their own TCP-over-UDP), so qualified each claim to the core reliable-UDP transport being built on the Go standard library rather than a third-party transport stack — dropped the absolute binary-wide "zero dependencies" framing.
+Build: npm run build green (345 pages).
