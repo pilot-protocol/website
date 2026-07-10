@@ -167,7 +167,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/persistent-network-addressing-secure-ai-systems.md | 1 | 5 | todo |
 | audit/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents.md | 2 | 2 | todo |
 | audit/blog/trust-network-protocols-secure-decentralized-systems.md | 0 | 8 | todo |
-| audit/docs/troubleshooting.md | 2 | 2 | todo |
+| audit/docs/troubleshooting.md | 2 | 2 | done |
 | audit/blog/private-networks-now-in-testing.md | 0 | 7 | todo |
 | audit/pages/plans.md | 0 | 7 | todo |
 | audit/blog/ai-networking-terminology-a2a-mcp-anp-protocols.md | 0 | 6 | todo |
@@ -186,8 +186,8 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/pages/aup.md | 0 | 4 | todo |
 | audit/blog/build-agent-app-turn-api-into-tool.md | 0 | 3 | todo |
 | audit/blog/enterprise-identity-integration-pilot-protocol.md | 0 | 3 | todo |
-| audit/docs/node-sdk.md | 1 | 0 | todo |
-| audit/for/skills.md | 1 | 0 | todo |
+| audit/docs/node-sdk.md | 1 | 0 | done |
+| audit/for/skills.md | 1 | 0 | done |
 | audit/pages/publisher-agreement.md | 0 | 3 | todo |
 | audit/blog/secure-data-exchange-for-multi-cloud-ai-systems.md | 0 | 2 | todo |
 | audit/blog/web-search-api-for-ai-agents-grounded-research.md | 0 | 2 | todo |

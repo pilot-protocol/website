@@ -21,3 +21,8 @@ Note: the page is largely data-driven — h1 count, category headings, pills, an
 - **Live URLs (curl -L, max-time 10)**: https://clawhub.ai/teoslayer/pilot-protocol → 200 (all "Browse/View on ClawHub" CTAs, featured-skill link); https://vulturelabs.com → 200 (JSON-LD publisher URL); https://pilotprotocol.network/for/skills → 200 (canonical URL); 3 spot-checked skill `source` links (pilot-chat, pilot-service-agents-culture, pilot-proposal-writer-setup) → all 200.
 - **Local site files**: src/pages/docs/getting-started.astro exists → "/docs/getting-started" links ("Install Pilot", "Getting started") resolve.
 - **Opinion/label (not flagged)**: eyebrow "Skills", search placeholder "Search skills…", "All" filter pill — UI labels with no factual content.
+
+## Resolutions (2026-07-11 iter 43)
+- L63 (`openclaw install teoslayer/pilot-protocol`): corrected to `clawhub install pilot-protocol`, matching the pilot-skills README, the ClawHub catalog, and the per-card `install` fields in skills.json. openclaw has no top-level `install` command (its form is `openclaw skills install @owner/slug`); clawhub is the consistent one-command form used everywhere else on the page.
+- Data-consistency note (156 total vs 155 categorized, pilotctl skill missing from category arrays): upstream skills.json issue in TeoSlayer/pilot-skills, not a website copy defect — left for the skills repo owner.
+Build: npm run build green (345 pages).

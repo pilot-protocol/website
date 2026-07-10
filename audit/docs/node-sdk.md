@@ -13,3 +13,7 @@ Audited: 2026-07-10 · Sentences examined: 30 · verified: 28 · false: 1 · unv
 - **Pre-verified cheatsheet**: stdio well-known port 1000 → `dial(\`${peer.address}:1000\`)` in quick start (line 43); socket `/tmp/pilot.sock`; npm `pilotprotocol@1.12.4`.
 - **Local site files (src/pages/docs/)**: `python-sdk.astro`, `swift-sdk.astro` exist → prev/next (lines 9–10); `getting-started.astro` has `id="install"` at line 54 → link on line 32; `sdk-parity.astro` exists and its line 8 says "Three official SDKs … Python, Node.js, Swift" → line 58 "Where the three SDKs differ, see SDK Parity"; TOC anchors `#install`/`#quickstart`/`#api` all present in this page (lines 24, 30, 49).
 - **EXAMPLE (not flagged)**: placeholder values in the quick-start code — hostnames `my-node-agent` / `other-agent`, payload `'hello'`, `info.address` template output (lines 38–44) — illustrative sample values around verified API calls.
+
+## Resolutions (2026-07-11 iter 43)
+- L28 (optionalDependencies + "macOS arm64/x64, Linux arm64/x64"): corrected. pilotprotocol@1.12.4 has optionalDependencies:null and the platform sub-packages 404 on npm; the real mechanism (runtime.ts) ships binaries INSIDE the package with no install-time scripts, seeded into ~/.pilot/bin/. Copy now says binaries ship inside the package, seeded on first use, and the published 1.12.4 build carries macOS arm64 + Linux x64 only (Windows experimental). (sdk-node README carries the same stale claim — flagged upstream, not a website fix.)
+Build: npm run build green (345 pages).

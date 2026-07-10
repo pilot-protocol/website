@@ -29,3 +29,8 @@ Notes (not flagged): L157's "the echo server should respond" is trust-gated on p
 
 Examples (not flagged): L35 `--email you@example.com` and L37 `{ "email": "you@example.com" }` use RFC 2606 example.com placeholders.
 Opinion: L5 subtitle "Common issues and how to fix them."
+
+## Resolutions (2026-07-11 iter 43)
+- L54/L70 ("run pilotctl info to see the tunnel UDP port"): corrected both. pilotctl info calls redactPeerEndpoints() and strips endpoint/real_addr/etc. in human and --json output (main.go:5171,3402-3416), so it never shows the port. Both steps now point to the daemon log (~/.pilot/pilot.log, "discovered public endpoint" line) and explicitly note pilotctl info redacts endpoints.
+- L101/L102 UNVERIFIABLE (free-tier 3-agent cap): left as-is — registry-side policy string not in the local client source; echoed only by error-codes page. Noted; would need registry source or a live repro.
+Build: npm run build green (345 pages).
