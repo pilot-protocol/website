@@ -21,3 +21,6 @@ Audited: 2026-07-10 · Sentences examined: 118 · verified: 62 · false: 0 · un
 - Math: N*(N-1)/2 quadratic connection growth (line 249) — correct combinatorics.
 - web4 source (pkg/daemon: STUN in tunnel.go, X25519/AES-GCM key exchange, beacon relay): line 330 product claims (virtual addresses, encrypted tunnels, NAT traversal, trust establishment, no central broker) match implementation.
 - Frontmatter/JSON-LD internal consistency: title, description, date (2026-03-30 vs "March 30, 2026"), canonicalPath match.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

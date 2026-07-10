@@ -35,3 +35,6 @@ Fire-and-forget event stream (no durable log), "ecosystem is young", "no single 
 
 ## Resolutions (2026-07-10, loop iteration 32)
 3 FALSE fixed: "zero external dependencies / one binary" → pure-Go small dep set, daemon+CLI+updater; pkg/driver → common/driver import path; the 10%-vs-20% self-contradiction reconciled to ~20% (matches the post's own 50/62 Mbps numbers). 24 unverifiable accepted.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

@@ -26,3 +26,6 @@ Audited: 2026-07-10 · Sentences examined: 113 · verified: 106 · false: 4 · u
 ## EXAMPLE items (not flagged)
 - Line 25-32: config.json sample values (my-agent, user@example.com, localhost:8080 webhook) — keys verified real, values illustrative
 - Line 175-204: fleet-health-monitor setup manifest JSON — field names verified against pilot-skills templates, values illustrative
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

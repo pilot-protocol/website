@@ -17,3 +17,6 @@ Audited: 2026-07-10 · Sentences examined: 86 · verified: 66 · false: 0 · unv
 - Local site files: all internal hrefs exist (nat-traversal-ai-agents-deep-dive, encrypted-tunnel-advantages…, peer-to-peer-agent-communication-no-server, how-pilot-protocol-works, openclaw-agents-behind-nat-zero-config, connect-ai-agents-behind-nat-without-vpn, benchmarking-http-vs-udp-overlay, decentralized-networking-p2p-solutions-ai-architectures, cloud-networking…, network-security…, /for/p2p); banner image exists; "free tier" corroborated by src/pages/terms.astro
 - Live URL checks (200): humanos-unified-world.lovable.app, blog.skypher.co article
 - OPINION/EXAMPLE: "resilience over perfection" advice, best-practice bullet lists, 1,000-agent/300-relay arithmetic illustration (example), 2–5s timeout guidance (advice)
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

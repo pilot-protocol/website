@@ -35,3 +35,6 @@ Audited: 2026-07-10 · Sentences examined: 110 · verified: 91 · false: 7 · un
 
 ## Resolutions (2026-07-10, loop iteration 34)
 7 FALSE fixed (verified vs sdk-python + PyPI): requires Python 3.9+ not 3.10+ (pyproject requires-python >=3.9); info() returns endpoints UNREDACTED (redaction is pilotctl's display layer, not the daemon); subscribe_event is a GENERATOR — must be iterated (the callback examples were no-ops) → rewrote to for-loops; read() default is 4096 not 65536; missing file in send_file raises PilotError not FileNotFoundError; examples/ dir 404 → link to repo root; the OpenClaw blog uses the pilotctl CLI, not the Python SDK. 2 unverifiable accepted.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

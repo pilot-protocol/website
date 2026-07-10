@@ -32,3 +32,6 @@ Audited: 2026-07-10 · Sentences examined: 104 · verified: 52 · false: 2 · un
 
 ## Resolutions (2026-07-10, loop iteration 32)
 2 FALSE fixed: the "97.6% NAT traversal success" claim misrepresented the statistic — 97.6% is the first-attempt share AMONG successful punches; actual DCUtR success is ~70% (relays cover the rest for near-100% overall). Corrected in intro + FAQ. 26 unverifiable accepted.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

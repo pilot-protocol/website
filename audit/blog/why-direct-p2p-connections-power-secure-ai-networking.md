@@ -17,3 +17,6 @@ Audited: 2026-07-10 · Sentences examined: 78 · verified: 60 · false: 0 · unv
 - RFC/general networking knowledge: WebRTC ICE/STUN/TURN/DTLS-SRTP; libp2p origin in IPFS, Noise protocol, DHT/mDNS discovery; NAT/client-server descriptions; TOFU/E2EE definitions; GDPR/HIPAA-style compliance framing
 - Live URL checks (curl, 200): github.com/peerclaw/peerclaw-agent (+/tree/v0.7.0), tickerly.net, cryptowatchdog.net, fxshop24.net links resolve
 - OPINION/EXAMPLE: TL;DR marketing framing, "fresh perspective" section, block quotes, hybrid-architecture advice tables (advice, not fact), supabase-hosted images (render, not claims)
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

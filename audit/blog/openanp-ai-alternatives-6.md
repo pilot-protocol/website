@@ -35,3 +35,6 @@ Audited: 2026-07-10 · Sentences examined: 140 · verified: 55 · false: 1 · un
 
 ## Resolutions (2026-07-10, loop iteration 26)
 AgentDM pricing corrected (no $5/$10 plans; free during adoption window per agentdm.ai)
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

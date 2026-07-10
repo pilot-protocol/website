@@ -32,3 +32,6 @@ Audited: 2026-07-10 · Sentences examined: 117 · verified: 110 · false: 6 · u
 
 ## Resolutions (2026-07-10, loop iteration 36)
 6 FALSE fixed (verified vs rendezvous@v0.2.5): enterprise toggle is admin-token-gated, not role-based; get_invites → poll_invites (return fields network_id/inviter_id/timestamp, no name/expiry); respond_to_invite → respond_invite; promote/demote/kick are role-authorized NOT Ed25519-signed (only set-hostname/set-visibility/deregister are signed); key rotation does not clear ExpiresAt (call set_key_expiry to extend). 1 unverifiable accepted.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

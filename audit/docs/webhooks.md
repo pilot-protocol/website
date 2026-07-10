@@ -31,3 +31,6 @@ Audited: 2026-07-10 · Sentences examined: 96 · verified: 88 · false: 5 · unv
 
 ## Resolutions (2026-07-10, loop iteration 36)
 5 FALSE fixed (verified vs webhook@v0.2.0): NOT "no queuing" — 1024-event buffer + 3 retries + circuit breaker (dropped only after retries); agent.registered/agent.heartbeat are the DAEMON's own registration/liveness, not an attached driver client; event_id is a per-webhook-client counter that restarts on URL hot-swap (not unique per daemon lifetime); data is OMITTED (omitempty) not null, and there is no daemon.started event. 0 unverifiable.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

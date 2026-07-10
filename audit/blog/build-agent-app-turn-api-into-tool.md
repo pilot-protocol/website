@@ -19,3 +19,6 @@ Audited: 2026-07-10 · Sentences examined: 58 · verified: 47 · false: 0 · unv
 - Site files: internal links /blog/ai-agent-app-store, /blog/mcp-plus-pilot-tools-and-network, /blog/overlay-network-ai-agents all exist in src/pages/blog/; banner public/blog/banners/build-agent-app-turn-api-into-tool.svg exists; canonical path matches.
 - Example (not flagged): io.pilot.yourapp, yourapp.search '{"q":"example"}' — placeholder app IDs.
 - Opinion (not flagged): "the difference that matters for adoption", method-design style advice framing.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

@@ -39,3 +39,6 @@ Notes: two error strings are documented in abbreviated form but counted VERIFIED
 
 ## Resolutions (2026-07-10, loop iteration 35)
 6 FALSE fixed (verified vs protocol/rendezvous source): "invalid checksum" → "checksum mismatch"; "invalid magic bytes" → unknown magic is silently dropped (no error); "node already registered" → "registration requires public_key" / "registry full"; "hostname already taken" → "hostname already in use"; "connection timed out" → "dial timeout" (CLI code `timeout`); "free networks are limited to 3 agents" → "network membership limit reached" (Policy.MaxMembers, no free-tier string). 3 unverifiable accepted.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

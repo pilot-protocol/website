@@ -18,3 +18,6 @@ Note: the bulk of this post is explicitly forward-looking design ("Pilot shouldâ
 - web4 source: registry emits structured audit events (tests/zz_audit_test.go) supporting "Phase 2 adds structured audit events" (line 119); daemon `-networks` auto-join exists (cmd/daemon/main.go:94).
 
 Example items: Rego policy sample (lines 80-102), spiffe://a.com / b.com IDs, `backend-services` group names â€” illustrative.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

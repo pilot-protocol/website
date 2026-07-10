@@ -33,3 +33,6 @@ Notes (not flagged): line 147 "retried … up to 3 times" — code performs 3 to
 
 ## Resolutions (2026-07-10, loop iteration 33)
 8 FALSE fixed (verified vs rendezvous): audit ring buffer IS included in the snapshot (survives restarts with -store); format value is syslog_cef not cef (audit_export.go:183, blueprint.go:147 — "cef" silently produces JSON); exported JSON is the full Entry incl. prev_hash/hash (superset of get_audit_log); DLQ has NO replay and redacts details; DLQ returns key `events` (event_id/action/timestamp/redacted details + count) not `entries` with original payload/error; webhooks configured via set_webhook not set_audit_export; metric names corrected (pilot_audit_exports_total, pilot_audit_action_total — pilot_audit_export_sent_total / pilot_webhook_dlq_size don't exist). 0 unverifiable.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

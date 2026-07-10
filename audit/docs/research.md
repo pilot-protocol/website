@@ -20,3 +20,6 @@ Audited: 2026-07-10 · Sentences examined: 77 · verified: 74 · false: 3 · unv
 
 ## Resolutions (2026-07-10, loop iteration 39)
 3 FALSE fixed: comparison paper date April → March 2026 (PDF title page / CreationDate 2026-03-11); social-structures paper title "Autonomous Agents" → "626 Agents" (arXiv 2604.09561); further-reading link label → "The Sociology of Machines: Hundreds of Agents" (actual post title). 0 unverifiable.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

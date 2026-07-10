@@ -35,3 +35,6 @@ Audited: 2026-07-10 · Sentences examined: 96 · verified: 62 · false: 5 · unv
 
 ## Resolutions (2026-07-10, loop iteration 36)
 5 FALSE fixed (verified vs live install.sh + pilotctl source): installer does NOT auto-start the service (prints the start command); pilotctl info has no heartbeat field → reworded the diagnostic to peers/connections; trust output has no "mutual: yes" (mutual is the untagged norm; JSON is "mutual": true); gateway example address → generic placeholder (0x037D was a different node); log path is ~/.pilot/pilot-<pid>.log not pilot.log. 8 unverifiable accepted.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

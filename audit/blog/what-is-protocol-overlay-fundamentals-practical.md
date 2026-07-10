@@ -18,3 +18,6 @@ Audited: 2026-07-10 · Sentences examined: 74 · verified: 52 · false: 0 · unv
 - JSON-LD (4-28): datePublished 2026-04-03 matches frontmatter date April 3, 2026; author/publisher URL pilotprotocol.network live; image URL 200; headline matches title.
 - Pilot Protocol product claims (207): NAT traversal, encrypted tunnels, virtual addressing, trust establishment — confirmed against web4 source (pkg/daemon: STUN/hole-punch/relay, X25519+AES-GCM keyexchange, 48-bit addresses, handshake/trust commands).
 - Opinion/marketing (not flagged): TL;DR framing, "matters enormously", pull-quote, Pro Tips, "supercharge", "observability is non-negotiable", "Synapse-like federation approaches", key-takeaways table rows (qualitative comparisons), physical-vs-overlay feature table (qualitative).
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

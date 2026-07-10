@@ -34,3 +34,6 @@ Audited: 2026-07-10 · Sentences examined: 85 · verified: 60 · false: 6 · unv
 
 ## Resolutions (2026-07-10, loop iteration 31)
 6 FALSE fixed (IPFS-paper misquotes, per www25-ipfs-dedup.pdf): "87.33% of IPFS data" is actually the CLOUD PEER-SET share (files are 97.43%) → corrected to "87.33% of peers (97.43% of files)" across JSON-LD/meta/intro/body; the "up from 50%" trend mixed metrics → reworded; FSC/CDC inversion fixed — FSC *is* fixed-size chunking and the paper shows CDC beats it (FSC ~0 dedup, CDC saves up to ~90%), the blog had it backwards. 8 unverifiable accepted.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

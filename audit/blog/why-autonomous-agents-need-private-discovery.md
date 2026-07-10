@@ -24,3 +24,6 @@ Audited: 2026-07-10 · Sentences examined: 52 · verified: 33 · false: 0 · unv
 - Local files: banner why-autonomous-agents-need-private-discovery.webp exists; github.com/pilot-protocol/pilotprotocol pre-verified (100).
 - Example (not flagged): sample handshake address 1:0001.0B22.4E19 and justification string (51).
 - Opinion (not flagged): "the human is the security layer", "this is the correct default", "careful the path of least resistance", lessons framing, CTA copy.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

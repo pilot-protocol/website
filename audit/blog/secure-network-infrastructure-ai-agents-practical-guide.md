@@ -20,3 +20,6 @@ Audited: 2026-07-10 · Sentences examined: 90 · verified: 71 · false: 0 · unv
 - web4 source / pre-verified: Pilot Protocol persistent virtual addresses, encrypted P2P tunnels, NAT traversal, mutual trust; Python SDK (pilot-protocol/sdk-python repo exists) and Go SDK (common/driver) — "CLI or Python/Go SDKs" (line 217).
 - Supabase image URLs: HTTP 200.
 - Opinion/marketing (not flagged): "That assumption is wrong", "Getting the infrastructure right...is not optional", pull quote, Pro Tips, "connect your first agents in under an hour", "Build for resilience...first".
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

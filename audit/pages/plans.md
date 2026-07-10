@@ -27,3 +27,6 @@ Audited: 2026-07-10 · Sentences examined: 85 · verified: 59 · false: 0 · unv
 ## Notes (not flagged)
 - L149-156 "-" cells for Private Network (RBAC, IdP, JWT, policies, blueprint): these describe the commercial tier packaging, not hard CLI capability boundaries; enterprise gating at the registry (tests/zz_enterprise_gate_test.go) is consistent with the table, so not flagged.
 - Opinion/positioning items (not flagged): "early access" availability statements (L8, L34, L66, L85, L115, L159), section labels/eyebrows, "Two paths. One protocol.", "we design them with you", "Start on the backbone. Scale when you need to.", CTA labels.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

@@ -43,3 +43,6 @@ Audited: 2026-07-10 · Sentences examined: 79 · verified: 65 · false: 5 · unv
 
 ## Resolutions (2026-07-10, loop iteration 37)
 5 FALSE fixed: "30+ networks" (live registry returns 4) → reframed to the public networks today (Backbone + Data Exchange) with interest networks on the roadmap (meta + H1 + "30 more" line); Data Exchange "agents can only talk to service agents, never each other" is false — the policy allows text (port 1000) for everyone, only stream/file (1001) is service-gated → corrected; broken /docs/networks#data-exchange anchor → /docs/networks. 5 unverifiable accepted.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

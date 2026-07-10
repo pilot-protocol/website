@@ -17,3 +17,6 @@ Audited: 2026-07-10 · Sentences examined: 56 · verified: 44 · false: 0 · unv
 - General/textbook: BM25 vs dense retrieval tradeoffs, hybrid retrieval + rerank + cited synthesis as known techniques (13, 24, 85); MCP characterization (92, FAQ 120) matches MCP spec.
 - Opinion/marketing (not flagged): "purpose-built answer", "the mechanism matters as much as the tool", "pick the cheapest method", "this beats a raw search-API integration", CTA copy.
 - Example (not flagged): sample queries "raft leader election", "What is HNSW?" — illustrative.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

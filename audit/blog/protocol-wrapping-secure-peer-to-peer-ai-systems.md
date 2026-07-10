@@ -28,3 +28,6 @@ Audited: 2026-07-10 · Sentences examined: 78 · verified: 52 · false: 0 · unv
 - src/pages/blog/benchmarking-http-vs-udp-overlay.astro: contains the "11x faster" figure the post cites (link target consistent; underlying benchmark still flagged above).
 - Product source (web4, gateway, pre-verified): Pilot provides encrypted tunnels (X25519+AES-256-GCM), NAT traversal, virtual addresses, mutual trust handshake, no central broker; HTTP/gRPC/SSH wrapping via gateway/overlay.
 - OPINION (not flagged): TL;DR framings, "Pro Tip" recommendations, unattributed pull-quote, "extensibility debt", future-proofing advice, CTA marketing.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

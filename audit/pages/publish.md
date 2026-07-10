@@ -42,3 +42,6 @@ The live-submit probe used to verify server behavior created a real pending case
 
 ## Resolutions (2026-07-10, loop iteration 33)
 3 FALSE fixed: the page claimed email verification ("we send a one-time code to verify", "verify your email" step, "verified email") — but there is NO verification (client fetches only /api/preview + /api/submit; live submit with an unverified address was accepted). Removed all three verification claims → "we use it to reach you about your submission." 16 unverifiable accepted.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

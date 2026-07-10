@@ -25,3 +25,6 @@ Audited: 2026-07-10 · Sentences examined: 88 · verified: 41 · false: 0 · unv
 - gopilot.dev (live GET): multi-model support incl. Anthropic, Mistral; "isolated" wording present.
 - Site files: canonical /blog/boarding-pilotagent-org-alternatives-3 matches file; banner public/blog/banners/boarding-pilotagent-org-alternatives-3.jpg exists; Recommended links (http-services-over-encrypted-overlay, a2a-agent-cards-over-pilot-tunnels, scriptorium-replace-agentic-active-research-ready-intelligence) all exist in src/pages/blog/; JSON-LD date/description match frontmatter.
 - Opinion (not flagged): "leading", "gold standard", "perfect fit", comparison-table pros/cons phrasing, FAQ generic advice sentences.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

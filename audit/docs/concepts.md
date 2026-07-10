@@ -29,3 +29,6 @@ Audited: 2026-07-10 · Sentences examined: 81 · verified: 74 · false: 5 · unv
 
 ## Resolutions (2026-07-10, loop iteration 37)
 5 FALSE fixed: no pilot-XXXX SHA-256 fallback hostname — unset hostname is empty (set later with set-hostname); keepalive is 60s not 30s (daemon.go:171); "services only coordinate" corrected (beacon relays encrypted data when no direct path); NAT-type detection does NOT exist (removed both claims — fallback ladder is automatic, no classification). 0 unverifiable.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

@@ -24,3 +24,6 @@ Audited: 2026-07-10 · Sentences examined: 65 · verified: 59 · false: 3 · unv
 
 ## Resolutions (2026-07-10, loop iteration 39)
 3 FALSE fixed: matrix.csv is not checked in (script writes ./inventory/ locally) → reworded; "three intentional rows (…socket-path default…)" → two rows (no socket-path row exists); Swift has no sendMessage → attributed to Node only with a note. 0 unverifiable.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

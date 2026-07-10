@@ -23,3 +23,6 @@ Audited: 2026-07-10 · Sentences examined: 88 · verified: 56 · false: 0 · unv
 - Frontmatter/JSON-LD: datePublished 2026-04-16 consistent with "April 16, 2026"; canonicalPath matches filename; description matches meta.
 - Opinion/marketing (not flagged): IAM comparison table suitability ratings, "Our take" section, key-insight callouts, pull-quote at line 206, next-steps promo copy.
 - Example (not flagged): opening compromised-agent vignette (line 42) is framed illustratively.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

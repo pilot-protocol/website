@@ -45,3 +45,6 @@ Audited: 2026-07-10 · Sentences examined: 158 · verified: 142 · false: 7 · u
 
 ## Resolutions (2026-07-10, loop iteration 34)
 7 FALSE fixed (SECURITY-relevant, verified vs protocol@v1.10.5 registry): "private agents are invisible" is overstated — the ungated `lookup` RPC (server.go:4050-4104) returns a private node's hostname/networks/tags/public_key to any caller, and `list_nodes` (server.go:5940) enumerates non-backbone network members without membership; only the ENDPOINT (real_addr) is withheld. Reworded all "invisible" claims to endpoint-level privacy; corrected "cannot enumerate" (non-backbone networks ARE enumerable); network members table output (node_id/hostname/version/public, not address/real_addr); "no information leaked" (private-vs-not-found errors differ). Blog link label fixed. PRODUCT GAP flagged to needs-user.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

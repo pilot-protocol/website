@@ -77,3 +77,6 @@ All 21 FALSE + 6 UNVERIFIABLE rows resolved in src/pages/docs/cli-reference.astr
 - network policy: real key flags (--max-members/--description/--allowed-ports), not --set json.
 - inbox --trace removed (no such flag); trusted -> "trusted list"; updates default 10.
 - UNVERIFIABLE (registry-server-side): hostname/tag charset, network-leave messaging, rotate-key trust, set-private searchable fields — reworded to what local source proves, dropping unverifiable server-side specifics.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

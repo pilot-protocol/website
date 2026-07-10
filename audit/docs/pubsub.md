@@ -29,3 +29,6 @@ Audited: 2026-07-10 · Sentences examined: 96 · verified: 72 · false: 7 · unv
 
 ## Resolutions (2026-07-10, loop iteration 34)
 7 FALSE fixed: subscribe needs --json to emit JSON/NDJSON (bare subscribe prints "[topic] payload") → added --json to the JSON examples + pipe recipes; "events.*" is a valid literal topic, not invalid syntax (opaque strings, matches literally); "no retries" wrong — broker retries once (~20ms) and drops after 3 failures; self-publish monitoring/coordination examples corrected (publish targets a peer's broker, subscribe to your own — self-publish fails with connection_failed, live-confirmed). 0 unverifiable.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

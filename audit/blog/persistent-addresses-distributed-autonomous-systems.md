@@ -19,3 +19,6 @@ Audited: 2026-07-10 · Sentences examined: 96 · verified: 52 · false: 0 · unv
 - Frontmatter/JSON-LD: datePublished 2026-04-14 matches displayed date "April 14, 2026"; canonicalPath matches file slug
 
 Marketing/subjective sentences (Key Takeaways rows, "reshape distributed systems" section, FAQ generalities, "Get it right from the start", "structural shift", table stability ratings High/Medium/Low) classified OPINION. Sample sequence steps (Ed25519 at provisioning etc.) are recommendations, not claims.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

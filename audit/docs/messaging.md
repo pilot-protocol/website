@@ -36,3 +36,6 @@ Audited: 2026-07-10 · Sentences examined: 77 · verified: 61 · false: 6 · unv
 
 ## Resolutions (2026-07-10, loop iteration 35)
 6 FALSE fixed (verified vs pinned dataexchange module): file size cap is not 16 MB — streamed default has no fixed cap (chunked), legacy fallback caps at frame size (default 1 GiB, PILOT_DATAEXCHANGE_MAX_FRAME); data_b64 REPLACES data (not additional) in the pinned module; U+FFFD replaces only INVALID UTF-8 not all bytes>0x7F; inbox type is TEXT/JSON/BINARY only (files → received/, not inbox); trust gate applies to PRIVATE nodes only (public accepts any peer); send-file returns filename/bytes/destination/sha256/verified/transport (no ack on the streamed path). 0 unverifiable.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

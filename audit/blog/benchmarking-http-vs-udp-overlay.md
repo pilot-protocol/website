@@ -35,3 +35,6 @@ Audited: 2026-07-10 · Sentences examined: 130 · verified: 41 · false: 4 · un
 
 ## Resolutions (2026-07-10, loop iteration 22)
 4 FALSE fixed (verified: cmdBench main.go:5918-6010 is a fixed-size echo transfer with a [size_mb] arg, NOT a 60s sustained harness; http2bench binary and GCP scripts do not exist in web4 or public repo): corrected the methodology (fixed-size bench, sweep sizes by re-running), removed the nonexistent http2bench command + "all tooling included" + "GCP deployment scripts" claims. 32 UNVERIFIABLE benchmark figures: added a prominent caveat that the numbers are illustrative internal two-machine runs, not reproducible from public tooling (only pilotctl bench ships) — treat as indicative, not audited.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

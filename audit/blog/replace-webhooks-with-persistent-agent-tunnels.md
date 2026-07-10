@@ -39,3 +39,6 @@ Audited: 2026-07-10 · Sentences examined: 78 · verified: 44 · false: 7 · unv
 
 ## Resolutions (2026-07-10, loop iteration 29)
 7 FALSE fixed: the entire "webhook bridge" premise was inverted — set-webhook makes the daemon POST Pilot events OUTBOUND to a URL (main.go:1215 "The daemon will POST JSON event payloads to this URL"), it is NOT an inbound receiver/bridge. Reframed to the two real directions: outbound via set-webhook (built in), inbound via your own tiny HTTP receiver calling pilotctl publish (no built-in bridge). 11 unverifiable accepted.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

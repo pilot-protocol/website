@@ -31,3 +31,6 @@ Audited: 2026-07-10 · Sentences examined: 62 · verified: 37 · false: 7 · unv
 
 ## Resolutions (2026-07-10, loop iteration 31)
 7 FALSE fixed: rendezvous.pilotprotocol.network → registry.pilotprotocol.network:443 (correct compat DNS); peers --search is node-ID not tag search → discovery via list-agents; recv needs a port; send needs <port> --data; "discoverable by peers searching tags" corrected to the directory; "50 lines" (actually ~150) softened. 14 unverifiable accepted.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

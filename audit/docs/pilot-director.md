@@ -35,3 +35,6 @@ Examples (not flagged): restaurant-booking task payload (L37); sample plan value
 
 ## Resolutions (2026-07-10, loop iteration 35)
 6 FALSE fixed (verified vs live /api/plan + site JS): reply has no top-level `calls`/`handoff`/`guide_url` — corrected to `guide` (markdown how-to) + `plan.{steps(depends_on),handoff,output}`; class enum is achievable/agent/not-yet (not "partially achievable"). 2 unverifiable accepted.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

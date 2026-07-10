@@ -23,3 +23,6 @@ Audited: 2026-07-10 · Sentences examined: 30 · verified: 25 · false: 3 · unv
 
 ## OPINION
 - L44: "A typical MCP server wraps one API and brings one more credential." — generalization/marketing framing, no checkable fact.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

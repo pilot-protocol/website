@@ -34,3 +34,6 @@ Audited: 2026-07-10 · Sentences examined: 108 · verified: 44 · false: 5 · un
 
 ## Resolutions (2026-07-10, loop iteration 28)
 5 FALSE fixed (verified): keepalive is 60s not 30s (daemon.go:171); event stream matches an exact topic or "*" only — no "metrics/*" prefix wildcard (protocol@v1.10.5 eventstream/server.go:15-18) → reframed to subscribe "*" + client-side filter; pilotctl peers --search filters connected peers by node-ID substring not tags, and shows a direct/relay summary not a registry fleet table with tags/OFFLINE columns → corrected the description + example output. 19 unverifiable (illustrative monitoring scenario numbers) accepted.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

@@ -5,7 +5,12 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 ## MILESTONE (2026-07-11): every FALSE claim resolved
 All 167 audited pages have had their FALSE claims fixed and verified (npm run build green after each batch), across ~62 loop iterations on branch fix/sweep-4 (PR #116). This covered: invalid/fictional CLI commands and flags, nonexistent SDK methods (SendFile/HTTPTransport/OpenEventStream/DialAddr-arity/Connect-arity/ListenSecure/Resolve/Address), wrong Go/Python SDK APIs, fabricated statistics attributed to real papers (arXiv 2507.08616/2503.13657/2511.19113/2603.03753, Nature NETCONF, googleblog "150 partners", 97.6% NAT misread), wrong RFC numbers (MLS 9420 vs 9750; mTLS 8705), wrong licenses (MIT→AGPL ×6 pages), broken/404 doc links (docs/SPEC.md, docs/ietf, examples/python_sdk), packet-layout/header errors, keepalive/retry/segment-size constants, app-store data drift + wrong app descriptions, date mismatches, and fictional webhook/event names. Three product fixes also shipped (web4 #366, skillinject #26).
 
-**Remaining: 43 pages with ONLY unverifiable claims** (marketing stats, unbenchmarked perf figures, third-party vendor behavior, anonymous quotes). Each is flagged in its ledger per the "flag what can't be validated" directive. Softening these where they read as hard measured/cited fact is the remaining pass; the site-wide editorial decision (keep as marketing vs. caveat) is noted under Needs user review.
+## COMPLETE (2026-07-11): every ledger row resolved
+All 167 ledgers are resolved and `npm run build` is green (345 pages). Every FALSE claim was FIXED; every UNVERIFIABLE claim was either softened (where it read as hard measured/cited Pilot fact or asserted protocol behavior the source contradicts — several of these turned out to be effectively false, e.g. the 0.47 clustering coefficient, a "ranked-by-reliability" search mechanism the registry doesn't implement, and a "we've been notified" claim on a static 500 page) or ACCEPTED and documented (third-party/academic descriptions of real live sources, uncited industry framing, marketing hyperbole, anonymous pull-quotes). The remaining softening pass (iters 63–66) touched ~15 pages of measured-fact overclaims; the other ~28 unverifiable-only pages carried no Pilot overclaim and were reviewed + accepted.
+
+**Nothing else is auto-fixable.** What's left is entirely under "Needs user review" below: product/security/legal decisions (npm squat, private-node metadata leak, handshake-justification signing, gateway positioning, tags-not-indexed, per-session forward secrecy, install.sh --email, AUP rate limits + sanctions, publisher-agreement revocation signals, terms open-source clause, privacy SMS section, pilot-agents repo, boarding-post pricing) and the site-wide editorial call on marketing stats. Loop stopped per LOOP-PROMPT.md's stop condition.
+
+_(Original mid-run note, retained: 43 unverifiable-only pages were the remaining pass at the FALSE-complete milestone; all now resolved as above.)_
 
 ## Product fixes (behavior-first — fix the product, then re-pass copy to the strong promise)
 | gap | fix | PR | copy re-pass |
@@ -30,6 +35,8 @@ All 167 audited pages have had their FALSE claims fixed and verified (npm run bu
 
 - **aup.astro rate limits + Syria sanctions** (legal, needs decision): the AUP states specific enforcement thresholds — 100 registrations/IP/hour, 1,000 discovery lookups/agent/hour, 300 handshakes/agent/hour — none of which appear in local web4 source (registry server source isn't in the repo; the only rate limit found is the daemon `-syn-rate-limit` default 100/sec, unrelated). Left as-is (they may be enforced registry-side). The sanctions clause also cites Syria as comprehensively sanctioned, but US/EU Syria programs were largely wound down in 2025 — hedged by "including but not limited to", so not edited. Confirm the real registry limits and refresh the sanctions list.
 - **publisher-agreement.astro "revocation signals"** (legal, needs decision): the agreement says Pilot can "publish revocation signals" and that "compliant daemons will decline to install or spawn the affected App." Install-decline via a re-fetched fail-closed catalogue IS real, but there is NO "revocation signal" mechanism in web4 and no spawn-time catalogue/delist check (spawn only verifies bundle-vs-manifest signature). Either implement revocation signals + a spawn-time delist check, or reword to match what's enforced (catalogue delisting blocks new installs; running apps aren't killed by a signal).
+
+- **boarding-pilotagent-org-alternatives-3.astro pricing** (business, needs decision): the post states specific Pilot pricing — "Private networks and enterprise features … plans starting at $200 per month plus per agent fees" and a table cell "Free core, paid plans from $200/month". The site's own plans.astro carries NO dollar amounts (Private/Enterprise are "early access"), so this $200 figure is unsupported. Left unedited because pricing is your call — either publish real prices on /plans and cite them, or soften the post to "paid plans (early access — contact us)".
 
 - (none yet)
 
@@ -113,7 +120,7 @@ All 167 audited pages have had their FALSE claims fixed and verified (npm run bu
 | audit/blog/multi-agent-system-networking-guide-ai-developers.md | 2 | 14 | done |
 | audit/docs/pilot-director.md | 6 | 2 | done |
 | audit/pages/for-networks.md | 5 | 5 | done |
-| audit/blog/ai-networking-best-practices-secure-scalable-systems.md | 0 | 19 | todo |
+| audit/blog/ai-networking-best-practices-secure-scalable-systems.md | 0 | 19 | done |
 | audit/blog/distributed-rag-without-central-knowledge-base.md | 4 | 7 | done |
 | audit/blog/smart-home-without-cloud-local-device-communication.md | 3 | 10 | done |
 | audit/docs/enterprise-rbac.md | 6 | 1 | done |
@@ -121,7 +128,7 @@ All 167 audited pages have had their FALSE claims fixed and verified (npm run bu
 | audit/blog/legacy-protocol-integration-for-secure-distributed-ai.md | 1 | 15 | done |
 | audit/blog/multi-cloud-networking-decentralized-ai-systems.md | 1 | 15 | done |
 | audit/docs/messaging.md | 6 | 0 | done |
-| audit/blog/boarding-pilotagent-org-alternatives-3.md | 0 | 17 | todo |
+| audit/blog/boarding-pilotagent-org-alternatives-3.md | 0 | 17 | done |
 | audit/blog/direct-communication-protocols-ai-agents-guide.md | 3 | 8 | done |
 | audit/blog/enterprise-phase-3-rbac-policies-audit-fleet.md | 4 | 5 | done |
 | audit/blog/federated-learning-p2p-communication.md | 1 | 14 | done |
@@ -139,36 +146,36 @@ All 167 audited pages have had their FALSE claims fixed and verified (npm run bu
 | audit/blog/agent-communication-security-best-practices.md | 4 | 2 | done |
 | audit/blog/clawhub-to-live-network-openclaw-discovery.md | 2 | 8 | done |
 | audit/blog/how-ai-agents-discover-each-other.md | 2 | 8 | done |
-| audit/blog/trustless-protocols-that-secure-decentralized-ai-systems.md | 0 | 14 | todo |
+| audit/blog/trustless-protocols-that-secure-decentralized-ai-systems.md | 0 | 14 | done |
 | audit/blog/userspace-tcp-over-udp-stack-pure-go.md | 3 | 5 | done |
 | audit/blog/virtual-network-addresses-for-secure-decentralized-ai.md | 2 | 8 | done |
 | audit/blog/why-ai-agents-need-network-stack.md | 2 | 8 | done |
 | audit/blog/aegis-agent-firewall-prompt-injection.md | 4 | 1 | done |
 | audit/docs/configuration.md | 4 | 1 | done |
-| audit/blog/autonomous-agent-networking-distributed-ai.md | 0 | 12 | todo |
+| audit/blog/autonomous-agent-networking-distributed-ai.md | 0 | 12 | done |
 | audit/blog/enterprise-private-networks-roadmap.md | 1 | 9 | done |
 | audit/blog/hipaa-compliant-agent-communication.md | 2 | 6 | done |
 | audit/blog/ietf-internet-drafts-pilot-protocol-revision-01.md | 1 | 9 | done |
 | audit/blog/multi-agent-pipelines-openclaw-encrypted-tunnels.md | 3 | 3 | done |
 | audit/blog/openclaw-meets-pilot-agent-networking-one-command.md | 3 | 3 | done |
-| audit/blog/overlay-networking-automation-secure-ai-agent-solutions.md | 0 | 12 | todo |
-| audit/blog/overlay-networking-secure-ai-agent-communication-explained.md | 0 | 12 | todo |
+| audit/blog/overlay-networking-automation-secure-ai-agent-solutions.md | 0 | 12 | done |
+| audit/blog/overlay-networking-secure-ai-agent-communication-explained.md | 0 | 12 | done |
 | audit/blog/peer-to-peer-networking-examples-ai-engineers.md | 2 | 6 | done |
 | audit/blog/persistent-address-strategies-for-distributed-ai-systems.md | 1 | 9 | done |
-| audit/blog/protocol-wrapping-secure-peer-to-peer-ai-systems.md | 0 | 12 | todo |
+| audit/blog/protocol-wrapping-secure-peer-to-peer-ai-systems.md | 0 | 12 | done |
 | audit/blog/python-sdk-pilot-protocol.md | 3 | 3 | done |
 | audit/docs/integration.md | 4 | 0 | done |
 | audit/apps/[id].md | 3 | 2 | done |
 | audit/blog/overlay-network-ai-agents.md | 3 | 2 | done |
-| audit/blog/why-autonomous-agents-need-private-discovery.md | 0 | 11 | todo |
+| audit/blog/why-autonomous-agents-need-private-discovery.md | 0 | 11 | done |
 | audit/pages/index.md | 2 | 5 | done |
 | audit/blog/advanced-network-automation-tips-secure-ai-systems.md | 2 | 4 | done |
 | audit/blog/claude-agent-teams-over-pilot.md | 2 | 4 | done |
 | audit/blog/peer-to-peer-agent-communication-no-server.md | 2 | 4 | done |
 | audit/docs/firewalls.md | 2 | 4 | done |
 | audit/docs/mcp-setup.md | 3 | 1 | done |
-| audit/blog/ai-networking-challenges-decentralized-systems.md | 0 | 9 | todo |
-| audit/blog/network-tunnels-ai-secure-communication-autonomous-agents.md | 0 | 9 | todo |
+| audit/blog/ai-networking-challenges-decentralized-systems.md | 0 | 9 | done |
+| audit/blog/network-tunnels-ai-secure-communication-autonomous-agents.md | 0 | 9 | done |
 | audit/docs/enterprise-policies.md | 3 | 0 | done |
 | audit/docs/research.md | 3 | 0 | done |
 | audit/docs/sdk-parity.md | 3 | 0 | done |
@@ -176,31 +183,31 @@ All 167 audited pages have had their FALSE claims fixed and verified (npm run bu
 | audit/pages/terms.md | 2 | 3 | done |
 | audit/blog/persistent-network-addressing-secure-ai-systems.md | 1 | 5 | done |
 | audit/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents.md | 2 | 2 | done |
-| audit/blog/trust-network-protocols-secure-decentralized-systems.md | 0 | 8 | todo |
+| audit/blog/trust-network-protocols-secure-decentralized-systems.md | 0 | 8 | done |
 | audit/docs/troubleshooting.md | 2 | 2 | done |
-| audit/blog/private-networks-now-in-testing.md | 0 | 7 | todo |
-| audit/pages/plans.md | 0 | 7 | todo |
-| audit/blog/ai-networking-terminology-a2a-mcp-anp-protocols.md | 0 | 6 | todo |
-| audit/blog/encrypted-tunnel-advantages-peer-to-peer-ai-networks.md | 0 | 6 | todo |
+| audit/blog/private-networks-now-in-testing.md | 0 | 7 | done |
+| audit/pages/plans.md | 0 | 7 | done |
+| audit/blog/ai-networking-terminology-a2a-mcp-anp-protocols.md | 0 | 6 | done |
+| audit/blog/encrypted-tunnel-advantages-peer-to-peer-ai-networks.md | 0 | 6 | done |
 | audit/blog/index.md | 2 | 0 | done |
-| audit/blog/secure-network-infrastructure-ai-agents-practical-guide.md | 0 | 6 | todo |
-| audit/blog/securing-ai-agent-networks-multi-cloud-environments.md | 0 | 6 | todo |
-| audit/blog/why-direct-p2p-connections-power-secure-ai-networking.md | 0 | 6 | todo |
+| audit/blog/secure-network-infrastructure-ai-agents-practical-guide.md | 0 | 6 | done |
+| audit/blog/securing-ai-agent-networks-multi-cloud-environments.md | 0 | 6 | done |
+| audit/blog/why-direct-p2p-connections-power-secure-ai-networking.md | 0 | 6 | done |
 | audit/docs/enterprise.md | 2 | 0 | done |
 | audit/docs/go-sdk.md | 2 | 0 | done |
 | audit/pages/app-store.md | 1 | 3 | done |
-| audit/blog/persistent-addresses-distributed-autonomous-systems.md | 0 | 5 | todo |
+| audit/blog/persistent-addresses-distributed-autonomous-systems.md | 0 | 5 | done |
 | audit/blog/secure-communication-protocols-distributed-ai-systems.md | 1 | 2 | done |
-| audit/blog/what-is-protocol-overlay-fundamentals-practical.md | 0 | 5 | todo |
-| audit/blog/why-secure-direct-p2p-connections-matter-for-ai-agents.md | 0 | 5 | todo |
+| audit/blog/what-is-protocol-overlay-fundamentals-practical.md | 0 | 5 | done |
+| audit/blog/why-secure-direct-p2p-connections-matter-for-ai-agents.md | 0 | 5 | done |
 | audit/pages/aup.md | 0 | 4 | done |
-| audit/blog/build-agent-app-turn-api-into-tool.md | 0 | 3 | todo |
-| audit/blog/enterprise-identity-integration-pilot-protocol.md | 0 | 3 | todo |
+| audit/blog/build-agent-app-turn-api-into-tool.md | 0 | 3 | done |
+| audit/blog/enterprise-identity-integration-pilot-protocol.md | 0 | 3 | done |
 | audit/docs/node-sdk.md | 1 | 0 | done |
 | audit/for/skills.md | 1 | 0 | done |
 | audit/pages/publisher-agreement.md | 0 | 3 | done |
-| audit/blog/secure-data-exchange-for-multi-cloud-ai-systems.md | 0 | 2 | todo |
-| audit/blog/web-search-api-for-ai-agents-grounded-research.md | 0 | 2 | todo |
+| audit/blog/secure-data-exchange-for-multi-cloud-ai-systems.md | 0 | 2 | done |
+| audit/blog/web-search-api-for-ai-agents-grounded-research.md | 0 | 2 | done |
 | audit/for/setups.md | 0 | 2 | done |
 | audit/blog/ai-agent-app-store.md | 0 | 1 | done |
 | audit/blog/build-an-agent-app.md | 0 | 1 | done |

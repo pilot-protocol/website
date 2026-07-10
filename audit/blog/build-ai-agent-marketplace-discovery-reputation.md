@@ -35,3 +35,6 @@ Audited: 2026-07-10 · Sentences examined: 92 · verified: 42 · false: 6 · unv
 
 ## Resolutions (2026-07-10, loop iteration 28)
 6 FALSE fixed (verified): license is AGPL-3.0 not MIT (gh api); set-tags max 3 not 4 (main.go:2452); pilotctl peers --search filters connected peers by node-ID substring, not a registry tag-search → rewrote the discovery examples to the list-agents directory service; policy-based per-tag/time-of-day handshake auto-approval does NOT exist (only --trust-auto-approve blanket flag + embedded trusted list) → corrected; recv requires a port arg. 16 unverifiable (reputation/marketplace narrative) accepted.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

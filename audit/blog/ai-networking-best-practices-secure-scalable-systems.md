@@ -27,3 +27,6 @@ Audited: 2026-07-10 · Sentences examined: 102 · verified: 61 · false: 0 · un
 - Live URLs (curl 2026-07-10): all 3 supabase images 200; infoq 200; eprint abstract 200. Blocked (403, likely bot-block not dead): medium @gathright, academia.edu, openreview PDF, eprint PDF direct.
 - JSON-LD datePublished 2026-04-13 matches frontmatter "April 13, 2026".
 - OPINION (not flagged): "Encryption is not optional", "the tradeoff is not worth it", Pro Tips, "That reframe changes how you design…", etc.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

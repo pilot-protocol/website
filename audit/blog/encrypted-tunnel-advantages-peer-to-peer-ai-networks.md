@@ -20,3 +20,6 @@ Audited: 2026-07-10 · Sentences examined: 88 · verified: 56 · false: 0 · unv
 - General networking facts (TLS/crypto textbook level): confidentiality/integrity/authentication definitions, MAC tamper-drop, zero-trust framing, NAT blocking inbound by default (lines 86-97, 102, 223).
 
 Opinion/example items: TL;DR marketing framing, "Pro Tip" advice, qualitative CPU-overhead comparison table (WireGuard Low / OpenVPN Medium / IPSec High — directionally supported but qualitative), deployment sequence steps, JSON-LD boilerplate, image alt text.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

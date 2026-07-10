@@ -32,3 +32,6 @@ Audited: 2026-07-10 · Sentences examined: 118 · verified: 48 · false: 6 · un
 
 ## Resolutions (2026-07-10, loop iteration 30)
 6 FALSE fixed (crypto-library facts): libsodium crypto_box_easy/secretbox require a CALLER-supplied nonce (randombytes_buf) — they do NOT auto-generate it (×3 corrected); Noise IK is a 2-message/1-RTT handshake and XX is 3-message/1.5-RTT (the blog had them swapped); JSON-LD datePublished 2026-05-07 aligned to the frontmatter date (May 10). 11 unverifiable accepted.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

@@ -23,3 +23,6 @@ Audited: 2026-07-10 · Sentences examined: 40 · verified: 22 · false: 0 · unv
 - Local site files: /plans (src/pages/plans.astro), /blog/enterprise-private-networks-roadmap, banner webp all exist.
 - EXAMPLE (not flagged): list-members output table (node IDs 685/686, addresses, real addrs), $TOKEN/join-secret placeholders.
 - OPINION/roadmap intent (not flagged): Phase 2/3 plans, self-service design, policy engine microsegmentation pitch, "honest look" framing.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

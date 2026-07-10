@@ -33,3 +33,6 @@ Audited: 2026-07-10 · Sentences examined: 84 · verified: 38 · false: 7 · unv
 
 ## Resolutions (2026-07-10, loop iteration 31)
 7 FALSE fixed: pkg/driver→common/driver import + removed nonexistent pkg/tasksubmit & pkg/eventstream imports; Connect(""); caveated the fictional driver methods (SetTaskReady/Recv/Send/Publish — real API is SendTo/RecvFrom) as illustrative; recv needs a port (1000); send needs <addr> <port> --data. 5 unverifiable accepted.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.

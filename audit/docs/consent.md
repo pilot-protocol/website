@@ -74,3 +74,6 @@ All 33 FALSE rows → FIXED in src/pages/docs/consent.astro; all 6 UNVERIFIABLE 
 
 ## Update (loop iteration 2, 2026-07-10): behavior-first — app_usage REMOVED
 Per user directive, app_usage telemetry is fixed in the product, not just disclosed. web4 PR #366 removes the event from both emission sites (CLI + daemon adapter). consent.astro telemetry section re-passed from the interim disclosure to the strong promise: "three events; what your agent does with an app is never reported — there is no per-call telemetry." Verified: grep app_usage in consent.astro = 0; GOWORK=off go build/vet/test green in web4; site build green.
+
+## Resolutions 2026-07-11 iter 66 -- reviewed and ACCEPTED
+- Reviewed all FLAGGED UNVERIFIABLE rows: third-party/academic descriptions (arXiv/Nature/EIP/vendor, real and live sources), uncited industry framing, marketing hyperbole, or anonymous pull-quotes. None assert Pilot protocol behavior falsely; none present a Pilot-specific measured figure; no FALSE rows remain. ACCEPTED per the "flag what can't be validated" directive. Pricing/legal-commitment items surfaced to PROGRESS.md Needs user review.
