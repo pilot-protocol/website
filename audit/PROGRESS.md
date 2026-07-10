@@ -108,13 +108,13 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/smart-home-without-cloud-local-device-communication.md | 3 | 10 | done |
 | audit/docs/enterprise-rbac.md | 6 | 1 | done |
 | audit/blog/ietf-internet-draft-pilot-protocol.md | 2 | 12 | done |
-| audit/blog/legacy-protocol-integration-for-secure-distributed-ai.md | 1 | 15 | todo |
+| audit/blog/legacy-protocol-integration-for-secure-distributed-ai.md | 1 | 15 | done |
 | audit/blog/multi-cloud-networking-decentralized-ai-systems.md | 1 | 15 | done |
 | audit/docs/messaging.md | 6 | 0 | done |
 | audit/blog/boarding-pilotagent-org-alternatives-3.md | 0 | 17 | todo |
 | audit/blog/direct-communication-protocols-ai-agents-guide.md | 3 | 8 | done |
 | audit/blog/enterprise-phase-3-rbac-policies-audit-fleet.md | 4 | 5 | done |
-| audit/blog/federated-learning-p2p-communication.md | 1 | 14 | todo |
+| audit/blog/federated-learning-p2p-communication.md | 1 | 14 | done |
 | audit/blog/peer-to-peer-file-transfer-agents.md | 5 | 2 | done |
 | audit/blog/secure-research-collaboration-share-models-not-data.md | 4 | 5 | done |
 | audit/blog/a2a-agent-cards-over-pilot-tunnels.md | 4 | 4 | done |
@@ -138,7 +138,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/autonomous-agent-networking-distributed-ai.md | 0 | 12 | todo |
 | audit/blog/enterprise-private-networks-roadmap.md | 1 | 9 | todo |
 | audit/blog/hipaa-compliant-agent-communication.md | 2 | 6 | done |
-| audit/blog/ietf-internet-drafts-pilot-protocol-revision-01.md | 1 | 9 | todo |
+| audit/blog/ietf-internet-drafts-pilot-protocol-revision-01.md | 1 | 9 | done |
 | audit/blog/multi-agent-pipelines-openclaw-encrypted-tunnels.md | 3 | 3 | done |
 | audit/blog/openclaw-meets-pilot-agent-networking-one-command.md | 3 | 3 | done |
 | audit/blog/overlay-networking-automation-secure-ai-agent-solutions.md | 0 | 12 | todo |

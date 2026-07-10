@@ -27,3 +27,7 @@ Audited: 2026-07-10 · Sentences examined: 68 · verified: 30 · false: 1 · unv
 - arxiv.org/abs/1906.08935 ("Deep Leakage from Gradients", HTTP 200): gradient inversion / training-data reconstruction is documented research
 - Local site files: /blog/ai-agent-discovery-process-p2p-networks page exists; banner webp exists; en.wikipedia.org/pytorch.org/tensorflow.org/flower.ai links reachable
 - EXAMPLE: Python FL node code, sample addresses (1:0001.0002.0003 etc.), peers JSON output, test commands
+
+## Resolutions (2026-07-11 iter 61)
+- L326-334 (Go snippet: import pkg/driver already batch-fixed; driver.Connect() already fixed; d.SendFile(peerAddr, gradFile) — no such method): the Driver has no SendFile. Rewrote the "tighter integration" example to the real approach — d.Dial(peerAddr+":1001") then io.Copy(conn, file) — with io/os imports. (File transfer via CLI is the pilotctl send-file shown just above.)
+Build: npm run build green (345 pages).

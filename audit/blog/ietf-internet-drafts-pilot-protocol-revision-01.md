@@ -30,3 +30,7 @@ Audited: 2026-07-10 · Sentences examined: 72 · verified: 55 · false: 1 · unv
 - Frontmatter/JSON-LD: datePublished 2026-04-06 matches date "April 6, 2026"; headline/description match page title/description.
 - OPINION: "the implementation has grown substantially", "a solid core", "distinct position" framing.
 - EXAMPLE: frame diagram formatting, HKDF pseudo-code block.
+
+## Resolutions (2026-07-11 iter 61)
+- L178 (docs/ietf/ repo link 404 + make build tooling): the public repo has no docs/ietf. Removed the false repo-path + make-build claim; repointed to the IETF datatracker and the on-site /research/ietf/ mirror (both live).
+Build: npm run build green (345 pages).

@@ -323,14 +323,33 @@ for round_num in range(NUM_ROUNDS):
 
   <p>For a full decentralized FL system, integrate the <code>pilotctl</code> commands into your training loop as shown in the Python example above, or use the Go driver package directly for tighter integration:</p>
 
-  <pre><code>import "github.com/pilot-protocol/common/driver"
+  <pre><code>import (
+    "io"
+    "os"
+
+    "github.com/pilot-protocol/common/driver"
+)
 
 func exchangeGradients(peerAddr string, gradFile string) error {
     d, err := driver.Connect("")
     if err != nil {
         return err
     }
-    return d.SendFile(peerAddr, gradFile)
+    // Dial the peer on the data-exchange port (1001) and stream the file
+    conn, err := d.Dial(peerAddr + ":1001")
+    if err != nil {
+        return err
+    }
+    defer conn.Close()
+
+    f, err := os.Open(gradFile)
+    if err != nil {
+        return err
+    }
+    defer f.Close()
+
+    _, err = io.Copy(conn, f)
+    return err
 }</code></pre>
 
   <p>Communication overhead is the dominant bottleneck in federated learning. Removing the central server from the communication path, enabling direct peer-to-peer gradient exchange, and handling NAT traversal automatically cuts that overhead substantially. Pilot provides the transport layer so you can focus on the learning algorithms instead of the networking plumbing. Once nodes can reach each other directly, the next question is how they find and verify each other in the first place — see the <a href="https://pilotprotocol.network/blog/ai-agent-discovery-process-p2p-networks">AI agent discovery process on P2P networks</a> for a step-by-step walkthrough of capability announcement and trust verification.</p>

@@ -31,3 +31,7 @@ Audited: 2026-07-10 · Sentences examined: 96 · verified: 41 · false: 1 · unv
 - web4 source: Pilot P2P overlay, NAT traversal, encrypted tunnels, mutual trust, persistent virtual addresses (pkg/daemon, keyexchange/derive.go, tunnel.go); CLI + Go SDK (common@v0.5.0/driver), Python SDK (pre-verified sdk-python repo exists)
 - General protocol knowledge: HTTP/SOAP/Modbus request-response design, WiFi/NAT/firewall behavior, gateway single-point-of-failure reasoning — descriptive, consistent with public specs
 - Remaining sentences: opinion/marketing framing (TL;DR, "hybrid wins", pro tips, table qualitative ratings) — OPINION; scenario values — EXAMPLE
+
+## Resolutions (2026-07-11 iter 61)
+- L26 vs L258 (datePublished 2026-05-06 vs frontmatter "May 9, 2026"): fixed JSON-LD datePublished to 2026-05-09.
+Build: npm run build green (345 pages).
