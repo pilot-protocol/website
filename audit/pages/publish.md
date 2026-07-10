@@ -39,3 +39,6 @@ Note (adjacent, not a page-text falsehood): the live server also accepted the pr
 ## Audit note
 
 The live-submit probe used to verify server behavior created a real pending case in the review queue: `case_id io.pilot.audit-probe-0.1.0` (email nobody@example.com, unsigned release). It should be rejected/deleted by the review team.
+
+## Resolutions (2026-07-10, loop iteration 33)
+3 FALSE fixed: the page claimed email verification ("we send a one-time code to verify", "verify your email" step, "verified email") — but there is NO verification (client fetches only /api/preview + /api/submit; live submit with an unverified address was accepted). Removed all three verification claims → "we use it to reach you about your submission." 16 unverifiable accepted.

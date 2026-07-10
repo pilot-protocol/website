@@ -107,7 +107,7 @@ const bodyContent = `<h1>Audit & Compliance</h1>
 
   <p>Returns: <code>entries</code> (array of audit events, newest first). The <code>network_id</code> filter is optional - omit it (or set to 0) to get all events.</p>
 
-  <p>The ring buffer is in-memory only and does not persist across registry restarts. For persistent audit trails, use <a href="#export">audit export</a>.</p>
+  <p>The in-memory ring buffer is included in the registry snapshot, so it survives restarts when snapshot persistence (<code>-store</code>) is enabled; for durable external trails, use <a href="#export">audit export</a>.</p>
 
   <h2 id="export">Audit export</h2>
 
@@ -127,7 +127,7 @@ const bodyContent = `<h1>Audit & Compliance</h1>
     <thead><tr><th>Format</th><th>Value</th><th>Target system</th></tr></thead>
     <tbody>
       <tr><td><strong>Splunk HEC</strong></td><td><code>splunk_hec</code></td><td>Splunk HTTP Event Collector</td></tr>
-      <tr><td><strong>CEF / Syslog</strong></td><td><code>cef</code></td><td>ArcSight, QRadar, any CEF-compatible SIEM</td></tr>
+      <tr><td><strong>CEF / Syslog</strong></td><td><code>syslog_cef</code></td><td>ArcSight, QRadar, any CEF-compatible SIEM</td></tr>
       <tr><td><strong>JSON</strong></td><td><code>json</code></td><td>Any HTTP endpoint accepting JSON payloads</td></tr>
     </tbody>
   </table>
@@ -166,7 +166,7 @@ const bodyContent = `<h1>Audit & Compliance</h1>
 
   <pre><code>{
   "command": "set_audit_export",
-  "format": "cef",
+  "format": "syslog_cef",
   "endpoint": "https://siem.example.com/api/events",
   "admin_token": "your-admin-token"
 }</code></pre>
@@ -184,7 +184,7 @@ const bodyContent = `<h1>Audit & Compliance</h1>
   "admin_token": "your-admin-token"
 }</code></pre>
 
-  <p>The payload is the audit event object as-is - the same structure returned by <code>get_audit_log</code>. Use this for custom integrations, log aggregators, or data pipelines.</p>
+  <p>The exported JSON payload is the full audit <code>Entry</code>, including the <code>prev_hash</code>/<code>hash</code> chain fields — a superset of what <code>get_audit_log</code> returns (which omits those). Use this for custom integrations, log aggregators, or data pipelines.</p>
 
   <h2 id="webhooks">Webhooks & DLQ</h2>
 
@@ -192,7 +192,7 @@ const bodyContent = `<h1>Audit & Compliance</h1>
 
   <h3>Retry behavior</h3>
 
-  <p>Failed webhook deliveries are retried with exponential backoff. After all retries are exhausted, the event is moved to a <strong>dead-letter queue</strong> (DLQ) for manual inspection and replay.</p>
+  <p>Failed webhook deliveries are retried with exponential backoff. After all retries are exhausted, the event is moved to a <strong>dead-letter queue</strong> (DLQ) for manual inspection. There is no automatic replay, and DLQ entries have their details redacted.</p>
 
   <h3>Query the DLQ</h3>
 
@@ -201,11 +201,11 @@ const bodyContent = `<h1>Audit & Compliance</h1>
   "admin_token": "your-admin-token"
 }</code></pre>
 
-  <p>Returns: <code>entries</code> (array of failed webhook events with original payload, error, and timestamps).</p>
+  <p>Returns: <code>events</code> (array of failed webhook events: <code>event_id</code>, <code>action</code>, <code>timestamp</code>, redacted <code>details</code>) plus <code>count</code>.</p>
 
   <h3>Configure webhooks</h3>
 
-  <p>Webhooks can be configured via the <code>set_audit_export</code> command or through the <code>webhooks</code> field in a <a href="enterprise-blueprints">blueprint</a>.</p>
+  <p>Webhooks are configured via the <code>set_webhook</code> command (or the <code>webhooks</code> field in a <a href="enterprise-blueprints">blueprint</a>); <code>set_audit_export</code> configures the audit exporter, not webhooks.</p>
 
   <h2 id="metrics">Metrics</h2>
 
@@ -215,10 +215,10 @@ const bodyContent = `<h1>Audit & Compliance</h1>
     <thead><tr><th>Metric</th><th>Type</th><th>Description</th></tr></thead>
     <tbody>
       <tr><td><code>pilot_audit_events_total</code></td><td>Counter</td><td>Total audit events emitted, by action</td></tr>
-      <tr><td><code>pilot_audit_export_sent_total</code></td><td>Counter</td><td>Events successfully exported, by format</td></tr>
+      <tr><td><code>pilot_audit_exports_total</code></td><td>Counter</td><td>Audit export attempts</td></tr>
       <tr><td><code>pilot_audit_export_errors_total</code></td><td>Counter</td><td>Export delivery failures, by format</td></tr>
       <tr><td><code>pilot_webhook_deliveries_total</code></td><td>Counter</td><td>Total webhook delivery attempts</td></tr>
-      <tr><td><code>pilot_webhook_dlq_size</code></td><td>Gauge</td><td>Current number of events in the dead-letter queue</td></tr>
+      <tr><td><code>pilot_audit_action_total</code></td><td>Counter</td><td>Audit events, labeled by action</td></tr>
     </tbody>
   </table>
 

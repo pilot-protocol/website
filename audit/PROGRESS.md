@@ -73,10 +73,10 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/replace-message-broker-twelve-lines-go.md | 6 | 8 | done |
 | audit/blog/run-agent-network-without-cloud-dependency.md | 4 | 13 | todo |
 | audit/pages/cookies.md | 7 | 4 | done |
-| audit/pages/publish.md | 3 | 16 | todo |
+| audit/pages/publish.md | 3 | 16 | done |
 | audit/blog/move-beyond-rest-persistent-connections-for-agents.md | 5 | 9 | todo |
 | audit/blog/trust-model-agents-invisible-by-default.md | 6 | 6 | todo |
-| audit/docs/enterprise-audit.md | 8 | 0 | todo |
+| audit/docs/enterprise-audit.md | 8 | 0 | done |
 | audit/blog/ai-agent-discovery-process-p2p-networks.md | 3 | 14 | todo |
 | audit/blog/ai-agent-network-examples-secure-scalable-connectivity.md | 1 | 20 | todo |
 | audit/blog/cross-company-agent-collaboration-without-shared-infrastructure.md | 5 | 8 | todo |

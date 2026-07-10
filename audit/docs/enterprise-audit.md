@@ -30,3 +30,6 @@ Registry-side source of truth: /Users/calinteodor/Development/pilot-protocol/ren
 - General knowledge: CEF is ArcSight's Common Event Format; QRadar and other SIEMs document CEF-over-syslog ingestion (compat claim on line 165/130 target-system column).
 
 Notes (not flagged): line 147 "retried … up to 3 times" — code performs 3 total attempts (2 retries); counted as verified against the "Retry attempts: 3" table value but the prose slightly overstates. Line 104 `"network_id": 1` and endpoint/token values in JSON blocks are EXAMPLE values. Line 187 "Use this for custom integrations…" is advice (OPINION).
+
+## Resolutions (2026-07-10, loop iteration 33)
+8 FALSE fixed (verified vs rendezvous): audit ring buffer IS included in the snapshot (survives restarts with -store); format value is syslog_cef not cef (audit_export.go:183, blueprint.go:147 — "cef" silently produces JSON); exported JSON is the full Entry incl. prev_hash/hash (superset of get_audit_log); DLQ has NO replay and redacts details; DLQ returns key `events` (event_id/action/timestamp/redacted details + count) not `entries` with original payload/error; webhooks configured via set_webhook not set_audit_export; metric names corrected (pilot_audit_exports_total, pilot_audit_action_total — pilot_audit_export_sent_total / pilot_webhook_dlq_size don't exist). 0 unverifiable.
