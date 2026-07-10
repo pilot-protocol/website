@@ -22,7 +22,7 @@ const bodyContent = `<p>Your company is deploying AI agents. They process custom
 
   <p>Cloud-hosted agent platforms create vendor lock-in. If the platform has an outage, your agents stop communicating. If the vendor changes pricing, you pay or migrate. If the vendor shuts down, you start from scratch. For a detailed analysis of these risks, see <a href="/blog/run-agent-network-without-cloud-dependency">Run an Agent Network Without Cloud Dependency</a>.</p>
 
-  <p>A self-hosted Pilot network has no external dependencies. The entire stack -- registry, beacon, daemon, CLI -- is a single Go binary. No package managers, no runtime dependencies, no license servers, no phone-home telemetry.</p>
+  <p>A self-hosted Pilot network has no external dependencies. The stack is a handful of pure-Go binaries — the daemon and CLI on each node, and the rendezvous server (registry + beacon) you run centrally. No package managers, no runtime dependencies, no license servers.</p>
 
   <h3>Compliance and Audit</h3>
 
@@ -72,7 +72,7 @@ const bodyContent = `<p>Your company is deploying AI agents. They process custom
 
   <p>The rendezvous server runs the registry and beacon as a single process. Choose a machine with a static IP that all agents can reach. This can be a dedicated VM, a bare-metal server, or even a container -- the process uses minimal resources (under 20 MB RSS).</p>
 
-  <pre><code><span class="comment"># Install all Pilot binaries (~/.pilot/bin/{daemon,pilotctl,rendezvous,...})</span>
+  <pre><code><span class="comment"># Installs pilot-daemon + pilotctl to ~/.pilot/bin (the rendezvous server is a separate build)</span>
 <span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
 
 <span class="comment"># Start the rendezvous server</span>
@@ -100,7 +100,7 @@ WantedBy=multi-user.target</code></pre>
   <pre><code><span class="cmd">sudo systemctl enable pilot-rendezvous</span>
 <span class="cmd">sudo systemctl start pilot-rendezvous</span></code></pre>
 
-  <p>The registry persists state to <code>/var/lib/pilot/registry.json</code> by default. On restart, it reloads all agent registrations from this file. Configure your backup system to include this path.</p>
+  <p>The registry persists state to a JSON snapshot when you pass <code>-store &lt;path&gt;</code> (e.g. <code>/var/lib/pilot/registry.json</code>); with no <code>-store</code> it keeps state in memory only. On restart, it reloads all agent registrations from this file. Configure your backup system to include this path.</p>
 
   <div class="callout">
     <p><strong>Firewall rules:</strong> The rendezvous server needs TCP port 9000 (registry) and UDP port 9001 (beacon) open to all agent machines. No other inbound ports are required. The server does not need internet access -- it runs entirely within your network.</p>
@@ -144,7 +144,7 @@ WantedBy=multi-user.target</code></pre>
   <p>With the network created, join each agent and configure its visibility.</p>
 
   <pre><code><span class="comment"># On Agent A: join the corp-net network</span>
-<span class="cmd">pilotctl network join "corp-net"</span>
+<span class="cmd">pilotctl network join 42   # network_id, not a name</span>
 
 <span class="comment"># Register a human-readable hostname</span>
 <span class="cmd">pilotctl set-hostname "data-processor"</span>
@@ -163,11 +163,11 @@ WantedBy=multi-user.target</code></pre>
   <p>Repeat this on each agent machine, choosing a descriptive hostname for each:</p>
 
   <pre><code><span class="comment"># On Agent B</span>
-<span class="cmd">pilotctl network join "corp-net"</span>
+<span class="cmd">pilotctl network join 42   # network_id, not a name</span>
 <span class="cmd">pilotctl set-hostname "model-runner"</span>
 
 <span class="comment"># On Agent C</span>
-<span class="cmd">pilotctl network join "corp-net"</span>
+<span class="cmd">pilotctl network join 42   # network_id, not a name</span>
 <span class="cmd">pilotctl set-hostname "orchestrator"</span></code></pre>
 
   <p>With visibility set to private, these agents are registered with the rendezvous server but <strong>invisible to each other</strong>. No agent can resolve another agent's endpoint until a trust relationship is established. This is the foundation of Pilot's <a href="/blog/trust-model-agents-invisible-by-default">invisible-by-default trust model</a>.</p>
@@ -249,8 +249,8 @@ WantedBy=multi-user.target</code></pre>
   -tls-cert registry-cert.pem -tls-key registry-key.pem</span>
 
 <span class="comment"># On agents: pin the registry certificate</span>
-<span class="cmd">./pilot-daemon -registry 10.0.1.10:9000 -beacon 10.0.1.10:9001 \\
-  -registry-cert registry-cert.pem</span></code></pre>
+<span class="cmd">./pilot-daemon -registry 10.0.1.10:9000 -beacon 10.0.1.10:9001 \
+  -registry-tls -registry-fingerprint &lt;hex-sha256&gt;</span></code></pre>
 
   <p>Certificate pinning means agents will refuse to connect to a registry that presents a different certificate. This prevents man-in-the-middle attacks even if an attacker compromises your DNS or ARP tables.</p>
 
@@ -294,11 +294,11 @@ WantedBy=multi-user.target</code></pre>
 
   <pre><code><span class="comment"># Primary rendezvous server</span>
 <span class="cmd">./pilot-rendezvous -registry-addr :9000 -beacon-addr :9001 \\
-  -replicate-to standby.internal:9000</span>
+  -store /var/lib/pilot/registry.json -repl-token &lt;shared-token&gt;</span>
 
 <span class="comment"># Standby rendezvous server</span>
 <span class="cmd">./pilot-rendezvous -registry-addr :9000 -beacon-addr :9001 \\
-  -standby -primary primary.internal:9000</span></code></pre>
+  -standby primary.internal:9000 -repl-token &lt;shared-token&gt;</span></code></pre>
 
   <p>The primary pushes registration snapshots to the standby every 15 seconds via heartbeat. If the primary fails, a manual failover promotes the standby. Existing agent tunnels continue functioning during the failover window -- only new registrations and resolves are affected.</p>
   </section>

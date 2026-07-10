@@ -36,3 +36,6 @@ Audited: 2026-07-10 · Sentences examined: 78 · verified: 44 · false: 7 · unv
 - FALSE-section counts as the 6 lines of Go claim (L314) — depends on the same nonexistent OpenEventStream Go API flagged in the broker-post audit; counted under false there, here L88-163 Go examples share that defect: import path pilotprotocol/pkg/driver and OpenEventStream/Subscribe/Publish do not exist (common@v0.5.0/driver grep) — included in the 7 FALSE above via the code blocks.
 - EXAMPLE: task/payment event payloads, pay_abc123, broker-addr placeholders, terminal transcripts.
 - OPINION: "band-aid", "unacceptable trust model", "the decision point is clear", CTA copy.
+
+## Resolutions (2026-07-10, loop iteration 29)
+7 FALSE fixed: the entire "webhook bridge" premise was inverted — set-webhook makes the daemon POST Pilot events OUTBOUND to a URL (main.go:1215 "The daemon will POST JSON event payloads to this URL"), it is NOT an inbound receiver/bridge. Reframed to the two real directions: outbound via set-webhook (built in), inbound via your own tiny HTTP receiver calling pilotctl publish (no built-in bridge). 11 unverifiable accepted.

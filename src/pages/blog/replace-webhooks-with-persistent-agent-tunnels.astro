@@ -203,17 +203,18 @@ publish("<broker-addr>", "tasks.complete", {
     "result": "Analysis complete. 3 anomalies found."
 })</code></pre>
 
-  <h3>Webhook bridge for existing integrations</h3>
+  <h3>Bridging existing integrations</h3>
 
-  <p>If you have existing services that send webhooks, you can bridge them into the Pilot event stream with a small adapter. Set the webhook to point at <code>pilotctl set-webhook</code>:</p>
+  <p>Two directions, two mechanisms:</p>
+  <ul>
+    <li><strong>Pilot events &rarr; your HTTP endpoint (built in).</strong> <code>pilotctl set-webhook &lt;url&gt;</code> tells the daemon to <em>POST</em> JSON event payloads (new connections, incoming messages, etc.) out to your URL — useful for feeding legacy systems from Pilot.</li>
+    <li><strong>External webhooks &rarr; Pilot (a few lines of your own code).</strong> There is no built-in inbound bridge; write a tiny HTTP receiver that accepts the provider's POST and calls <code>pilotctl publish &lt;peer&gt; &lt;topic&gt; --data …</code> to put it on the event stream.</li>
+  </ul>
 
-  <pre><code><span class="comment"># Start the webhook bridge: receives HTTP POSTs, publishes to event stream</span>
-<span class="cmd">pilotctl set-webhook http://localhost:8080/events</span>
+  <pre><code><span class="comment"># Outbound: daemon POSTs Pilot events to your URL</span>
+<span class="cmd">pilotctl set-webhook https://your-service.example.com/pilot-events</span></code></pre>
 
-<span class="comment"># Now any webhook pointing at localhost:8080/events</span>
-<span class="comment"># gets bridged into the Pilot event stream</span></code></pre>
-
-  <p>This gives you a migration path. Existing webhook providers POST to the bridge. The bridge publishes to the event stream. Your agents subscribe to the stream. Over time, you replace webhook integrations with direct Pilot connections as your counterparties adopt the protocol.</p>
+  <p>This gives you a migration path in both directions while your counterparties adopt the protocol.</p>
   </section>
 
   <section>
@@ -340,7 +341,7 @@ publish("<broker-addr>", "tasks.complete", {
 
   <ol>
     <li><strong>Install Pilot on your agents:</strong> <code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></li>
-    <li><strong>Bridge existing webhooks:</strong> Use <code>pilotctl set-webhook</code> to pipe incoming webhooks into the event stream.</li>
+    <li><strong>Bridge integrations:</strong> Use <code>pilotctl set-webhook</code> to POST Pilot events to a legacy endpoint; for the reverse, run a tiny receiver that calls <code>pilotctl publish</code>.</li>
     <li><strong>New integrations use Pilot:</strong> When connecting agents you control, use the event stream directly instead of adding another webhook endpoint.</li>
     <li><strong>Decomission webhook infrastructure:</strong> As integrations move to Pilot, remove the corresponding webhook receivers, queues, and dead letter queues.</li>
   </ol>
@@ -352,8 +353,8 @@ publish("<broker-addr>", "tasks.complete", {
 <span class="cmd">pilotctl daemon start --email agent@example.com</span>
 <span class="cmd">pilotctl network join 1</span>
 
-<span class="comment"># Step 3: Bridge existing webhooks</span>
-<span class="cmd">pilotctl set-webhook http://localhost:8080/events</span>
+<span class="comment"># Step 3: Forward Pilot events to a legacy endpoint (outbound)</span>
+<span class="cmd">pilotctl set-webhook https://your-service.example.com/pilot-events</span>
 
 <span class="comment"># Step 4: Subscribe to events (replaces webhook consumer)</span>
 <span class="cmd">pilotctl subscribe <broker-addr> "tasks.*"</span></code></pre>

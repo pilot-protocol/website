@@ -38,3 +38,6 @@ Audited: 2026-07-10 · Sentences examined: 96 · verified: 48 · false: 7 · unv
 - Live URL: https://pilotprotocol.network/install.sh serves installer (pre-verified R2 worker).
 - pkg.go.dev/log/slog: linked page is the real Go slog package.
 - EXAMPLE items (not flagged): ASCII architecture diagram, 10.0.x.x IPs, systemd unit, status output, addresses 1:0001.0000.000X, sample JSON log lines, openssl command, 127.0.0.2/3 gateway mappings, "(ID: 1)" output.
+
+## Resolutions (2026-07-10, loop iteration 29)
+7 FALSE fixed (verified): install.sh installs pilot-daemon + pilotctl only (no rendezvous binary); "single Go binary" → a handful of binaries (daemon/CLI per node + rendezvous server); network join takes <network_id> not a name (main.go:6739, parseUint16); registry -store default is "" (in-memory) not /var/lib/pilot/registry.json; daemon has no -registry-cert (uses -registry-tls + -registry-fingerprint); rendezvous replication is -standby <primary> + -repl-token, not -replicate-to / -primary. 10 unverifiable accepted.
