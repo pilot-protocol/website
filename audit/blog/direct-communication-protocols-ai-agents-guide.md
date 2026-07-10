@@ -31,3 +31,9 @@ Audited: 2026-07-10 · Sentences examined: 102 · verified: 78 · false: 3 · un
 - src/data/apps.ts: all nine named apps exist in the catalogue (names correct; descriptions audited above)
 - Pre-cutoff public knowledge: MCP = Anthropic, JSON-RPC 2.0 over stdio/SSE, client-server tool access, no NAT traversal; A2A = Google, Agent Cards at /.well-known/agent.json, HTTP/JSON-RPC, SSE streaming, requires reachable endpoints; DIDs = W3C decentralized identifiers
 - Local files: banner direct-communication-protocols-ai-agents-guide.svg exists; canonicalPath matches
+
+## Resolutions (2026-07-11 iter 51)
+- L157 ("zero external dependencies, stdlib only"): web4/go.mod pulls coder/websocket, expr-lang/expr, golang.org/x/* + pilot modules. Reworded to "ships as a single static binary (CGO-free)".
+- L161 (wrong app descriptions): corrected every one to the real apps.ts tagline — cosift=grounded web search, sixtyfour=people/company intelligence, miren=PaaS deploys, plainweb=web page→Markdown, slipstream=Polymarket smart-money signals, smol=hardware-isolated microVMs, wallet=on-overlay USDC. AEGIS/otto kept.
+- L168-172 (pilotctl call plainweb serve/dir + short id): no top-level `call` (only `appstore call <id> <method>`); plainweb is web→Markdown not a static server. Changed to `pilotctl appstore call io.pilot.plainweb plainweb.help '{}'` and the install to the full id.
+Build: npm run build green (345 pages).

@@ -25,3 +25,8 @@ Audited: 2026-07-10 · Sentences examined: 62 · verified: 37 · false: 3 · unv
 - Sociology literature (pre-cutoff knowledge): Merton's Matthew Effect ("rich get richer"); Granovetter's strength-of-weak-ties and triadic-closure work; Dunbar's social brain hypothesis with ~5/15/50/150 layers; citation networks / social media preferential attachment; power-law degree distributions as signature of preferential attachment.
 - Local files: banner public/blog/banners/sociology-of-machines-626-agents.webp exists; canonicalPath matches filename.
 - Opinion (not flagged): "embryonic society," "research opportunity," divergence commentary (binary trust, instant formation, perfect memory — accurate descriptions of the trust model per web4 source: trust is binary and persists until untrust), predictions framed as such (bridge nodes, hierarchies).
+
+## Resolutions (2026-07-11 iter 51)
+- L33 (clustering "0.47"): the paper reports 0.373 (≈47× random). Corrected the coefficient to 0.373, kept the 47× multiplier.
+- L39 ("layers at 3, 8, and 15" + "~3x scaling ratio matches Dunbar"): the paper has no 3/8/15 layers or scaling-ratio analysis. Reworded to the paper's actual figures (mode 3, mean 6.3, natural breaks near the Dunbar 5-15/15-50 boundaries) and added the paper's own caution that the parallels are suggestive, not a demonstrated constraint.
+Build: npm run build green (345 pages).

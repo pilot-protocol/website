@@ -33,3 +33,8 @@ Audited: 2026-07-10 · Sentences examined: 112 · verified: 71 · false: 3 · un
 - Local site: internal links nat-traversal-ai-agents-deep-dive, zero-dependency-encryption-x25519-aes-gcm, build-multi-agent-network-five-minutes all exist in src/pages/blog/; banner webp exists in public/blog/banners/.
 - Honest-limitations section (lines 199–204): consistent with source — no radio layer, no device drivers, Go daemon, no HA/Alexa integrations found in repo. Verified as accurate self-description.
 - Example (not flagged): all terminal outputs (addresses, RTTs, byte counts, sensor readings), $5/month VPS, admin@home.local.
+
+## Resolutions (2026-07-11 iter 51)
+- L164-166/L181-190 (pilotctl peers --search matching tags): peers --search filters node-ID/hostname substring, never tags (main.go:5395). Reframed to function-named hostnames (the search does match those), fixed search terms to real hostname substrings ("plug"/"light"/"security-*"), and removed the impossible tag columns from the peers output.
+- L174 ("queries tags to find devices by function"): reworded — set-tags stores metadata; peer search matches hostname/node-ID, so encode the function in the hostname. Heading updated to "Hostnames and Tags".
+Build: npm run build green (345 pages).

@@ -154,22 +154,22 @@ const bodyContent = `
 
 <p><strong>Discovery.</strong> Agents register with a rendezvous registry and a nameserver. Peers can resolve addresses and capabilities without a central broker owning the trust decision.</p>
 
-<p>Pilot is written in Go with zero external dependencies (stdlib only), is open source under AGPL-3.0, and is available at <a href="https://github.com/pilot-protocol" target="_blank" rel="noopener">github.com/pilot-protocol</a>. SDKs are available for Go, Python (<code>pilotprotocol</code> on PyPI), Node, and Swift. Over 243k+ agents and users run on the network today.</p>
+<p>Pilot is written in Go and ships as a single static binary (CGO-free), is open source under AGPL-3.0, and is available at <a href="https://github.com/pilot-protocol" target="_blank" rel="noopener">github.com/pilot-protocol</a>. SDKs are available for Go, Python (<code>pilotprotocol</code> on PyPI), Node, and Swift. Over 243k+ agents and users run on the network today.</p>
 
 <h3 id="pilot-app-store">The Pilot app store: capabilities as IPC services</h3>
 
-<p>Pilot ships an app store for installable capability apps. Each app runs locally as a typed IPC service — JSON in, JSON out — and is auto-spawned when installed. Apps include AEGIS (security), cosift (image signing), sixtyfour (base64 codec), miren (DNS), otto (automation), plainweb (static serving), slipstream (streaming), smolmachines (small model inference), and wallet (key management).</p>
+<p>Pilot ships an app store for installable capability apps. Each app runs locally as a typed IPC service — JSON in, JSON out — and is auto-spawned when installed. Apps include AEGIS (prompt-injection firewall), cosift (grounded web search), sixtyfour (people &amp; company intelligence), miren (PaaS deploys), otto (browser automation), plainweb (web page → Markdown), slipstream (Polymarket smart-money signals), smol (hardware-isolated microVMs), and wallet (on-overlay USDC payments).</p>
 
 <p>The <code>discover → install → call</code> loop takes three commands:</p>
 
 <pre><code class="language-bash"># Discover available apps in the Pilot app store
 pilotctl appstore list
 
-# Install a capability app (example: plainweb static server)
-pilotctl appstore install plainweb
+# Install a capability app (example: plainweb, web page → Markdown)
+pilotctl appstore install io.pilot.plainweb
 
-# Call the installed app via typed IPC
-pilotctl call plainweb '{"action":"serve","dir":"/var/www"}'
+# Call the installed app via typed IPC (appstore call <id> <method> [json])
+pilotctl appstore call io.pilot.plainweb plainweb.help '{}'
 </code></pre>
 
 <p>Each installed app becomes a local IPC endpoint your agent can call with a typed JSON request. No HTTP server, no port management, no dependency wrangling.</p>
