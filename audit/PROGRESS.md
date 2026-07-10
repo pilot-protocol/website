@@ -73,9 +73,9 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/build-openclaw-agent-self-organizes-pilot.md | 7 | 5 | done |
 | audit/blog/cloud-networking-secure-peer-to-peer-distributed-ai.md | 6 | 8 | done |
 | audit/blog/mcp-plus-pilot-tools-and-network.md | 7 | 5 | done |
-| audit/blog/openclaw-agents-behind-nat-zero-config.md | 4 | 14 | todo |
+| audit/blog/openclaw-agents-behind-nat-zero-config.md | 4 | 14 | done |
 | audit/blog/replace-message-broker-twelve-lines-go.md | 6 | 8 | done |
-| audit/blog/run-agent-network-without-cloud-dependency.md | 4 | 13 | todo |
+| audit/blog/run-agent-network-without-cloud-dependency.md | 4 | 13 | done |
 | audit/pages/cookies.md | 7 | 4 | done |
 | audit/pages/publish.md | 3 | 16 | done |
 | audit/blog/move-beyond-rest-persistent-connections-for-agents.md | 5 | 9 | done |

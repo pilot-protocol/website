@@ -40,3 +40,11 @@ Audited: 2026-07-10 · Sentences examined: 62 · verified: 30 · false: 4 · unv
 - RFC 5737: 203.0.113.5 is TEST-NET-3 documentation address; 192.168.1.x RFC 1918 — proper EXAMPLE values.
 - Local site files: internal link nat-traversal-ai-agents-deep-dive exists; banner public/blog/banners/openclaw-agents-behind-nat-zero-config.webp exists.
 - OPINION (not flagged): "Zero configuration. Automatic detection. Universal connectivity." CTA, "the agent doesn't know or care how".
+
+## Resolutions (2026-07-11 iter 54)
+- L19 ("daemon detects the NAT type during STUN discovery and selects the approach"): no NAT-type classification in web4; strategy is retry-based (direct → hole-punch → relay). Reworded to the real retry-ladder behavior.
+- L68 (status JSON with fabricated nat_type/tunnel_port keys): ipc emits "endpoint" but no nat_type/tunnel_port. Removed both fabricated keys, kept address/endpoint/encrypted.
+- L75 ("shows the detected NAT type and STUN endpoint"): no nat_type field. Reduced to "shows the STUN-discovered endpoint".
+- L81-82 ("hole-punching 3 more attempts / switch to relay"): real budget is 3 direct + 4 relay (7 total), no separate 3-attempt punch phase. Reworded the retry list.
+- L89-104 (NAT distribution table presented as measured OpenClaw "empirical data"): the daemon can't classify NAT types, so this couldn't have been collected. Reframed the section as a representative distribution from published NAT research (surveys vary), not a live measurement, and softened the downstream percentages.
+Build: npm run build green (345 pages).

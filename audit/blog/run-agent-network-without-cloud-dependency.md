@@ -38,3 +38,8 @@ Audited: 2026-07-10 · Sentences examined: 86 · verified: 49 · false: 4 · unv
 - Local site files: internal links connect-ai-agents-behind-nat-without-vpn, private-agent-network-company, secure-ai-agent-communication-zero-trust, build-multi-agent-network-five-minutes all exist in src/pages/blog/.
 - EXAMPLE: virtual addresses 1:0001.0000.000x, 7a2c...f819 key, 192.168.1.50:4000, sensor-N provisioning loops, example.com emails.
 - OPINION: "rented, not owned", "design flaw", "phonebook not the phone network", "ownership principle", CTA copy.
+
+## Resolutions (2026-07-11 iter 54)
+- L133/L141/L189 ("MIT license"): the repo is AGPL-3.0 (gh api + web4/LICENSE). Corrected all three to AGPL-3.0.
+- L168 (broken step numbering "Step 4" with no Step 3, and "auto-approval rules"): the deployment section had Step 1/2/4/5. Renumbered Step 4→3 and Step 5→4. Reworded the trust step to "script the handshakes (or enable the daemon's -trust-auto-approve flag)" since no "auto-approval rule" command exists.
+Build: npm run build green (345 pages).
