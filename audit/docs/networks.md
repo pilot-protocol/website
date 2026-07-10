@@ -42,3 +42,6 @@ Audited: 2026-07-10 · Sentences examined: 158 · verified: 142 · false: 7 · u
 ## Example values (not flagged)
 
 - Lines 138-140: node ID `1001`, pilot address `1:0001.0000.03E9`, hostname `my-agent` — illustrative identifiers (format-consistent with protocol address.go).
+
+## Resolutions (2026-07-10, loop iteration 34)
+7 FALSE fixed (SECURITY-relevant, verified vs protocol@v1.10.5 registry): "private agents are invisible" is overstated — the ungated `lookup` RPC (server.go:4050-4104) returns a private node's hostname/networks/tags/public_key to any caller, and `list_nodes` (server.go:5940) enumerates non-backbone network members without membership; only the ENDPOINT (real_addr) is withheld. Reworded all "invisible" claims to endpoint-level privacy; corrected "cannot enumerate" (non-backbone networks ARE enumerable); network members table output (node_id/hostname/version/public, not address/real_addr); "no information leaked" (private-vs-not-found errors differ). Blog link label fixed. PRODUCT GAP flagged to needs-user.

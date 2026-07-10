@@ -5,7 +5,7 @@ const bodyContent = `<h1>Python SDK</h1>
   <p class="subtitle">Native Python client library for Pilot Protocol with CLI tools and type hints.</p>
 
   <div class="callout">
-    <p><strong>Package:</strong> <code>pilotprotocol</code> &nbsp;&bull;&nbsp; <strong>PyPI:</strong> <a href="https://pypi.org/project/pilotprotocol/">pypi.org/project/pilotprotocol</a> &nbsp;&bull;&nbsp; <strong>Requires:</strong> Python 3.10+</p>
+    <p><strong>Package:</strong> <code>pilotprotocol</code> &nbsp;&bull;&nbsp; <strong>PyPI:</strong> <a href="https://pypi.org/project/pilotprotocol/">pypi.org/project/pilotprotocol</a> &nbsp;&bull;&nbsp; <strong>Requires:</strong> Python 3.9+</p>
   </div>
 
   <div class="toc">
@@ -73,7 +73,7 @@ with Driver() as d:
 
   <h4>Core Methods</h4>
 
-  <p><strong><code>info()</code></strong> - Returns the full daemon-info dict (address, hostname, uptime_secs, peers, connections, bytes_sent / bytes_recv, encryption status, etc. — same shape as <code>pilotctl info --json</code>, with per-peer endpoints redacted by the daemon).</p>
+  <p><strong><code>info()</code></strong> - Returns the full daemon-info dict (address, hostname, uptime_secs, peers, connections, bytes_sent / bytes_recv, encryption status, etc. — similar to <code>pilotctl info --json</code>, but note the SDK returns per-peer <code>endpoint</code> values unredacted — the redaction seen in <code>pilotctl</code> output is done by the CLI's display layer, not the daemon).</p>
   <pre><code class="language-python">d.info() -&gt; dict
 # {"address": "0:0000.0000.0042", "hostname": "my-agent", "uptime_secs": 3600,
 #  "peers": 5, "encrypted_peers": 5, "bytes_sent": 1234, ...}</code></pre>
@@ -106,11 +106,13 @@ with Driver() as d:
   <pre><code class="language-python">def on_event(topic, data):
     print(f"{topic}: {data}")
 
-# Exact match — receives only the "sensor.temp" topic
-d.subscribe_event("other-agent", "sensor.temp", on_event)
+# subscribe_event is a generator — iterate it to receive events
+for event in d.subscribe_event("other-agent", "sensor.temp"):
+    on_event(event)
 
-# Catch-all — receives every topic the peer publishes
-d.subscribe_event("other-agent", "*", on_event)</code></pre>
+# Catch-all — "*" receives every topic the peer publishes
+for event in d.subscribe_event("other-agent", "*"):
+    on_event(event)</code></pre>
 
   <h4>Administration Methods</h4>
   <ul>
@@ -124,7 +126,7 @@ d.subscribe_event("other-agent", "*", on_event)</code></pre>
   <p>Represents an active stream connection. Supports context management (<code>with</code> statement).</p>
   <ul>
     <li><code>write(data: bytes) -&gt; int</code> - Write data, returns bytes written</li>
-    <li><code>read(size: int = 65536) -&gt; bytes</code> - Read data (blocks until data arrives)</li>
+    <li><code>read(size: int = 4096) -&gt; bytes</code> - Read data (blocks until data arrives)</li>
     <li><code>close()</code> - Close the connection</li>
   </ul>
 
@@ -193,7 +195,7 @@ with Driver() as d:
   <p><strong>Common exceptions:</strong></p>
   <ul>
     <li><code>PilotError</code> - Connection failures, protocol errors</li>
-    <li><code>FileNotFoundError</code> - Library or file not found</li>
+    <li><code>FileNotFoundError</code> - the native library could not be located (a missing file in <code>send_file</code> raises <code>PilotError</code>, not this)</li>
     <li><code>ValueError</code> - Invalid parameters</li>
   </ul>
 
@@ -233,11 +235,11 @@ with Driver() as d:
   <ul>
     <li><a href="https://pypi.org/project/pilotprotocol/">PyPI Package</a></li>
     <li><a href="https://github.com/pilot-protocol/sdk-python">SDK Source Code</a></li>
-    <li><a href="https://github.com/pilot-protocol/sdk-python/tree/main/examples">Example Code</a></li>
+    <li><a href="https://github.com/pilot-protocol/sdk-python">SDK repository</a></li>
     <li><a href="/blog/python-sdk-pilot-protocol">Announcement Blog Post</a></li>
   </ul>
 
-  <p>Further reading: <a href="/blog/build-openclaw-agent-self-organizes-pilot">Build an OpenClaw Agent That Self-Organizes</a> uses the Python SDK to build autonomous agents on the Pilot network.</p>
+  <p>Further reading: <a href="/blog/build-openclaw-agent-self-organizes-pilot">Build an OpenClaw Agent That Self-Organizes</a> builds autonomous Python agents on Pilot (via the <code>pilotctl</code> CLI).</p>
 `;
 ---
 <DocLayout

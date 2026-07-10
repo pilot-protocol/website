@@ -32,3 +32,6 @@ Audited: 2026-07-10 · Sentences examined: 110 · verified: 91 · false: 7 · un
 - **Local site files (src/pages/)**: blog/python-sdk-pilot-protocol.astro exists (L237); blog/build-openclaw-agent-self-organizes-pilot.astro exists (L240 link target); docs/go-sdk.astro + docs/node-sdk.astro exist (frontmatter prev/next L248-249); all 11 TOC anchors (#installation … #architecture) match ids in this page; 24 headings are accurate structural labels.
 - **EXAMPLE (not flagged)**: you@example.com, `0:0000.0000.0042` address, "other-agent"/"my-agent" hostnames, sample outputs, "no route to host" sample error, echo/send/pubsub/file-transfer code blocks (~9 units), sample info JSON at L78-79.
 - **OPINION**: "Complete Python SDK documentation…" (frontmatter description, L245).
+
+## Resolutions (2026-07-10, loop iteration 34)
+7 FALSE fixed (verified vs sdk-python + PyPI): requires Python 3.9+ not 3.10+ (pyproject requires-python >=3.9); info() returns endpoints UNREDACTED (redaction is pilotctl's display layer, not the daemon); subscribe_event is a GENERATOR — must be iterated (the callback examples were no-ops) → rewrote to for-loops; read() default is 4096 not 65536; missing file in send_file raises PilotError not FileNotFoundError; examples/ dir 404 → link to repo root; the OpenClaw blog uses the pilotctl CLI, not the Python SDK. 2 unverifiable accepted.

@@ -26,3 +26,6 @@ Audited: 2026-07-10 · Sentences examined: 96 · verified: 72 · false: 7 · unv
 
 ### Notes (omissions, not flagged)
 - Limits section omits the per-publisher publish rate limit: 100 events/sec, burst 200 (eventstream@v0.2.2 service.go publishRatePerSecond/publishBurstBudget); rate-limited publishes are silently dropped and emit `pubsub.rate_limited` (also absent from the webhooks callout's event list).
+
+## Resolutions (2026-07-10, loop iteration 34)
+7 FALSE fixed: subscribe needs --json to emit JSON/NDJSON (bare subscribe prints "[topic] payload") → added --json to the JSON examples + pipe recipes; "events.*" is a valid literal topic, not invalid syntax (opaque strings, matches literally); "no retries" wrong — broker retries once (~20ms) and drops after 3 failures; self-publish monitoring/coordination examples corrected (publish targets a peer's broker, subscribe to your own — self-publish fails with connection_failed, live-confirmed). 0 unverifiable.
