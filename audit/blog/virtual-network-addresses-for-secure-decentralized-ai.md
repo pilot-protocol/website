@@ -33,3 +33,8 @@ Audited: 2026-07-10 · Sentences examined: 88 · verified: 36 · false: 2 · unv
 - RFC 5737: multiaddr example /ip4/192.0.2.1/... uses documentation range (line 220) — EXAMPLE.
 
 Remaining sentences (definitions of virtual addresses, isolation/scalability property lists, pro tips, FAQ restatements) are accurate general networking prose or advice — classified VERIFIED-generic or OPINION as appropriate.
+
+## Resolutions (2026-07-11 iter 56)
+- L100 (FIPS = "Fully Isolated P2P Spaces"): the 0ceanSlim/fips README expands it as "Free Internetworking Peering System". Corrected the acronym (the npub→fd00::/8 TUN mapping was already correct).
+- L211 (CIDR-overlap claim attributed to libp2p issue #2977): #2977 is about a dual-stack circuit-relay reservation failure, not CIDR overlap/VCN peering. Removed the misattributed citation; kept the (accurate, general) point that overlapping CIDRs must be renumbered before peering.
+Build: npm run build green (345 pages).

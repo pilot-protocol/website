@@ -24,3 +24,8 @@ Audited: 2026-07-10 · Sentences examined: 76 · verified: 44 · false: 2 · unv
 - General MCP knowledge: MCP = Model Context Protocol, JSON-RPC client/server tool interface, agent→tool axis — matches MCP spec.
 - General networking: webhook/broker/shared-DB/pub-sub trade-off descriptions (L17-23) — standard, low-risk.
 - EXAMPLE: 1,842 rows, "Q4 up 23%", RTT 34ms output, pilot_send/pilot_receive pseudocode, scraper→analyzer→reporter pipeline, cfo@company.com.
+
+## Resolutions (2026-07-11 iter 56)
+- L71 Go `d.Dial("reporter-agent", 1001)` (two-arg + hostname): Dial takes one address-string arg and doesn't resolve hostnames. Changed to driver.Connect + ResolveHostname + Dial(fmt.Sprintf("%s:1001", info["address"])). Also fixed the Python fragment to the real sync Driver() API.
+- L49 ("trust handshake and encrypted tunnel established automatically"): trust is not automatic; the peer must approve (or run -trust-auto-approve). Reworded.
+Build: npm run build green (345 pages).

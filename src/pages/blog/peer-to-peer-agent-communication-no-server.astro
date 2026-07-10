@@ -150,11 +150,18 @@ pilotctl connect agent-b --message '{"task":"analyze","payload":"data..."}'
 
   <pre><code>package main
 
-import "github.com/pilot-protocol/common/driver"
+import (
+    "fmt"
+
+    "github.com/pilot-protocol/common/driver"
+)
 
 func main() {
-    d, _ := driver.New("/tmp/pilot.sock")
-    conn, _ := d.Dial("agent-b", 1001)
+    d, _ := driver.Connect("/tmp/pilot.sock")
+
+    // Resolve the peer's hostname to its pilot address, then dial :1001
+    info, _ := d.ResolveHostname("agent-b")
+    conn, _ := d.Dial(fmt.Sprintf("%s:1001", info["address"]))
 
     // Send data
     conn.Write([]byte("{\"task\":\"analyze\",\"rows\":1842}"))
@@ -171,9 +178,10 @@ func main() {
 
   <pre><code>import pilotprotocol as pilot
 
-async with pilot.connect("agent-b", port=1001) as conn:
-    await conn.send(b'{"task": "analyze", "rows": 1842}')
-    response = await conn.recv()
+with pilot.Driver() as d:
+    conn = d.dial("1:0001.A3F2.00B1:1001")  # agent-b's pilot address
+    conn.write(b'{"task": "analyze", "rows": 1842}')
+    response = conn.read()
     print("Response:", response)</code></pre>
   </section>
 

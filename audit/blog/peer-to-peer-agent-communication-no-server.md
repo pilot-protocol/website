@@ -23,3 +23,8 @@ Audited: 2026-07-10 · Sentences examined: 92 · verified: 48 · false: 2 · unv
 - Live curl 2026-07-10: https://pilotprotocol.network/install.sh → 200.
 - Local site files: /for/p2p, /blog/nat-traversal-ai-agents-deep-dive, banner webp all exist under src/pages / public.
 - Opinion/architecture reasoning (middlemen problems, when-to-use lists, comparison-table qualitative cells): OPINION. Terminal outputs, RTT figures, sample address 1:0001.A3F2.00B1, endpoint 34.148.103.117:4000: EXAMPLE.
+
+## Resolutions (2026-07-11 iter 56)
+- L151-168 Go example: import already common/driver (batch fix). driver.New -> driver.Connect; Dial takes one arg (Dial doesn't resolve hostnames) -> ResolveHostname + Dial(fmt.Sprintf("%s:1001", info["address"])); added the fmt import (used by fmt.Println).
+- L172-177 Python example: real sdk-python API is a synchronous Driver() context manager, not module-level async connect. Rewrote to `with pilot.Driver() as d: conn = d.dial("<addr>:1001"); conn.write/read`.
+Build: npm run build green (345 pages).

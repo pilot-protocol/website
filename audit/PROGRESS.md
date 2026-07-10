@@ -120,7 +120,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/a2a-agent-cards-over-pilot-tunnels.md | 4 | 4 | done |
 | audit/blog/encryption-protocols-for-secure-ai-systems-a-practical-guide.md | 1 | 13 | todo |
 | audit/blog/sociology-of-machines-626-agents.md | 3 | 7 | done |
-| audit/blog/connecting-mcp-servers-across-agents.md | 2 | 9 | todo |
+| audit/blog/connecting-mcp-servers-across-agents.md | 2 | 9 | done |
 | audit/blog/network-security-for-multi-agent-systems-key-strategies.md | 1 | 12 | todo |
 | audit/blog/scaling-openclaw-fleets-thousands-agents.md | 1 | 12 | todo |
 | audit/docs/concepts.md | 5 | 0 | done |
@@ -131,7 +131,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/how-ai-agents-discover-each-other.md | 2 | 8 | done |
 | audit/blog/trustless-protocols-that-secure-decentralized-ai-systems.md | 0 | 14 | todo |
 | audit/blog/userspace-tcp-over-udp-stack-pure-go.md | 3 | 5 | done |
-| audit/blog/virtual-network-addresses-for-secure-decentralized-ai.md | 2 | 8 | todo |
+| audit/blog/virtual-network-addresses-for-secure-decentralized-ai.md | 2 | 8 | done |
 | audit/blog/why-ai-agents-need-network-stack.md | 2 | 8 | done |
 | audit/blog/aegis-agent-firewall-prompt-injection.md | 4 | 1 | done |
 | audit/docs/configuration.md | 4 | 1 | done |
@@ -154,7 +154,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/pages/index.md | 2 | 5 | done |
 | audit/blog/advanced-network-automation-tips-secure-ai-systems.md | 2 | 4 | todo |
 | audit/blog/claude-agent-teams-over-pilot.md | 2 | 4 | todo |
-| audit/blog/peer-to-peer-agent-communication-no-server.md | 2 | 4 | todo |
+| audit/blog/peer-to-peer-agent-communication-no-server.md | 2 | 4 | done |
 | audit/docs/firewalls.md | 2 | 4 | done |
 | audit/docs/mcp-setup.md | 3 | 1 | done |
 | audit/blog/ai-networking-challenges-decentralized-systems.md | 0 | 9 | todo |
