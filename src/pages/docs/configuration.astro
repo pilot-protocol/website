@@ -31,7 +31,7 @@ const bodyContent = `<h1>Configuration</h1>
   "webhook": "http://localhost:8080/events"
 }</code></pre>
 
-  <p>CLI flags override environment variables, which override config file values. The config file is created by <code>pilotctl init</code> and can be updated with <code>pilotctl config --set</code>.</p>
+  <p>CLI flags take highest precedence. For <code>pilotctl daemon start</code>, the config file is consulted before environment variables (a value in <code>~/.pilot/config.json</code> beats the matching <code>PILOT_*</code> env var); some direct paths read env first. The config file is created by <code>pilotctl init</code> and can be updated with <code>pilotctl config --set</code>.</p>
 
   <h2 id="commands">Config commands</h2>
 
@@ -132,11 +132,11 @@ const bodyContent = `<h1>Configuration</h1>
   <table>
     <thead><tr><th>Flag</th><th>Default</th><th>Description</th></tr></thead>
     <tbody>
-      <tr><td>-keepalive &lt;dur&gt;</td><td>30s</td><td>Keepalive probe interval</td></tr>
+      <tr><td>-keepalive &lt;dur&gt;</td><td>60s</td><td>Keepalive probe interval</td></tr>
       <tr><td>-idle-timeout &lt;dur&gt;</td><td>120s</td><td>Idle connection timeout</td></tr>
       <tr><td>-syn-rate-limit &lt;n&gt;</td><td>100</td><td>Max SYN packets per second</td></tr>
       <tr><td>-max-conns-per-port &lt;n&gt;</td><td>1024</td><td>Max connections per port</td></tr>
-      <tr><td>-max-conns-total &lt;n&gt;</td><td>4096</td><td>Max total connections</td></tr>
+      <tr><td>-max-conns-total &lt;n&gt;</td><td>65536</td><td>Max total connections</td></tr>
       <tr><td>-time-wait &lt;dur&gt;</td><td>10s</td><td>TIME_WAIT duration</td></tr>
       <tr><td>-registry-tls</td><td>false</td><td>Enable TLS for registry connection</td></tr>
       <tr><td>-registry-fingerprint &lt;hex&gt;</td><td>(none)</td><td>SHA-256 fingerprint of registry TLS cert</td></tr>
@@ -149,7 +149,7 @@ const bodyContent = `<h1>Configuration</h1>
       <tr><td>-transport &lt;mode&gt;</td><td>udp</td><td>Tunnel transport: <code>udp</code> (default — binds a UDP socket, today's behavior) or <code>compat</code> (opt-in — tunnels Pilot packets over WSS to the beacon for daemons in UDP-blocked environments such as Docker on Render/Railway/Vercel/Lambda). See <a href="firewalls">Running pilot behind a firewall</a>.</td></tr>
       <tr><td>-compat-beacon &lt;url&gt;</td><td>wss://beacon.pilotprotocol.network/v1/compat</td><td>WSS endpoint used when <code>-transport=compat</code></td></tr>
       <tr><td>-tls-trust &lt;mode&gt;</td><td>system</td><td>Compat-mode TLS trust store: <code>system</code> (default — OS trust store; matches the public beacon's Let's Encrypt cert) or <code>pinned</code> (Pilot CA root embedded in the daemon binary; rejects any cert not signed by it). Default will flip back to <code>pinned</code> in a future release once the production Pilot CA root ships embedded in client binaries. End-to-end Ed25519 protects payload identity in both modes.</td></tr>
-      <tr><td>-fake-listen-addr &lt;addr&gt;</td><td>(none)</td><td>Advertise this listen_addr to the registry instead of the real one</td></tr>
+      <tr><td>-advertise-endpoint &lt;host:port&gt;</td><td>(none)</td><td>Override the STUN-discovered endpoint advertised to the registry (for k8s pods where STUN returns unreachable IPs)</td></tr>
     </tbody>
   </table>
 

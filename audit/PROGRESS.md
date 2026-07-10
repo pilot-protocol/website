@@ -13,6 +13,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | GA4 loads unconditionally on /plain (GDPR) | FIXED — removed GA4 from PlainLayout entirely (plain = JS-stripped agent surface) | website #116 | n/a |
 
 ## Needs user review
+- **pilot-mcp npm name is squatted (UX/security hazard)**: npx -y pilot-mcp installs an unrelated browser-automation MCP server (maintainer tacosyhorchata, npm latest 0.4.2 with a postinstall script), NOT the Pilot overlay MCP server. Pilot's 0.1.0 was never published. Docs now say build-from-source. Fix: publish under a scoped name (e.g. @pilot-protocol/mcp) and update mcp-setup + any blog referencing npx -y pilot-mcp.
 - **Private-node directory metadata leak (security)**: the docs claimed private agents are "invisible", but the registry's lookup RPC returns a private node's hostname/networks/tags/public_key to any caller with no trust/membership check (protocol registry server.go:4050-4104), and list_nodes enumerates non-backbone network members without membership. Only the endpoint is withheld. Docs now say "endpoint-level privacy"; if full metadata privacy is intended, the registry needs a requester gate on lookup/list_nodes.
 - **Sign the handshake justification (small crypto gap)**: the Ed25519 handshake signature covers only `handshake:<node_id>:<peer_id>`, not the justification text (handshake@v0.2.1 handshake.go:37). An operator reviewing a request cannot cryptographically trust the justification. Consider including it in the signed bytes. Website copy is now honest about it.
 - **Gateway positioning (product decision)**: pilot-protocol/gateway is a Go library only — the standalone pilot-gateway binary has no public cmd/ source, and the pilotctl extras gateway list/map/unmap/stop subcommands are stubs. Public users cannot use the gateway CLI workflow as documented. Options: publish cmd/gateway, or reposition the gateway as an embeddable library (docs now say library + caveated). Your call.
@@ -131,7 +132,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/virtual-network-addresses-for-secure-decentralized-ai.md | 2 | 8 | todo |
 | audit/blog/why-ai-agents-need-network-stack.md | 2 | 8 | todo |
 | audit/blog/aegis-agent-firewall-prompt-injection.md | 4 | 1 | todo |
-| audit/docs/configuration.md | 4 | 1 | todo |
+| audit/docs/configuration.md | 4 | 1 | done |
 | audit/blog/autonomous-agent-networking-distributed-ai.md | 0 | 12 | todo |
 | audit/blog/enterprise-private-networks-roadmap.md | 1 | 9 | todo |
 | audit/blog/hipaa-compliant-agent-communication.md | 2 | 6 | todo |
@@ -144,7 +145,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/persistent-address-strategies-for-distributed-ai-systems.md | 1 | 9 | todo |
 | audit/blog/protocol-wrapping-secure-peer-to-peer-ai-systems.md | 0 | 12 | todo |
 | audit/blog/python-sdk-pilot-protocol.md | 3 | 3 | todo |
-| audit/docs/integration.md | 4 | 0 | todo |
+| audit/docs/integration.md | 4 | 0 | done |
 | audit/apps/[id].md | 3 | 2 | todo |
 | audit/blog/overlay-network-ai-agents.md | 3 | 2 | todo |
 | audit/blog/why-autonomous-agents-need-private-discovery.md | 0 | 11 | todo |
@@ -153,7 +154,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/claude-agent-teams-over-pilot.md | 2 | 4 | todo |
 | audit/blog/peer-to-peer-agent-communication-no-server.md | 2 | 4 | todo |
 | audit/docs/firewalls.md | 2 | 4 | todo |
-| audit/docs/mcp-setup.md | 3 | 1 | todo |
+| audit/docs/mcp-setup.md | 3 | 1 | done |
 | audit/blog/ai-networking-challenges-decentralized-systems.md | 0 | 9 | todo |
 | audit/blog/network-tunnels-ai-secure-communication-autonomous-agents.md | 0 | 9 | todo |
 | audit/docs/enterprise-policies.md | 3 | 0 | todo |
