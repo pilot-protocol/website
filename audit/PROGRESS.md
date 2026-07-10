@@ -94,11 +94,11 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/scriptorium-replace-agentic-active-research-ready-intelligence.md | 2 | 16 | todo |
 | audit/blog/chain-ai-models-across-machines.md | 4 | 9 | todo |
 | audit/blog/http-services-over-encrypted-overlay.md | 6 | 3 | todo |
-| audit/docs/error-codes.md | 6 | 3 | todo |
+| audit/docs/error-codes.md | 6 | 3 | done |
 | audit/docs/networks.md | 7 | 0 | done |
 | audit/docs/pubsub.md | 7 | 0 | done |
 | audit/blog/multi-agent-system-networking-guide-ai-developers.md | 2 | 14 | todo |
-| audit/docs/pilot-director.md | 6 | 2 | todo |
+| audit/docs/pilot-director.md | 6 | 2 | done |
 | audit/pages/for-networks.md | 5 | 5 | todo |
 | audit/blog/ai-networking-best-practices-secure-scalable-systems.md | 0 | 19 | todo |
 | audit/blog/distributed-rag-without-central-knowledge-base.md | 4 | 7 | todo |
@@ -107,7 +107,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/ietf-internet-draft-pilot-protocol.md | 2 | 12 | todo |
 | audit/blog/legacy-protocol-integration-for-secure-distributed-ai.md | 1 | 15 | todo |
 | audit/blog/multi-cloud-networking-decentralized-ai-systems.md | 1 | 15 | todo |
-| audit/docs/messaging.md | 6 | 0 | todo |
+| audit/docs/messaging.md | 6 | 0 | done |
 | audit/blog/boarding-pilotagent-org-alternatives-3.md | 0 | 17 | todo |
 | audit/blog/direct-communication-protocols-ai-agents-guide.md | 3 | 8 | todo |
 | audit/blog/enterprise-phase-3-rbac-policies-audit-fleet.md | 4 | 5 | todo |

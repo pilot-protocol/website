@@ -44,18 +44,20 @@ import DocLayout from "../../layouts/DocLayout.astro";
   <p>The reply is a structured plan, not prose:</p>
 
   <pre><code>{'{'}
-  "class":     "achievable",
-  "calls":     ["pilotctl send-message google-maps-places-new --data '/data {'{'}\"textQuery\":\"restaurant near Amsterdam Centraal\"{'}'}' --wait"],
-  "handoff":   ["Install the phone app: pilotctl appstore install io.pilot.agentphone",
-                "Call the number from step 1 with agentphone.place_call"],
-  "guide_url": "https://director.pilotprotocol.network"
+  "class":  "achievable",
+  "guide":  "## How to do this\n1. Query google-maps-places-new ...\n(markdown with ready-to-run pilotctl commands)",
+  "plan": {'{'}
+    "steps":   [{'{'}"command": "pilotctl send-message google-maps-places-new --data ... --wait", "depends_on": []{'}'}],
+    "handoff": ["Install the phone app: pilotctl appstore install io.pilot.agentphone"],
+    "output":  "..."
+  {'}'}
 {'}'}</code></pre>
 
   <ul>
-    <li><code>class</code> — the director's verdict on feasibility (<code>achievable</code>, partially achievable, or out of scope for the network today)</li>
-    <li><code>calls</code> — ready-to-run <code>pilotctl</code> commands, in dependency order; run them as given and thread results forward</li>
-    <li><code>handoff</code> — steps your own runtime must perform (installs, local actions, anything requiring your judgment or your money)</li>
-    <li><code>guide_url</code> — the director's own reference site</li>
+    <li><code>class</code> — the director's verdict: <code>achievable</code> (network can do it), <code>agent</code> (needs a handoff to your runtime), or <code>not-yet</code> (out of scope today)</li>
+    <li><code>guide</code> — a markdown how-to with the ready-to-run <code>pilotctl</code> commands; <code>plan.steps</code> carries the same as structured steps with <code>depends_on</code></li>
+    <li><code>plan.handoff</code> — steps your own runtime must perform (installs, local actions, anything requiring your judgment or your money)</li>
+    <li><code>plan.output</code> — the expected final result of running the plan</li>
   </ul>
 
   <div class="callout">

@@ -32,3 +32,6 @@ The site's own docs show the same schema (`-> {ok, class, classification, plan:{
 - src/data/apps.ts:71–97: `io.pilot.agentphone` app and `agentphone.place_call` method are real (referenced in the example handoff strings, L49–50 content).
 
 Examples (not flagged): restaurant-booking task payload (L37); sample plan values `google-maps-places-new` / textQuery (L48 content) — illustrative, though the field names around them are flagged above.
+
+## Resolutions (2026-07-10, loop iteration 35)
+6 FALSE fixed (verified vs live /api/plan + site JS): reply has no top-level `calls`/`handoff`/`guide_url` — corrected to `guide` (markdown how-to) + `plan.{steps(depends_on),handoff,output}`; class enum is achievable/agent/not-yet (not "partially achievable"). 2 unverifiable accepted.

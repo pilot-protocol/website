@@ -36,3 +36,6 @@ Audited: 2026-07-10 · Sentences examined: 125 · verified: 98 · false: 6 · un
 - Local site files: /plans (src/pages/plans.astro, has "Private Network" tier), /docs/troubleshooting, /docs/diagnostics, /docs/integration all exist — callout links, plans link, prev/next frontmatter verified. Subtitle/meta description accurately describe page contents.
 
 Notes: two error strings are documented in abbreviated form but counted VERIFIED because the actual error is a superset and grep-discoverable: "handshake already pending" (actual inserts "request") and "invite-only networks require invite flow" (actual: "...require invite_to_network + respond_invite flow"). Consider quoting them verbatim.
+
+## Resolutions (2026-07-10, loop iteration 35)
+6 FALSE fixed (verified vs protocol/rendezvous source): "invalid checksum" → "checksum mismatch"; "invalid magic bytes" → unknown magic is silently dropped (no error); "node already registered" → "registration requires public_key" / "registry full"; "hostname already taken" → "hostname already in use"; "connection timed out" → "dial timeout" (CLI code `timeout`); "free networks are limited to 3 agents" → "network membership limit reached" (Policy.MaxMembers, no free-tier string). 3 unverifiable accepted.
