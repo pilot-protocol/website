@@ -29,3 +29,7 @@ Audited: 2026-07-10 · Sentences examined: 96 · verified: 54 · false: 1 · unv
 - Local site: internal links /blog/hipaa-compliant-agent-communication, /blog/connect-agents-across-aws-gcp-azure-without-vpn, secure-ai-agent-communication-zero-trust, nat-traversal-ai-agents-deep-dive, zero-dependency-encryption-x25519-aes-gcm all exist in src/pages/blog/; banner webp exists. (Note: several hrefs are relative, e.g. "secure-ai-agent-communication-zero-trust" without "/blog/" — resolves correctly only from /blog/ paths without trailing slash; works given Astro routing but fragile.)
 - General networking (textbook): hole-punch sequence description, ROS2/DDS uses UDP multicast discovery and is LAN-scoped, ngrok per-endpoint model, MQTT broker bottleneck — standard, low-risk.
 - EXAMPLE: all terminal transcripts (STUN endpoints 34.148.103.117, 73.162.88.14, 91.203.45.67, 98.45.211.33, addresses 1:0001.0000.0008/0009, ping replies) — except the ~600ms/~12ms figures flagged above.
+
+## Resolutions (2026-07-11 iter 62)
+- L213 (pilotctl init --hostname home-agent-2 --public): init has no --public flag (it belongs to daemon start). Removed --public from init and added it to the daemon start line, preserving the public-visibility intent.
+Build: npm run build green (345 pages).

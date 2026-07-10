@@ -30,3 +30,7 @@ Audited: 2026-07-10 · Sentences examined: 110 · verified: 62 · false: 1 · un
 - web4 pilotctl surface + site docs: Pilot Protocol closing claims (line 267: encrypted P2P tunnels, persistent virtual addresses, NAT traversal, mutual trust across multi-cloud) consistent with product (handshake/trust/map/ping).
 - Frontmatter note: JSON-LD datePublished 2026-04-19 vs frontmatter date "April 21, 2026" — minor internal inconsistency (not a factual claim to readers; noted, not flagged).
 - OPINION (not flagged): "cuts through the noise", "genuinely compelling", "trade-off is real", practitioner's-take section, Pro Tips, "Getting started takes minutes, not weeks."
+
+## Resolutions (2026-07-11 iter 62)
+- L145 ("150+ partners" cited to googleblog which says "50 technology partners"): corrected to 50+ across all four occurrences (L145/169/228/276).
+Build: npm run build green (345 pages).

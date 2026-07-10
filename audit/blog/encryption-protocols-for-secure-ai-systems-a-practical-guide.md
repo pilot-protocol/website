@@ -31,3 +31,7 @@ Audited: 2026-07-10 · Sentences examined: 94 · verified: 48 · false: 1 · unv
 - Local site assets: banner jpg exists; canonicalPath matches.
 
 Opinion items: "Key Takeaways" framing, Pro Tips, "perspective" section arguments, decision-framework recommendations.
+
+## Resolutions (2026-07-11 iter 62)
+- L27 vs L243 (datePublished 2026-05-02 vs frontmatter "May 5, 2026"): fixed JSON-LD to 2026-05-05.
+Build: npm run build green (345 pages).

@@ -82,7 +82,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/trust-model-agents-invisible-by-default.md | 6 | 6 | done |
 | audit/docs/enterprise-audit.md | 8 | 0 | done |
 | audit/blog/ai-agent-discovery-process-p2p-networks.md | 3 | 14 | done |
-| audit/blog/ai-agent-network-examples-secure-scalable-connectivity.md | 1 | 20 | todo |
+| audit/blog/ai-agent-network-examples-secure-scalable-connectivity.md | 1 | 20 | done |
 | audit/blog/cross-company-agent-collaboration-without-shared-infrastructure.md | 5 | 8 | done |
 | audit/blog/how-pilot-protocol-works.md | 5 | 8 | done |
 | audit/blog/preferential-attachment-ai-networks-trust-graph.md | 0 | 23 | todo |
@@ -91,7 +91,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/python-sdk.md | 7 | 2 | done |
 | audit/for/mcp.md | 7 | 2 | done |
 | audit/blog/building-custom-pilot-skills-openclaw.md | 4 | 10 | done |
-| audit/blog/connect-ai-agents-behind-nat-without-vpn.md | 1 | 19 | todo |
+| audit/blog/connect-ai-agents-behind-nat-without-vpn.md | 1 | 19 | done |
 | audit/blog/decentralized-communication-protocols-ai-developers.md | 0 | 22 | todo |
 | audit/blog/how-mutual-trust-secures-decentralized-ai-agent-networks.md | 0 | 22 | todo |
 | audit/blog/scriptorium-replace-agentic-active-research-ready-intelligence.md | 2 | 16 | done |
@@ -118,7 +118,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/peer-to-peer-file-transfer-agents.md | 5 | 2 | done |
 | audit/blog/secure-research-collaboration-share-models-not-data.md | 4 | 5 | done |
 | audit/blog/a2a-agent-cards-over-pilot-tunnels.md | 4 | 4 | done |
-| audit/blog/encryption-protocols-for-secure-ai-systems-a-practical-guide.md | 1 | 13 | todo |
+| audit/blog/encryption-protocols-for-secure-ai-systems-a-practical-guide.md | 1 | 13 | done |
 | audit/blog/sociology-of-machines-626-agents.md | 3 | 7 | done |
 | audit/blog/connecting-mcp-servers-across-agents.md | 2 | 9 | done |
 | audit/blog/network-security-for-multi-agent-systems-key-strategies.md | 1 | 12 | done |
@@ -136,7 +136,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/aegis-agent-firewall-prompt-injection.md | 4 | 1 | done |
 | audit/docs/configuration.md | 4 | 1 | done |
 | audit/blog/autonomous-agent-networking-distributed-ai.md | 0 | 12 | todo |
-| audit/blog/enterprise-private-networks-roadmap.md | 1 | 9 | todo |
+| audit/blog/enterprise-private-networks-roadmap.md | 1 | 9 | done |
 | audit/blog/hipaa-compliant-agent-communication.md | 2 | 6 | done |
 | audit/blog/ietf-internet-drafts-pilot-protocol-revision-01.md | 1 | 9 | done |
 | audit/blog/multi-agent-pipelines-openclaw-encrypted-tunnels.md | 3 | 3 | done |

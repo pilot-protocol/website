@@ -26,3 +26,7 @@ Audited: 2026-07-10 · Sentences examined: 46 · verified: 16 · false: 1 · unv
 - Local site files: /enterprise-readiness-report.pdf exists in public/, banner webp exists
 - Pre-verified: github.com/pilot-protocol/pilotprotocol repo exists
 - Positioning statements (A2A/MCP/Pilot roles), roadmap phase descriptions: counted as opinion/plan statements, not flagged
+
+## Resolutions (2026-07-11 iter 62)
+- L95 (Wire Specification -> docs/SPEC.md 404): public repo has no docs/SPEC.md. Repointed to the live IETF draft.
+Build: npm run build green (345 pages).
