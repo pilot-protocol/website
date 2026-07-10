@@ -39,7 +39,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/emergent-trust-networks-agents-choose-peers.md | 1 | 37 | todo |
 | audit/blog/openanp-ai-alternatives-6.md | 1 | 34 | todo |
 | audit/blog/nat-traversal-ai-agents-deep-dive.md | 8 | 12 | todo |
-| audit/docs/comparison.md | 10 | 6 | todo |
+| audit/docs/comparison.md | 10 | 6 | done |
 | audit/blog/secure-ai-agent-networking-workflow-step-by-step.md | 0 | 35 | todo |
 | audit/blog/build-ai-agent-marketplace-discovery-reputation.md | 6 | 16 | todo |
 | audit/blog/build-multi-agent-network-five-minutes.md | 11 | 1 | todo |
