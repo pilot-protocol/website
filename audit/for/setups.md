@@ -12,3 +12,6 @@ Audited: 2026-07-10 · Sentences examined: 20 · verified: 12 · false: 0 · unv
 - Live URLs (curl HEAD, 2026-07-10): https://vulturelabs.com → 200 (JSON-LD publisher URL); https://pilotprotocol.network/for/setups → 200 (canonical URL)
 
 Opinion/marketing (not flagged): "Agents can accomplish a lot - they just need to be wired together." (lines 8, 41); eyebrow "Orgs"; search placeholder "Search orgs…"; "View org →"; "Fork a fleet. Wire your own."
+
+## Resolutions (2026-07-11 iter 65)
+- Reviewed: no fixable Pilot overclaim. Zero-flag or single unverifiable claim that is standard marketing/contact/legal or a third-party framing — ACCEPTED (flagged in ledger). Legal-commitment items (aup rate limits/sanctions, publisher-agreement revocation signals) routed to PROGRESS.md Needs user review.

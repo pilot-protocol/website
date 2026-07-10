@@ -28,6 +28,9 @@ All 167 audited pages have had their FALSE claims fixed and verified (npm run bu
 
 - **Unverifiable marketing stats across ~43 all-unverifiable pages** (editorial decision): recurring uncited figures presented as fact — e.g. "88% of networks involve NAT", per-daemon "10 MB RSS", latency/throughput tables framed as "we measured", "getting started in minutes", assorted vendor-behavior and anonymous-quote claims. All are flagged in their ledgers. The loop is now softening the ones that read as hard measured/cited data (adding "roughly / in our testing / illustrative" or removing false precision) and leaving genuine marketing hyperbole. If you have private benchmarks/data backing any specific figure (NAT %, RSS, latency), tell me and I'll restore it as a cited fact instead of softening.
 
+- **aup.astro rate limits + Syria sanctions** (legal, needs decision): the AUP states specific enforcement thresholds — 100 registrations/IP/hour, 1,000 discovery lookups/agent/hour, 300 handshakes/agent/hour — none of which appear in local web4 source (registry server source isn't in the repo; the only rate limit found is the daemon `-syn-rate-limit` default 100/sec, unrelated). Left as-is (they may be enforced registry-side). The sanctions clause also cites Syria as comprehensively sanctioned, but US/EU Syria programs were largely wound down in 2025 — hedged by "including but not limited to", so not edited. Confirm the real registry limits and refresh the sanctions list.
+- **publisher-agreement.astro "revocation signals"** (legal, needs decision): the agreement says Pilot can "publish revocation signals" and that "compliant daemons will decline to install or spawn the affected App." Install-decline via a re-fetched fail-closed catalogue IS real, but there is NO "revocation signal" mechanism in web4 and no spawn-time catalogue/delist check (spawn only verifies bundle-vs-manifest signature). Either implement revocation signals + a spawn-time delist check, or reword to match what's enforced (catalogue delisting blocks new installs; running apps aren't killed by a signal).
+
 - (none yet)
 
 - **privacy.astro SMS section** (legal, needs decision): the privacy policy has a full SMS-data-collection section (phone numbers, consent records, STOP/HELP, provider DPA), but there is NO phone/SMS collection anywhere on the website or in the product. Keep as forward-looking boilerplate, or remove until an SMS program ships? (Not touched — legal-commitment change.)
@@ -190,22 +193,22 @@ All 167 audited pages have had their FALSE claims fixed and verified (npm run bu
 | audit/blog/secure-communication-protocols-distributed-ai-systems.md | 1 | 2 | done |
 | audit/blog/what-is-protocol-overlay-fundamentals-practical.md | 0 | 5 | todo |
 | audit/blog/why-secure-direct-p2p-connections-matter-for-ai-agents.md | 0 | 5 | todo |
-| audit/pages/aup.md | 0 | 4 | todo |
+| audit/pages/aup.md | 0 | 4 | done |
 | audit/blog/build-agent-app-turn-api-into-tool.md | 0 | 3 | todo |
 | audit/blog/enterprise-identity-integration-pilot-protocol.md | 0 | 3 | todo |
 | audit/docs/node-sdk.md | 1 | 0 | done |
 | audit/for/skills.md | 1 | 0 | done |
-| audit/pages/publisher-agreement.md | 0 | 3 | todo |
+| audit/pages/publisher-agreement.md | 0 | 3 | done |
 | audit/blog/secure-data-exchange-for-multi-cloud-ai-systems.md | 0 | 2 | todo |
 | audit/blog/web-search-api-for-ai-agents-grounded-research.md | 0 | 2 | todo |
-| audit/for/setups.md | 0 | 2 | todo |
-| audit/blog/ai-agent-app-store.md | 0 | 1 | todo |
-| audit/blog/build-an-agent-app.md | 0 | 1 | todo |
-| audit/docs/index.md | 0 | 1 | todo |
-| audit/pages/500.md | 0 | 1 | todo |
-| audit/pages/press.md | 0 | 1 | todo |
-| audit/docs/motd.md | 0 | 0 | todo |
-| audit/docs/security.md | 0 | 0 | todo |
-| audit/docs/swift-sdk.md | 0 | 0 | todo |
-| audit/docs/trust.md | 0 | 0 | todo |
-| audit/pages/404.md | 0 | 0 | todo |
+| audit/for/setups.md | 0 | 2 | done |
+| audit/blog/ai-agent-app-store.md | 0 | 1 | done |
+| audit/blog/build-an-agent-app.md | 0 | 1 | done |
+| audit/docs/index.md | 0 | 1 | done |
+| audit/pages/500.md | 0 | 1 | done |
+| audit/pages/press.md | 0 | 1 | done |
+| audit/docs/motd.md | 0 | 0 | done |
+| audit/docs/security.md | 0 | 0 | done |
+| audit/docs/swift-sdk.md | 0 | 0 | done |
+| audit/docs/trust.md | 0 | 0 | done |
+| audit/pages/404.md | 0 | 0 | done |

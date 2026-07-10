@@ -14,3 +14,6 @@ Audited: 2026-07-10 · Sentences examined: 56 · verified: 47 · false: 0 · unv
 - Local site files: blog links mcp-plus-pilot-tools-and-network, ai-agent-discovery-process-p2p-networks, secure-ai-agent-communication-zero-trust, connect-ai-agents-behind-nat-without-vpn all exist in src/pages/blog/; /publish page exists; banner public/blog/banners/build-an-agent-app.svg exists.
 - Opinion (not flagged): "Publishing once and reaching every agent is the whole point", "one job done well", "worth installing", flywheel language.
 - Example (not flagged): io.pilot.cosift command samples, {"q":"raft consensus","k":"5"}.
+
+## Resolutions (2026-07-11 iter 65)
+- Reviewed: no fixable Pilot overclaim. Zero-flag or single unverifiable claim that is standard marketing/contact/legal or a third-party framing — ACCEPTED (flagged in ledger). Legal-commitment items (aup rate limits/sanctions, publisher-agreement revocation signals) routed to PROGRESS.md Needs user review.

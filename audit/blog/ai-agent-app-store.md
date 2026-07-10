@@ -16,3 +16,7 @@ Audited: 2026-07-10 · Sentences examined: 88 · verified: 69 · false: 0 · unv
 - Local site files: internal links /blog/build-agent-app-turn-api-into-tool, build-an-agent-app, mcp-plus-pilot-tools-and-network, aegis-agent-firewall-prompt-injection all exist in src/pages/blog/; banner public/blog/banners/ai-agent-app-store.svg exists.
 - OPINION (not flagged): "capable one", "worth installing", "one more reason to be on Pilot", MCP-complementarity framing ("many teams use both"), etc.
 - EXAMPLE (not flagged): io.yourorg.yourapp commands, `cosift.search '{"q":"raft consensus","k":"5"}'` sample calls.
+
+## Resolutions (2026-07-11 iter 65)
+- L66 ("243k+ of them"): ambiguous/drifting (active 218,560 vs total 250,175). Changed to "hundreds of thousands of them" — non-drifting and true on both denominators.
+Build: npm run build green.

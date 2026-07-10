@@ -20,3 +20,6 @@ Note on methodology: this page is a legal contract. Purely operative/performativ
 - **Live curl (2026-07-10)**: https://pilotprotocol.network/publisher-agreement → HTTP 200 (canonicalUrl, "published publicly"); https://pilotprotocol.network/publish → HTTP 200 (line 28 publish-flow URL).
 - **Known statutes/licenses (verbatim check)**: California Civil Code §1542 quote at line 71 matches the current (post-2019) statutory text exactly; ESIGN Act citation "15 U.S.C. §7001 et seq." correct, UETA real (§15); AGPL-3.0 network-use source-availability obligation real (AGPL §13) (§3(g)); GDPR, UK GDPR, CCPA/CPRA real laws (§3(h)); OFAC SDN List and BIS Entity List real (§3(j)).
 - **Internal consistency**: §9 survival clause references Sections 1, 3, 4, 5, 6, 7, 8, 10, 14, 15, 16, 17 — all exist on the page (headings 1-18); §2 cross-ref to Section 15 exists; frontmatter title/description accurately summarize the page body (Sections 4-5).
+
+## Resolutions (2026-07-11 iter 65)
+- Reviewed: no fixable Pilot overclaim. Zero-flag or single unverifiable claim that is standard marketing/contact/legal or a third-party framing — ACCEPTED (flagged in ledger). Legal-commitment items (aup rate limits/sanctions, publisher-agreement revocation signals) routed to PROGRESS.md Needs user review.

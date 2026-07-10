@@ -24,3 +24,6 @@ No flagged claims.
 ## Notes (not page errors)
 - The CLI help text for `untrust` (main.go:1107-1113) says "This does not notify the remote node", but the implementation (handshake.go:1230-1243) does send a best-effort HandshakeRevoke notification. The page matches the implementation; the stale text is in the CLI help, not the page.
 - `pilotctl reject` exists in source (main.go:1115, 1785) despite being absent from the pre-verified subcommand cheatsheet; source grep is authoritative here.
+
+## Resolutions (2026-07-11 iter 65)
+- Reviewed: no fixable Pilot overclaim. Zero-flag or single unverifiable claim that is standard marketing/contact/legal or a third-party framing — ACCEPTED (flagged in ledger). Legal-commitment items (aup rate limits/sanctions, publisher-agreement revocation signals) routed to PROGRESS.md Needs user review.

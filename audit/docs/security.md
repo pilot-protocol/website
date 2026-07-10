@@ -24,3 +24,6 @@ No flagged claims.
 - **website/src/pages/docs/ listing**: internal link targets exist — concepts.astro (with `id="rendezvous"` at line 89), firewalls.astro, trust.astro, consent.astro, enterprise.astro, enterprise-rbac.astro, enterprise-identity.astro, enterprise-policies.astro, enterprise-audit.astro → L29-30, L34, L38, L42, L46, and prev/next frontmatter (L9-10).
 - **website/public/**: enterprise-readiness-report.pdf exists → L46; .well-known/security.txt exists with `Contact: mailto:founders@pilotprotocol.network` → L50 both sentences (email matches the machine-readable contact).
 - **Page self-consistency**: title (L5), meta description (L6), h1 (L12), subtitle (L13), and TOC entries (L16-23) accurately describe the five sections present on the page (#crypto, #trust, #transparency, #enterprise, #reporting).
+
+## Resolutions (2026-07-11 iter 65)
+- Reviewed: no fixable Pilot overclaim. Zero-flag or single unverifiable claim that is standard marketing/contact/legal or a third-party framing — ACCEPTED (flagged in ledger). Legal-commitment items (aup rate limits/sanctions, publisher-agreement revocation signals) routed to PROGRESS.md Needs user review.

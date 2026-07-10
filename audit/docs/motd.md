@@ -16,3 +16,6 @@ No flagged claims.
 ## Examples (not flagged)
 - Line 22–25: terminal sample `pilotctl info` with banner "overlay maintenance 22:00 UTC — expect ~5min blips" — invented demo text; banner format itself verified against printMOTDBanner.
 - Line 52–53: JSON envelope sample with "overlay maintenance 22:00 UTC" — invented demo text; envelope shape verified against output().
+
+## Resolutions (2026-07-11 iter 65)
+- Reviewed: no fixable Pilot overclaim. Zero-flag or single unverifiable claim that is standard marketing/contact/legal or a third-party framing — ACCEPTED (flagged in ledger). Legal-commitment items (aup rate limits/sanctions, publisher-agreement revocation signals) routed to PROGRESS.md Needs user review.

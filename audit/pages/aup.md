@@ -26,3 +26,6 @@ Note on methodology: this is a legal/policy page. Normative statements ("You may
 
 ## Opinion
 - Line 112: "This policy is provided for transparency and operational clarity." — characterization, no factual content.
+
+## Resolutions (2026-07-11 iter 65)
+- Reviewed: no fixable Pilot overclaim. Zero-flag or single unverifiable claim that is standard marketing/contact/legal or a third-party framing — ACCEPTED (flagged in ledger). Legal-commitment items (aup rate limits/sanctions, publisher-agreement revocation signals) routed to PROGRESS.md Needs user review.

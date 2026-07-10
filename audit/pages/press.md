@@ -20,3 +20,6 @@ Audited: 2026-07-10 · Sentences examined: 68 · verified: 51 · false: 0 · unv
 Opinion/label items (not flagged, no factual content): "PRESS KIT", "Brand assets.", "Overview", "At a glance.", "Logo", "Dark BG", "Surface", "Colors", "Typography", "Spacing", "Downloads", "Everything you need.", "Guidelines", "Quick rules.", "Do", "Don't".
 
 Note (not a flag): line 91 "Use the dark variant on dark backgrounds" implies a light logo variant exists, but only `pilot-logo-dark@*` ships in public/brand/ — Jira PILOT-28 acceptance criteria called for "dark + light variants". The sentence itself makes no false claim, but a light variant is missing from the kit.
+
+## Resolutions (2026-07-11 iter 65)
+- Reviewed: no fixable Pilot overclaim. Zero-flag or single unverifiable claim that is standard marketing/contact/legal or a third-party framing — ACCEPTED (flagged in ledger). Legal-commitment items (aup rate limits/sanctions, publisher-agreement revocation signals) routed to PROGRESS.md Needs user review.

@@ -13,3 +13,6 @@ No flagged claims.
 
 ## EXAMPLE (not flagged)
 - Quickstart placeholder values: `peerID: 12345`, address `"0:0000.0000.AAAA"`, port `7777`, payload `"hi"` — illustrative demo values, consistent with the README's own commented example.
+
+## Resolutions (2026-07-11 iter 65)
+- Reviewed: no fixable Pilot overclaim. Zero-flag or single unverifiable claim that is standard marketing/contact/legal or a third-party framing — ACCEPTED (flagged in ledger). Legal-commitment items (aup rate limits/sanctions, publisher-agreement revocation signals) routed to PROGRESS.md Needs user review.
