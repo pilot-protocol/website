@@ -30,3 +30,9 @@ Audited: 2026-07-10 · Sentences examined: 85 · verified: 50 · false: 4 · unv
 - Arithmetic/general ML knowledge: 7B params × 2 bytes (FP16) ≈ 14 GB VRAM; KV cache formats incompatible across vLLM/TGI/Ollama/TensorRT-LLM (each hop re-tokenizes).
 - Generic networking (RFC-level): TCP handshake 1 RTT, TLS ~2 RTTs; STUN discovery + key exchange as one-time setup (daemon flags).
 - EXAMPLE items: agent addresses 1:0001.000X.000Y, machine/GPU layout (A100/T4/A10G), HTTP latency comment block (illustrative estimates), mock endpoints.
+
+## Resolutions (2026-07-11 iter 47)
+- L119 import + L141 Connect(): already fixed in the iter-21 batch (common/driver, Connect("")).
+- L153/L229 (d.HTTPTransport() — no such method): replaced with a real http.Transport whose DialContext calls d.ResolveHostname + d.Dial over the Pilot tunnel; added context+net imports; reworded the prose accordingly.
+- L99-101/L122/L333 (tag-based discovery via peers --search): peers --search matches node-ID/hostname substring, not tags (main.go:951,5399). Reframed to hostname-substring discovery (name model hosts with a prefix), fixed the command to `pilotctl --json peers --search "model"`.
+Build: npm run build green (345 pages).

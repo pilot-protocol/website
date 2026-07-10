@@ -27,3 +27,8 @@ Audited: 2026-07-10 · Sentences examined: 88 · verified: 32 · false: 4 · unv
 - General knowledge: RAG/vector-DB architecture description, ChromaDB PersistentClient/upsert/query API shape, hnsw:space cosine metadata, OpenAI chat.completions API shape — all consistent with public docs (code examples otherwise EXAMPLE).
 
 Note: line 99 "It cannot even discover the HR agent exists (private by default)" is directionally supported (hidden from public directory) but a node's address remains reachable by peers that already know it (set-private help) — trust gating, not invisibility, is what blocks queries. Not counted as FALSE.
+
+## Resolutions (2026-07-11 iter 47)
+- L77/L79 (peers --search for tag discovery + "returns address and tags"): peers matches node-ID/hostname substring and does not return tags. Reframed to hostname-substring discovery (name retrievers rag-hr/rag-legal/rag-eng), fixed command to `pilotctl --json peers --search "rag-"`, and route by hostname.
+- L189/L267 (pilotctl receive-message — no such command): replaced with the real `pilotctl --json inbox [--from <addr>] --limit 1` (recv/inbox exist; receive-message does not).
+Build: npm run build green (345 pages).

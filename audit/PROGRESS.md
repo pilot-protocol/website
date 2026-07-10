@@ -78,7 +78,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/run-agent-network-without-cloud-dependency.md | 4 | 13 | todo |
 | audit/pages/cookies.md | 7 | 4 | done |
 | audit/pages/publish.md | 3 | 16 | done |
-| audit/blog/move-beyond-rest-persistent-connections-for-agents.md | 5 | 9 | todo |
+| audit/blog/move-beyond-rest-persistent-connections-for-agents.md | 5 | 9 | done |
 | audit/blog/trust-model-agents-invisible-by-default.md | 6 | 6 | done |
 | audit/docs/enterprise-audit.md | 8 | 0 | done |
 | audit/blog/ai-agent-discovery-process-p2p-networks.md | 3 | 14 | todo |
@@ -95,7 +95,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/decentralized-communication-protocols-ai-developers.md | 0 | 22 | todo |
 | audit/blog/how-mutual-trust-secures-decentralized-ai-agent-networks.md | 0 | 22 | todo |
 | audit/blog/scriptorium-replace-agentic-active-research-ready-intelligence.md | 2 | 16 | todo |
-| audit/blog/chain-ai-models-across-machines.md | 4 | 9 | todo |
+| audit/blog/chain-ai-models-across-machines.md | 4 | 9 | done |
 | audit/blog/http-services-over-encrypted-overlay.md | 6 | 3 | done |
 | audit/docs/error-codes.md | 6 | 3 | done |
 | audit/docs/networks.md | 7 | 0 | done |
@@ -104,7 +104,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/pilot-director.md | 6 | 2 | done |
 | audit/pages/for-networks.md | 5 | 5 | done |
 | audit/blog/ai-networking-best-practices-secure-scalable-systems.md | 0 | 19 | todo |
-| audit/blog/distributed-rag-without-central-knowledge-base.md | 4 | 7 | todo |
+| audit/blog/distributed-rag-without-central-knowledge-base.md | 4 | 7 | done |
 | audit/blog/smart-home-without-cloud-local-device-communication.md | 3 | 10 | todo |
 | audit/docs/enterprise-rbac.md | 6 | 1 | done |
 | audit/blog/ietf-internet-draft-pilot-protocol.md | 2 | 12 | todo |

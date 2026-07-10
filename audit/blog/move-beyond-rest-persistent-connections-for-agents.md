@@ -32,3 +32,8 @@ Audited: 2026-07-10 · Sentences examined: 102 · verified: 52 · false: 5 · un
 - Public protocol knowledge: REST request-response/unidirectional model, WebSocket sticky-session/load-balancer issues, WebSocket client-server topology, MQTT broker star topology, gRPC over HTTP/2 ping — consistent with RFC 6455, MQTT and gRPC specs
 - Local site: banner public/blog/banners/move-beyond-rest-persistent-connections-for-agents.webp exists
 - EXAMPLE: Python polling loop, agent addresses 1:0001.0001.0001 / 1:0001.0002.0001, task/result JSON payloads, <broker-addr> placeholders, "confidence":0.95
+
+## Resolutions (2026-07-11 iter 47)
+- L69/L164 (keepalive "30 seconds" for NAT mapping): corrected to 25s — the NAT-mapping keepalive is TunnelKeepaliveInterval = 25s (tunnel.go:787). Also dropped the unverifiable "~200ms" setup figure from L69.
+- L191 import + L202/L233 Connect() + L203/L234 OpenEventStream: already handled in the iter-21 batch (common/driver, Connect(""), and the pub/sub block carries the "illustrative — real API is SendTo/RecvFrom, pub/sub via pilotctl publish/subscribe" caveat).
+Build: npm run build green (345 pages).

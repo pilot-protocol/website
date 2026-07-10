@@ -72,11 +72,11 @@ const bodyContent = `<p>The standard <a href="https://en.wikipedia.org/wiki/Retr
 <span class="comment"># HR agent</span>
 <span class="cmd">pilotctl extras set-tags rag-retriever hr employees benefits</span></code></pre>
 
-  <p>The synthesis agent queries for available retrievers:</p>
+  <p>The synthesis agent finds retrievers among its connected peers by hostname substring:</p>
 
-  <pre><code><span class="cmd">pilotctl peers --search "rag-retriever" --json</span></code></pre>
+  <pre><code><span class="cmd">pilotctl --json peers --search "rag-"</span></code></pre>
 
-  <p>This returns the address and tags of each retriever. The synthesis agent uses the tags to route queries: a question about "contract terms" goes to the legal agent, a question about "deployment architecture" goes to the engineering agent, and a question about "vacation policy" goes to the HR agent.</p>
+  <p>Peer search matches node ID and hostname (not the tags set above — those are metadata only), so name each retriever host by its domain: <code>rag-hr</code>, <code>rag-legal</code>, <code>rag-eng</code>. The synthesis agent then routes by which host it is: a question about "contract terms" goes to <code>rag-legal</code>, "deployment architecture" to <code>rag-eng</code>, and "vacation policy" to <code>rag-hr</code>.</p>
   </section>
 
   <section>
@@ -184,9 +184,9 @@ def search(query, top_k=5):
 def listen_for_queries():
     """Listen for incoming queries via Pilot messaging."""
     while True:
-        <span class="comment"># Receive message from any trusted peer</span>
+        <span class="comment"># Read the latest message from any trusted peer</span>
         result = subprocess.run(
-            ["pilotctl", "receive-message", "--timeout", "60", "--json"],
+            ["pilotctl", "--json", "inbox", "--limit", "1"],
             capture_output=True, text=True,
         )
         if result.returncode != 0:
@@ -262,10 +262,10 @@ def query_retriever(address, query):
         "pilotctl", "send-message", address,
         "--data", json.dumps({"query": query}),
     ])
-    <span class="comment"># Wait for response</span>
+    <span class="comment"># Read the response from that retriever</span>
     result = subprocess.run(
-        ["pilotctl", "receive-message", "--timeout", "30",
-         "--from", address, "--json"],
+        ["pilotctl", "--json", "inbox",
+         "--from", address, "--limit", "1"],
         capture_output=True, text=True,
     )
     if result.returncode == 0:
