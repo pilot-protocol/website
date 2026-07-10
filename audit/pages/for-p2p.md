@@ -40,3 +40,6 @@ Audited: 2026-07-10 · Sentences examined: 85 · verified: 52 · false: 9 · unv
 ## Notes
 - OPINION (not flagged): "Hub-and-spoke is a bottleneck", "Linear by construction", "There is no central fan-in limit", "The network grows with the agents, not around them", "No middleman, no middleman overhead", "Pilot stays out of the way", section eyebrows/labels.
 - EXAMPLE (not flagged): terminal bar "agent@node ~ direct p2p / 0.8s", pid 24817, address 0:0000.A91F.7C2E, hostname agent-a, "✓ direct tunnel · 34ms · no relay", the two `#` comment lines.
+
+## Resolutions (2026-07-10, loop iteration 27)
+9 FALSE fixed: "No server in the data path" (4× — meta/lede/FAQ/CTA) reframed to "direct P2P by default; encrypted beacon relay fallback for symmetric-NAT peers" (tunnel.go:623/1957 relay path); "encryption isn't optional" → on by default, disableable via --no-encrypt; 34-byte header "encryption fits in it" → encryption is a separate envelope (nonce+GCM tag); "Three steps / thirty seconds" → four steps (page's own list) / about a minute; "single static binary" → static binaries (daemon+CLI). 6 UNVERIFIABLE bench figures (40ms/4ms/0.0003%/sub-second) reframed as relative (≈RTT / low / measure-your-own via pilotctl bench) — removed false precision.
