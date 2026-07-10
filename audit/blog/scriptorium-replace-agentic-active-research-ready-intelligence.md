@@ -32,3 +32,8 @@ Audited: 2026-07-10 · Sentences examined: 45 · verified: 8 · false: 2 · unve
 - Pre-verified: pilotprotocol.network live; agent-to-agent E2E encryption + mutual-consent trust model; permanent identity/virtual addresses.
 - Local files: all four chart PNGs exist in public/blog/scriptorium/ (chart_tokens/context/latency/scale.png).
 - EXAMPLE (not flagged): curl query strings with 2026-04 date windows; service address 0:0000.0000.3814 (unverifiable as a live address but shown as usage sample).
+
+## Resolutions (2026-07-11 iter 53)
+- L6 ("No central server. No middleman."): registry + beacon relay are central infra. Reworded to "A thin registry handles discovery; data then flows directly between agents, end-to-end encrypted. No cloud broker in the data path, no lock-in."
+- L77 (bannerImage missing leading /blog/): fixed to /blog/banners/... so BlogLayout builds a valid og:image URL.
+Build: npm run build green (345 pages).

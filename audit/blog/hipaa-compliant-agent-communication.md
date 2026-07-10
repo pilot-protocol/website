@@ -28,3 +28,8 @@ Audited: 2026-07-10 · Sentences examined: 96 · verified: 68 · false: 2 · unv
 - Live URL: hhs.gov/hipaa/index.html (403 = bot block; canonical HHS HIPAA URL)
 - Local files: banner public/blog/banners/hipaa-compliant-agent-communication.webp exists
 - EXAMPLE items: terminal blocks (addresses 1:0001.0000.0042, BAA #2026-0142, example.com emails, sample slog JSON lines — note the slog msg names mirror the invented event names above; illustrative only). Cosmetic: "Getting Started" steps jump 1→3.
+
+## Resolutions (2026-07-11 iter 53)
+- L159-162 + slog examples L146-149 (fictional event names trust.request/connection.open/task.submit/data.send): replaced with the real daemon publishEvent topics (node.registered, agent.registered, agent.heartbeat, conn.established/fin/rst, data.datagram, file.delivered, key.rotated, tunnel.*, security.*).
+- L164 ("webhook pushes to a local HTTP server, does not send to external"): common/urlvalidate accepts any http/https URL (blocks only cloud-metadata). Reworded to "can push to any HTTP/HTTPS endpoint; point it at a local server to keep data on-host; nothing forces localhost".
+Build: npm run build green (345 pages).

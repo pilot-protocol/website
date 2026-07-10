@@ -94,7 +94,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/connect-ai-agents-behind-nat-without-vpn.md | 1 | 19 | todo |
 | audit/blog/decentralized-communication-protocols-ai-developers.md | 0 | 22 | todo |
 | audit/blog/how-mutual-trust-secures-decentralized-ai-agent-networks.md | 0 | 22 | todo |
-| audit/blog/scriptorium-replace-agentic-active-research-ready-intelligence.md | 2 | 16 | todo |
+| audit/blog/scriptorium-replace-agentic-active-research-ready-intelligence.md | 2 | 16 | done |
 | audit/blog/chain-ai-models-across-machines.md | 4 | 9 | done |
 | audit/blog/http-services-over-encrypted-overlay.md | 6 | 3 | done |
 | audit/docs/error-codes.md | 6 | 3 | done |
@@ -107,7 +107,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/distributed-rag-without-central-knowledge-base.md | 4 | 7 | done |
 | audit/blog/smart-home-without-cloud-local-device-communication.md | 3 | 10 | done |
 | audit/docs/enterprise-rbac.md | 6 | 1 | done |
-| audit/blog/ietf-internet-draft-pilot-protocol.md | 2 | 12 | todo |
+| audit/blog/ietf-internet-draft-pilot-protocol.md | 2 | 12 | done |
 | audit/blog/legacy-protocol-integration-for-secure-distributed-ai.md | 1 | 15 | todo |
 | audit/blog/multi-cloud-networking-decentralized-ai-systems.md | 1 | 15 | todo |
 | audit/docs/messaging.md | 6 | 0 | done |
@@ -137,7 +137,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/configuration.md | 4 | 1 | done |
 | audit/blog/autonomous-agent-networking-distributed-ai.md | 0 | 12 | todo |
 | audit/blog/enterprise-private-networks-roadmap.md | 1 | 9 | todo |
-| audit/blog/hipaa-compliant-agent-communication.md | 2 | 6 | todo |
+| audit/blog/hipaa-compliant-agent-communication.md | 2 | 6 | done |
 | audit/blog/ietf-internet-drafts-pilot-protocol-revision-01.md | 1 | 9 | todo |
 | audit/blog/multi-agent-pipelines-openclaw-encrypted-tunnels.md | 3 | 3 | done |
 | audit/blog/openclaw-meets-pilot-agent-networking-one-command.md | 3 | 3 | done |

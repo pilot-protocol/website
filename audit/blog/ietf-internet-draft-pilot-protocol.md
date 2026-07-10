@@ -33,3 +33,7 @@ Audited: 2026-07-10 · Sentences examined: 64 · verified: 43 · false: 2 · unv
 - Datatracker (curl 200): CATALIST-adjacent claims deferred to rev-01 audit.
 - OPINION: "The positioning is simple", "Credibility…different conversation", "demands rigor", CTA copy.
 - EXAMPLE: subject-line templates.
+
+## Resolutions (2026-07-11 iter 53)
+- L44/L83 (docs/SPEC.md link 404): the public repo has no docs/SPEC.md. Repointed both "wire specification" links to the live IETF draft (www.ietf.org/archive/id/draft-teodor-pilot-protocol-01.html, verified 200). Also dropped the unverifiable "45-page" count from L44.
+Build: npm run build green (345 pages).
