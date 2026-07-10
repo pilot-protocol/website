@@ -13,6 +13,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | GA4 loads unconditionally on /plain (GDPR) | FIXED — removed GA4 from PlainLayout entirely (plain = JS-stripped agent surface) | website #116 | n/a |
 
 ## Needs user review
+- **Sign the handshake justification (small crypto gap)**: the Ed25519 handshake signature covers only `handshake:<node_id>:<peer_id>`, not the justification text (handshake@v0.2.1 handshake.go:37). An operator reviewing a request cannot cryptographically trust the justification. Consider including it in the signed bytes. Website copy is now honest about it.
 - **Gateway positioning (product decision)**: pilot-protocol/gateway is a Go library only — the standalone pilot-gateway binary has no public cmd/ source, and the pilotctl extras gateway list/map/unmap/stop subcommands are stubs. Public users cannot use the gateway CLI workflow as documented. Options: publish cmd/gateway, or reposition the gateway as an embeddable library (docs now say library + caveated). Your call.
 - **Tags not indexed for discovery (product gap)**: pilotctl set-tags stores tags on a node, but the list-agents directory search only matches hostname/category/description (search.py _doc_text), so tags do not actually aid capability discovery. Either index tags in list-agents search, or reposition tags as pure metadata. (Docs now honest about this.)
 - **Per-session forward secrecy (crypto roadmap)**: the daemon generates ONE X25519 keypair at startup and reuses it for all tunnels (tunnel.go:524-526), so there is no per-session forward secrecy — a compromise of the daemon key exposes past captured sessions. Website copy is now honest about this (peer isolation, not FS). Real fix = rotating/ephemeral per-session X25519 keys (a Noise-IK-style rekey). Significant crypto work; your call.
@@ -50,7 +51,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/contributing-codebase-tour.md | 9 | 14 | done |
 | audit/blog/emergent-trust-networks-agents-choose-peers.md | 1 | 37 | todo |
 | audit/blog/openanp-ai-alternatives-6.md | 1 | 34 | todo |
-| audit/blog/nat-traversal-ai-agents-deep-dive.md | 8 | 12 | todo |
+| audit/blog/nat-traversal-ai-agents-deep-dive.md | 8 | 12 | done |
 | audit/docs/comparison.md | 10 | 6 | done |
 | audit/blog/secure-ai-agent-networking-workflow-step-by-step.md | 0 | 35 | todo |
 | audit/blog/build-ai-agent-marketplace-discovery-reputation.md | 6 | 16 | todo |
