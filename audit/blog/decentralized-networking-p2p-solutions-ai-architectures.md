@@ -29,3 +29,6 @@ Audited: 2026-07-10 · Sentences examined: 104 · verified: 52 · false: 2 · un
 - web4 source + go.mod + pre-verified: Pilot provides virtual addresses, encrypted tunnels (tunnel.go:534 X25519+AES-256-GCM), NAT punch-through + relay fallback (beacon), multi-cloud/cross-region connectivity, CLI + Python SDK + Go SDK (sdk-python repo, common/driver), wraps HTTP/gRPC/SSH via map/tunnel commands
 - Live URL checks (200): arxiv 2510.27500, arxiv 2511.15388v1, arxiv 2503.09833v1, github.com/kagvi13/HMP, github.com/hyperspaceai/agi, holochain.org, supabase images
 - Frontmatter: datePublished 2026-04-04 matches "April 4, 2026"
+
+## Resolutions (2026-07-10, loop iteration 32)
+2 FALSE fixed: the "97.6% NAT traversal success" claim misrepresented the statistic — 97.6% is the first-attempt share AMONG successful punches; actual DCUtR success is ~70% (relays cover the rest for near-100% overall). Corrected in intro + FAQ. 26 unverifiable accepted.

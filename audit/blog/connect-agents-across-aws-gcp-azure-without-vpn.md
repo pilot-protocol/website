@@ -31,3 +31,6 @@ Audited: 2026-07-10 · Sentences examined: 112 · verified: 74 · false: 3 · un
 - Local site files: banner public/blog/banners/connect-agents-across-aws-gcp-azure-without-vpn.webp exists; canonicalPath matches file slug.
 - General/RFC knowledge: N*(N-1)/2 tunnel mesh math (L29, arithmetic checks: 3→3 tunnels/6 endpoints, 4→6/12); VPN encapsulation overhead description (L194); Tailscale DERP relays, Headscale self-hosting, ZeroTier controllers (public docs, low-risk).
 - EXAMPLE (not flagged): addresses 1:0001.0000.0017/0042/0063, private IPs 10.x, ASCII diagrams, sample emails/tags.
+
+## Resolutions (2026-07-10, loop iteration 32)
+3 FALSE fixed (internal contradictions): "two go install commands" → the example uses curl install.sh (one per agent); "three ports" → outbound UDP/4000; "the example used --endpoint" → the example uses set-public (—endpoint is an optional daemon flag). 21 unverifiable accepted.

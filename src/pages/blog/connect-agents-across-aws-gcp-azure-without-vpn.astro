@@ -132,13 +132,13 @@ const bodyContent = `<p>You have agents on <a href="https://aws.amazon.com" targ
 <span class="comment"># Benchmark the connection</span>
 <span class="cmd">pilotctl bench 1:0001.0000.0042</span></code></pre>
 
-  <p>That is the complete setup. Two <code>go install</code> commands, two <code>daemon start</code> commands, one trust handshake, and the agents are communicating across clouds with end-to-end encryption. No VPN tunnels. No cloud interconnect products. No firewall rules beyond the three ports.</p>
+  <p>That is the complete setup. One install command per agent, a <code>daemon start</code> on each, one trust handshake, and the agents are communicating across clouds with end-to-end encryption. No VPN tunnels. No cloud interconnect products. No firewall rules beyond outbound UDP/4000.</p>
   </section>
 
   <section>
   <h2>NAT Traversal Handles the Networking Automatically</h2>
 
-  <p>The example above used VMs with public IPs and the <code>--endpoint</code> flag, which skips NAT traversal by registering a fixed public endpoint. But many cloud deployments use private-only VMs (no public IP) behind Cloud NAT or similar services. Pilot handles this automatically.</p>
+  <p>The example above used VMs with public IPs and <code>set-public</code>. For cloud VMs with a known public IP you can also pass the daemon's <code>--endpoint</code> flag to register a fixed endpoint and skip STUN. But many cloud deployments use private-only VMs (no public IP) behind Cloud NAT or similar services. Pilot handles this automatically.</p>
 
   <p>When an agent starts without the <code>--endpoint</code> flag, the daemon performs STUN discovery to determine its public-facing IP and port, plus the NAT type (Full Cone, Restricted Cone, Port-Restricted Cone, or Symmetric). Based on the NAT types of both peers, the connection strategy is selected automatically:</p>
 

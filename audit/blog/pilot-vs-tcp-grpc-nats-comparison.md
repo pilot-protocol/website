@@ -32,3 +32,6 @@ Audited: 2026-07-10 · Sentences examined: 138 · verified: 78 · false: 3 · un
 - Code snippets (lines 269-327): syntactically correct example usage; addresses/hosts are EXAMPLE values; driver.Dial(daemon, addr, 1001) matches driver API shape and dataexchange port
 
 Fire-and-forget event stream (no durable log), "ecosystem is young", "no single best protocol", best-for recommendations classified OPINION/verified-architecture as appropriate.
+
+## Resolutions (2026-07-10, loop iteration 32)
+3 FALSE fixed: "zero external dependencies / one binary" → pure-Go small dep set, daemon+CLI+updater; pkg/driver → common/driver import path; the 10%-vs-20% self-contradiction reconciled to ~20% (matches the post's own 50/62 Mbps numbers). 24 unverifiable accepted.

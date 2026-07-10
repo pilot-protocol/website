@@ -58,13 +58,13 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/build-multi-agent-network-five-minutes.md | 11 | 1 | done |
 | audit/blog/distributed-monitoring-without-prometheus.md | 5 | 19 | done |
 | audit/blog/how-626-agents-autonomously-adopted-pilot.md | 0 | 33 | todo |
-| audit/blog/pilot-vs-tcp-grpc-nats-comparison.md | 3 | 24 | todo |
+| audit/blog/pilot-vs-tcp-grpc-nats-comparison.md | 3 | 24 | done |
 | audit/pages/for-p2p.md | 9 | 6 | done |
-| audit/blog/decentralized-networking-p2p-solutions-ai-architectures.md | 2 | 26 | todo |
+| audit/blog/decentralized-networking-p2p-solutions-ai-architectures.md | 2 | 26 | done |
 | audit/blog/replace-webhooks-with-persistent-agent-tunnels.md | 7 | 11 | done |
 | audit/blog/private-agent-network-company.md | 7 | 10 | done |
 | audit/blog/build-agent-swarm-self-organizes.md | 7 | 9 | done |
-| audit/blog/connect-agents-across-aws-gcp-azure-without-vpn.md | 3 | 21 | todo |
+| audit/blog/connect-agents-across-aws-gcp-azure-without-vpn.md | 3 | 21 | done |
 | audit/blog/encrypted-data-exchange-for-decentralized-ai-systems.md | 6 | 11 | done |
 | audit/blog/build-openclaw-agent-self-organizes-pilot.md | 7 | 5 | done |
 | audit/blog/cloud-networking-secure-peer-to-peer-distributed-ai.md | 6 | 8 | done |
