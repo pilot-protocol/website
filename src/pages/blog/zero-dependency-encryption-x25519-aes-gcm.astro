@@ -25,7 +25,7 @@ const bodyContent = `<p>Pilot Protocol implements its entire encryption stack --
 
   <p>External crypto libraries often pull in hundreds of thousands of lines of code. OpenSSL alone is over 500,000 lines of C. Auditing this is a multi-year, multi-million-dollar effort that most organizations never complete.</p>
 
-  <p>Go's <code>crypto/ecdh</code> package for X25519 is roughly 300 lines of Go. The <code>crypto/aes</code> and <code>crypto/cipher</code> packages for AES-GCM add another ~1,500 lines. The total audit surface for Pilot's encryption is under 2,000 lines of well-documented, type-safe Go code. A single security engineer can review it in a day.</p>
+  <p>Pilot's encryption relies only on Go's standard-library <code>crypto/ecdh</code>, <code>crypto/aes</code>, <code>crypto/cipher</code>, and <code>crypto/sha256</code> — a few thousand lines of well-documented, type-safe, widely-reviewed Go, with no third-party cryptography dependencies to audit.</p>
 
   <h3>Reproducible Builds</h3>
 
@@ -41,7 +41,7 @@ const bodyContent = `<p>Pilot Protocol implements its entire encryption stack --
 
   <h3>How It Works</h3>
 
-  <p>When two Pilot agents establish a tunnel, each side generates an <strong>ephemeral X25519 key pair</strong>. "Ephemeral" means the keys are created fresh for every tunnel establishment. Even if an attacker captures and decrypts one session's traffic (by somehow obtaining the shared secret), they cannot decrypt any other session because every session uses different keys. This property is called <strong>forward secrecy</strong>.</p>
+  <p>When a Pilot daemon enables encryption it generates an <strong>X25519 key pair</strong> once at startup and reuses it for the tunnels it establishes. Each pair of peers derives a distinct shared secret from their two public keys, so a peer cannot read traffic between two other peers. (Note: because the X25519 key is per-daemon-lifetime rather than per-session, this is not per-session forward secrecy — a future rotating-key design would add that.)</p>
 
   <pre><code><span class="comment">// Generate ephemeral X25519 key pair using Go's crypto/ecdh</span>
 curve := ecdh.X25519()
@@ -55,7 +55,8 @@ privateKey, err := curve.GenerateKey(rand.Reader)
 
 <span class="comment">// Derive shared secret using ECDH</span>
 sharedSecret, err := privateKey.ECDH(peerPublicKey)
-<span class="comment">// sharedSecret is 32 bytes -- used as the AES-256 key</span></code></pre>
+<span class="comment">// sharedSecret (32 bytes) is run through HKDF-SHA256</span>
+<span class="comment">// (info = "pilot-tunnel-v1") to derive the AES-256-GCM key</span></code></pre>
 
   <p>The mathematics of elliptic curve Diffie-Hellman guarantee that both sides derive the same shared secret, even though neither transmitted their private key. An eavesdropper who captures both public keys cannot derive the shared secret without solving the elliptic curve discrete logarithm problem, which is computationally infeasible.</p>
 
@@ -79,9 +80,9 @@ Agent A                                          Agent B
    |<========= PILS encrypted traffic ==============>|
 
 <span class="comment"># PILK = 0x50494C4B ("Pilot Key"), 4 bytes magic + 32 bytes public key</span>
-<span class="comment"># Total key exchange overhead: 72 bytes (36 bytes per direction)</span></code></pre>
+<span class="comment"># PILK frame: 4 magic + 4 nodeID + 32 pubkey = 40 bytes/direction (80 total)</span></code></pre>
 
-  <p>The entire key exchange adds approximately <strong>0.3ms</strong> to connection setup time. This is measured on cross-region connections between GCP VMs. On local networks, key exchange completes in under 0.1ms. The cost is paid once per tunnel, not per packet.</p>
+  <p>The X25519 computation itself is sub-millisecond; the dominant setup cost is the one network round-trip for the handshake, which is bounded by the peers' RTT. The crypto cost is paid once per tunnel, not per packet.</p>
 
   <h2 id="aes-gcm-encryption">AES-256-GCM: Authenticated Encryption</h2>
 
@@ -115,18 +116,18 @@ plaintext, err := aesGCM.Open(nil, nonce, ciphertext, nil)
 
   <pre><code><span class="comment"># PILT frame (plaintext, used before key exchange)</span>
 <span class="cmd">50 49 4C 54</span>    <span class="comment"># Magic: "PILT"</span>
-<span class="cmd">XX XX</span>          <span class="comment"># Frame length</span>
-<span class="cmd">[pilot packet]</span> <span class="comment"># 34-byte header + payload (plaintext)</span>
+<span class="cmd">[pilot packet]</span> <span class="comment"># header + payload (plaintext; UDP datagram framing, no length field)</span>
 
 <span class="comment"># PILS frame (encrypted, used after key exchange)</span>
 <span class="cmd">50 49 4C 53</span>    <span class="comment"># Magic: "PILS"</span>
+<span class="cmd">[4 bytes]</span>      <span class="comment"># Sender nodeID (big-endian)</span>
 <span class="cmd">[12 bytes]</span>     <span class="comment"># Nonce (4-byte random prefix + 8-byte counter)</span>
 <span class="cmd">[N bytes]</span>      <span class="comment"># AES-256-GCM ciphertext</span>
 <span class="cmd">[16 bytes]</span>     <span class="comment"># GCM authentication tag (appended by Seal)</span>
 
-<span class="comment"># Overhead per packet: 4 (magic) + 12 (nonce) + 16 (auth tag) = 32 bytes</span></code></pre>
+<span class="comment"># Overhead per packet: 4 (magic) + 4 (nodeID) + 12 (nonce) + 16 (auth tag) = 36 bytes</span></code></pre>
 
-  <p>The 32-byte overhead per packet is modest. For a typical agent message of 1,024 bytes, encryption adds 3.1% overhead. For larger payloads near the MTU limit, overhead drops below 2%. The per-packet encryption time is approximately <strong>5 microseconds</strong> on modern hardware -- negligible compared to network latency.</p>
+  <p>The 36-byte overhead per packet is modest. For a typical agent message of 1,024 bytes, encryption adds about 3.5% overhead. For larger payloads near the MTU limit, overhead drops below 2%. The per-packet encryption time is approximately <strong>5 microseconds</strong> on modern hardware -- negligible compared to network latency.</p>
 
   <h2 id="nonce-management">Nonce Management: Preventing Replay and Reuse</h2>
 
@@ -195,7 +196,7 @@ Agent A                                          Agent B
    |  <span class="comment">Authentication tags prevent tampering</span>
    |  <span class="comment">Counter nonces prevent replay</span></code></pre>
 
-  <p>The entire handshake adds one round-trip (~0.3ms on typical networks). After the handshake, every packet is encrypted and authenticated with ~5 microseconds of overhead. The agent developer never calls any encryption API -- the daemon handles it automatically when connections target port 443 or when encrypt-by-default is enabled.</p>
+  <p>The entire handshake adds one round-trip (~0.3ms on typical networks). After the handshake, every packet is encrypted and authenticated with ~5 microseconds of overhead. The agent developer never calls any encryption API -- the daemon handles it automatically — tunnel encryption is a daemon-level default (the <code>-encrypt</code> flag, on by default) applied to all tunnel traffic.</p>
 
   <h2 id="encrypt-by-default">Encrypt by Default: Port 443</h2>
 
@@ -208,16 +209,16 @@ Cipher: AES-256-GCM
 Nonce prefix: a3b2c1d0
 Message encrypted and delivered
 
-<span class="comment"># Port 80 for non-sensitive traffic (still within the overlay)</span>
+<span class="comment"># Any port — with -encrypt on (the default) all tunnel traffic is encrypted</span>
 <span class="cmd">$ pilotctl connect status-monitor 80 --message "heartbeat"</span>
-Connected (plaintext within tunnel)
+Connected (encrypted — -encrypt is on by default)
 Message delivered</code></pre>
 
   <p>The encrypt-by-default design means that developers who use port 443 get end-to-end encryption without writing any cryptographic code. The Go standard library handles the heavy lifting. The daemon handles the key exchange. The developer handles the application logic.</p>
 
   <h2 id="performance">Performance Characteristics</h2>
 
-  <p>Encryption overhead is measured at two levels: the one-time cost of key exchange, and the per-packet cost of AES-GCM operations.</p>
+  <p>Encryption overhead lands at two levels: the one-time cost of key exchange, and the per-packet cost of AES-GCM operations. The figures below are illustrative orders of magnitude (crypto is CPU-bound and sub-millisecond; round-trips are network-bound), not published benchmarks.</p>
 
   <table>
     <thead>
@@ -234,7 +235,7 @@ Message delivered</code></pre>
     </tbody>
   </table>
 
-  <p>On modern CPUs with AES-NI hardware acceleration (virtually all x86 processors since 2010 and ARM processors since ARMv8), AES-GCM runs at memory bandwidth speeds. The 5-microsecond per-packet cost is negligible compared to network transmission time, which is typically measured in milliseconds. Even on a Raspberry Pi without AES-NI, per-packet encryption completes in under 50 microseconds.</p>
+  <p>On modern CPUs with AES-NI hardware acceleration (virtually all x86 processors since 2010 and ARM processors since ARMv8), AES-GCM runs at memory bandwidth speeds. The per-packet AES-GCM cost is on the order of microseconds — negligible compared to network transmission time, which is typically measured in milliseconds. (These are illustrative orders of magnitude, not published benchmarks.)</p>
 
   <p>The bottom line: encryption adds effectively zero observable latency to agent communication. The key exchange adds one network round-trip. Per-packet encryption is invisible at the application layer.</p>
 
@@ -246,7 +247,7 @@ Message delivered</code></pre>
     <li><strong>Certificate management.</strong> TLS requires X.509 certificates. Who issues them? Who revokes them? For a fleet of ephemeral agents that spin up and down dynamically, certificate lifecycle management is a significant operational burden. Pilot uses ephemeral X25519 keys with no certificates.</li>
     <li><strong>TCP dependency.</strong> Standard TLS runs over TCP. Pilot runs over UDP. DTLS (Datagram TLS) exists but adds complexity, retransmission logic that conflicts with Pilot's own transport layer, and a much larger handshake.</li>
     <li><strong>External dependencies.</strong> Go's <code>crypto/tls</code> package handles TLS but brings in ASN.1 parsing, X.509 validation, OCSP stapling, and a dozen other features that Pilot does not need. Each feature is additional attack surface.</li>
-    <li><strong>Handshake overhead.</strong> A TLS 1.3 handshake requires 1-RTT minimum and involves multiple message types (ClientHello, ServerHello, EncryptedExtensions, Finished). Pilot's key exchange is a single PILK frame in each direction -- 72 total bytes.</li>
+    <li><strong>Handshake overhead.</strong> A TLS 1.3 handshake requires 1-RTT minimum and involves multiple message types (ClientHello, ServerHello, EncryptedExtensions, Finished). Pilot's key exchange is a single PILK frame in each direction -- 40 bytes each, 80 total.</li>
   </ul>
 
   <p>Pilot's encryption is narrowly scoped: X25519 for key exchange, AES-256-GCM for symmetric encryption, nothing else. There is no certificate parsing, no cipher suite negotiation, no protocol version fallback. This narrow scope is the point -- fewer features means fewer bugs, fewer CVEs, and a smaller attack surface.</p>
@@ -256,7 +257,7 @@ Message delivered</code></pre>
   <ul>
     <li><strong>Confidentiality:</strong> AES-256-GCM encryption. 256-bit key, no known practical attacks.</li>
     <li><strong>Integrity:</strong> GCM authentication tag on every packet. Tampered packets are detected and discarded.</li>
-    <li><strong>Forward secrecy:</strong> Ephemeral X25519 keys. Compromise of long-term identity keys does not expose past sessions.</li>
+    <li><strong>Peer isolation:</strong> Each peer pair derives its own AES-256-GCM key via X25519 + HKDF, so one peer cannot read another pair's traffic. (The X25519 key is per-daemon-lifetime, not per-session.)</li>
     <li><strong>Replay prevention:</strong> Random nonce prefix per connection + monotonic counter. No nonce reuse across or within connections.</li>
     <li><strong>No external dependencies:</strong> Entire crypto stack is Go standard library (crypto/ecdh, crypto/aes, crypto/cipher, crypto/rand).</li>
     <li><strong>Relay privacy:</strong> Even when traffic is relayed through the beacon for <a href="nat-traversal-ai-agents-deep-dive">NAT traversal</a>, encryption is end-to-end. The beacon sees only opaque ciphertext.</li>
@@ -264,9 +265,9 @@ Message delivered</code></pre>
 
   <h2 id="aes-128-gcm-vs-aes-256-gcm">AES-128-GCM vs. AES-256-GCM: Why Pilot Pairs X25519 With the 256-bit Key</h2>
 
-  <p>X25519 key exchange is often paired with AES-128-GCM rather than AES-256-GCM. TLS 1.3 defines <code>TLS_AES_128_GCM_SHA256</code> as its mandatory-to-implement cipher suite, and WireGuard's Noise-based handshake also derives a 128-bit symmetric key for its ChaCha20-Poly1305 transport. Seeing X25519 next to AES-128-GCM in a protocol spec or a TLS handshake trace is common, and it is a deliberate, well-reasoned choice in those designs -- a 128-bit key already provides a security margin considered adequate against classical cryptanalysis, and a smaller key can mean marginally less work per block cipher round.</p>
+  <p>X25519 key exchange is often paired with AES-128-GCM rather than AES-256-GCM. TLS 1.3 defines <code>TLS_AES_128_GCM_SHA256</code> as its mandatory-to-implement cipher suite, and WireGuard's Noise-based handshake derives 256-bit ChaCha20-Poly1305 transport keys. Seeing X25519 next to AES-128-GCM in a protocol spec or a TLS handshake trace is common, and it is a deliberate, well-reasoned choice in those designs -- a 128-bit key already provides a security margin considered adequate against classical cryptanalysis, and a smaller key can mean marginally less work per block cipher round.</p>
 
-  <p>Pilot Protocol's key derivation from X25519 produces a 32-byte (256-bit) shared secret, and the daemon uses the full 32 bytes as the AES-256-GCM key rather than truncating to 16 bytes for AES-128-GCM. Go's <code>crypto/aes</code> package selects the cipher variant purely from key length -- <code>aes.NewCipher</code> returns an AES-128 cipher for a 16-byte key and an AES-256 cipher for a 32-byte key, with no separate code path required. Since X25519's ECDH output is already 32 bytes, using all of it for AES-256 avoids a truncation or key-derivation step that AES-128-GCM would otherwise need.</p>
+  <p>Pilot Protocol's X25519 ECDH produces a 32-byte (256-bit) shared secret, which the daemon runs through HKDF-SHA256 (info <code>"pilot-tunnel-v1"</code>) to derive a 32-byte AES-256-GCM key. Go's <code>crypto/aes</code> package selects the cipher variant purely from key length -- <code>aes.NewCipher</code> returns an AES-256 cipher for a 32-byte key with no separate code path. Deriving a full-length key keeps the AES-256 strength end to end.</p>
 
   <table>
     <thead>
@@ -294,11 +295,11 @@ Message delivered</code></pre>
 const faqItems = [
   {
     question: "Does X25519 have to be paired with AES-128-GCM?",
-    answer: "No. X25519 key exchange produces a 32-byte (256-bit) shared secret, which can be used directly as an AES-256-GCM key or truncated/derived down to a 16-byte AES-128-GCM key. Both pairings are used in real protocols -- TLS 1.3's default cipher suite and WireGuard-style handshakes commonly pair X25519 with a 128-bit key, while Pilot Protocol uses the full 256-bit ECDH output for AES-256-GCM.",
+    answer: "No. X25519 key exchange produces a 32-byte (256-bit) shared secret, which can be used directly as an AES-256-GCM key or truncated/derived down to a 16-byte AES-128-GCM key. Both pairings are used in real protocols -- TLS 1.3's default cipher suite and WireGuard-style handshakes commonly pair X25519 with a 128-bit key, while Pilot Protocol derives a 256-bit AES-256-GCM key (via HKDF-SHA256) from its X25519 shared secret.",
   },
   {
     question: "Why does Pilot Protocol use AES-256-GCM instead of AES-128-GCM?",
-    answer: "Pilot's X25519 key exchange already produces a 32-byte shared secret. Using all 32 bytes as the AES-256-GCM key avoids an extra truncation or key-derivation step, and Go's crypto/aes package selects the AES-256 code path automatically from a 32-byte key with no additional dependency or configuration.",
+    answer: "Pilot's X25519 key exchange produces a 32-byte shared secret, which is run through HKDF-SHA256 to derive the AES-256-GCM key. Go's crypto/aes package selects the AES-256 code path automatically from the 32-byte key, with no additional dependency.",
   },
   {
     question: "Is AES-128-GCM less secure than AES-256-GCM?",
@@ -310,7 +311,7 @@ const faqItems = [
   },
   {
     question: "What is X25519 key exchange used for?",
-    answer: "X25519 (RFC 7748) is an elliptic curve Diffie-Hellman function that lets two agents derive a shared secret from ephemeral key pairs without ever transmitting the secret itself. Pilot Protocol generates a fresh X25519 key pair for every tunnel, which provides forward secrecy: compromising one session's keys does not expose any other session.",
+    answer: "X25519 (RFC 7748) is an elliptic curve Diffie-Hellman function that lets two agents derive a shared secret from ephemeral key pairs without ever transmitting the secret itself. A Pilot daemon generates an X25519 key pair at startup and derives a distinct shared secret with each peer, so one peer pair's traffic cannot be read by another. (The key is per-daemon-lifetime, so this is peer isolation rather than per-session forward secrecy.)",
   },
   {
     question: "Why use AES-256-GCM instead of AES-CBC or another mode?",
