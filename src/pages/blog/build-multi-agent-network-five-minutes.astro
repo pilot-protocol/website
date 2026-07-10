@@ -7,7 +7,7 @@ const bodyContent = `<p>This tutorial takes you from zero to a working multi-age
 
   <h2 id="prerequisites">Prerequisites</h2>
 
-  <p>You need <strong><a href="https://go.dev" target="_blank" rel="noopener">Go</a> 1.21 or later</strong> installed. That is the only dependency. Pilot Protocol is a single binary with zero external libraries.</p>
+  <p>The one-line installer ships prebuilt binaries — <strong>no Go toolchain required</strong>. (Building from source needs Go 1.25+.) The install drops a small set of binaries: <code>pilotctl</code>, <code>pilot-daemon</code>, and the auto-updater.</p>
 
   <p>You will also need a Pilot network. The default network at <code>pilotprotocol.network</code> is available for all users.</p>
 
@@ -17,12 +17,12 @@ const bodyContent = `<p>This tutorial takes you from zero to a working multi-age
 
   <pre><code><span class="cmd">$ curl -fsSL https://pilotprotocol.network/install.sh | sh</span></code></pre>
 
-  <p>This installs <code>pilotctl</code> to your <code>$GOPATH/bin</code>. Make sure that directory is in your <code>$PATH</code>.</p>
+  <p>This installs the binaries to <code>~/.pilot/bin</code> and adds that directory to your <code>$PATH</code>.</p>
 
   <p>Verify the installation:</p>
 
   <pre><code><span class="cmd">$ pilotctl version</span>
-pilotctl v0.5.0</code></pre>
+pilotctl v1.12.4</code></pre>
 
   <div class="callout">
     <p><strong>Alternative:</strong> You can also clone the repository and build from source with <code>go build ./cmd/pilotctl</code>. See the <a href="/docs/getting-started">Getting Started guide</a> for details.</p>
@@ -34,8 +34,10 @@ pilotctl v0.5.0</code></pre>
 
   <h3>Agent Alice (Terminal 1)</h3>
 
-  <pre><code><span class="comment"># Initialize identity</span>
-<span class="cmd">$ pilotctl init</span>
+  <pre><code><span class="comment"># Write local config (registry required)</span>
+<span class="cmd">$ pilotctl init --registry 34.71.57.205:9000</span>
+<span class="comment"># The daemon creates the Ed25519 identity on first start:</span>
+<span class="cmd">$ pilotctl daemon start</span>
 Identity created: ~/.pilot/identity.json
 
 <span class="comment"># Start the daemon and register as "alice"</span>
@@ -61,7 +63,7 @@ Tunnel listening on :4000</code></pre>
   <p>Both agents are now running. The <code>--public</code> flag makes them discoverable by hostname. Without it, agents are private and can only be found by trusted peers.</p>
 
   <div class="callout">
-    <p><strong>Same machine?</strong> If you are running both agents on one machine for testing, use different directories for identity storage: <code>PILOT_HOME=~/.pilot-alice pilotctl init</code> and <code>PILOT_HOME=~/.pilot-bob pilotctl init</code>. Each daemon also needs a different tunnel port: <code>--port 4000</code> and <code>--port 4001</code>.</p>
+    <p><strong>Same machine?</strong> If you are running both agents on one machine for testing, use different directories for identity storage: <code>PILOT_HOME=~/.pilot-alice pilotctl init</code> and <code>PILOT_HOME=~/.pilot-bob pilotctl init</code>. Each daemon also needs a different tunnel listen port: <code>--listen :4000</code> and <code>--listen :4001</code>.</p>
   </div>
 
   <h2 id="discover">Step 3: Discover and Establish Trust</h2>
@@ -111,11 +113,11 @@ Reply from 0:0000.0000.0004: seq=3 time=22.1ms</code></pre>
   <p>Send structured text data through the Data Exchange service on port 1001:</p>
 
   <pre><code><span class="comment"># Alice sends a message to Bob</span>
-<span class="cmd">$ pilotctl send bob 1002 --data "Analysis complete. 47 anomalies detected in dataset-7."</span>
+<span class="cmd">$ pilotctl send bob 1001 --data "Analysis complete. 47 anomalies detected in dataset-7."</span>
 Message sent to bob (0:0000.0000.0004)
 
 <span class="comment"># Bob receives it</span>
-<span class="cmd">$ pilotctl recv</span>
+<span class="cmd">$ pilotctl recv 1001</span>
 From: alice (0:0000.0000.0003)
   "Analysis complete. 47 anomalies detected in dataset-7."</code></pre>
 
@@ -128,7 +130,7 @@ From: alice (0:0000.0000.0003)
 Sending report.pdf (2.4 MB) to bob...
 Transfer complete: 2.4 MB in 1.2s (2.0 MB/s)
 
-<span class="comment"># Bob receives files into the current directory</span>
+<span class="comment"># Bob receives files into ~/.pilot/received/</span>
 <span class="cmd">$ ls report.pdf</span>
 report.pdf</code></pre>
 
@@ -173,7 +175,7 @@ Listening...
     <li><a href="trust-model-agents-invisible-by-default"><strong>The Trust Model</strong></a> -- learn why agents are invisible by default and how the handshake system works in depth</li>
     <li><a href="why-ai-agents-need-network-stack"><strong>Why Agents Need a Network Stack</strong></a> -- the motivation behind Pilot Protocol and why HTTP is not enough for agent communication</li>
     <li><a href="/docs/cli-reference"><strong>CLI Reference</strong></a> -- complete documentation for every <code>pilotctl</code> command</li>
-    <li><a href="/docs/services"><strong>Built-in Services</strong></a> -- port-based services including Echo, Data Exchange, Event Stream, and Task Submit</li>
+    <li><a href="/docs/services"><strong>Built-in Services</strong></a> -- port-based services including Echo (7), Stdio (1000), Data Exchange (1001), and Event Stream (1002)</li>
     <li><a href="/docs/integration"><strong>Integration Guide</strong></a> -- embed Pilot Protocol in your Go applications</li>
   </ul>
 

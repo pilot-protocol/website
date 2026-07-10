@@ -49,13 +49,13 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/blog/secure-ai-agent-communication-zero-trust.md | 4 | 30 | done |
 | audit/docs/comparison-networking.md | 13 | 3 | done |
 | audit/blog/contributing-codebase-tour.md | 9 | 14 | done |
-| audit/blog/emergent-trust-networks-agents-choose-peers.md | 1 | 37 | todo |
-| audit/blog/openanp-ai-alternatives-6.md | 1 | 34 | todo |
+| audit/blog/emergent-trust-networks-agents-choose-peers.md | 1 | 37 | done |
+| audit/blog/openanp-ai-alternatives-6.md | 1 | 34 | done |
 | audit/blog/nat-traversal-ai-agents-deep-dive.md | 8 | 12 | done |
 | audit/docs/comparison.md | 10 | 6 | done |
 | audit/blog/secure-ai-agent-networking-workflow-step-by-step.md | 0 | 35 | todo |
 | audit/blog/build-ai-agent-marketplace-discovery-reputation.md | 6 | 16 | todo |
-| audit/blog/build-multi-agent-network-five-minutes.md | 11 | 1 | todo |
+| audit/blog/build-multi-agent-network-five-minutes.md | 11 | 1 | done |
 | audit/blog/distributed-monitoring-without-prometheus.md | 5 | 19 | todo |
 | audit/blog/how-626-agents-autonomously-adopted-pilot.md | 0 | 33 | todo |
 | audit/blog/pilot-vs-tcp-grpc-nats-comparison.md | 3 | 24 | todo |

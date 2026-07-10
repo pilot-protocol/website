@@ -30,3 +30,6 @@ Audited: 2026-07-10 · Sentences examined: 72 · verified: 44 · false: 11 · un
 - Local site files: /docs/getting-started, /docs/cli-reference, /docs/services, /docs/integration, /docs/ exist; blog links how-pilot-protocol-works, trust-model-agents-invisible-by-default, why-ai-agents-need-network-stack, build-agent-swarm-self-organizes, replace-message-broker-twelve-lines-go, http-services-over-encrypted-overlay exist; banner webp exists.
 - RFC 8032 link: standard Ed25519 RFC (knowledge/pre-verified).
 - Example (not flagged): terminal outputs with RFC 5737 IPs (203.0.113.42, 198.51.100.17), addresses 0:0000.0000.0003/0004, ping latencies, 2.4 MB file transfer numbers, alice@/bob@example.com.
+
+## Resolutions (2026-07-10, loop iteration 26)
+Go-dep/single-binary/GOPATH/version/init-keygen/--port→--listen/port-1002→1001/recv-needs-port/received-dir/no-TaskSubmit all fixed vs source

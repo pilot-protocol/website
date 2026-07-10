@@ -30,3 +30,6 @@ This article presents itself as empirical research ("Research findings from live
 - web4/cmd/pilotctl/main.go (handshake help): trust is bilateral — "The remote node must approve the request before messages can flow" — supports "requires both parties to agree" / "directed, mutual edge" (line 9).
 - Local site files: internal links /docs/research (src/pages/docs/research.astro) and /docs/getting-started exist; banner emergent-trust-networks-agents-choose-peers.webp exists in public/blog/banners/.
 - General knowledge: Barabási-Albert preferential attachment description (line 27-29), power laws in citation networks/web/Hollywood collaborations (line 41), Dunbar's layer numbers 5/15/50/150 and social brain hypothesis (line 66), giant-component behavior in social networks (line 85) — accurate textbook network science.
+
+## Resolutions (2026-07-10, loop iteration 26)
+clustering-coefficient 47x reworded (~47x higher than random graph, per research page)

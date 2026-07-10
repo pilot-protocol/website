@@ -32,3 +32,6 @@ Audited: 2026-07-10 · Sentences examined: 140 · verified: 55 · false: 1 · un
 - Self-consistent metadata: JSON-LD headline/description/date match frontmatter.
 - OPINION (not flagged): all "Unique Value Proposition" superlatives ("unmatched foundation", "sophisticated buyers"), pros/cons editorializing, FAQ advice.
 - EXAMPLE: hypothetical use-case narratives (financial services firm, fintech firm, security operations team) — illustrative scenarios, not presented as real customers.
+
+## Resolutions (2026-07-10, loop iteration 26)
+AgentDM pricing corrected (no $5/$10 plans; free during adoption window per agentdm.ai)
