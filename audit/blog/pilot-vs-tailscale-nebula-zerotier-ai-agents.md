@@ -22,3 +22,7 @@ Audited: 2026-07-10 · Sentences examined: 82 · verified: 58 · false: 2 · unv
 - Local site files: banner public/blog/banners/pilot-vs-tailscale-nebula-zerotier-ai-agents.svg exists; external links tailscale.com, github.com/slackhq/nebula, zerotier.com, wireguard.com, github.com/juanfont/headscale are valid targets
 
 Decision-guide recommendations ("hard to beat", "which should you choose", FAQ verdicts) classified OPINION. Terminal block commands are real syntax (verified above); agent@example.com and <peer-address> are EXAMPLE values.
+
+## Resolutions (2026-07-11 iter 55)
+- L27/L77 ("stdlib-only Go" / "pure-stdlib Go with no external dependencies"): go.mod has coder/websocket, golang.org/x/sys, expr-lang/expr. AGPL kept; reworded to "static Go binary" / "single static binary".
+Build: npm run build green (345 pages).

@@ -29,3 +29,8 @@ Audited: 2026-07-10 · Sentences examined: 102 · verified: 70 · false: 2 · un
 - Local site files: internal links secure-ai-agent-communication-zero-trust, connect-ai-agents-behind-nat-without-vpn, build-multi-agent-network-five-minutes, private-agent-network-company all exist in src/pages/blog; banner .webp exists
 - Knowledge: DNS history/behavior claims (hierarchical, cached, ~40 years, WHOIS public, no capability info); A2A Agent Cards at /.well-known/agent.json is the documented A2A convention
 - EXAMPLE items: all terminal outputs (agent-alpha, 1:0001.0000.00xx addresses, 34.148.103.117:4000, sample JSON incl. the malformed `context` JSON with duplicate "network" keys and trailing comma — illustrative but sloppy)
+
+## Resolutions (2026-07-11 iter 55)
+- L202 ("Open source | Yes (MIT license)"): repo is AGPL-3.0. Corrected to AGPL-3.0.
+- L103/118/141/225 (peers --search as a registry-wide tag/capability search): peers --search filters connected peers by node-ID/hostname substring and returns no tags. The real network-wide capability discovery is the list-agents directory service. Replaced all four command blocks with `pilotctl send-message list-agents --data '/data {"search":"..."}' --wait`, changed the outputs to a directory response (hostname/address/category-description), and reworded the prose: the directory indexes hostname/category/description (not tags — tags are node metadata), and peers --search is the connected-peer filter. Softened the unverifiable per-peer tag-visibility claim.
+Build: npm run build green (345 pages).

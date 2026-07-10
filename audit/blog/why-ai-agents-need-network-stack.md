@@ -28,3 +28,7 @@ Audited: 2026-07-10 · Sentences examined: 78 · verified: 58 · false: 2 · unv
 - Public specs: A2A Agent Cards at well-known HTTP endpoints, JSON-RPC over HTTP + SSE (a2a-protocol.org, 200) (4, 14); MCP transports stdio + HTTP/SSE (modelcontextprotocol.io, 200) (16); jsonrpc.org, crewai.com, tailscale.com all 200 (4, 98).
 - Local links: how-pilot-protocol-works, trust-model-agents-invisible-by-default, build-multi-agent-network-five-minutes, /blog/move-beyond-rest-persistent-connections-for-agents, /blog/lightweight-swarm-communication-drones-robots, /blog/smart-home-without-cloud-local-device-communication all exist in src/pages/blog; /docs/concepts and /docs/integration exist; github.com/pilot-protocol/pilotprotocol pre-verified repo; banner .webp exists.
 - Opinion (not flagged): "It is not.", 1990s TCP/IP analogy, "identity is in worse shape", "staggering", Tailscale analogy framing, "The application layer cannot solve these problems", CTA copy.
+
+## Resolutions (2026-07-11 iter 55)
+- L130/L141 ("zero external dependencies" / "No external dependencies"): web4 go.mod requires coder/websocket + pilot modules. AGPL + Go kept; reworded to "ships as a single static binary" / "One static binary".
+Build: npm run build green (345 pages).

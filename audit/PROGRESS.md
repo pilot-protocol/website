@@ -128,11 +128,11 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/webhooks.md | 5 | 0 | done |
 | audit/blog/agent-communication-security-best-practices.md | 4 | 2 | done |
 | audit/blog/clawhub-to-live-network-openclaw-discovery.md | 2 | 8 | todo |
-| audit/blog/how-ai-agents-discover-each-other.md | 2 | 8 | todo |
+| audit/blog/how-ai-agents-discover-each-other.md | 2 | 8 | done |
 | audit/blog/trustless-protocols-that-secure-decentralized-ai-systems.md | 0 | 14 | todo |
 | audit/blog/userspace-tcp-over-udp-stack-pure-go.md | 3 | 5 | done |
 | audit/blog/virtual-network-addresses-for-secure-decentralized-ai.md | 2 | 8 | todo |
-| audit/blog/why-ai-agents-need-network-stack.md | 2 | 8 | todo |
+| audit/blog/why-ai-agents-need-network-stack.md | 2 | 8 | done |
 | audit/blog/aegis-agent-firewall-prompt-injection.md | 4 | 1 | done |
 | audit/docs/configuration.md | 4 | 1 | done |
 | audit/blog/autonomous-agent-networking-distributed-ai.md | 0 | 12 | todo |
@@ -165,7 +165,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | audit/docs/services.md | 3 | 0 | done |
 | audit/pages/terms.md | 2 | 3 | done |
 | audit/blog/persistent-network-addressing-secure-ai-systems.md | 1 | 5 | todo |
-| audit/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents.md | 2 | 2 | todo |
+| audit/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents.md | 2 | 2 | done |
 | audit/blog/trust-network-protocols-secure-decentralized-systems.md | 0 | 8 | todo |
 | audit/docs/troubleshooting.md | 2 | 2 | done |
 | audit/blog/private-networks-now-in-testing.md | 0 | 7 | todo |
