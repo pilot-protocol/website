@@ -13,6 +13,8 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 | GA4 loads unconditionally on /plain (GDPR) | FIXED — removed GA4 from PlainLayout entirely (plain = JS-stripped agent surface) | website #116 | n/a |
 
 ## Needs user review
+- **install.sh `--email` flag** (product-fix candidate): the compatibility examples used `--email`, which install.sh rejects (exit 2); website now uses `PILOT_EMAIL=` env. install.sh's OWN header comment still references `--email`. Options: add a real `--email` flag to the installer parser (makes the natural UX work, matches the header) OR fix the header comment. Touches release/install.sh → needs R2 deploy via pilot-release worker, so parking for your greenlight.
+
 - (none yet)
 
 ## Pages
@@ -20,7 +22,7 @@ Started 2026-07-10. Status: todo | in-progress | done | blocked.
 |---|---:|---:|---|
 | audit/docs/consent.md | 33 | 6 | done |
 | audit/for/compatibility.md | 16 | 33 | done |
-| audit/docs/enterprise-blueprints.md | 24 | 0 | todo |
+| audit/docs/enterprise-blueprints.md | 24 | 0 | done |
 | audit/pages/privacy.md | 11 | 37 | todo |
 | audit/docs/cli-reference.md | 21 | 6 | done |
 | audit/docs/enterprise-identity.md | 22 | 0 | todo |
