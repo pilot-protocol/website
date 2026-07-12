@@ -53,17 +53,36 @@ const bodyContent = `<h1>Enterprise</h1>
   <table>
     <thead><tr><th>Requires enterprise</th><th>Available to all networks</th></tr></thead>
     <tbody>
-      <tr><td>RBAC roles (promote, demote, kick)</td><td>Network create / join / leave / delete</td></tr>
-      <tr><td>Ownership transfer</td><td>Membership listing</td></tr>
-      <tr><td>Per-network admin tokens</td><td>Audit log query (global)</td></tr>
-      <tr><td>Invite flow</td><td>Key rotation</td></tr>
-      <tr><td>Directory sync</td><td>Hostname &amp; visibility changes</td></tr>
-      <tr><td>Port policies</td><td>Tags &amp; discovery</td></tr>
-      <tr><td>Blueprint provisioning</td><td>Trust &amp; handshakes</td></tr>
+      <tr>
+        <td>
+          <ul>
+            <li>RBAC roles (promote, demote, kick)</li>
+            <li>Ownership transfer</li>
+            <li>Invite flow</li>
+            <li>Directory sync</li>
+            <li>Port policies</li>
+          </ul>
+        </td>
+        <td>
+          <ul>
+            <li>Network create / join / leave / delete</li>
+            <li>Membership listing</li>
+            <li>Audit log query (global)</li>
+            <li>Key rotation</li>
+            <li>Hostname &amp; visibility changes</li>
+            <li>Tags &amp; discovery</li>
+            <li>Trust &amp; handshakes</li>
+            <li>Per-network admin tokens</li>
+            <li>Blueprint provisioning</li>
+          </ul>
+        </td>
+      </tr>
     </tbody>
   </table>
 
   <p>Attempting an enterprise operation on a non-enterprise network returns an error. The flag is toggled by the registry's <code>set_network_enterprise</code> RPC (also reachable via the Go SDK's <code>registry.Client.SetNetworkEnterprise</code>); membership is preserved across the toggle.</p>
+
+  <p>Note: per-network admin tokens and blueprint provisioning are gated by an <strong>admin token</strong>, not by enterprise mode — they work on any network. Blueprint provisioning only <em>enables</em> enterprise when the blueprint explicitly requests it.</p>
 
   <h2 id="next">What&rsquo;s next</h2>
 
@@ -86,7 +105,7 @@ const bodyContent = `<h1>Enterprise</h1>
   description="Enterprise features for Pilot Protocol - RBAC, identity providers, network policies, audit logging, and blueprint provisioning."
   activePage="enterprise"
   canonicalPath="/docs/enterprise"
-  prev={{ label: "Consent & Privacy", href: "/docs/consent" }}
+  prev={{ label: "Security", href: "/docs/security" }}
   next={{ label: "RBAC & Access Control", href: "/docs/enterprise-rbac" }}
 >
   <Fragment set:html={bodyContent} />

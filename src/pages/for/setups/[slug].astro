@@ -19,7 +19,12 @@ export async function getStaticPaths() {
 const { setup } = Astro.props as { setup: any };
 
 const title = `${setup.name} - Orgs · Pilot Protocol`;
-const description = setup.tagline;
+// Meta description: clean word-boundary truncation of the full description
+// (setup.tagline is a hard ~100-char cut that breaks mid-word).
+const rawDesc: string = setup.description || setup.tagline || '';
+const description = rawDesc.length > 155
+  ? rawDesc.slice(0, 155).replace(/\s+\S*$/, '') + '…'
+  : rawDesc;
 const canonicalUrl = `https://pilotprotocol.network/for/setups/${setup.slug}`;
 ---
 <!DOCTYPE html>
@@ -29,7 +34,7 @@ const canonicalUrl = `https://pilotprotocol.network/for/setups/${setup.slug}`;
 </head>
 <body>
 
-<Nav active="for" />
+<Nav active="tech" />
 
 <section class="page-head">
   <div class="wrap">

@@ -22,8 +22,8 @@ const bodyContent = `<script type="application/ld+json">
     "@type": "Organization"
   },
   "inLanguage": "en-US",
-  "articleBody": "Learn how cloud VPC and P2P protocols like libp2p and IPFS differ, why 87.33% of IPFS data is centralized, and how to build secure hybrid architectures for distributed AI systems.",
-  "description": "Learn how cloud VPC and P2P protocols like libp2p and IPFS differ, why 87.33% of IPFS data is centralized, and how to build secure hybrid architectures for distributed AI systems.",
+  "articleBody": "Learn how cloud VPC and P2P protocols like libp2p and IPFS differ, why 87.33% of IPFS peers are cloud-hosted, and how to build secure hybrid architectures for distributed AI systems.",
+  "description": "Learn how cloud VPC and P2P protocols like libp2p and IPFS differ, why 87.33% of IPFS peers are cloud-hosted, and how to build secure hybrid architectures for distributed AI systems.",
   "datePublished": "2026-04-18T16:31:07.780Z"
 }
       </script>
@@ -39,7 +39,7 @@ const bodyContent = `<script type="application/ld+json">
 </ul>
 </blockquote>
 <hr>
-<p>Most AI developers assume that choosing a decentralized protocol automatically means resilience and security. The reality is more complicated. <a href="https://tddg.github.io/assets/pdf/www25-ipfs-dedup.pdf" rel="nofollow noopener noreferrer" target="_blank">87.33% of IPFS data</a> is now hosted on cloud nodes, a dramatic shift that exposes how centralization quietly creeps into systems designed to resist it. NAT traversal failures, IP collisions, and protocol mismatches add more friction than most teams anticipate. This article breaks down the core networking concepts, the protocols that matter, the real-world challenges you will face, and the hybrid strategies that experienced teams use to build secure, scalable distributed AI systems.</p>
+<p>Most AI developers assume that choosing a decentralized protocol automatically means resilience and security. The reality is more complicated. <a href="https://tddg.github.io/assets/pdf/www25-ipfs-dedup.pdf" rel="nofollow noopener noreferrer" target="_blank">87.33% of IPFS peers (and 97.43% of files)</a> are now hosted on cloud nodes, a dramatic shift that exposes how centralization quietly creeps into systems designed to resist it. NAT traversal failures, IP collisions, and protocol mismatches add more friction than most teams anticipate. This article breaks down the core networking concepts, the protocols that matter, the real-world challenges you will face, and the hybrid strategies that experienced teams use to build secure, scalable distributed AI systems.</p>
 <h2 id="table-of-contents" tabindex="-1">Table of Contents</h2>
 <ul>
 <li><a href="#core-cloud-and-peer-to-peer-networking-concepts">Core cloud and peer-to-peer networking concepts</a></li>
@@ -186,7 +186,7 @@ const bodyContent = `<script type="application/ld+json">
 <p><img src="https://csuxjmfbwmkxiegfpljm.supabase.co/storage/v1/object/public/blog-images/organization-24002/1776529864142_IT-team-collaboratively-solving-networking-problem.jpeg" alt="IT team collaboratively solving networking problem"></p>
 <p>NAT traversal is the first wall you hit. Roughly 30% of NAT traversal attempts fail outright, requiring relay fallback. Symmetric NAT configurations, common in enterprise and mobile environments, block hole-punching entirely. If you don’t build relay infrastructure into your design from day one, you will debug mysterious connection failures at 2 a.m.</p>
 <p>IP address collisions are another underappreciated problem. When agents span multiple VPCs or on-premise networks, overlapping CIDR blocks cause silent routing failures. Data appears to send but never arrives.</p>
-<p>Centralization in P2P networks is the most counterintuitive challenge. IPFS cloud nodes now host 87.33% of data, up from roughly 50% just three years ago. This means your “decentralized” storage may actually depend on a handful of cloud providers.</p>
+<p>Centralization in P2P networks is the most counterintuitive challenge. Cloud nodes now make up 87.33% of the IPFS peer set (and host 97.43% of files), a sharp rise per the 2025 study. This means your “decentralized” storage may actually depend on a handful of cloud providers.</p>
 <blockquote>
 <p>“The assumption that P2P equals decentralization is no longer safe. Empirical data shows IPFS has centralized faster than most practitioners realize, with cloud nodes dominating data hosting in 2026.”</p>
 </blockquote>
@@ -204,14 +204,14 @@ const bodyContent = `<script type="application/ld+json">
 <h2 id="hybrid-cloudp2p-strategies-best-practices-for-distributed-ai-systems" tabindex="-1">Hybrid cloud–P2P strategies: Best practices for distributed AI systems</h2>
 <p>Understanding challenges lets you build future-proof architectures. Here’s how pros merge cloud and P2P models for scalable, secure distributed AI.</p>
 <p>The most effective teams don’t choose between cloud and P2P. They use cloud VPC as the control plane for reliability, authentication, and policy enforcement, while P2P overlays handle data distribution, agent communication, and cross-region resilience. Hybrid approaches combining VPC control planes with P2P overlays consistently outperform pure implementations in both reliability and flexibility.</p>
-<p>Deduplication strategy also matters more than most teams expect. FSC chunking outperforms CDC (Content Defined Chunking) and fixed-size chunking for storage efficiency in distributed systems. Optimizing your chunking method directly reduces storage costs and retrieval latency at scale.</p>
+<p>Deduplication strategy also matters more than most teams expect. Content-Defined Chunking (CDC) outperforms Fixed-Size Chunking (FSC) for deduplication — the 2025 study found FSC achieves near-zero dedup at default chunk sizes while CDC can save up to ~90% of storage. Choosing CDC directly reduces storage costs at scale.</p>
 <p><strong>Best practices for implementing hybrid cloud–P2P architectures:</strong></p>
 <ol>
 <li>Use cloud VPC for identity management, access control, and audit logging</li>
 <li>Deploy P2P overlays (libp2p or custom) for agent-to-agent data exchange</li>
 <li>Implement SCION or equivalent multipath transport for path-aware routing</li>
 <li>Configure DCUtR with relay fallback as a standard pattern, not an edge case</li>
-<li>Apply FSC deduplication chunking to minimize storage overhead</li>
+<li>Apply Content-Defined Chunking (CDC) to minimize storage overhead (FSC deduplicates poorly)</li>
 <li>Monitor centralization metrics regularly and redistribute data when concentration exceeds thresholds</li>
 <li>Use <a href="https://pilotprotocol.network/blog/ai-networking-best-practices-secure-scalable-systems">AI networking best practices</a> to validate your architecture against known failure modes</li>
 </ol>
@@ -220,12 +220,12 @@ const bodyContent = `<script type="application/ld+json">
 <li>Assuming P2P equals decentralization: Monitor node distribution continuously</li>
 <li>Skipping relay infrastructure: Budget for relay nodes from the start</li>
 <li>Ignoring CIDR planning: Allocate non-overlapping ranges before any deployment</li>
-<li>Using fixed-size chunking: Switch to FSC for meaningful efficiency gains</li>
+<li>Using fixed-size chunking (FSC)? Switch to Content-Defined Chunking (CDC) for meaningful dedup gains</li>
 <li>Treating security groups and NACLs as equivalent: Understand stateful vs. stateless behavior</li>
 </ul>
 <p>Following a <a href="https://pilotprotocol.network/blog/secure-ai-agent-networking-workflow-step-by-step">secure networking workflow</a> from the start saves significant rework later.</p>
 <h2 id="the-uncomfortable-truth-decentralization-isnt-automaticwhat-experts-really-do" tabindex="-1">The uncomfortable truth: Decentralization isn’t automatic-what experts really do</h2>
-<p>Here’s what most articles won’t tell you: the word “decentralized” has become marketing language as much as a technical description. The data is clear. Cloud node share in IPFS jumped from 50% to 87.33% in three years. A network designed to resist centralization has centralized faster than most of its users know.</p>
+<p>Here’s what most articles won’t tell you: the word “decentralized” has become marketing language as much as a technical description. The data is clear. Cloud nodes now dominate the IPFS peer set (87.33%) and host the large majority of files (97.43%). A network designed to resist centralization has centralized faster than most of its users know.</p>
 <p>Experienced teams don’t chase ideological purity. They build hybrid systems that are pragmatically resilient. They monitor centralization metrics the same way they monitor latency and error rates. They treat relay fallback as infrastructure, not a bug fix. They apply dedup-optimized chunking because storage efficiency compounds at scale.</p>
 <p>The teams that struggle are the ones who adopt a P2P protocol and assume the architecture handles itself. It doesn’t. Decentralization requires active maintenance, measurement, and adaptation.</p>
 <p>Pro Tip: Set automated alerts for centralization drift in your P2P storage layer. If more than 60% of your data concentrates on fewer than five nodes, redistribute proactively. Pair this with multi-cloud strategies to avoid single-provider dependency at the infrastructure level.</p>
@@ -244,7 +244,7 @@ const bodyContent = `<script type="application/ld+json">
 <h3 id="what-security-risks-exist-in-permissionless-p2p-networking" tabindex="-1">What security risks exist in permissionless P2P networking?</h3>
 <p>Without cryptographic path validation, P2P networks are vulnerable to route hijacking and trust failures. SCION’s cryptographic path validation addresses this by letting nodes verify the exact path their traffic takes.</p>
 <h3 id="how-does-deduplication-chunking-impact-storage-efficiency-in-ipfs" tabindex="-1">How does deduplication chunking impact storage efficiency in IPFS?</h3>
-<p>FSC chunking outperforms fixed-size methods and CDC by reducing duplicate content stored across nodes, which directly lowers storage costs and improves retrieval speed at scale.</p>
+<p>Content-Defined Chunking (CDC) beats fixed-size chunking (FSC) at reducing duplicate content across nodes, which directly lowers storage costs at scale.</p>
 <h2 id="recommended" tabindex="-1">Recommended</h2>
 <ul>
 <li><a href="https://pilotprotocol.network/blog/ai-networking-best-practices-secure-scalable-systems">AI networking best practices for secure, scalable systems</a></li>
@@ -255,7 +255,7 @@ const bodyContent = `<script type="application/ld+json">
 ---
 <BlogLayout
   title="Cloud networking: Secure peer-to-peer for distributed AI"
-  description="Learn how cloud VPC and P2P protocols like libp2p and IPFS differ, why 87.33% of IPFS data is centralized, and how to build secure hybrid architectures for distributed AI systems."
+  description="Learn how cloud VPC and P2P protocols like libp2p and IPFS differ, why 87.33% of IPFS peers are cloud-hosted, and how to build secure hybrid architectures for distributed AI systems."
   date="April 18, 2026"
   tags={["blog"]}
   canonicalPath="/blog/cloud-networking-secure-peer-to-peer-distributed-ai"

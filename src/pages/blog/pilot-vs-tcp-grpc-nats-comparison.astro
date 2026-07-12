@@ -315,9 +315,9 @@ nc.Publish("tasks.agent-b", taskPayload)
 
   <p>Pilot Protocol was designed from the ground up for the specific problem of AI agents communicating across arbitrary network topologies.</p>
 
-  <p><strong>Strengths:</strong> Built-in NAT traversal with three tiers (STUN, hole-punch, relay). End-to-end encryption between agents by default -- the rendezvous server never sees plaintext. Virtual 48-bit addresses that persist across network changes. Cryptographic trust model where agents are invisible by default. Single UDP socket for all peer connections keeps memory under 25 MB even at 100 concurrent peers. Zero external dependencies -- one Go binary for the daemon, one for the CLI.</p>
+  <p><strong>Strengths:</strong> Built-in NAT traversal with three tiers (STUN, hole-punch, relay). End-to-end encryption between agents by default -- the rendezvous server never sees plaintext. Virtual 48-bit addresses that persist across network changes. Cryptographic trust model where agents are invisible by default. Single UDP socket for all peer connections keeps memory under 25 MB even at 100 concurrent peers. Pure-Go with a small dependency set; the install ships a daemon binary and a CLI binary (plus an auto-updater).</p>
 
-  <p><strong>Weaknesses:</strong> Userspace transport means lower raw throughput than kernel TCP -- approximately 10% less on sustained transfers. The driver package is Go-only, so agents in Python or JavaScript need to shell out to <code>pilotctl</code> or use the IPC socket. No HTTP/2 multiplexing -- connections are byte streams, not structured RPC calls. No durable message log -- if an agent is offline when a message is sent, the message is lost (unlike NATS JetStream). The ecosystem is young compared to gRPC and NATS.</p>
+  <p><strong>Weaknesses:</strong> Userspace transport means lower raw throughput than kernel TCP -- roughly 20% less on sustained transfers (see the numbers below). The driver package is Go-only, so agents in Python or JavaScript need to shell out to <code>pilotctl</code> or use the IPC socket. No HTTP/2 multiplexing -- connections are byte streams, not structured RPC calls. No durable message log -- if an agent is offline when a message is sent, the message is lost (unlike NATS JetStream). The ecosystem is young compared to gRPC and NATS.</p>
 
   <pre><code><span class="comment">// Pilot: P2P, encrypted, NAT-aware</span>
 conn, err := driver.Dial(daemon, "0:0000.0000.0003", 1001)
@@ -354,7 +354,7 @@ conn.Write(taskPayload)</code></pre>
 
   <ul>
     <li><strong>Raw throughput:</strong> Pilot achieves approximately 50 Mbps sustained, compared to 62 Mbps for raw TCP. The 20% gap is the cost of userspace transport. For bulk data transfer between agents on the same LAN, TCP is faster.</li>
-    <li><strong>Language support:</strong> The driver package (<code>pkg/driver</code>) is Go-only. Other languages can interact via the <code>pilotctl</code> CLI or the IPC Unix socket, but native client libraries for Python, JavaScript, and Rust do not exist yet.</li>
+    <li><strong>Language support:</strong> The Go driver package (<code>github.com/pilot-protocol/common/driver</code>) is Go-only. Other languages can interact via the <code>pilotctl</code> CLI or the IPC Unix socket, but native client libraries for Python, JavaScript, and Rust do not exist yet.</li>
     <li><strong>No HTTP/2 multiplexing:</strong> gRPC's ability to multiplex many RPC calls over a single HTTP/2 connection is genuinely useful for structured APIs. Pilot connections are raw byte streams -- you implement your own framing or use HTTP/1.1 over port 80.</li>
     <li><strong>No durable message log:</strong> NATS JetStream lets consumers replay missed messages. Pilot's event stream on port 1002 is fire-and-forget. If the subscriber is offline, the event is lost.</li>
     <li><strong>Ecosystem maturity:</strong> gRPC has thousands of production deployments and a massive community. NATS powers messaging at companies like Synadia and Mastercard. Pilot Protocol is newer and smaller.</li>

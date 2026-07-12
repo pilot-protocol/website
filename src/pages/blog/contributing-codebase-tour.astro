@@ -3,7 +3,7 @@ import BlogLayout from '../../layouts/BlogLayout.astro';
 
 const bodyContent = `<p>You want to contribute to Pilot Protocol. You have cloned the repository, run <code>go build ./...</code>, and now you are staring at a tree of packages wondering where to start. This article is the map. It covers every package in the project, explains how the test environment works, walks through adding a new service from scratch, warns you about the linter traps that catch every new contributor, and lists concrete issues you can pick up today.</p>
 
-  <p>Pilot Protocol is a Go project with zero external dependencies beyond the standard library. That means no dependency hell, no vendoring surprises, and <code>go test</code> just works. The codebase is roughly 15,000 lines of Go across about 60 files, plus integration tests. It is small enough for one person to understand in a weekend, but structured cleanly enough that you never need to hold the whole thing in your head at once.</p>
+  <p>Pilot Protocol is a pure-Go project with a small dependency set (a handful of well-known modules like <code>coder/websocket</code>, <code>expr-lang/expr</code>, and <code>golang.org/x/*</code>). That means no cgo, no vendoring surprises, and <code>go test</code> just works. The core daemon/CLI module alone is tens of thousands of lines of Go across dozens of files, plus integration tests. It is small enough for one person to understand in a weekend, but structured cleanly enough that you never need to hold the whole thing in your head at once.</p>
 
   <section>
   <h2>The Package Map</h2>
@@ -32,7 +32,7 @@ const bodyContent = `<p>You want to contribute to Pilot Protocol. You have clone
 
   <h3>cmd/pilotctl - The CLI</h3>
 
-  <p>The command-line interface. It wraps the driver with user-friendly commands: <code>info</code>, <code>connect</code>, <code>send</code>, <code>recv</code>, <code>trust</code>, <code>revoke</code>, <code>bench</code>, <code>resolve</code>, <code>data send</code>/<code>data recv</code>, <code>events publish</code>/<code>events subscribe</code>, and more. Most commands are thin wrappers that parse flags, call the driver, and format output. Adding a new CLI command is one of the easiest contributions. Routes for <code>set-hostname</code>, <code>set-visibility</code>, and <code>deregister</code> go through the daemon IPC (not directly to the registry) because they require auth signing.</p>
+  <p>The command-line interface. It wraps the driver with user-friendly commands: <code>info</code>, <code>connect</code>, <code>send</code>, <code>recv</code>, <code>trust</code>, <code>untrust</code>, <code>bench</code>, <code>lookup</code>, <code>send-file</code>/<code>recv</code>, <code>publish</code>/<code>subscribe</code>, and more. Most commands are thin wrappers that parse flags, call the driver, and format output. Adding a new CLI command is one of the easiest contributions. Routes for <code>set-hostname</code>, <code>set-public</code>/<code>set-private</code>, and <code>deregister</code> go through the daemon IPC (not directly to the registry) because they require auth signing.</p>
 
   <h3>cmd/rendezvous - The Server Binary</h3>
 
@@ -42,13 +42,13 @@ const bodyContent = `<p>You want to contribute to Pilot Protocol. You have clone
 
   <p>Private packages that are not part of the public API. <code>internal/crypto</code> handles Ed25519 key generation, X25519 key exchange for tunnel encryption, AES-256-GCM encryption/decryption, identity persistence, and TLS certificate pinning with <code>DialTLSPinned</code>. Random nonce prefixes are generated per secure connection to prevent replay attacks. <code>internal/fsutil</code> provides atomic file writes (write to temp, rename over target) used by the registry persistence and trust state storage. <code>internal/pool</code> has buffer pooling. The <code>internal/ipcutil</code> package provides the IPC socket permission management. Because these are in <code>internal/</code>, they cannot be imported by external packages, so changes here only affect the project itself.</p>
 
-  <h3>Services: pkg/dataexchange, pkg/eventstream, pkg/secure</h3>
+  <h3>Services: internal/dataexchange, internal/eventstream</h3>
 
-  <p>These are the built-in services that run on well-known ports. <code>pkg/dataexchange</code> (port 1001) handles structured data transfer: file sends with metadata headers and chunked streaming. <code>pkg/eventstream</code> (port 1002) implements pub/sub with topic routing and wildcard subscriptions. <code>pkg/secure</code> (port 443) handles the X25519+AES-GCM encrypted channel on top of the tunnel encryption. The echo service runs on port 7 and is embedded in the daemon itself. Each service follows the same pattern: register a port handler with the daemon's PortManager, accept connections on that port, and implement the service protocol.</p>
+  <p>These are the built-in services that run on well-known ports. <code>internal/dataexchange</code> (port 1001) handles structured data transfer: file sends with metadata headers and chunked streaming. <code>internal/eventstream</code> (port 1002) implements pub/sub with topic routing. The echo service runs on port 7 and is embedded in the daemon itself. Each service follows the same pattern: register a port handler with the daemon's PortManager, accept connections on that port, and implement the service protocol.</p>
 
   <h3>tests/ - Integration Tests</h3>
 
-  <p>The integration test suite uses <code>testenv.go</code> to spin up a full in-process environment: beacon, registry, and multiple daemons, all running in the same process with real UDP sockets. This gives you end-to-end testing without deploying anything. There are currently 226 tests (202 passing, 24 skipped for platform-specific reasons). The test files are organized by feature: <code>handshake_test.go</code>, <code>privacy_test.go</code>, <code>nat_traversal_test.go</code>, <code>gateway_test.go</code>, and so on. Every PR should include tests, and most features can be tested entirely through testenv without any external infrastructure.</p>
+  <p>The integration test suite uses <code>testenv.go</code> to spin up a full in-process environment: beacon, registry, and multiple daemons, all running in the same process with real UDP sockets. This gives you end-to-end testing without deploying anything. There are a couple hundred tests (some skipped for platform-specific reasons); run <code>go test ./tests/</code> for the current tally. The test files are organized by feature under <code>tests/</code> with a <code>zz_</code> prefix: <code>zz_handshake_test.go</code>, <code>zz_privacy_test.go</code>, <code>zz_nat_traversal_test.go</code>, <code>zz_gateway_test.go</code>, and so on. Every PR should include tests, and most features can be tested entirely through testenv without any external infrastructure.</p>
   </section>
 
   <section>
@@ -112,7 +112,7 @@ import (
     "encoding/json"
     "time"
 
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
 )
 
 <span class="comment">// PortPing is the well-known port for the ping service.</span>
@@ -212,7 +212,7 @@ func cmdPing(addr string) {
     assert.True(t, resp.Latency > 0)
 }</code></pre>
 
-  <p>That is it. Package, registration, CLI, test. The pattern is identical for every service in the project. Look at <code>pkg/dataexchange</code> or <code>pkg/eventstream</code> for real-world examples of more complex service protocols.</p>
+  <p>That is it. Package, registration, CLI, test. The pattern is identical for every service in the project. Look at <code>internal/dataexchange</code> or <code>internal/eventstream</code> for real-world examples of more complex service protocols.</p>
   </section>
 
   <section>
@@ -222,11 +222,11 @@ func cmdPing(addr string) {
 
   <h3>The "Unused Field" Trap</h3>
 
-  <p>The linter aggressively removes struct fields that it considers unused. This is a particular problem with <code>NodeInfo</code> in the registry. If you add a field to <code>NodeInfo</code> that is only read via JSON serialization or reflection, the linter may delete it on the next pass. The workaround: do not store crypto identity objects (like <code>crypto.Identity</code>) in <code>NodeInfo</code>. Use local variables instead. If you need the data to survive serialization, make sure there is a direct Go code path that reads the field, not just JSON marshaling.</p>
+  <p>Watch out for unused-field warnings on structs like <code>NodeInfo</code> in the registry: a field only ever read via JSON serialization or reflection can look unused to static analysis. The workaround: do not store crypto identity objects (like <code>crypto.Identity</code>) in <code>NodeInfo</code>. Use local variables instead. If you need the data to survive serialization, make sure there is a direct Go code path that reads the field, not just JSON marshaling.</p>
 
   <h3>The handleRegister Rewrite</h3>
 
-  <p>The linter has opinions about the <code>handleRegister</code> function in the registry. It rewrites the function to require a <code>public_key</code> in the registration request. This breaks the server-generated identity path, where the server creates a new identity for nodes that register without one. After every linter run, check that the server-generated identity path still works. If the linter has rewritten it, you need to restore the original logic that handles both cases: client-provided key and server-generated key.</p>
+  <p>When editing the <code>handleRegister</code> function in the registry, keep both registration paths intact: a client-provided <code>public_key</code>, and the server-generated identity path where the server creates a new identity for nodes that register without one. It is easy to accidentally drop the second case; make sure both are covered by tests.</p>
 
   <h3>Files Modified Between Edits</h3>
 
@@ -248,7 +248,7 @@ func cmdPing(addr string) {
 
   <h3>2. Implement pilotctl broadcast</h3>
 
-  <p>Add a <code>pilotctl broadcast</code> command that sends a message to all trusted peers simultaneously. The driver already supports listing trusted peers and opening connections. The broadcast command would iterate over all trusted peers, connect to port 1000 (stdio) on each, and send the message. Error handling is the interesting part: what happens when some peers are offline? This is a CLI-only change in <code>cmd/pilotctl</code> plus a test in <code>tests/broadcast_test.go</code> (the test file already exists but could use more coverage).</p>
+  <p>Improve the existing <code>pilotctl broadcast</code> command (network fan-out via the admin token). Good extensions: better error reporting when some members are offline, or richer output. Look at the existing handler in <code>cmd/pilotctl</code> and the test in <code>tests/zz_broadcast_test.go</code> (which could use more coverage).</p>
 
   <h3>3. Connection Stats in Webhooks</h3>
 
@@ -285,7 +285,7 @@ func cmdPing(addr string) {
 
   <p>The project has no external dependencies and no code generation steps. The <code>Makefile</code> provides convenience targets for building binaries, but <code>go build</code> and <code>go test</code> are all you need. Build artifacts go into <code>bin/</code> and <code>build/</code> directories.</p>
 
-  <p>For larger changes, read the <a href="/docs/">documentation</a> and the <code>SPEC.md</code> file in the repository root. The spec defines the wire protocol, message types, and state machines. If your change modifies protocol behavior, update the spec as part of your PR. For architecture decisions, check <code>REQUIREMENTS.md</code>.</p>
+  <p>For larger changes, read the <a href="/docs/">documentation</a> and the IETF Internet-Draft linked from the <a href="/docs/research">research page</a>, which describes the wire protocol and message types. If your change modifies protocol behavior, note it in your PR.</p>
 
   <p>Every contribution goes through standard GitHub PR review. Keep PRs focused: one feature or fix per PR. Include tests. Update the spec if you change protocol behavior. And always run the full test suite with <code>-parallel 4</code> before pushing.</p>
   </section>

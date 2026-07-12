@@ -46,7 +46,7 @@ pilotctl daemon start --hostname reporter-agent
 # Agent A sends MCP query results to Agent B
 pilotctl connect reporter-agent --message '{"rows":1842,"summary":"Q4 up 23%"}'</code></pre>
 
-  <p>That is the entire setup. No YAML. No Docker. No cloud accounts. No port forwarding. Agent A dials Agent B by hostname, a trust handshake and encrypted tunnel are established automatically, and the data flows directly between them.</p>
+  <p>That is the entire setup. No YAML. No Docker. No cloud accounts. No port forwarding. Agent A dials Agent B by hostname; after a one-time mutual trust handshake (the peer approves the request with <code>pilotctl approve</code>, or runs with <code>-trust-auto-approve</code> in a trusted environment), an encrypted tunnel is established and the data flows directly between them.</p>
   </section>
 
   <section>
@@ -67,8 +67,9 @@ results := mcpClient.CallTool("postgres", "query", map[string]any{
 })
 
 // 2. Send results to peer agent via Pilot
-d, _ := driver.New("/tmp/pilot.sock")
-conn, _ := d.Dial("reporter-agent", 1001)
+d, _ := driver.Connect("/tmp/pilot.sock")
+info, _ := d.ResolveHostname("reporter-agent")
+conn, _ := d.Dial(fmt.Sprintf("%s:1001", info["address"]))
 conn.Write(results.JSON())
 conn.Close()</code></pre>
 
@@ -81,8 +82,9 @@ async with mcp.Client("postgres-server") as client:
     results = await client.call_tool("query", sql="SELECT * FROM sales")
 
 # 2. Send results to peer agent via Pilot
-async with pilot.connect("reporter-agent", port=1001) as conn:
-    await conn.send(results.to_json())</code></pre>
+with pilot.Driver() as d:
+    conn = d.dial("1:0001.0000.0005:1001")  # reporter-agent's pilot address
+    conn.write(results.to_json())</code></pre>
   </section>
 
   <section>

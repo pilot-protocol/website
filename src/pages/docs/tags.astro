@@ -20,9 +20,9 @@ const bodyContent = `<h1>Tags & Discovery</h1>
 
   <h2 id="what">What tags are</h2>
 
-  <p>Tags are capability labels stored in the registry. They describe what your agent does - <code>web-server</code>, <code>data-processor</code>, <code>monitor</code>. Other agents can search for peers by tag to discover agents with specific capabilities.</p>
+  <p>Tags are capability labels stored in the registry. They describe what your agent does - <code>web-server</code>, <code>data-processor</code>, <code>monitor</code>. They label your node in the registry and are returned when another agent looks it up.</p>
 
-  <p>Tags are visible through the CLI's <code>peers --search</code> command and in the registry. They are the primary mechanism for agents to find each other by capability rather than by address.</p>
+  <p>Tags are capability labels stored on your node in the registry. They appear when another agent looks your node up, and (within a network) via <code>member-tags</code>. Note: the <code>list-agents</code> directory search itself matches on hostname, category, and description — not tags — so tags are metadata on your node rather than a directory search field.</p>
 
   <h2 id="set">Setting tags</h2>
 
@@ -54,17 +54,17 @@ const bodyContent = `<h1>Tags & Discovery</h1>
 
   <h2 id="discovery">Discovery</h2>
 
-  <h3>Search peers by tag</h3>
-  <pre><code><span class="cmd">pilotctl</span> peers --search "web-server"</code></pre>
-  <p>The <code>--search</code> flag filters your connected peers by tag substring match. If any of a peer's tags contain the search string, that peer appears in the results. For example, searching <code>"ml"</code> would match peers tagged with <code>ml-model</code>, <code>ml-inference</code>, or <code>automl</code>.</p>
-  <p>Returns: <code>peers</code> [{<code>node_id</code>, <code>encrypted</code>, <code>authenticated</code>, <code>path</code> (<code>direct</code> | <code>relay</code>)}], <code>total</code>. Real endpoints (IP:port) are always redacted by the daemon before they reach any client.</p>
+  <h3>Discover agents by capability</h3>
+  <pre><code><span class="cmd">pilotctl</span> send-message list-agents --data '/data {"search":"web-server","limit":10}' --wait</code></pre>
+  <p>Capability discovery goes through the <code>list-agents</code> directory service, which searches the registry directory (hostname, category, and description) and returns matching agents. The ranker is semantic — it matches related terms, not just literal substrings.</p>
+  <p><strong>Note:</strong> <code>pilotctl peers</code> lists your <em>already-connected</em> peers, and its <code>--search</code> flag filters that local list by <strong>node-ID substring</strong> — it does not search tags or the registry. Use <code>list-agents</code> to discover agents by capability.</p>
 
   <h3>Find by hostname</h3>
   <pre><code><span class="cmd">pilotctl</span> find other-agent</code></pre>
   <p>Resolves a hostname to an address. Requires mutual trust or shared network membership.</p>
 
-  <h3>Browse by tag via CLI</h3>
-  <p>Use <code>pilotctl peers --search &lt;tag&gt;</code> to search for agents by capability. The registry returns all agents whose tags match the search string.</p>
+  <h3>Inspect a network member's tags</h3>
+  <p>Within a network you administer, <code>pilotctl member-tags get &lt;network_id&gt; &lt;node_id&gt;</code> returns the tags set on a member.</p>
 
   <h2 id="workflow">End-to-end workflow</h2>
 
@@ -73,9 +73,9 @@ const bodyContent = `<h1>Tags & Discovery</h1>
   <pre><code><span class="comment"># 1. Agent A sets tags advertising its capabilities</span>
 <span class="cmd">pilotctl</span> extras set-tags data-processor ml-model
 
-<span class="comment"># 2. Agent B searches for data processors</span>
-<span class="cmd">pilotctl</span> peers --search "data-processor"
-<span class="comment"># → finds Agent A in the results</span>
+<span class="comment"># 2. Agent B discovers data processors via the directory</span>
+<span class="cmd">pilotctl</span> send-message list-agents --data '/data {"search":"data-processor"}' --wait
+<span class="comment"># → Agent A appears in the directory results</span>
 
 <span class="comment"># 3. Agent B sends a handshake request</span>
 <span class="cmd">pilotctl</span> handshake agent-a
@@ -94,7 +94,7 @@ const bodyContent = `<h1>Tags & Discovery</h1>
   <p>Tags and visibility are independent concepts:</p>
 
   <ul>
-    <li><strong>Tags</strong> are always visible in the registry regardless of your visibility setting. Anyone can search for your tags via <code>peers --search</code>.</li>
+    <li><strong>Tags</strong> are visible on your node in the registry regardless of your visibility setting (returned on lookup); capability discovery itself is via <code>list-agents</code> over hostname/category/description.</li>
     <li><strong>Visibility</strong> controls whether the registry reveals your <em>endpoint</em> (IP:port) to untrusted peers. It does not affect whether your tags or address are discoverable.</li>
   </ul>
 
@@ -105,14 +105,14 @@ const bodyContent = `<h1>Tags & Discovery</h1>
 
   <h2 id="programmatic">Programmatic discovery</h2>
 
-  <p>Both the Go and Python SDKs expose peer discovery programmatically:</p>
+  <p>The SDKs expose <code>info()</code>, <code>trusted_peers()</code>, and <code>resolve_hostname()</code>. Directory discovery is done by sending a message to the <code>list-agents</code> service over the messaging API (there is no <code>peers(search=…)</code> method):</p>
 
-  <pre><code><span class="comment"># Python SDK example</span>
+  <pre><code><span class="comment"># Python SDK — resolve a known hostname; discover via the list-agents service</span>
 from pilotprotocol import Driver
-driver = Driver.connect()
-peers = driver.peers(search="data-processor")
-for p in peers:
-    print(f"Found: node {p.node_id} (path={p.path}, encrypted={p.encrypted})")</code></pre>
+driver = Driver(socket_path="/tmp/pilot.sock")
+info = driver.info()                       # your node's status
+addr = driver.resolve_hostname("list-agents")
+<span class="comment"># then send a /data query to list-agents over the messaging API</span></code></pre>
 
   <p>See the <a href="go-sdk">Go SDK</a> and <a href="python-sdk">Python SDK</a> for full API details.</p>
 
@@ -126,7 +126,7 @@ for p in peers:
   activePage="tags"
   canonicalPath="/docs/tags"
   prev={{ label: "Gateway", href: "/docs/gateway" }}
-  next={{ label: "Diagnostics", href: "/docs/diagnostics" }}
+  next={{ label: "pilot-director", href: "/docs/pilot-director" }}
 >
   <Fragment set:html={bodyContent} />
 </DocLayout>

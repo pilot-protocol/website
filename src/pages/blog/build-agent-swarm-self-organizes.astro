@@ -88,7 +88,7 @@ class SwarmAgent:
 
   <pre><code>    def discover_peers(self):
         """Find other agents in the swarm by tag."""
-        output = self.pilotctl("peers", "--search", "swarm=demo")
+        output = self.pilotctl("send-message", "list-agents", "--data", '/data {"search":"swarm-demo"}', "--wait")
         peers = json.loads(output)
         for peer in peers:
             addr = peer["address"]
@@ -107,7 +107,7 @@ class SwarmAgent:
         status = json.loads(output)
         return status["address"]</code></pre>
 
-  <p>The <code>peers --search</code> command queries the registry for all agents with matching tags. Each result includes the agent's virtual address, hostname, and tags. This is how the swarm maintains awareness without an orchestrator -- every agent can ask the registry "who else is in my swarm?" at any time.</p>
+  <p>The <code>list-agents</code> directory service is how agents find each other by capability; <code>pilotctl peers</code> lists your currently-connected peers (its <code>--search</code> filters that local list by node-ID substring, not tags). Query the directory to ask "who else does this?" without an orchestrator.</p>
 
   <h3>Establishing Trust</h3>
 
@@ -144,7 +144,7 @@ class SwarmAgent:
         })
 
         self.pilotctl(
-            "data", "send",
+            "send-file",
             target_addr,
             "--stdin",
         )
@@ -173,7 +173,7 @@ class SwarmAgent:
         while True:
             try:
                 <span class="comment"># Receive incoming data payload</span>
-                output = self.pilotctl("data", "recv", "--json")
+                output = self.pilotctl("recv", "1001", "--json")
                 if not output:
                     continue
 
@@ -189,7 +189,7 @@ class SwarmAgent:
 
                 <span class="comment"># Send results back to sender</span>
                 result_json = json.dumps(result)
-                self.pilotctl("send", sender, result_json)
+                self.pilotctl("send", sender, "1000", "--data", result_json)  # send <addr> <port> --data
 
                 self.tasks_completed += 1
                 print(f"[{self.hostname}] Responded in {elapsed:.1f}s")
@@ -352,7 +352,7 @@ if __name__ == "__main__":
     """Print peer activity every 30 seconds."""
     while True:
         output = subprocess.run(
-            ["pilotctl", "peers", "--search", "swarm=demo"],
+            ["pilotctl", "send-message", "list-agents", "--data", '/data {"search":"swarm-demo"}', "--wait"],
             capture_output=True, text=True
         ).stdout
         agents = json.loads(output)
@@ -460,10 +460,10 @@ class SwarmAgent:
         ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(2)
         self.pilotctl("set-hostname", self.hostname)
-        self.pilotctl("extras", "set-tags", f"role={self.role},swarm=demo")
+        self.pilotctl("extras", "set-tags", f"role-{self.role}", "swarm-demo")  # space-separated, max 3
 
     def discover(self):
-        output = self.pilotctl("peers", "--search", "swarm=demo")
+        output = self.pilotctl("send-message", "list-agents", "--data", '/data {"search":"swarm-demo"}', "--wait")
         my_addr = self.my_address()
         for peer in json.loads(output):
             addr = peer["address"]
@@ -507,7 +507,7 @@ class SwarmAgent:
             target = self.select_peer(role)
             if target:
                 try:
-                    self.pilotctl("data", "send", target,
+                    self.pilotctl("send-file", target,
                         "--stdin")
                 except RuntimeError:
                     pass
@@ -516,7 +516,7 @@ class SwarmAgent:
     def listen(self):
         while True:
             try:
-                output = self.pilotctl("data", "recv", "--json")
+                output = self.pilotctl("recv", "1001", "--json")
                 if not output:
                     continue
                 msg = json.loads(output)

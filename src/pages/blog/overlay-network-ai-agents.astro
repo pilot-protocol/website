@@ -55,7 +55,7 @@ const bodyContent = `<p>An AI agent that only works when it's sitting on the sam
 <li><strong>Discovery:</strong> a rendezvous registry and nameserver, so agents and capabilities can be found by name or tag instead of a hardcoded address.</li>
 </ul>
 
-<p>The daemon itself is written in Go with zero external dependencies — just the standard library — and is fully open source under AGPL-3.0 (source at <a href="https://github.com/pilot-protocol">github.com/pilot-protocol</a>). SDKs are available for Go, Python (<code>pilotprotocol</code> on PyPI), Node, and Swift, plus an MCP server (<code>pilot-mcp</code>) for agents that already speak MCP, and a plain-text mirror of the site at <code>/plain</code> for agents that just want to read documentation directly.</p>
+<p>The daemon itself is written in Go and ships as a single static binary (CGO-free), and is fully open source under AGPL-3.0 (source at <a href="https://github.com/pilot-protocol">github.com/pilot-protocol</a>). SDKs are available for Go, Python (<code>pilotprotocol</code> on PyPI), Node, and Swift, plus an MCP server (<code>pilot-mcp</code>) for agents that already speak MCP, and a plain-text mirror of the site at <code>/plain</code> for agents that just want to read documentation directly.</p>
 
 <pre><code>curl -fsSL https://pilotprotocol.network/install.sh | sh
 pilotctl daemon start
@@ -78,8 +78,8 @@ pilotctl info    # confirm your node's address and status</code></pre>
 <p>Connectivity is the foundation, not the whole story. Once agents have a reliable overlay, the natural next step is giving them capabilities to call over it. Pilot Protocol's app store extends the overlay with installable capability apps — typed IPC services, JSON in and JSON out, auto-spawned by the daemon on install. The loop is the same three steps every time: discover, install, call.</p>
 
 <pre><code>pilotctl appstore catalogue                 # browse what's installable
-pilotctl appstore install cosift            # install; the daemon spawns it
-pilotctl appstore call cosift cosift.help '{}'   # discover its methods</code></pre>
+pilotctl appstore install io.pilot.cosift            # install; the daemon spawns it
+pilotctl appstore call io.pilot.cosift cosift.help '{}'   # discover its methods</code></pre>
 
 <p>Apps run locally — the thin adapter lives on your daemon while any heavier backend logic lives wherever the app's author put it. Each app's manifest pins a sha256 hash and an ed25519 signature that's re-checked every time it spawns, and permissions are grant-scoped at install time rather than handed out as ambient authority. Live apps on the store today include AEGIS (a runtime firewall for agents), cosift (grounded web search and research), sixtyfour (people and company intelligence), miren (PaaS deploys from an agent), plainweb (web-to-markdown), slipstream (Polymarket smart-money signals), smolmachines (disposable microVMs), and wallet (on-overlay USDC). Anyone can publish a new one at <a href="https://pilotprotocol.network/publish">pilotprotocol.network/publish</a> — bring an existing app or API, and the platform generates and signs the adapter.</p>
 </section>
@@ -115,7 +115,7 @@ const faqItems = [
   },
   {
     question: "Is Pilot Protocol open source?",
-    answer: "Yes. The daemon is written in Go with zero external dependencies (standard library only) and is licensed under AGPL-3.0. The source is available at github.com/pilot-protocol.",
+    answer: "Yes. The daemon is written in Go and ships as a single static binary (CGO-free), licensed under AGPL-3.0. The source is available at github.com/pilot-protocol.",
   },
   {
     question: "How do I discover other agents on the overlay?",

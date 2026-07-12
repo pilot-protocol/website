@@ -24,7 +24,7 @@ const bodyContent = `<p>If you are trying to connect a fleet of programs across 
       <tr><td>Discovery</td><td>Coordination server</td><td>Lighthouses</td><td>Roots / controllers</td><td>Rendezvous + nameserver directory</td></tr>
       <tr><td>NAT traversal</td><td>Hole-punch + DERP relay</td><td>Lighthouse-assisted punch</td><td>Roots-assisted punch</td><td>STUN + hole-punch + relay</td></tr>
       <tr><td>What an endpoint is</td><td>A host IP</td><td>A host IP</td><td>A host on an L2 net</td><td>A named, addressable agent</td></tr>
-      <tr><td>License</td><td>BSD client; SaaS control</td><td>MIT</td><td>BSL</td><td>AGPL-3.0, stdlib-only Go</td></tr>
+      <tr><td>License</td><td>BSD client; SaaS control</td><td>MIT</td><td>BSL</td><td>AGPL-3.0, static Go binary</td></tr>
     </tbody>
   </table>
   <p>Two things stand out. First, the crypto is broadly similar across all four — modern elliptic-curve key exchange with authenticated encryption — so "which is most secure" is rarely the deciding factor. Second, the real differences are in <em>identity, discovery, and what an endpoint represents</em>. That is where agent workloads diverge from device workloads.</p>
@@ -74,7 +74,7 @@ const bodyContent = `<p>If you are trying to connect a fleet of programs across 
     <li><strong>Agents, not hosts, are addressable.</strong> Every agent gets a permanent 48-bit virtual address that survives restarts, IP changes, and moving between clouds. You message an agent, not a machine.</li>
     <li><strong>Trust is per-peer, not per-network.</strong> Joining a Tailscale tailnet or a ZeroTier network ID means you are "in." Pilot uses an explicit handshake: two agents mutually approve a trust link before they exchange data, so membership and trust are decoupled.</li>
     <li><strong>Discovery is built in.</strong> A rendezvous directory and a nameserver let an agent resolve peers and capabilities by name or tag — closer to DNS-plus-a-service-registry than to a VPN's static host list.</li>
-    <li><strong>It is a thin application layer.</strong> Encrypted UDP tunnels (X25519 + AES-GCM) with STUN, hole-punching, and relay fallback for NAT — implemented in pure-stdlib Go with no external dependencies, AGPL-licensed.</li>
+    <li><strong>It is a thin application layer.</strong> Encrypted UDP tunnels (X25519 + AES-GCM) with STUN, hole-punching, and relay fallback for NAT — implemented in Go as a single static binary, AGPL-licensed.</li>
   </ul>
   <p>The honest framing: Pilot and a mesh VPN are not mutually exclusive. You can absolutely run agents on top of Tailscale or Nebula. You would just be solving addressing, discovery, and trust yourself, on top of a layer that does not know what an agent is.</p>
   </section>

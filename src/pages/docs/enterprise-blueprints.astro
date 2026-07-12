@@ -28,7 +28,7 @@ const bodyContent = `<h1>Blueprints</h1>
 
   <pre><code>{
   "name": "prod-fleet",
-  "join_rule": "invite_only",
+  "join_rule": "invite",
   "enterprise": true,
   "policy": {
     "max_members": 100,
@@ -40,21 +40,19 @@ const bodyContent = `<h1>Blueprints</h1>
     "url": "https://accounts.example.com/.well-known/openid-configuration",
     "client_id": "pilot-prod"
   },
-  "webhooks": [
-    {
-      "url": "https://ops.example.com/pilot-events",
-      "events": ["member.kicked", "network.policy_changed"]
-    }
-  ],
+  "webhooks": {
+    "audit_url": "https://ops.example.com/pilot-audit",
+    "identity_url": "https://ops.example.com/pilot-identity"
+  },
   "audit_export": {
     "format": "splunk_hec",
     "endpoint": "https://splunk.example.com:8088/services/collector",
     "token": "hec-token-here"
   },
-  "roles": {
-    "42": "admin",
-    "108": "admin"
-  },
+  "roles": [
+    {"external_id": "alice@example.com", "role": "admin"},
+    {"external_id": "bob@example.com", "role": "member"}
+  ],
   "network_admin_token": "network-specific-secret"
 }</code></pre>
 
@@ -64,13 +62,13 @@ const bodyContent = `<h1>Blueprints</h1>
     <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
     <tbody>
       <tr><td><code>name</code></td><td>string</td><td>Yes</td><td>Network name. Lowercase alphanumeric with hyphens. Used for idempotent lookup.</td></tr>
-      <tr><td><code>join_rule</code></td><td>string</td><td>No</td><td>One of <code>open</code>, <code>invite_only</code>, or <code>token</code>. Defaults to <code>open</code>.</td></tr>
+      <tr><td><code>join_rule</code></td><td>string</td><td>No</td><td>One of <code>open</code>, <code>token</code>, or <code>invite</code>. Defaults to <code>open</code>.</td></tr>
       <tr><td><code>enterprise</code></td><td>bool</td><td>No</td><td>Enable enterprise features. Defaults to <code>false</code>.</td></tr>
       <tr><td><code>policy</code></td><td>object</td><td>No</td><td>Network policy: <code>max_members</code>, <code>allowed_ports</code>, <code>description</code>. See <a href="enterprise-policies">Network Policies</a>.</td></tr>
       <tr><td><code>identity_provider</code></td><td>object</td><td>No</td><td>IDP configuration: <code>type</code>, <code>url</code>, <code>client_id</code>. See <a href="enterprise-identity">Identity &amp; SSO</a>.</td></tr>
-      <tr><td><code>webhooks</code></td><td>array</td><td>No</td><td>Webhook endpoints: <code>url</code> and <code>events</code> filter.</td></tr>
+      <tr><td><code>webhooks</code></td><td>object</td><td>No</td><td>Webhook endpoints: <code>audit_url</code> and <code>identity_url</code>.</td></tr>
       <tr><td><code>audit_export</code></td><td>object</td><td>No</td><td>Export config: <code>format</code>, <code>endpoint</code>, <code>token</code>. See <a href="enterprise-audit#export">Audit Export</a>.</td></tr>
-      <tr><td><code>roles</code></td><td>object</td><td>No</td><td>Map of node ID (string) &rarr; role (<code>admin</code> or <code>member</code>). Pre-assigns RBAC roles.</td></tr>
+      <tr><td><code>roles</code></td><td>array</td><td>No</td><td>RBAC pre-assignments by external identity: <code>[{external_id, role}]</code> where role is <code>owner</code>, <code>admin</code>, or <code>member</code>. Applied when a matching node joins.</td></tr>
       <tr><td><code>network_admin_token</code></td><td>string</td><td>No</td><td>Per-network admin token for delegated administration.</td></tr>
     </tbody>
   </table>
@@ -84,12 +82,12 @@ const bodyContent = `<h1>Blueprints</h1>
     <li><strong>Enable enterprise</strong> - if <code>enterprise: true</code> and the network is not yet enterprise, enable it.</li>
     <li><strong>Set policies</strong> - apply the <code>policy</code> object using merge-on-update semantics.</li>
     <li><strong>Configure IDP</strong> - set the identity provider configuration if specified.</li>
+    <li><strong>Configure webhooks</strong> - register the <code>audit_url</code> / <code>identity_url</code> endpoints if specified.</li>
     <li><strong>Configure audit export</strong> - set the audit export endpoint and format if specified.</li>
-    <li><strong>Configure webhooks</strong> - register webhook endpoints if specified.</li>
-    <li><strong>Assign roles</strong> - for each entry in <code>roles</code>, set the RBAC role. Nodes must already be members of the network.</li>
+    <li><strong>Pre-assign roles</strong> - store each <code>{external_id, role}</code> as a pre-assignment; the role is applied when a node with that external identity later joins. Membership is not required at apply time.</li>
   </ol>
 
-  <p>Each step is independent - if a later step fails, earlier steps are not rolled back. The result includes which actions were taken and which failed.</p>
+  <p>Each step is independent - if a later step fails, earlier steps are not rolled back, and the call returns an error immediately. The result's <code>actions</code> list names only the steps that succeeded; failures are surfaced as the returned error, not itemized in the result.</p>
 
   <h2 id="idempotency">Idempotency</h2>
 
@@ -108,22 +106,19 @@ const bodyContent = `<h1>Blueprints</h1>
 
   <ul>
     <li><strong><code>name</code></strong> is required and must match the network name rules (lowercase alphanumeric with hyphens)</li>
-    <li><strong><code>join_rule</code></strong> must be one of <code>open</code>, <code>invite_only</code>, or <code>token</code></li>
-    <li><strong><code>policy.max_members</code></strong> must be a non-negative integer</li>
-    <li><strong><code>policy.allowed_ports</code></strong> must have &le; 100 entries</li>
-    <li><strong><code>policy.description</code></strong> must be &le; 256 characters</li>
+    <li><strong><code>join_rule</code></strong> must be one of <code>open</code>, <code>token</code>, or <code>invite</code></li>
     <li><strong><code>identity_provider.type</code></strong> must be a valid provider type (<code>oidc</code>, <code>saml</code>, <code>entra_id</code>, <code>ldap</code>, <code>webhook</code>)</li>
-    <li><strong><code>roles</code></strong> values must be <code>admin</code> or <code>member</code> (not <code>owner</code> - ownership is assigned to the creator)</li>
+    <li><strong><code>roles</code></strong> values must be <code>owner</code>, <code>admin</code>, or <code>member</code></li>
   </ul>
 
-  <p>If validation fails, no changes are made and the error is returned immediately.</p>
+  <p>If validation fails, no changes are made and the error is returned immediately. (Policy fields like <code>max_members</code> and <code>allowed_ports</code> are not range-checked on the blueprint path — those limits apply to the separate <code>set_network_policy</code> RPC.)</p>
 
   <h2 id="command">Protocol command</h2>
 
   <h3>Apply a blueprint</h3>
 
   <pre><code>{
-  "command": "provision_network",
+  "type": "provision_network",
   "blueprint": {
     "name": "prod-fleet",
     "enterprise": true,
@@ -132,7 +127,7 @@ const bodyContent = `<h1>Blueprints</h1>
   "admin_token": "your-admin-token"
 }</code></pre>
 
-  <p>The blueprint is the only payload field besides <code>admin_token</code>. Ownership of a newly-created network is assigned to the registry node that the admin token authorizes — there is no explicit <code>node_id</code> on the RPC.</p>
+  <p>The blueprint is the only payload field besides <code>admin_token</code>. The admin token is a global registry token; no network owner is assigned by the blueprint path, and there is no explicit <code>node_id</code> on the RPC.</p>
 
   <h3>Result format</h3>
 
@@ -140,11 +135,12 @@ const bodyContent = `<h1>Blueprints</h1>
   "network_id": 5,
   "name": "prod-fleet",
   "created": true,
+  "type": "provision_network_ok",
   "actions": [
-    "network created",
-    "enterprise enabled",
-    "policy set",
-    "audit export configured"
+    "created network 5 (prod-fleet)",
+    "enabled enterprise features",
+    "applied network policy",
+    "configured splunk_hec audit export to https://splunk.example.com:8088/..."
   ]
 }</code></pre>
 
@@ -152,28 +148,29 @@ const bodyContent = `<h1>Blueprints</h1>
 
   <h3>File-based blueprints</h3>
 
-  <p>For programmatic use, load a blueprint from a JSON file using the helper in <code>pkg/registry/wire</code>, then convert to the map shape <code>ProvisionNetwork</code> expects:</p>
+  <p>For programmatic use, load a blueprint from a JSON file with the typed loader in the <code>common/registry/wire</code> package, then pass it to the client:</p>
 
-  <pre><code><span class="comment">// Go SDK — pkg/registry/wire has the typed loader</span>
-import "github.com/pilot-protocol/pilotprotocol/pkg/registry/wire"
-import "github.com/pilot-protocol/pilotprotocol/pkg/registry"
+  <pre><code><span class="comment">// Go SDK — the typed loader lives in common/registry/wire</span>
+import "github.com/pilot-protocol/common/registry/wire"
+import "github.com/pilot-protocol/common/registry/client"
 
-bp, err := wire.LoadBlueprint("network.json")        // *wire.NetworkBlueprint
-result, err := client.ProvisionNetwork(bp.ToMap(), adminToken)</code></pre>
+bp, err := wire.LoadBlueprint("network.json")   // *wire.NetworkBlueprint
+// ProvisionNetwork takes a map[string]interface{} blueprint + admin token.
+// Marshal the blueprint JSON into a map, or build the map directly.
+result, err := c.ProvisionNetwork(blueprintMap, adminToken)</code></pre>
 
-  <p><code>wire.LoadBlueprint</code> reads and validates the JSON file, returning a typed struct. <code>registry.Client.ProvisionNetwork(blueprint, adminToken)</code> takes the blueprint as a <code>map[string]interface{}</code> and the admin token — the network owner is the node already authenticated on the client connection (no explicit <code>nodeID</code> argument).</p>
+  <p><code>wire.LoadBlueprint</code> reads and validates the JSON file, returning a typed struct. <code>client.Client.ProvisionNetwork(blueprint, adminToken)</code> takes the blueprint as a <code>map[string]interface{}</code> and the admin token. There is no explicit <code>nodeID</code> argument, and the blueprint path assigns no network owner.</p>
 
   <h2 id="status">Status query</h2>
 
   <p>Inspect the provisioning state of a network:</p>
 
   <pre><code>{
-  "command": "get_provision_status",
-  "network_id": 5,
+  "type": "get_provision_status",
   "admin_token": "your-admin-token"
 }</code></pre>
 
-  <p>Returns the network&rsquo;s current configuration as seen by the registry: enterprise status, policies, IDP config, webhook endpoints, audit export, and role assignments. Use this to verify that a blueprint was applied correctly or to diff the current state against a desired state.</p>
+  <p>Takes no <code>network_id</code> — it returns a registry-wide summary of all networks. Per network you get enterprise status, policy, <code>idp_type</code>, an <code>audit</code> format string, a <code>webhook_enabled</code> flag, and an <code>rbac_pre_assignments</code> count (a summary, not full configs or endpoints). Use it to verify a blueprint was applied.</p>
 
   <div class="callout">
     <strong>See also:</strong> <a href="enterprise">Enterprise Overview</a> - the full enterprise feature set. <a href="enterprise-policies">Network Policies</a> - policy fields that blueprints configure. <a href="enterprise-audit#export">Audit Export</a> - export formats and delivery guarantees.
@@ -185,7 +182,7 @@ result, err := client.ProvisionNetwork(bp.ToMap(), adminToken)</code></pre>
   activePage="enterprise-blueprints"
   canonicalPath="/docs/enterprise-blueprints"
   prev={{ label: "Audit & Compliance", href: "/docs/enterprise-audit" }}
-  next={{ label: "Diagnostics", href: "/docs/diagnostics" }}
+  next={{ label: "Firewalls & Compat Mode", href: "/docs/firewalls" }}
 >
   <Fragment set:html={bodyContent} />
 </DocLayout>

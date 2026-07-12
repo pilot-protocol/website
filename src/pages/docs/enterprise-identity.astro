@@ -23,7 +23,7 @@ const bodyContent = `<h1>Identity & SSO</h1>
 
   <p>Enterprise networks can integrate with external identity providers (IDPs) to centralize authentication. Instead of relying solely on Pilot&rsquo;s built-in Ed25519 keys, agents can present tokens from your organization&rsquo;s IDP - OIDC, SAML, Entra ID, LDAP, or a custom webhook - and the registry validates them before granting access.</p>
 
-  <p>Identity integration is per-network. Each network can have its own IDP configuration, allowing different teams or environments to use different providers.</p>
+  <p>Identity integration is registry-global: a single IDP configuration applies across the registry, and setting a new one replaces the previous config. (Blueprint provisioning writes the same global store.)</p>
 
   <h2 id="providers">Supported providers</h2>
 
@@ -44,8 +44,8 @@ const bodyContent = `<h1>Identity & SSO</h1>
 
   <pre><code><span class="comment"># OIDC example</span>
 {
-  "command": "set_idp_config",
-  "type": "oidc",
+  "type": "set_idp_config",
+  "idp_type": "oidc",
   "url": "https://accounts.example.com/.well-known/openid-configuration",
   "client_id": "pilot-network-prod",
   "admin_token": "your-admin-token"
@@ -56,7 +56,7 @@ const bodyContent = `<h1>Identity & SSO</h1>
   <p>To query the current configuration:</p>
 
   <pre><code>{
-  "command": "get_idp_config",
+  "type": "get_idp_config",
   "admin_token": "your-admin-token"
 }</code></pre>
 
@@ -77,12 +77,12 @@ const bodyContent = `<h1>Identity & SSO</h1>
   <p>Validate a token with the <code>validate_token</code> protocol command:</p>
 
   <pre><code>{
-  "command": "validate_token",
+  "type": "validate_token",
   "token": "eyJhbGciOiJSUzI1NiIs...",
   "admin_token": "your-admin-token"
 }</code></pre>
 
-  <p>Returns: <code>valid</code> (bool), <code>claims</code> (the decoded JWT claims if valid), or <code>error</code> (string describing why validation failed).</p>
+  <p>Returns: <code>verified</code> (bool), <code>subject</code> (the token subject), <code>issuer</code>, and — on failure — <code>error</code> (string describing why validation failed).</p>
 
   <h3>Validated claims</h3>
 
@@ -92,8 +92,8 @@ const bodyContent = `<h1>Identity & SSO</h1>
     <li><strong>Signature</strong> - verified against the JWKS public key (RS256) or shared secret (HS256)</li>
     <li><strong>Expiration</strong> (<code>exp</code>) - token must not be expired</li>
     <li><strong>Not-before</strong> (<code>nbf</code>) - token must not be used before its valid time</li>
-    <li><strong>Issued-at</strong> (<code>iat</code>) - checked for reasonableness</li>
-    <li><strong>Issuer</strong> (<code>iss</code>) - must match the configured IDP URL</li>
+    
+    <li><strong>Issuer</strong> (<code>iss</code>) - must match the configured <code>issuer</code> value, when one is set</li>
     <li><strong>Audience</strong> (<code>aud</code>) - must match the configured client ID</li>
   </ul>
 
@@ -107,7 +107,7 @@ const bodyContent = `<h1>Identity & SSO</h1>
       <tr><td>Cache TTL</td><td>5 minutes</td></tr>
       <tr><td>Max response size</td><td>64 KB</td></tr>
       <tr><td>Key matching</td><td>By <code>kid</code> (Key ID) header in the JWT</td></tr>
-      <tr><td>Refresh</td><td>Automatic on cache expiry; on-demand if <code>kid</code> not found in cached set</td></tr>
+      <tr><td>Refresh</td><td>On TTL expiry, URL change, or empty cache. A <code>kid</code> missing from a fresh (non-expired) cache returns an error rather than refetching.</td></tr>
     </tbody>
   </table>
 
@@ -117,11 +117,11 @@ const bodyContent = `<h1>Identity & SSO</h1>
 
   <h3>Algorithm confusion prevention</h3>
 
-  <p>The validator enforces the expected algorithm based on configuration. If the IDP is configured with RS256, an attacker cannot present an HS256 token signed with the public key (a classic algorithm confusion attack). The <code>alg</code> header in the JWT must match the configured algorithm.</p>
+  <p>The validator blocks the classic algorithm-confusion attack by cross-checking the JWT's <code>alg</code> header against the matched JWKS key's own type (<code>RSA</code> for RS256, <code>oct</code> for HS256) — an HS256 token cannot be verified against an RSA signing key. There is no separately-configured algorithm; RS256 and HS256 are the two supported algorithms.</p>
 
   <h3>Clock skew tolerance</h3>
 
-  <p>A 60-second clock skew tolerance is applied to all time-based claims (<code>exp</code>, <code>nbf</code>, <code>iat</code>). This accommodates minor clock differences between the IDP and the registry without opening a significant window for expired tokens.</p>
+  <p>A 60-second clock skew tolerance is applied to the time-based claims that are checked (<code>exp</code> and <code>nbf</code>). This accommodates minor clock differences between the IDP and the registry without opening a significant window for expired tokens.</p>
 
   <h2 id="webhook-identity">Webhook identity</h2>
 
@@ -129,8 +129,8 @@ const bodyContent = `<h1>Identity & SSO</h1>
 
   <pre><code><span class="comment"># Configure a webhook IDP</span>
 {
-  "command": "set_idp_config",
-  "type": "webhook",
+  "type": "set_idp_config",
+  "idp_type": "webhook",
   "url": "https://auth.example.com/verify-agent",
   "admin_token": "your-admin-token"
 }</code></pre>
@@ -143,7 +143,7 @@ const bodyContent = `<h1>Identity & SSO</h1>
 
   <pre><code><span class="comment"># Set an external ID for an agent</span>
 {
-  "command": "set_external_id",
+  "type": "set_external_id",
   "node_id": 5,
   "external_id": "user@example.com",
   "admin_token": "your-admin-token"
@@ -151,7 +151,7 @@ const bodyContent = `<h1>Identity & SSO</h1>
 
 <span class="comment"># Look up an agent&rsquo;s identity</span>
 {
-  "command": "get_identity",
+  "type": "get_identity",
   "node_id": 5,
   "admin_token": "your-admin-token"
 }</code></pre>
@@ -160,23 +160,22 @@ const bodyContent = `<h1>Identity & SSO</h1>
 
   <h2 id="directory-sync">Directory sync</h2>
 
-  <p>Directory sync pushes entries from an external directory (AD, Entra ID, LDAP) to the registry, automatically provisioning and deprovisioning network members.</p>
+  <p>Directory sync pushes entries from an external directory (AD, Entra ID, LDAP) to the registry. It updates roles for existing members, removes members no longer in the directory, and stores role pre-assignments for identities that have not joined yet — it does not itself add (join) new members.</p>
 
   <h3>Sync operation</h3>
 
   <pre><code>{
-  "command": "directory_sync",
+  "type": "directory_sync",
   "network_id": 1,
   "entries": [
     {
       "external_id": "alice@example.com",
-      "node_id": 5,
-      "role": "admin",
-      "tags": ["frontend", "us-east"]
+      "display_name": "Alice",
+      "role": "admin"
     },
     {
       "external_id": "bob@example.com",
-      "node_id": 8,
+      "display_name": "Bob",
       "role": "member"
     }
   ],
@@ -187,29 +186,29 @@ const bodyContent = `<h1>Identity & SSO</h1>
   <h3>What sync does</h3>
 
   <ol>
-    <li><strong>Matches entries</strong> - each entry is matched to a registered node by <code>node_id</code></li>
-    <li><strong>Joins to network</strong> - nodes not already in the network are added</li>
-    <li><strong>Maps roles</strong> - the <code>role</code> field sets the RBAC role (admin or member). Owner role cannot be assigned through sync.</li>
-    <li><strong>Sets external IDs</strong> - the <code>external_id</code> field is stored for identity mapping</li>
-    <li><strong>Applies tags</strong> - optional <code>tags</code> field sets the node&rsquo;s capability tags</li>
+    <li><strong>Matches entries</strong> - each entry is matched to an existing member by normalized <code>external_id</code></li>
+    <li><strong>Pre-assigns unmatched</strong> - entries with no matching member are counted as unmapped and stored as role pre-assignments applied when that identity later joins</li>
+    <li><strong>Maps roles</strong> - the <code>role</code> field sets the RBAC role; <code>owner</code>, <code>admin</code>, and <code>member</code> are all assignable.</li>
+    <li><strong>Reads external IDs</strong> - the <code>external_id</code> field is used to match; the node must already carry an external ID (set via <code>set_external_id</code> or at register) to be matched</li>
+    
     <li><strong>Removes unlisted</strong> - if <code>remove_unlisted</code> is true, members not in the entries list are kicked from the network</li>
   </ol>
 
   <h3>RBAC pre-assignments</h3>
 
-  <p>Directory sync supports role pre-assignment: when a new member is added through sync, they receive their assigned role immediately instead of defaulting to member. This is useful for provisioning admin roles in bulk.</p>
+  <p>Directory sync supports role pre-assignment: an identity not yet in the network gets its assigned role stored, so when the matching node later joins it receives that role instead of defaulting to member. This is useful for provisioning admin roles in bulk.</p>
 
   <h3>Query sync status</h3>
 
   <pre><code>{
-  "command": "get_directory_status",
+  "type": "directory_status",
   "network_id": 1,
   "admin_token": "your-admin-token"
 }</code></pre>
 
-  <p>Returns the last sync timestamp, number of entries processed, and any errors encountered.</p>
+  <p>Returns <code>network_id</code>, <code>total</code>, <code>mapped</code>, <code>unmapped</code>, <code>pre_assignments</code>, <code>enterprise</code>, and <code>last_sync</code>.</p>
 
-  <p>A <code>directory.synced</code> audit event is emitted after each sync, recording the network ID, number of entries added, removed, and role changes.</p>
+  <p>A <code>directory.synced</code> audit event is emitted after each sync, recording the network ID and the <code>mapped</code>, <code>updated</code>, <code>disabled</code>, and <code>unmapped</code> counts.</p>
 
   <div class="callout">
     <strong>See also:</strong> <a href="enterprise-rbac">RBAC &amp; Access Control</a> - role definitions and the permissions matrix. <a href="enterprise-blueprints">Blueprints</a> - include IDP configuration in declarative provisioning.

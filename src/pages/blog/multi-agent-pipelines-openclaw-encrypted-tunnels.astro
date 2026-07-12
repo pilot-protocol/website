@@ -28,12 +28,12 @@ const bodyContent = `<p>A single AI agent can answer questions. A pipeline of sp
   <p>The simplest pipeline: one agent sends work to another and waits for results.</p>
 
   <pre><code><span class="comment"># Agent A: Send file and work description to Agent B</span>
-<span class="cmd">pilotctl data send 1:0001.0B22.4E19 ./raw-data.csv</span>
-<span class="cmd">pilotctl send 1:0001.0B22.4E19 \\
+<span class="cmd">pilotctl send-file 1:0001.0B22.4E19 ./raw-data.csv</span>
+<span class="cmd">pilotctl send 1:0001.0B22.4E19 1002 --data \\
   '{"description":"Clean and normalize the CSV: remove nulls, standardize dates, convert currencies to USD","params":{"input":"raw-data.csv","output_format":"parquet"}}'</span>
 
 <span class="comment"># Agent A waits for Agent B's reply</span>
-<span class="cmd">pilotctl recv --from 1:0001.0B22.4E19 --json</span>
+<span class="cmd">pilotctl --json inbox --from 1:0001.0B22.4E19</span>
 <span class="comment"># Agent A gets the result JSON with the cleaned data location</span></code></pre>
 
   <p>Agent A blocks waiting for the reply. For a two-agent chain, this is the right model -- simple, predictable, easy to reason about.</p>
@@ -48,21 +48,21 @@ const bodyContent = `<p>A single AI agent can answer questions. A pipeline of sp
 <span class="comment"># (In practice, the orchestrator spawns these as concurrent tool calls)</span>
 
 <span class="comment"># Branch 1: Sentiment analysis</span>
-<span class="cmd">pilotctl send 1:0001.0C11.2A33 \\
+<span class="cmd">pilotctl send 1:0001.0C11.2A33 1002 --data \\
   '{"description":"Run sentiment analysis on customer reviews","params":{"model":"roberta-sentiment"}}'</span>
 
 <span class="comment"># Branch 2: Topic extraction</span>
-<span class="cmd">pilotctl send 1:0001.0C11.3B44 \\
+<span class="cmd">pilotctl send 1:0001.0C11.3B44 1002 --data \\
   '{"description":"Extract topics from customer reviews using LDA","params":{"num_topics":"10"}}'</span>
 
 <span class="comment"># Branch 3: Named entity recognition</span>
-<span class="cmd">pilotctl send 1:0001.0C11.4C55 \\
+<span class="cmd">pilotctl send 1:0001.0C11.4C55 1002 --data \\
   '{"description":"Extract named entities: products, companies, people"}'</span>
 
 <span class="comment"># Collect results from all three</span>
-<span class="cmd">pilotctl recv --from 1:0001.0C11.2A33 --json</span>
-<span class="cmd">pilotctl recv --from 1:0001.0C11.3B44 --json</span>
-<span class="cmd">pilotctl recv --from 1:0001.0C11.4C55 --json</span></code></pre>
+<span class="cmd">pilotctl --json inbox --from 1:0001.0C11.2A33</span>
+<span class="cmd">pilotctl --json inbox --from 1:0001.0C11.3B44</span>
+<span class="cmd">pilotctl --json inbox --from 1:0001.0C11.4C55</span></code></pre>
 
   <p>The orchestrator sends all three tasks simultaneously. Each specialist works independently on its branch. When all three complete, the orchestrator merges the results. This is the MapReduce pattern applied to agent pipelines.</p>
 
@@ -113,17 +113,17 @@ const bodyContent = `<p>A single AI agent can answer questions. A pipeline of sp
   <section>
   <h2 id="discovery">Dynamic Agent Discovery</h2>
 
-  <p>Hard-coded agent addresses work for fixed pipelines. For dynamic pipelines, use tag-based discovery to find the best available agent at runtime:</p>
+  <p>Hard-coded agent addresses work for fixed pipelines. For dynamic pipelines, list the network's members and pick the best available agent at runtime by hostname (name your GPU trainers with a recognizable prefix):</p>
 
-  <pre><code><span class="comment"># Find an available ML agent with GPU capabilities</span>
-<span class="cmd">pilotctl search --tag ml --tag gpu --json</span>
+  <pre><code><span class="comment"># List members of the network, then pick a gpu-trainer by hostname</span>
+<span class="cmd">pilotctl --json network members 1</span>
 <span class="comment"># Returns: [{"address":"1:0001.0C11.2A33","hostname":"gpu-trainer-1"},
 #           {"address":"1:0001.0C11.5D66","hostname":"gpu-trainer-2"}]</span>
 
 <span class="comment"># Send work to the first available agent</span>
-<span class="cmd">pilotctl send 1:0001.0C11.2A33 \\
+<span class="cmd">pilotctl send 1:0001.0C11.2A33 1002 --data \\
   '{"description":"Train classifier on preprocessed data"}'</span>
-<span class="cmd">pilotctl recv --from 1:0001.0C11.2A33 --json</span></code></pre>
+<span class="cmd">pilotctl --json inbox --from 1:0001.0C11.2A33</span></code></pre>
 
   <p>If <code>gpu-trainer-1</code> is offline, the orchestrator falls back to <code>gpu-trainer-2</code>. Tags provide capability matching. Together, tag search and tunnel health signals enable the orchestrator to dynamically compose pipelines from whatever agents are available at runtime.</p>
 

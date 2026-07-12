@@ -45,13 +45,13 @@ const bodyContent = `<h1>Pub/Sub</h1>
 
   <h3>Bounded subscription</h3>
   <p>Collect a fixed number of events and return a JSON array:</p>
-  <pre><code><span class="cmd">pilotctl</span> subscribe other-agent status --count 5 --timeout 60s</code></pre>
+  <pre><code><span class="cmd">pilotctl</span> --json subscribe other-agent status --count 5 --timeout 60s</code></pre>
   <p>Returns: <code>events</code> [{<code>topic</code>, <code>data</code>, <code>bytes</code>}], <code>timeout</code> (bool)</p>
 
   <h3>Unbounded subscription</h3>
   <p>Stream events indefinitely as NDJSON (one JSON object per line):</p>
-  <pre><code><span class="cmd">pilotctl</span> subscribe other-agent status</code></pre>
-  <p>Each line is a standalone JSON object: <code>{"topic":"status","data":"online","bytes":6}</code></p>
+  <pre><code><span class="cmd">pilotctl</span> --json subscribe other-agent status</code></pre>
+  <p>With <code>--json</code> and no <code>--count</code>, each line is a standalone JSON object (without <code>--json</code>, subscribe prints human lines like <code>[status] online</code>): <code>{"topic":"status","data":"online","bytes":6}</code></p>
 
   <h2 id="publish">Publishing</h2>
 
@@ -64,7 +64,7 @@ const bodyContent = `<h1>Pub/Sub</h1>
 
   <p>Use <code>*</code> as the topic to subscribe to all topics at once:</p>
   <pre><code><span class="cmd">pilotctl</span> subscribe other-agent "*" --count 10</code></pre>
-  <p><code>*</code> is a full wildcard - it matches every topic published on the target's event stream broker in a single subscription. It is not a prefix glob, so <code>events.*</code> is not valid syntax. There is no multi-level wildcard; <code>*</code> is the only wildcard form, and it always matches all topics.</p>
+  <p><code>*</code> is a full wildcard - it matches every topic published on the target's event stream broker in a single subscription. Topics are opaque strings, so <code>events.*</code> is not a prefix glob — it is treated as the literal topic <code>events.*</code> (no error, but it only matches that exact string). There is no multi-level wildcard; <code>*</code> is the only wildcard form, and it always matches all topics.</p>
 
   <h2 id="ndjson">NDJSON streaming</h2>
 
@@ -86,7 +86,7 @@ done</code></pre>
   <table>
     <thead><tr><th>Property</th><th>Guarantee</th></tr></thead>
     <tbody>
-      <tr><td><strong>Delivery</strong></td><td>At-most-once. No acknowledgments, no retries.</td></tr>
+      <tr><td><strong>Delivery</strong></td><td>At-most-once, no acknowledgments. (The broker retries a failed write once after ~20&nbsp;ms and drops a subscriber after 3 consecutive failures.)</td></tr>
       <tr><td><strong>Ordering</strong></td><td>Events arrive in publish order per connection.</td></tr>
       <tr><td><strong>Persistence</strong></td><td>None. Events are not stored anywhere.</td></tr>
       <tr><td><strong>Replay</strong></td><td>Not supported. Missed events are gone.</td></tr>
@@ -134,19 +134,19 @@ done</code></pre>
 
   <h3>Real-time monitoring</h3>
   <p>An agent publishes system metrics every few seconds. A dashboard agent subscribes and renders them. Note: <code>publish</code> always targets a peer, never yourself — the publisher invokes <code>publish</code> against the dashboard (or any subscriber), and the dashboard's broker fans the event out to its own subscribers. For a node to expose its own metrics, it runs a small SDK loop that calls <code>publish</code> for each interested peer (or uses the SDK's broker directly).</p>
-  <pre><code><span class="comment"># From any peer with metrics to share</span>
+  <pre><code><span class="comment"># The monitored node publishes to the dashboard's broker</span>
 <span class="cmd">pilotctl</span> publish dashboard-agent metrics --data '{"cpu":42,"mem":1024,"disk":80}'
 
-<span class="comment"># On the dashboard agent</span>
-<span class="cmd">pilotctl</span> subscribe monitored-agent metrics >> dashboard-data.jsonl</code></pre>
+<span class="comment"># The dashboard subscribes to its OWN broker to receive them</span>
+<span class="cmd">pilotctl</span> --json subscribe dashboard-agent metrics >> dashboard-data.jsonl</code></pre>
 
   <h3>Coordination</h3>
   <p>A controller publishes tasks, workers subscribe and pick them up:</p>
-  <pre><code><span class="comment"># Workers subscribe</span>
-<span class="cmd">pilotctl</span> subscribe controller-agent tasks --count 1
+  <pre><code><span class="comment"># Workers subscribe to the controller's broker</span>
+<span class="cmd">pilotctl</span> --json subscribe controller-agent tasks --count 1
 
-<span class="comment"># Controller publishes work</span>
-<span class="cmd">pilotctl</span> publish controller-agent tasks --data '{"job":"process-batch-42"}'</code></pre>
+<span class="comment"># Controller publishes to a worker's broker (publish targets a peer, not itself)</span>
+<span class="cmd">pilotctl</span> publish worker-agent tasks --data '{"job":"process-batch-42"}'</code></pre>
 
   <h3>Event-driven workflows</h3>
   <p>Trigger actions in response to events from other agents:</p>

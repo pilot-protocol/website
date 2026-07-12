@@ -16,7 +16,7 @@ const bodyContent = `<h1>Gateway</h1>
   </div>
 
   <div class="callout">
-    <strong>Separate binary:</strong> <code>pilot-gateway</code> does not ship with the standard install (release tarballs contain <code>pilot-daemon</code>, <code>pilotctl</code>, and <code>pilot-updater</code> only). Build it from <a href="https://github.com/pilot-protocol/gateway">pilot-protocol/gateway</a> and place it next to <code>pilotctl</code>, put it on <code>$PATH</code>, or point <code>$PILOT_GATEWAY_BIN</code> at it. <code>pilotctl extras gateway …</code> resolves it in that order.
+    <strong>Separate binary:</strong> <code>pilot-gateway</code> does not ship with the standard install (release tarballs contain <code>pilot-daemon</code>, <code>pilotctl</code>, and <code>pilot-updater</code> only). <a href="https://github.com/pilot-protocol/gateway">pilot-protocol/gateway</a> is currently published as a Go <em>library</em> (<code>import "github.com/pilot-protocol/gateway"</code>) that you embed to bridge pilot streams to local loopback IPs; a standalone <code>pilot-gateway</code> binary is not published from it today. When a <code>pilot-gateway</code> binary is present, <code>pilotctl extras gateway …</code> locates it in this order: <code>$PILOT_GATEWAY_BIN</code> first, then a sibling next to <code>pilotctl</code>, then <code>$PATH</code>.
   </div>
 
   <h2 id="how">How it works</h2>
@@ -51,7 +51,8 @@ const bodyContent = `<h1>Gateway</h1>
 <span class="comment"># or open http://10.4.0.1/ in a browser</span>
 
 <span class="comment"># 4. Stop when done</span>
-<span class="cmd">sudo pilotctl</span> extras gateway stop</code></pre>
+<span class="comment"># pilotctl no longer tracks the gateway; stop it directly:</span>
+<span class="cmd">sudo</span> pkill -TERM pilot-gateway</code></pre>
 
   <p>The first pilot address you map gets <code>10.4.0.1</code>, the second gets <code>10.4.0.2</code>, and so on.</p>
 
@@ -62,7 +63,7 @@ const bodyContent = `<h1>Gateway</h1>
 
   <h2 id="host">Expose your own server on pilotprotocol network</h2>
 
-  <p>To let a trusted peer reach a service running on your machine, you just run the server - no special gateway setup needed on your side. The peer runs the gateway on their end and connects to you.</p>
+  <p>For a peer to reach a plain TCP service on your machine, the pilot stream must be bridged to your local port on <em>your</em> side — a plain OS listener (e.g. <code>python3 -m http.server</code>) does not register a pilot listener, so the daemon has nothing to hand the inbound stream to. Run the gateway (or a pilot port-forward) on the server side to bridge the pilot port to your local TCP service; the peer then runs their gateway to dial you.</p>
 
   <h3>Your machine (the server)</h3>
   <pre><code><span class="comment"># Start your server on whatever port you want</span>
@@ -89,16 +90,18 @@ const bodyContent = `<h1>Gateway</h1>
 
   <h3>List current mappings</h3>
   <pre><code><span class="cmd">pilotctl</span> extras gateway list</code></pre>
+  <p><em>Note:</em> this prints "no mappings" — live mappings are held inside the <code>pilot-gateway</code> process, not pilotctl.</p>
 
-  <h3>Add a mapping to a running gateway</h3>
-  <pre><code><span class="cmd">pilotctl</span> extras gateway map 0:0000.0000.0007           <span class="comment"># auto-assign local IP</span>
-<span class="cmd">pilotctl</span> extras gateway map 0:0000.0000.0007 10.4.0.5  <span class="comment"># assign a specific IP</span></code></pre>
+  <h3>Mappings</h3>
+  <p><code>pilot-gateway</code> owns its in-memory mapping table for its lifetime; there is no IPC to mutate a running gateway. <code>pilotctl extras gateway map</code> execs a transient <code>pilot-gateway</code> that registers a mapping and exits. To change the mapping set, restart <code>pilot-gateway</code> with the mappings you want.</p>
+  <pre><code><span class="cmd">pilotctl</span> extras gateway map 0:0000.0000.0007           <span class="comment"># transient: register + exit</span></code></pre>
 
   <h3>Remove a mapping</h3>
-  <pre><code><span class="cmd">pilotctl</span> extras gateway unmap 10.4.0.1</code></pre>
+  <p><code>pilotctl extras gateway unmap</code> is not supported — unmapping is owned by the <code>pilot-gateway</code> process (there is no remote control path). Stop the process to release its mappings.</p>
 
   <h3>Stop the gateway</h3>
-  <pre><code><span class="cmd">sudo pilotctl</span> extras gateway stop</code></pre>
+  <pre><code><span class="comment"># pilotctl no longer tracks the gateway; stop it directly:</span>
+<span class="cmd">sudo</span> pkill -TERM pilot-gateway</code></pre>
 
   <h2 id="notes">Notes &amp; limits</h2>
 
@@ -108,7 +111,7 @@ const bodyContent = `<h1>Gateway</h1>
     <li><strong>TCP only</strong> - the gateway does not support UDP.</li>
     <li><strong>Trust required</strong> - you must have mutual trust with the remote node. Run <code>pilotctl handshake</code> first.</li>
     <li><strong>Default ports</strong> - if you omit <code>--ports</code>, the gateway listens on: <code>7, 80, 443, 1000, 1001, 1002, 8080, 8443</code>.</li>
-    <li><strong>Cleanup</strong> - loopback aliases are removed automatically on <code>gateway stop</code> or <code>gateway unmap</code>.</li>
+    <li><strong>Cleanup</strong> - the gateway removes its loopback aliases when the <code>pilot-gateway</code> process stops (SIGTERM).</li>
   </ul>
 
   <div class="callout">
@@ -121,7 +124,7 @@ const bodyContent = `<h1>Gateway</h1>
   activePage="gateway"
   canonicalPath="/docs/gateway"
   prev={{ label: "Webhooks", href: "/docs/webhooks" }}
-  next={{ label: "Service Agents", href: "/docs/service-agents" }}
+  next={{ label: "Tags", href: "/docs/tags" }}
 >
   <Fragment set:html={bodyContent} />
 </DocLayout>

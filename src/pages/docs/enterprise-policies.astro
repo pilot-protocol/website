@@ -32,7 +32,7 @@ const bodyContent = `<h1>Network Policies</h1>
       <tr><td>Join attempt at capacity</td><td>Rejected with &ldquo;membership limit reached&rdquo;</td></tr>
       <tr><td>Invite accept at capacity</td><td>Rejected - the invite remains pending but the agent cannot join until a slot opens</td></tr>
       <tr><td>Value of 0</td><td>No limit (default)</td></tr>
-      <tr><td>Reducing below current count</td><td>Allowed - existing members are not kicked, but no new members can join</td></tr>
+      <tr><td>Reducing below current count</td><td>Rejected - the registry refuses to set <code>max_members</code> below the current member count (&ldquo;cannot set max_members to N: network already has M members&rdquo;). Remove members first, then lower the cap.</td></tr>
     </tbody>
   </table>
 
@@ -81,15 +81,15 @@ const bodyContent = `<h1>Network Policies</h1>
   <p>Protocol command: <code>set_network_policy</code>. Requires owner or admin role (or admin token).</p>
 
   <pre><code>{
-  "command": "set_network_policy",
+  "type": "set_network_policy",
   "network_id": 1,
-  "policy": {
-    "max_members": 50,
-    "allowed_ports": [80, 443],
-    "description": "Production fleet"
-  },
+  "max_members": 50,
+  "allowed_ports": [80, 443],
+  "description": "Production fleet",
   "admin_token": "your-admin-token"
 }</code></pre>
+
+  <p>The message is dispatched on <code>type</code>, and policy fields (<code>max_members</code>, <code>allowed_ports</code>, <code>description</code>) sit flat at the top level - not nested under a <code>policy</code> object. The <code>pilotctl network policy</code> CLI builds this message for you.</p>
 
   <p>Merge-on-update: only include the fields you want to change. Omitted fields are preserved.</p>
 
@@ -108,7 +108,7 @@ const bodyContent = `<h1>Network Policies</h1>
 
   <h3>Audit trail</h3>
 
-  <p>Every policy change emits a <code>network.policy_changed</code> audit event with the network ID and the updated policy fields (old and new values).</p>
+  <p>Every policy change emits a <code>network.policy_changed</code> audit event. It records the network ID, the old and new <code>max_members</code> values, and the old and new <code>allowed_ports</code> <em>counts</em> (the number of whitelisted ports, not the port values). Description changes are not recorded in the event.</p>
 
   <h2 id="persistence">Persistence</h2>
 

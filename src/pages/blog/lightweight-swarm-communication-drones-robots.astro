@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>"The network grinds to a halt 90% of the time when I add a second robot." This complaint from a ROS2 user captures a problem that robotics teams encounter repeatedly. DDS, the middleware underneath ROS2, uses multicast for peer discovery. On WiFi networks -- where most mobile robots and drones actually operate -- multicast is unreliable, generates broadcast storms, and consumes bandwidth that the robots need for telemetry and coordination. The result: adding more robots to the swarm makes communication worse, not better.</p>
+const bodyContent = `<p>Robotics teams building multi-robot swarms on ROS2 run into a recurring scaling problem. DDS, the middleware underneath ROS2, uses multicast for peer discovery. On WiFi networks -- where most mobile robots and drones actually operate -- multicast is unreliable, generates broadcast storms, and consumes bandwidth that the robots need for telemetry and coordination. The result: adding more robots to the swarm makes communication worse, not better.</p>
 
   <p>The question robotics teams keep asking is straightforward: what affordable, stable system provides communication between multiple robots without the overhead of ROS2/DDS? This article examines why the DDS multicast model breaks for swarms, what lightweight alternatives exist, and how a single-socket UDP overlay with tag-based discovery can coordinate robot swarms on constrained hardware.</p>
 
@@ -12,7 +12,7 @@ const bodyContent = `<p>"The network grinds to a halt 90% of the time when I add
 
   <p><strong>Discovery storms.</strong> DDS uses SPDP (Simple Participant Discovery Protocol) to find other participants on the network. Each participant periodically multicasts its presence. With 10 robots, that is 10 discovery messages every few seconds, each broadcast to all network participants. On WiFi, multicast frames are transmitted at the lowest data rate (often 1 Mbps on 802.11b/g compatibility mode), consuming disproportionate airtime. With 50 robots, the discovery traffic alone can saturate the WiFi channel.</p>
 
-  <p><strong>50% latency overhead.</strong> Benchmarks consistently show that ROS2 adds approximately 50% latency overhead compared to raw DDS. The ROS2 middleware layer -- type support, serialization, executor callbacks -- adds measurable delay to every message. For a swarm doing position updates at 10 Hz, this means the position data each robot receives is 50% staler than it needs to be.</p>
+  <p><strong>Middleware latency overhead.</strong> The ROS2 middleware layer adds latency compared to raw DDS. The ROS2 middleware layer -- type support, serialization, executor callbacks -- adds measurable delay to every message. For a swarm doing position updates at 10 Hz, this means the position data each robot receives is 50% staler than it needs to be.</p>
 
   <p><strong>WiFi multicast is fundamentally broken.</strong> WiFi access points handle multicast by converting it to broadcast, which is transmitted without acknowledgment or retransmission. If a robot misses a multicast frame due to interference (common in outdoor environments with 2.4 GHz congestion), the message is silently lost. DDS has reliability mechanisms, but they depend on the transport layer delivering the multicast in the first place. On WiFi, this assumption fails routinely.</p>
 
@@ -45,7 +45,7 @@ const bodyContent = `<p>"The network grinds to a halt 90% of the time when I add
   <p><strong>Tag-based discovery.</strong> Instead of multicast discovery, robots register with a lightweight registry server and tag themselves with capabilities. Other robots query the registry to discover peers. The registry is a single process that can run on the ground station, a cloud VM, or one of the robots themselves. Discovery traffic is unicast TCP to the registry, not multicast on the WiFi channel.</p>
 
   <pre><code><span class="comment"># Each drone tags itself on startup</span>
-<span class="cmd">pilotctl extras set-tags swarm-member drone quadcopter survey-team-alpha</span>
+<span class="cmd">pilotctl extras set-tags drone survey-team-alpha quadcopter</span>  <span class="comment"># max 3 tags</span>
 
 <span class="comment"># Ground station discovers all drones</span>
 <span class="cmd">pilotctl peers --search "drone" --json</span>
@@ -53,7 +53,7 @@ const bodyContent = `<p>"The network grinds to a halt 90% of the time when I add
 <span class="comment"># Or find specific capabilities</span>
 <span class="cmd">pilotctl peers --search "drone thermal-camera" --json</span></code></pre>
 
-  <p><strong>10 MB RSS per daemon.</strong> The Pilot daemon is a single Go binary with no external dependencies. It uses 10 MB of RSS at idle, which is 5-10x less than a ROS2 node with DDS middleware. On a Raspberry Pi 4, this is 0.25% of available memory. On a Jetson Nano, it is 0.5%. The remaining resources are available for the robot's actual workload: navigation, perception, and control.</p>
+  <p><strong>10 MB RSS per daemon.</strong> The Pilot daemon is a single Go binary with no external dependencies. In our own runs it uses on the order of ~10 MB of RSS at idle — substantially less than a typical ROS2 node (the figures below are illustrative, not published benchmarks) with DDS middleware. On a Raspberry Pi 4, this is 0.25% of available memory. On a Jetson Nano, it is 0.5%. The remaining resources are available for the robot's actual workload: navigation, perception, and control.</p>
 
   <pre><code><span class="comment"># Memory comparison on Raspberry Pi 4 (4GB)</span>
 <span class="comment"># ROS2 Humble + FastDDS:  ~80MB RSS  (2.0% of RAM)</span>
@@ -87,20 +87,20 @@ const bodyContent = `<p>"The network grinds to a halt 90% of the time when I add
   <pre><code><span class="comment"># Drone startup sequence</span>
 <span class="cmd">pilot-daemon</span>
 <span class="cmd">pilotctl network join 1</span>
-<span class="cmd">pilotctl extras set-tags swarm-member drone drone-07 survey-team-alpha</span>
+<span class="cmd">pilotctl extras set-tags drone drone-07 survey-team-alpha</span>  <span class="comment"># max 3 tags</span>
 
 <span class="comment"># Ground station startup</span>
 <span class="cmd">pilot-daemon</span>
 <span class="cmd">pilotctl network join 1</span>
 <span class="cmd">pilotctl extras set-tags ground-station survey-team-alpha</span>
-<span class="cmd">pilotctl subscribe "swarm.telemetry.*"</span>
-<span class="cmd">pilotctl subscribe "swarm.events.*"</span></code></pre>
+<span class="cmd">pilotctl subscribe &lt;hub-address|hostname&gt; swarm.telemetry</span>
+<span class="cmd">pilotctl subscribe &lt;hub-address|hostname&gt; swarm.events</span></code></pre>
   </section>
 
   <section>
   <h2>Code Example: Telemetry Publishing and Subscribing</h2>
 
-  <p>Here is a Go program that runs on each drone, publishing GPS telemetry at 10 Hz over the Pilot event stream.</p>
+  <p>Here is the pattern for a Go program running on each drone, publishing GPS telemetry over Pilot. <em>Note: pub/sub is exposed through the <code>pilotctl publish</code>/<code>subscribe</code> commands and the event-stream service; the Go SDK (<code>common/driver</code>) itself provides datagram primitives (<code>SendTo</code>/<code>RecvFrom</code>). The <code>stream</code> calls below are illustrative pseudocode for the pub/sub pattern — wire them to <code>publish</code>/<code>subscribe</code> or the messaging API in real code.</em></p>
 
   <pre><code>package main
 
@@ -110,7 +110,7 @@ import (
     "os"
     "time"
 
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
 )
 
 type Telemetry struct {
@@ -131,7 +131,7 @@ func main() {
         droneID = "drone-01"
     }
 
-    d, err := driver.Connect()
+    d, err := driver.Connect("")
     if err != nil {
         panic(err)
     }
@@ -199,7 +199,7 @@ import (
     "encoding/json"
     "fmt"
 
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
 )
 
 type Telemetry struct {
@@ -220,7 +220,7 @@ type Waypoint struct {
 }
 
 func main() {
-    d, err := driver.Connect()
+    d, err := driver.Connect("")
     if err != nil {
         panic(err)
     }
@@ -422,7 +422,7 @@ func main() {
 <span class="cmd">go install github.com/pilot-protocol/pilotprotocol/cmd/pilotctl@latest</span>
 <span class="cmd">pilot-daemon</span>
 <span class="cmd">pilotctl extras set-tags ground-station swarm-controller</span>
-<span class="cmd">pilotctl subscribe "swarm.telemetry.*"</span>
+<span class="cmd">pilotctl subscribe &lt;hub-address|hostname&gt; swarm.telemetry</span>
 
 <span class="comment"># On each robot (Raspberry Pi / Jetson Nano)</span>
 <span class="cmd">go install github.com/pilot-protocol/pilotprotocol/cmd/pilotctl@latest</span>
@@ -435,7 +435,7 @@ func main() {
 <span class="cmd">pilotctl ping 1:0001.0001.0001</span>
 
 <span class="comment"># Start publishing telemetry</span>
-<span class="cmd">pilotctl publish swarm.telemetry.robot-01 '{"lat":37.77,"lon":-122.42,"battery":95}'</span></code></pre>
+<span class="cmd">pilotctl publish &lt;hub-address|hostname&gt; swarm.telemetry --data '{"lat":37.77,"lon":-122.42,"battery":95}'</span></code></pre>
 
   <p>The entire communication stack -- daemon, registry client, NAT traversal, encryption -- is a single binary with zero external dependencies. Cross-compile it for ARM (Raspberry Pi) or ARM64 (Jetson) with one command:</p>
 

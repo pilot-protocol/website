@@ -3,7 +3,7 @@ import BlogLayout from '../../layouts/BlogLayout.astro';
 
 const bodyContent = `<p>You have three agents. Agent A monitors CPU. Agent B monitors memory. Agent C needs to aggregate both streams and trigger alerts. The conventional answer is <a href="https://kafka.apache.org" target="_blank" rel="noopener">Kafka</a>, <a href="https://www.rabbitmq.com" target="_blank" rel="noopener">RabbitMQ</a>, or <a href="https://redis.io" target="_blank" rel="noopener">Redis</a> Streams. That means another service to deploy, configure, secure, and keep running. For fewer than 1,000 agents, that is infrastructure overkill.</p>
 
-  <p>Pilot Protocol has a built-in event stream on <strong>port 1002</strong>. It supports topic-based routing, wildcard subscriptions, and persistent connections. The publish side is 6 lines of Go. The subscribe side is 6 lines. Twelve lines total, and you have a working <strong>agent pub/sub system</strong> in <a href="https://go.dev" target="_blank" rel="noopener">Go</a> with encrypted transport and NAT traversal included.</p>
+  <p>Pilot Protocol has a built-in event stream on <strong>port 1002</strong>. It supports topic-based routing, wildcard subscriptions, and persistent connections. Pub/sub is a few commands: <code>pilotctl publish &lt;peer&gt; &lt;topic&gt; --data …</code> and <code>pilotctl subscribe &lt;peer&gt; &lt;topic&gt;</code>, with encrypted transport and NAT traversal included. (The Go snippets below use an illustrative <code>stream</code> API for the pattern; the shipped Go SDK exposes datagram primitives — wire the pattern to the CLI publish/subscribe or the messaging API.)</p>
 
   <section>
   <h2>The Problem with Brokers for Agents</h2>
@@ -30,14 +30,14 @@ const bodyContent = `<p>You have three agents. Agent A monitors CPU. Agent B mon
   <pre><code>package main
 
 import (
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
     "encoding/json"
     "time"
 )
 
 func main() {
-    d, _ := driver.Connect()            <span class="comment">// Connect to local daemon</span>
-    stream, _ := d.OpenEventStream()     <span class="comment">// Open port 1002</span>
+    d, _ := driver.Connect("")            <span class="comment">// Connect to local daemon</span>
+    stream, _ := d.OpenEventStream()     <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
 
     for {
         event := map[string]any{
@@ -56,13 +56,13 @@ func main() {
   <pre><code>package main
 
 import (
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
     "fmt"
 )
 
 func main() {
-    d, _ := driver.Connect()             <span class="comment">// Connect to local daemon</span>
-    stream, _ := d.OpenEventStream()      <span class="comment">// Open port 1002</span>
+    d, _ := driver.Connect("")             <span class="comment">// Connect to local daemon</span>
+    stream, _ := d.OpenEventStream()     <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
     ch, _ := stream.Subscribe("metrics.*") <span class="comment">// Wildcard subscription</span>
 
     for event := range ch {
@@ -70,7 +70,7 @@ func main() {
     }
 }</code></pre>
 
-  <p>That is the complete pub/sub system. The <code>driver.Connect()</code> call connects to the local Pilot daemon via IPC socket. <code>OpenEventStream()</code> opens the event stream on port 1002. <code>Publish</code> sends a message to a topic. <code>Subscribe</code> returns a channel that delivers matching events.</p>
+  <p>That is the complete pub/sub system. The <code>driver.Connect("")</code> call connects to the local Pilot daemon via IPC socket. <code>OpenEventStream()</code> opens the event stream on port 1002. <code>Publish</code> sends a message to a topic. <code>Subscribe</code> returns a channel that delivers matching events.</p>
 
   <div class="callout">
     <p><strong>What you get for free:</strong> Encryption (AES-256-GCM tunnel), NAT traversal (STUN + hole-punching), peer discovery (registry lookup), and access control (only trusted peers can subscribe). No broker configuration, no TLS certificates, no firewall rules.</p>
@@ -99,7 +99,7 @@ import (
     "strings"
     "time"
 
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
 )
 
 type CPUMetric struct {
@@ -110,11 +110,11 @@ type CPUMetric struct {
 }
 
 func main() {
-    d, err := driver.Connect()
+    d, err := driver.Connect("")
     if err != nil {
         panic(err)
     }
-    stream, err := d.OpenEventStream()
+    stream, err := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
     if err != nil {
         panic(err)
     }
@@ -152,7 +152,7 @@ import (
     "runtime"
     "time"
 
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
 )
 
 type MemMetric struct {
@@ -164,11 +164,11 @@ type MemMetric struct {
 }
 
 func main() {
-    d, err := driver.Connect()
+    d, err := driver.Connect("")
     if err != nil {
         panic(err)
     }
-    stream, err := d.OpenEventStream()
+    stream, err := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
     if err != nil {
         panic(err)
     }
@@ -201,7 +201,7 @@ import (
     "fmt"
     "time"
 
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
 )
 
 type Alert struct {
@@ -212,11 +212,11 @@ type Alert struct {
 }
 
 func main() {
-    d, err := driver.Connect()
+    d, err := driver.Connect("")
     if err != nil {
         panic(err)
     }
-    stream, err := d.OpenEventStream()
+    stream, err := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
     if err != nil {
         panic(err)
     }
@@ -287,7 +287,7 @@ import (
     "encoding/json"
     "fmt"
 
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
 )
 
 type StageEvent struct {
@@ -297,8 +297,8 @@ type StageEvent struct {
 }
 
 func main() {
-    d, _ := driver.Connect()
-    stream, _ := d.OpenEventStream()
+    d, _ := driver.Connect("")
+    stream, _ := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
 
     <span class="comment">// Wait for stage 1 to complete</span>
     ch, _ := stream.Subscribe("pipeline.stage1.complete")
@@ -377,7 +377,7 @@ stream.Publish("pipeline.stage2.result.anomaly", data)</code></pre>
 <span class="comment"># Subscribe to only anomalies</span>
 <span class="cmd">pilotctl subscribe <broker-addr> "pipeline.stage2.result.anomaly"</span></code></pre>
 
-  <p>The CLI commands connect to the same daemon and use the same event stream as the Go API. They are interchangeable.</p>
+  <p>The <code>pilotctl publish</code>/<code>subscribe</code> commands are the supported way to use the event stream; the Go snippets above illustrate the pattern.</p>
   </section>
 
   <section>
@@ -455,7 +455,7 @@ stream.Publish("pipeline.stage2.result.anomaly", data)</code></pre>
     <li>Coordination signals ("I am ready", "start next phase")</li>
   </ul>
 
-  <p>For these patterns, 12 lines of Go and zero broker infrastructure is the right answer. Save Kafka for when you actually need Kafka.</p>
+  <p>For these patterns, a couple of Pilot pub/sub commands and zero broker infrastructure is the right answer. Save Kafka for when you actually need Kafka.</p>
   </section>
 
   <section>

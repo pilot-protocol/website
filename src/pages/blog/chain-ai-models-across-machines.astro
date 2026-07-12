@@ -96,9 +96,9 @@ const bodyContent = `<p>A single complex query now routinely requires <strong>5 
 <span class="comment"># On Machine C</span>
 <span class="cmd">pilotctl extras set-tags model-service diffusion image</span></code></pre>
 
-  <p>The orchestrator discovers available models by tag, not by hardcoded address:</p>
+  <p>The orchestrator finds model hosts by node-ID/hostname substring (tags are metadata the daemon stores, but the peer search matches node ID and hostname, not tags — so name your model hosts with a recognizable prefix):</p>
 
-  <pre><code><span class="cmd">pilotctl peers --search "model-service" --json</span></code></pre>
+  <pre><code><span class="cmd">pilotctl --json peers --search "model"</span></code></pre>
   </section>
 
   <section>
@@ -110,16 +110,18 @@ const bodyContent = `<p>A single complex query now routinely requires <strong>5 
 
 import (
     "bytes"
+    "context"
     "encoding/json"
     "fmt"
     "io"
+    "net"
     "net/http"
     "time"
 
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
 )
 
-<span class="comment">// Model agent addresses (discovered via tags at startup)</span>
+<span class="comment">// Model agent addresses (discovered via hostname substring at startup)</span>
 var (
     llmAddr    = "1:0001.0001.0001"
     whisperAddr = "1:0001.0002.0001"
@@ -138,7 +140,7 @@ type ChainResponse struct {
 }
 
 func main() {
-    d, err := driver.Connect()
+    d, err := driver.Connect("")
     if err != nil {
         panic(err)
     }
@@ -150,9 +152,19 @@ func main() {
     }
 
     <span class="comment">// Create an HTTP client that routes through Pilot tunnels</span>
-    pilotTransport := d.HTTPTransport()
+    transport := &http.Transport{
+        DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+            <span class="comment">// addr is "hostname:port"; resolve + dial over the Pilot overlay</span>
+            host, _, _ := net.SplitHostPort(addr)
+            info, err := d.ResolveHostname(host)
+            if err != nil {
+                return nil, err
+            }
+            return d.Dial(fmt.Sprintf("%s:80", info["address"]))
+        },
+    }
     client := &http.Client{
-        Transport: pilotTransport,
+        Transport: transport,
         Timeout:   60 * time.Second,
     }
 
@@ -226,7 +238,7 @@ func callModel(client *http.Client, agentAddr, path string, payload any) (string
     return parsed.Result, nil
 }</code></pre>
 
-  <p>The key detail is <code>d.HTTPTransport()</code>. This returns an <code>http.RoundTripper</code> that routes HTTP requests through Pilot tunnels instead of the standard network stack. The <code>http.Client</code> uses it transparently -- the code looks like normal HTTP calls, but the transport is a persistent encrypted tunnel. There are no DNS lookups, no TCP handshakes, no TLS negotiations on each request.</p>
+  <p>The key detail is the custom <code>http.Transport</code>: its <code>DialContext</code> resolves the hostname through the Pilot registry and dials over the encrypted Pilot tunnel instead of the standard network stack. The <code>http.Client</code> uses it transparently -- the code looks like normal HTTP calls, but the transport is a persistent encrypted tunnel. There are no public DNS lookups, no TCP handshakes, no TLS negotiations on each request.</p>
   </section>
 
   <section>

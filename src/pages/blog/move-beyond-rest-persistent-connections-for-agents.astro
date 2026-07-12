@@ -66,7 +66,7 @@ while True:
     <li>AES-256-GCM encryption begins on all subsequent data.</li>
   </ol>
 
-  <p>After this one-time setup (~200ms), the tunnel stays open. Keepalive probes every 30 seconds maintain the NAT mapping. If a probe fails, the tunnel automatically re-establishes. If the network changes (WiFi to cellular, IP rebind), the tunnel detects the change and reconnects.</p>
+  <p>After this one-time setup, the tunnel stays open. Keepalive probes every 25 seconds maintain the NAT mapping. If a probe fails, the tunnel automatically re-establishes. If the network changes (WiFi to cellular, IP rebind), the tunnel detects the change and reconnects.</p>
 
   <p>Both sides can send data at any time. There is no client or server. The connection is peer-to-peer and bidirectional by default.</p>
 
@@ -161,7 +161,7 @@ while True:
       <td>TCP keepalive</td>
       <td>HTTP/2 ping</td>
       <td>MQTT keepalive</td>
-      <td>UDP probe (30s)</td>
+      <td>UDP probe (25s)</td>
     </tr>
     <tr>
       <td>Memory per conn</td>
@@ -188,7 +188,7 @@ import (
     "fmt"
     "time"
 
-    "github.com/pilot-protocol/pilotprotocol/pkg/driver"
+    "github.com/pilot-protocol/common/driver"
 )
 
 type Message struct {
@@ -199,8 +199,8 @@ type Message struct {
 
 <span class="comment">// Agent A: sends tasks and receives results</span>
 func runAgentA() {
-    d, _ := driver.Connect()
-    stream, _ := d.OpenEventStream()
+    d, _ := driver.Connect("")
+    stream, _ := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
 
     <span class="comment">// Subscribe to results from Agent B</span>
     results, _ := stream.Subscribe("agent-b.results")
@@ -230,8 +230,8 @@ func runAgentA() {
 
 <span class="comment">// Agent B: receives tasks and sends results</span>
 func runAgentB() {
-    d, _ := driver.Connect()
-    stream, _ := d.OpenEventStream()
+    d, _ := driver.Connect("")
+    stream, _ := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
 
     <span class="comment">// Subscribe to tasks from Agent A</span>
     tasks, _ := stream.Subscribe("agent-a.tasks")

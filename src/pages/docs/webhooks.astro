@@ -18,7 +18,7 @@ const bodyContent = `<h1>Webhooks</h1>
 
   <h2 id="overview">Overview</h2>
 
-  <p>When configured, the daemon POSTs a JSON event to your webhook URL every time something happens - connections, trust changes, messages received, pub/sub activity, and more. Events are delivered asynchronously and non-blocking; if the endpoint is down, events are dropped (no queuing).</p>
+  <p>When configured, the daemon POSTs a JSON event to your webhook URL every time something happens - connections, trust changes, messages received, pub/sub activity, and more. Events are delivered asynchronously and non-blocking. Delivery is buffered (a 1024-event channel), retried up to 3× with exponential backoff, and a circuit breaker pauses delivery after repeated failures; events are dropped only after retries are exhausted (there is no durable/redelivery queue).</p>
 
   <h2 id="configuration">Configuration</h2>
 
@@ -51,8 +51,8 @@ const bodyContent = `<h1>Webhooks</h1>
       <tr><td>daemon.shutting_down</td><td>Daemon is shutting down (final pre-exit event)</td></tr>
       <tr><td>node.registered</td><td>Daemon registered with the registry</td></tr>
       <tr><td>node.reregistered</td><td>Re-registration after keepalive timeout</td></tr>
-      <tr><td>agent.registered</td><td>An agent client (driver) attached to this daemon</td></tr>
-      <tr><td>agent.heartbeat</td><td>Periodic heartbeat from an attached agent client</td></tr>
+      <tr><td>agent.registered</td><td>The daemon registered (or re-registered) itself with the registry</td></tr>
+      <tr><td>agent.heartbeat</td><td>The daemon's own periodic liveness heartbeat</td></tr>
       <tr><td>key.rotated</td><td>Daemon's Ed25519 keypair was rotated</td></tr>
       <tr><td>network.auto_joined</td><td>Daemon auto-joined a network on startup</td></tr>
     </tbody>
@@ -157,11 +157,11 @@ const bodyContent = `<h1>Webhooks</h1>
   <table>
     <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
     <tbody>
-      <tr><td>event_id</td><td>uint64</td><td>Monotonically increasing event counter (unique per daemon lifetime)</td></tr>
+      <tr><td>event_id</td><td>uint64</td><td>Per-webhook-client counter starting at 1 (restarts if the webhook URL is hot-swapped via set-webhook, so ids can repeat within a daemon lifetime)</td></tr>
       <tr><td>event</td><td>string</td><td>The event type (e.g. <code>conn.established</code>)</td></tr>
       <tr><td>node_id</td><td>uint32</td><td>Your node's ID (the daemon emitting the event)</td></tr>
       <tr><td>timestamp</td><td>string</td><td>ISO 8601 timestamp</td></tr>
-      <tr><td>data</td><td>object</td><td>Event-specific data; <code>null</code> for events with no additional payload (e.g. <code>daemon.started</code>); includes peer details for handshake events and message content for <code>message.received</code> / <code>file.received</code></td></tr>
+      <tr><td>data</td><td>object</td><td>Event-specific data; the field is <em>omitted</em> (omitempty) for events with no additional payload; includes peer details for handshake events and message content for <code>message.received</code> / <code>file.received</code></td></tr>
     </tbody>
   </table>
 

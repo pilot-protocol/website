@@ -80,13 +80,13 @@ Transfer: ████████████████████ 100% (4.2
 File delivered (encrypted, verified)
 
 <span class="comment"># Lab B: Receive weights and aggregate</span>
-<span class="cmd">$ ls ~/pilot-received/</span>
+<span class="cmd">$ ls ~/.pilot/received/</span>
 round-3-weights.pt
 
 <span class="comment"># Lab B aggregates with its own local weights</span>
 <span class="cmd">$ python aggregate.py \\
     --local /models/lab-b-round-3.pt \\
-    --remote ~/pilot-received/round-3-weights.pt \\
+    --remote ~/.pilot/received/round-3-weights.pt \\
     --output /models/global-round-3.pt</span>
 Aggregation complete. Global model: /models/global-round-3.pt</code></pre>
 
@@ -130,7 +130,7 @@ for round_num in range(1, ROUNDS + 1):
     subprocess.run([
         "python", "aggregate.py",
         "--local", f"/models/local-round-{round_num}.pt",
-        "--remote", f"~/pilot-received/local-round-{round_num}.pt",
+        "--remote", f"~/.pilot/received/local-round-{round_num}.pt",
         "--output", f"/models/global-round-{round_num}.pt"
     ], check=True)
 
@@ -160,7 +160,7 @@ print("Federated training complete.")</code></pre>
 <span class="cmd">$ pilotctl untrust 1:0001.0000.0020</span>
 Trust revoked for lab-b-trainer (1:0001.0000.0020)
 Active tunnel torn down
-Peer notified
+Peer not notified — it will see connection failures on its next attempt
 
 <span class="comment"># Lab B can no longer send or receive any data</span>
 <span class="comment"># The revocation is effective immediately</span></code></pre>
@@ -176,7 +176,7 @@ Peer notified
   <p>Pilot Protocol is not a compliance product. It does not certify your deployment as HIPAA-compliant or GDPR-compliant. But it provides technical properties that compliance teams evaluate when reviewing research infrastructure:</p>
 
   <ul>
-    <li><strong>End-to-end encryption.</strong> All data in transit is encrypted with X25519 key exchange and AES-256-GCM. The encryption is mandatory -- there is no way to disable it. This satisfies the "encryption in transit" requirement found in HIPAA Security Rule Section 164.312(e)(1) and GDPR Article 32(1)(a).</li>
+    <li><strong>End-to-end encryption.</strong> All data in transit is encrypted with X25519 key exchange and AES-256-GCM. Encryption is on by default; it can only be turned off with the daemon's <code>--no-encrypt</code> flag, so leave it on to satisfy the "encryption in transit" requirement found in HIPAA Security Rule Section 164.312(e)(1) and GDPR Article 32(1)(a).</li>
     <li><strong>Mutual authentication.</strong> Both parties verify identity using Ed25519 signatures before any data flows. The authentication is per-agent, not per-network. This provides stronger access control than IP-based allowlisting or VPN group membership.</li>
     <li><strong>Audit trail.</strong> Every trust event (handshake request, approval, revocation) is logged locally with timestamps and cryptographic signatures. The justification field in each handshake creates a purpose-limited record of why the connection was established.</li>
     <li><strong>Data minimization.</strong> The network stores only connection metadata. No research data, model weights, or training parameters are stored on shared infrastructure. The data exchange is purely peer-to-peer.</li>

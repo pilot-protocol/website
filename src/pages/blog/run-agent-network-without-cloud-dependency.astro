@@ -130,7 +130,7 @@ done</code></pre>
       <tr><th>Property</th><th>Pilot Protocol</th><th>MQTT Broker</th><th>Cloud IoT (AWS/GCP/Azure)</th></tr>
     </thead>
     <tbody>
-      <tr><td>Open source</td><td>Yes (MIT license)</td><td>Yes (Mosquitto, etc.)</td><td>No</td></tr>
+      <tr><td>Open source</td><td>Yes (AGPL-3.0)</td><td>Yes (Mosquitto, etc.)</td><td>No</td></tr>
       <tr><td>Cloud account required</td><td>No</td><td>No</td><td>Yes</td></tr>
       <tr><td>Central server in data path</td><td>No (discovery only)</td><td>Yes (all messages)</td><td>Yes (all messages)</td></tr>
       <tr><td>P2P communication</td><td>Yes (after discovery)</td><td>No (always via broker)</td><td>No (always via cloud)</td></tr>
@@ -138,7 +138,7 @@ done</code></pre>
       <tr><td>Encryption</td><td>End-to-end (X25519 + AES-256-GCM)</td><td>TLS to broker only</td><td>TLS to cloud only</td></tr>
       <tr><td>Survives server outage</td><td>Yes (existing connections continue)</td><td>No (all messages stop)</td><td>No (all messages stop)</td></tr>
       <tr><td>Per-device identity</td><td>Ed25519 key pair (auto-generated)</td><td>Username/password or certificate</td><td>Cloud-managed certificate</td></tr>
-      <tr><td>Vendor lock-in</td><td>None (open source, MIT license)</td><td>Low (MQTT is a standard)</td><td>High (proprietary SDKs)</td></tr>
+      <tr><td>Vendor lock-in</td><td>None (open source, AGPL-3.0)</td><td>Low (MQTT is a standard)</td><td>High (proprietary SDKs)</td></tr>
       <tr><td>Monthly cost at 1K devices</td><td>$0 (open source)</td><td>$0 (open source)</td><td>$50-500/month</td></tr>
     </tbody>
   </table>
@@ -165,9 +165,9 @@ done</code></pre>
 <span class="cmd">$ pilotctl init --hostname device-name</span>
 <span class="cmd">$ pilotctl daemon start --email device@example.com</span></code></pre>
 
-  <h3>Step 4: Establish Trust Between Devices</h3>
+  <h3>Step 3: Establish Trust Between Devices</h3>
 
-  <p>Devices that need to communicate establish trust through the handshake protocol. For fleet deployments, use auto-approval rules to automate this:</p>
+  <p>Devices that need to communicate establish trust through the handshake protocol. For fleet deployments, script the handshakes (or enable the daemon's <code>-trust-auto-approve</code> flag in a trusted environment):</p>
 
   <pre><code><span class="comment"># On the controller: auto-approve devices on the same network</span>
 <span class="cmd">$ pilotctl handshake sensor-1 "Fleet enrollment"</span>
@@ -178,7 +178,7 @@ for sensor in $(pilotctl --json peers --search "sensor" | jq -r '.[].hostname');
   pilotctl handshake "$sensor" "Automated fleet enrollment"
 done</code></pre>
 
-  <h3>Step 5: Decommission the Cloud Service</h3>
+  <h3>Step 4: Decommission the Cloud Service</h3>
 
   <p>Once all devices are communicating over Pilot, disable the cloud service. The communication is peer-to-peer and encrypted end-to-end. A rendezvous server is still needed for new device discovery and NAT traversal coordination, but you can self-host it -- no vendor dependency, no risk of third-party service shutdown.</p>
 
@@ -186,7 +186,7 @@ done</code></pre>
 
   <p>The devices you buy should work for as long as the hardware functions. Not for as long as the vendor stays in business. Not for as long as the vendor's cloud service runs. Not for as long as the vendor's terms of service allow.</p>
 
-  <p>Running your agent network on Pilot Protocol means you own your data and your connections. The software is open source (MIT license). The communication is peer-to-peer. There is no vendor that can shut down your deployment by shutting down their servers.</p>
+  <p>Running your agent network on Pilot Protocol means you own your data and your connections. The software is open source (AGPL-3.0). The communication is peer-to-peer. There is no vendor that can shut down your deployment by shutting down their servers.</p>
 
   <p>Insteon's customers learned this lesson the hard way. Wemo's customers are learning it now. The next cloud shutdown -- and there will be a next one -- does not have to affect you.</p>
 

@@ -7,7 +7,7 @@ const bodyContent = `<p>Building a reliable userspace transport stack from scrat
 
 <p>Pilot Protocol fills this exact gap. It leverages UDP hole-punching for efficient NAT traversal, but because agents exchanging structured API data require reliable, stream-oriented connections, raw UDP is not enough. Existing transport protocols like QUIC were too heavy and did not natively support our requirements for custom addressing and bilateral cryptographic trust handshakes.</p>
 
-<p>Our solution was to build a reliable transport layer entirely in userspace over raw UDP using zero external dependencies. This meant implementing sliding windows, Additive-Increase/Multiplicative-Decrease (AIMD) congestion control, Nagle's algorithm, and Retransmission Timeouts (RTO) from scratch. Here is how we bypassed the kernel and built a full state machine, congestion controller, and crypto-router natively in Go, and how you can apply these lessons to your own high-throughput systems.</p>
+<p>Our solution was to build a reliable transport layer entirely in userspace over raw UDP, leaning on the Go standard library rather than a third-party transport stack. This meant implementing sliding windows, Additive-Increase/Multiplicative-Decrease (AIMD) congestion control, Nagle's algorithm, and Retransmission Timeouts (RTO) from scratch. Here is how we bypassed the kernel and built a full state machine, congestion controller, and crypto-router natively in Go, and how you can apply these lessons to your own high-throughput systems.</p>
 
 <section>
 <h2>1. Concurrency and Fine-Grained Locking</h2>
@@ -111,7 +111,7 @@ func LoadIdentity(path string) (*Identity, error) {
     return &Identity{PublicKey: pub, PrivateKey: priv}, nil
 }</code></pre>
 
-<p>This entirely native crypto stack handles thousands of authenticated handshake packets per second without breaking a sweat, all while keeping our binary dependency-free.</p>
+<p>This native crypto stack handles many authenticated handshake packets per second, all while keeping the core reliable-UDP transport on the standard library.</p>
 </section>
 
 <section>
@@ -157,7 +157,7 @@ case <-dch:
 <section>
 <h2>Conclusion</h2>
 
-<p>Building a reliable transport layer in userspace is a rigorous technical challenge, but Go's standard library provided everything we needed out of the box. By combining the <code>crypto</code> packages for native security, the <code>time</code> and <code>sync</code> packages for efficient memory management, and the deep interface ecosystem of the <code>net</code> package, we built a high-performance overlay network without importing a single third-party dependency.</p>
+<p>Building a reliable transport layer in userspace is a rigorous technical challenge, but Go's standard library provided everything we needed out of the box. By combining the <code>crypto</code> packages for native security, the <code>time</code> and <code>sync</code> packages for efficient memory management, and the deep interface ecosystem of the <code>net</code> package, we built the reliable-UDP core of a high-performance overlay network without reaching for a third-party transport stack.</p>
 
 <p>If you are interested in networking, custom protocols, or how distributed AI agents will traverse firewalls to communicate in the future, dive into the Go standard library. You will find it is more powerful than you think. Explore the <a href="https://github.com/pilot-protocol/pilotprotocol">Pilot Protocol source on GitHub</a>, or read the <a href="/docs/enterprise">enterprise deployment docs</a>.</p>
 </section>

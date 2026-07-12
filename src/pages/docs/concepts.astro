@@ -42,7 +42,7 @@ import DocLayout from "../../layouts/DocLayout.astro";
     <li><code>0:0000.0000.0005</code> - node 5 on network 0</li>
   </ul>
 
-  <p>Agents can also register <strong>hostnames</strong> - human-readable names like <code>my-agent</code>. Most commands accept either an address or a hostname. If you don't set one, the node is still assigned an internal hostname of the form <code>pilot-XXXXXXXX</code>, where the suffix is the first 4 bytes of <code>SHA-256(public_key)</code> encoded as hex (8 hex characters).</p>
+  <p>Agents can also register <strong>hostnames</strong> - human-readable names like <code>my-agent</code>. Most commands accept either an address or a hostname. If you don't set one, the node simply has no hostname (empty) and is addressed by its virtual address; you can set a hostname later with <code>pilotctl set-hostname</code>.</p>
 
   <h3>Special addresses</h3>
   <ul>
@@ -68,7 +68,7 @@ import DocLayout from "../../layouts/DocLayout.astro";
 
   <h3>Connection lifecycle</h3>
   <ul>
-    <li><strong>Keepalive probes</strong> - sent every 30 seconds to detect dead connections</li>
+    <li><strong>Keepalive probes</strong> - sent every 60 seconds to detect dead connections</li>
     <li><strong>Idle timeout</strong> - connections without activity for 120 seconds are cleaned up</li>
     <li><strong>Graceful shutdown</strong> - FIN packets ensure both sides know when a connection ends</li>
   </ul>
@@ -86,20 +86,20 @@ import DocLayout from "../../layouts/DocLayout.astro";
 
   <p>Every node has a persistent <strong>Ed25519 identity keypair</strong> stored at <code>~/.pilot/identity.json</code>. The public key is registered with the registry and used for trust handshake signing.</p>
 
-  <p id="rendezvous">The registry server's binary is named <strong><code>rendezvous</code></strong> — docs and configs use the two names interchangeably. It assigns addresses, stores public keys, and answers hostname lookups; self-hosted deployments run their own rendezvous.</p>
+  <p id="rendezvous">Two coordination services exist: the <strong>registry</strong> (address assignment, key storage, hostname lookup — its binary is named <code>rendezvous</code>, and docs use the two names interchangeably) and the <strong>beacon</strong> (STUN discovery, NAT hole-punching, relay fallback). Data flows peer-to-peer on the direct path; when a direct path isn't possible, the beacon relays the (still-encrypted) traffic. Self-hosted deployments run their own rendezvous.</p>
 
   <h2 id="nat">NAT Traversal</h2>
 
   <p>The daemon automatically discovers its public endpoint and handles NAT traversal:</p>
 
   <ol>
-    <li><strong>STUN discovery</strong> - the daemon queries the beacon server to learn its public IP and port, and determines the NAT type</li>
+    <li><strong>STUN discovery</strong> - the daemon queries the beacon server to learn its public IP and port</li>
     <li><strong>Direct connection</strong> - for Full Cone NATs, the STUN-discovered endpoint works for all peers</li>
     <li><strong>Hole-punching</strong> - for Restricted/Port-Restricted Cone NATs, the beacon coordinates simultaneous UDP packets from both peers to punch through the NAT</li>
     <li><strong>Relay fallback</strong> - for Symmetric NATs (where each destination gets a different port mapping), traffic is relayed through the beacon server</li>
   </ol>
 
-  <p>NAT type is detected automatically. No configuration needed. Cloud VMs with static IPs can skip STUN with the <code>--endpoint host:port</code> flag.</p>
+  <p>The fallback ladder (direct → hole-punch → relay) is automatic; the daemon does not classify the NAT type. Cloud VMs with static IPs can skip STUN with the <code>--endpoint host:port</code> flag.</p>
 
   <h2 id="trust">Trust Model</h2>
 
