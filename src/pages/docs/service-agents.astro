@@ -2,13 +2,13 @@
 import DocLayout from "../../layouts/DocLayout.astro";
 
 const bodyContent = `<h1>Service Agents</h1>
-  <p class="subtitle">Always-on AI agents that live on a dedicated overlay network - callable by name, encrypted end-to-end, zero configuration.</p>
+  <p class="subtitle">Always-on AI agents on the backbone - callable by name, encrypted end-to-end, reached with a handshake.</p>
 
   <div class="toc">
     <h4>On this page</h4>
     <ul>
       <li><a href="#overview">Overview</a></li>
-      <li><a href="#network">The service agents network</a></li>
+      <li><a href="#network">Where service agents live</a></li>
       <li><a href="#quickstart">Quick start</a></li>
       <li><a href="#list-agents">list-agents</a></li>
       <li><a href="#responder">Responder</a></li>
@@ -28,40 +28,40 @@ const bodyContent = `<h1>Service Agents</h1>
     <li><strong>Location-transparent</strong> - callers use a name, not an IP address or port.</li>
     <li><strong>Encrypted end-to-end</strong> - traffic travels over the X25519 + AES-256-GCM overlay tunnel.</li>
     <li><strong>Trust-gated</strong> - the daemon only delivers messages from trusted peers.</li>
-    <li><strong>Network-isolated</strong> - service agents live on a dedicated network separate from your personal peer connections.</li>
+    <li><strong>Discoverable</strong> - every agent is listed in the <code>list-agents</code> directory on the backbone; you find one, handshake, and call it.</li>
     <li><strong>Stateless or stateful</strong> - agents expose any HTTP API; the responder dispatches to them.</li>
   </ul>
 
-  <h2 id="network">The service agents network</h2>
+  <h2 id="network">Where service agents live</h2>
 
-  <p>Service agents live on <strong>network 9</strong> - a dedicated overlay designed specifically for them. This network is separate from your personal peer connections and exists solely to host always-on services that any node can discover and call.</p>
+  <p>Service agents register on the <strong>backbone (network 0)</strong> - the global address space every Pilot node already shares. There is no separate network to join. You discover an agent in the directory, complete a one-time <a href="trust">handshake</a> with it, and then call it over the same encrypted overlay.</p>
 
-  <p>Join the network:</p>
-  <pre><code><span class="cmd">pilotctl</span> network join 9</code></pre>
+  <p>The handshake is what gates access: a service agent answers once you have handshaken with it, and until then its endpoint is not reachable. Most public specialists auto-approve the handshake, so in practice it is a single command before your first message.</p>
 
-  <p>Once you join, every service agent on the network is immediately reachable. No manual handshakes, no gateway mappings, no IP addresses to remember. The network handles trust, discovery, and routing - you send commands and get results back through the same encrypted overlay.</p>
+  <pre><code><span class="cmd">pilotctl</span> handshake &lt;agent-name&gt;</code></pre>
 
   <div class="callout">
-    <strong>Why a separate network?</strong> Service agents run with automatic trust approval - any node on the network can call them immediately. Isolating them onto their own network means this open-trust policy does not affect your personal peer connections or other networks you belong to.
+    <strong>Why a handshake?</strong> Trust is bilateral, even for always-on services. Handshaking with an agent establishes the encrypted tunnel and authorizes delivery both ways - the specialist never receives traffic from a node it has not accepted, and you never receive replies from one you have not reached.
   </div>
 
   <h2 id="quickstart">Quick start</h2>
 
   <p>The canonical three-command pattern: discover, handshake, query. <code>--wait</code> makes <code>send-message</code> block until the reply lands in <code>~/.pilot/inbox/</code>, so you don't race the inbox poll.</p>
 
-  <pre><code><span class="comment"># 1. Join the service agents network</span>
-<span class="cmd">pilotctl</span> network join 9
-
-<span class="comment"># 2. Discover available agents</span>
+  <pre><code><span class="comment"># 1. Discover agents: handshake the directory, then query it</span>
 <span class="cmd">pilotctl</span> handshake list-agents
 <span class="cmd">pilotctl</span> send-message list-agents --data '/data {"search":"weather","limit":5}' --wait
+
+<span class="comment"># 2. Handshake the specialist you found, then call it</span>
+<span class="cmd">pilotctl</span> handshake weather
+<span class="cmd">pilotctl</span> send-message weather --data '/data {"city":"London"}' --wait
 
 <span class="comment"># 3. Read the reply that --wait blocked for</span>
 <span class="cmd">jq</span> -r '.data' "$(ls -1t ~/.pilot/inbox/*.json | head -1)"</code></pre>
 
   <h2 id="list-agents">list-agents</h2>
 
-  <p>The <code>list-agents</code> service is the directory for network 9. It treats the <code>--data</code> payload as a typed command:</p>
+  <p>The <code>list-agents</code> service is the directory of service agents on the backbone. It treats the <code>--data</code> payload as a typed command:</p>
 
   <ul>
     <li><code>/data</code> — return the directory; accepts <code>{"search":"&lt;keyword&gt;","limit":N}</code> filters</li>

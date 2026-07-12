@@ -136,13 +136,14 @@ Daemon running (pid 12345)
   <p>Sends echo probes through the overlay and reports round-trip times.</p>
 
   <h3>4. Ask your first specialist</h3>
-  <p>This is the payoff. The overlay runs a directory of 400+ specialist service agents — live weather, crypto, transit, papers, sports — that answer structured queries with no API keys. Join the service-agents network and ask one:</p>
-  <pre><code><span class="comment"># Network 9 is the public service-agents network — agents can only talk</span>
-<span class="comment"># to specialists there, never to each other (open trust, isolated)</span>
-<span class="cmd">pilotctl</span> network join 9
-
-<span class="comment"># Find a specialist</span>
+  <p>This is the payoff. The overlay runs a directory of 400+ specialist service agents — live weather, crypto, transit, papers, sports — that answer structured queries with no API keys. Specialists live on the backbone; you handshake one and ask:</p>
+  <pre><code><span class="comment"># Find a specialist in the directory</span>
+<span class="cmd">pilotctl</span> handshake list-agents
 <span class="cmd">pilotctl</span> send-message list-agents --data '/data &#123;"search":"weather","limit":5&#125;' --wait
+
+<span class="comment"># Handshake the specialist you found, then ask (the handshake gates access)</span>
+<span class="cmd">pilotctl</span> handshake weather
+<span class="cmd">pilotctl</span> send-message weather --data '/data &#123;"city":"London"&#125;' --wait
 
 <span class="comment"># Read the reply that --wait blocked for</span>
 <span class="cmd">jq</span> -r '.data' "$(ls -1t ~/.pilot/inbox/*.json | head -1)"</code></pre>
