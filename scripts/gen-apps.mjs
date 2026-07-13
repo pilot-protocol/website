@@ -35,8 +35,8 @@ const CATMAP = {
   'io.pilot.postgres': 'data', 'io.pilot.duckdb': 'data', 'io.pilot.sqlite': 'data', 'io.pilot.mysql': 'data', 'io.pilot.redis': 'data', 'io.pilot.sixtyfour': 'data', 'io.pilot.orthogonal': 'data',
   'io.pilot.cosift': 'ai', 'io.telepat.ideon-free': 'ai',
   'io.pilot.plainweb': 'web', 'io.pilot.otto': 'web', 'io.pilot.bowmark': 'web',
-  'io.pilot.smol': 'infra', 'io.pilot.miren': 'infra', 'io.pilot.docker': 'infra',
-  'io.pilot.aegis': 'security',
+  'io.pilot.smol': 'infra', 'io.pilot.smolmachines': 'infra', 'io.pilot.miren': 'infra', 'io.pilot.docker': 'infra',
+  'io.pilot.aegis': 'security', 'io.pilot.didit': 'security',
   'io.pilot.slipstream': 'finance', 'io.pilot.wallet': 'finance',
   'io.pilot.agentphone': 'comms',
 };
@@ -51,6 +51,8 @@ const ICON_MAP = {
   'io.pilot.docker': { brand: 'docker', hex: '#2496ED' },
   'io.pilot.cosift': { image: 'png', fit: 'contain', bg: '#ffffff' },
   'io.pilot.smol': { image: 'png', fit: 'cover', bg: '#ffffff' },
+  'io.pilot.smolmachines': { image: 'png', fit: 'cover', bg: '#ffffff' },
+  'io.pilot.didit': { image: 'png', fit: 'contain', bg: '#ffffff' },
   'io.pilot.sixtyfour': { image: 'png', fit: 'cover', bg: '#0b0b0a' },
   'io.pilot.plainweb': { image: 'png', fit: 'contain', bg: '#ffffff' },
   'io.pilot.slipstream': { lucide: 'trending-up' },
@@ -90,8 +92,8 @@ const APP_IDS = [
   'io.pilot.agentphone',
   'io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.sqlite', 'io.pilot.mysql', 'io.pilot.redis', 'io.pilot.sixtyfour',
   'io.pilot.cosift', 'io.telepat.ideon-free', 'io.pilot.plainweb', 'io.pilot.otto',
-  'io.pilot.smol', 'io.pilot.miren', 'io.pilot.docker', 'io.pilot.aegis',
-  'io.pilot.slipstream', 'io.pilot.wallet', 'io.pilot.bowmark', 'io.pilot.orthogonal',
+  'io.pilot.smol', 'io.pilot.smolmachines', 'io.pilot.miren', 'io.pilot.docker', 'io.pilot.aegis',
+  'io.pilot.slipstream', 'io.pilot.wallet', 'io.pilot.bowmark', 'io.pilot.orthogonal', 'io.pilot.didit',
 ];
 const FEATURED = ['io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.docker'];
 const LINUX_ONLY = new Set(['io.pilot.docker']);

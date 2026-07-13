@@ -406,6 +406,7 @@
 "vendor": "Pilot Protocol",
 "vendorUrl": "https://pilotprotocol.network",
 "license": "Proprietary",
+"sourceUrl": "https://github.com/pilot-protocol/plainweb",
 "homepage": "https://pilotprotocol.network",
 "version": "1.0.0",
 "categoriesRaw": [
@@ -792,7 +793,7 @@
 "description": "# SQLite \u2014 zero-server transactional SQL, native CLI for agents\n\nThis app installs the official **SQLite 3.45.2** command-line shell (`sqlite3`) on the host and fronts it\nas typed methods. The bundle is the upstream sqlite3 CLI binary (sha-pinned per OS/arch, fetched from the\nPilot artifact registry at install) plus a tiny wrapper that serves a clean, complete `--help`.\n\nSQLite is a **zero-server, single-file, transactional (OLTP)** SQL engine \u2014 the most widely deployed\ndatabase in the world. There is **no server, no daemon, no port, no auth, and nothing to provision**: an\nagent opens an in-memory database (`:memory:`) or a single `.db` file like any other file. It is the\ndurable, on-disk complement to **DuckDB's in-memory analytics** ([io.pilot.duckdb](https://pilotprotocol.network)) \u2014\nreal transactional SQL and durable agent memory, locally, with no cloud account.\n\n## Why an agent wants this\n\n- **Zero provisioning.** No server lifecycle, no credentials, no \"is the daemon up?\" state. Open `:memory:`\n  or a file and run SQL.\n- **Durable, transactional storage \u2014 the killer feature.** A single `.db` file *is* the database: ACID\n  transactions, real constraints, indexes, triggers, and full-text search, all persisted to one file the\n  agent can copy, back up, or hand off. The right home for durable agent memory and structured state.\n- **Universal + rock-solid.** SQLite is public-domain, exhaustively tested, and backward-compatible \u2014 the\n  format your data will still open in decades from now.\n- **Agent-friendly output.** `sqlite.query` returns rows as **JSON**; other shapes (CSV, table, Markdown,\n  line, HTML) are one `sqlite.exec` away.\n- **Full SQL.** Window functions, CTEs, JSON1, generated columns, upserts, FTS5, and a rich function library.\n- **Self-contained + offline.** One binary, no dependencies, no network.\n\n## Methods\n\n- `sqlite.query` \u2014 run SQL, get rows back as a **JSON** array. In-memory or against a file.\n- `sqlite.script` \u2014 run a multi-statement SQL script (DDL + DML + a trailing SELECT) in one call.\n- `sqlite.schema` \u2014 print the `CREATE` DDL for every object in the database (`.schema`).\n- `sqlite.tables` \u2014 list the tables in the database (`.tables`).\n- `sqlite.exec` \u2014 run the CLI with a verbatim argv (+ optional stdin) for any flag, output mode, or\n  dot-command the curated methods don't cover (`.dump`, `.import`, `.backup`, `.clone`, `.read`, `-csv`, \u2026).\n- `sqlite.cli_help` \u2014 the complete CLI help: every option **and** every dot-command, as clean text.\n- `sqlite.version` \u2014 the delivered SQLite version. `sqlite.help` \u2014 the self-describing method list.\n\n## How to use it\n\n1. **Quick query (no setup):** `sqlite.query` `{ \"database\": \":memory:\", \"sql\": \"SELECT 42 AS answer\" }`.\n2. **Persistent database:** point `database` at a file path (`/work/app.db`); it's created on first use and\n   persists. The same file holds many tables, indexes, and views.\n3. **Set up a schema:** `sqlite.script` `{ \"database\": \"/work/app.db\", \"sql\": \"CREATE TABLE notes(id INTEGER PRIMARY KEY, body TEXT); INSERT INTO notes(body) VALUES ('hello');\" }`.\n4. **Anything else:** `sqlite.exec` `{ \"args\": [\"/work/app.db\", \"-cmd\", \".mode csv\", \"-cmd\", \".import /data/in.csv t\", \"SELECT count(*) FROM t\"] }`.\n\n## Configuration\n\n- **`database`** \u2014 `:memory:` (ephemeral, no provisioning) or an absolute path to a `.db`/`.sqlite` file\n  (created on first use, persists, holds many tables).\n- **Output mode** \u2014 `sqlite.query` returns JSON; choose any other mode via `sqlite.exec` (`-csv`, `-table`,\n  `-markdown`, `-line`, `-html`, `-box`, `-ascii`).\n- **Read-only** \u2014 open a database without write access via `sqlite.exec` (`-readonly`).\n\n## Good to know\n\n- On a non-zero exit (SQL error) the reply is `{stdout, stderr, exit}` so the caller sees everything the\n  CLI produced.\n- Runs on **macOS and Linux** (arm64 + amd64); the binary is fetched from the Pilot artifact registry and\n  sha-pinned on install. SQLite is in the **public domain** (the \"blessing\" license).\n- `sqlite.help` lists every method with its latency class \u2014 the self-describing discovery contract.\n\n## SQLite CLI help (`sqlite.cli_help`)\n```\nSQLite CLI (sqlite3) \u2014 command-line options and meta-commands\n=============================================================\n\nSQLite is a zero-server, single-file, transactional SQL database engine.\nThe sqlite3 CLI runs SQL against a database file (created if it does not\nexist) or an in-memory database (use ':memory:' or omit the filename).\n\nUSAGE: sqlite3 [OPTIONS] [FILENAME] [SQL]\n\nFILENAME is an SQLite database file; ':memory:' is an ephemeral in-memory DB.\nA trailing SQL string is executed (may contain multiple ;-separated statements).\n\n------------------------------------------------------------------------------\nCOMMAND-LINE OPTIONS  (sqlite3 -help)\n------------------------------------------------------------------------------\n   --                   treat no subsequent arguments as options\n   -append              append the database to the end of the file\n   -ascii               set output mode to 'ascii'\n   -bail                stop after hitting an error\n   -batch               force batch I/O\n   -box                 set output mode to 'box'\n   -column              set output mode to 'column'\n   -cmd COMMAND         run \"COMMAND\" before reading stdin\n   -csv                 set output mode to 'csv'\n   -deserialize         open the database using sqlite3_deserialize()\n   -echo                print inputs before execution\n   -init FILENAME       read/process named file\n   -[no]header          turn headers on or off\n   -help                show this message\n   -html                set output mode to HTML\n   -interactive         force interactive I/O\n   -json                set output mode to 'json'\n   -line                set output mode to 'line'\n   -list                set output mode to 'list'\n   -lookaside SIZE N    use N entries of SZ bytes for lookaside memory\n   -markdown            set output mode to 'markdown'\n   -maxsize N           maximum size for a --deserialize database\n   -memtrace            trace all memory allocations and deallocations\n   -mmap N              default mmap size set to N\n   -newline SEP         set output row separator. Default: '\\n'\n   -nofollow            refuse to open symbolic links to database files\n   -nonce STRING        set the safe-mode escape nonce\n   -nullvalue TEXT      set text string for NULL values. Default ''\n   -pagecache SIZE N    use N slots of SZ bytes each for page cache memory\n   -pcachetrace         trace all page cache operations\n   -quote               set output mode to 'quote'\n   -readonly            open the database read-only\n   -safe                enable safe-mode\n   -separator SEP       set output column separator. Default: '|'\n   -stats               print memory stats before each finalize\n   -table               set output mode to 'table'\n   -tabs                set output mode to 'tabs'\n   -unsafe-testing      allow unsafe commands and modes for testing\n   -version             show SQLite version\n   -vfs NAME            use NAME as the default VFS\n\n------------------------------------------------------------------------------\nDOT-COMMANDS  (meta-commands; usable inside the shell or via -cmd \"...\")\n------------------------------------------------------------------------------\n.auth ON|OFF             Show authorizer callbacks\n.backup ?DB? FILE        Backup DB (default \"main\") to FILE\n.bail on|off             Stop after hitting an error.  Default OFF\n.cd DIRECTORY            Change the working directory to DIRECTORY\n.changes on|off          Show number of rows changed by SQL\n.check GLOB              Fail if output since .testcase does not match\n.clone NEWDB             Clone data into NEWDB from the existing database\n.connection [close] [#]  Open or close an auxiliary database connection\n.databases               List names and files of attached databases\n.dbconfig ?op? ?val?     List or change sqlite3_db_config() options\n.dump ?OBJECTS?          Render database content as SQL\n.echo on|off             Turn command echo on or off\n.eqp on|off|full|...     Enable or disable automatic EXPLAIN QUERY PLAN\n.excel                   Display the output of next command in spreadsheet\n.exit ?CODE?             Exit this program with return-code CODE\n.expert                  EXPERIMENTAL. Suggest indexes for queries\n.explain ?on|off|auto?   Change the EXPLAIN formatting mode.  Default: auto\n.filectrl CMD ...        Run various sqlite3_file_control() operations\n.fullschema ?--indent?   Show schema and the content of sqlite_stat tables\n.headers on|off          Turn display of headers on or off\n.help ?-all? ?PATTERN?   Show help text for PATTERN\n.import FILE TABLE       Import data from FILE into TABLE\n.indexes ?TABLE?         Show names of indexes\n.limit ?LIMIT? ?VAL?     Display or change the value of an SQLITE_LIMIT\n.lint OPTIONS            Report potential schema issues.\n.load FILE ?ENTRY?       Load an extension library\n.log FILE|on|off         Turn logging on or off.  FILE can be stderr/stdout\n.mode MODE ?OPTIONS?     Set output mode\n.nonce STRING            Suspend safe mode for one command if nonce matches\n.nullvalue STRING        Use STRING in place of NULL values\n.once ?OPTIONS? ?FILE?   Output for the next SQL command only to FILE\n.open ?OPTIONS? ?FILE?   Close existing database and reopen FILE\n.output ?FILE?           Send output to FILE or stdout if FILE is omitted\n.parameter CMD ...       Manage SQL parameter bindings\n.print STRING...         Print literal STRING\n.progress N              Invoke progress handler after every N opcodes\n.prompt MAIN CONTINUE    Replace the standard prompts\n.quit                    Stop interpreting input stream, exit if primary.\n.read FILE               Read input from FILE or command output\n.restore ?DB? FILE       Restore content of DB (default \"main\") from FILE\n.save ?OPTIONS? FILE     Write database to FILE (an alias for .backup ...)\n.scanstats on|off|est    Turn sqlite3_stmt_scanstatus() metrics on or off\n.schema ?PATTERN?        Show the CREATE statements matching PATTERN\n.separator COL ?ROW?     Change the column and row separators\n.sha3sum ...             Compute a SHA3 hash of database content\n.shell CMD ARGS...       Run CMD ARGS... in a system shell\n.show                    Show the current values for various settings\n.stats ?ARG?             Show stats or turn stats on or off\n.system CMD ARGS...      Run CMD ARGS... in a system shell\n.tables ?TABLE?          List names of tables matching LIKE pattern TABLE\n.timeout MS              Try opening locked tables for MS milliseconds\n.timer on|off            Turn SQL timer on or off\n.trace ?OPTIONS?         Output each SQL statement as it is run\n.version                 Show source, library and compiler versions\n.vfsinfo ?AUX?           Information about the top-level VFS\n.vfslist                 List all available VFSes\n.vfsname ?AUX?           Print the name of the VFS stack\n.width NUM1 NUM2 ...     Set minimum column widths for columnar output\n\n```\n",
 "vendor": "Pilot Protocol",
 "vendorUrl": "https://pilotprotocol.network",
-"license": "Public Domain",
+"license": "blessing",
 "sourceUrl": "https://sqlite.org/src",
 "homepage": "https://sqlite.org",
 "version": "3.45.2",
@@ -929,6 +930,97 @@
 "protection": "guarded",
 "publishedAt": null,
 "grants": [],
+"inCatalogue": true
+},
+"io.pilot.smolmachines": {
+"name": "Smol Machines",
+"tagline": "Fast, hardware-isolated microVMs on demand",
+"description": "Smol Machines \u2014 the app-store front door for the smolmachines VM engine. It lets an agent spin up fast, hardware-isolated Linux microVMs on demand (sub-second boot, real hypervisor isolation \u2014 not shared-kernel containers), then run workloads in a disposable sandbox. Free to use. Portable .smolmachine artifacts run identically on macOS and Linux, locally or in the cloud.\n\nUse it to:\n- Run untrusted or AI-generated code safely, with networking off by default\n- Give an agent a real Linux shell \u2014 a stateful, isolated execution backend\n- Automate headless browsers (GPU-accelerated) for scraping, screenshots, and web tasks\n- Run GPU/compute jobs via Vulkan with container-like speed\n- Spin up disposable dev sandboxes \u2014 a clean VM per task, torn down after\n- Keep persistent dev VMs \u2014 installed packages survive restarts\n- Run CI-style jobs \u2014 build, test, lint in clean environments\n- Fan out parallel ephemeral workers thanks to sub-second boot\n- Analyze malware / suspicious files in a throwaway environment\n- Build once, run anywhere \u2014 same artifact local, cloud, or self-hosted\n\nDiscover the live method surface at runtime with smolmachines.help, which lists each method's parameters and latency class.",
+"vendor": "smol machines",
+"vendorUrl": "https://smolmachines.com",
+"license": "Apache-2.0",
+"sourceUrl": "https://github.com/smol-machines/smolvm",
+"homepage": "https://smolmachines.com",
+"version": "1.2.0",
+"keywords": [
+"microvm",
+"sandbox",
+"vm",
+"isolation",
+"gpu",
+"ci"
+],
+"bundleBytes": 5346146,
+"installedBytes": 9601119,
+"changelog": [
+{
+"version": "1.2.0",
+"notes": [
+"Released v1.2.0"
+]
+}
+],
+"minPilotVersion": "1.0.0",
+"runtimes": [
+"go"
+],
+"protection": "guarded",
+"inCatalogue": true
+},
+"io.pilot.didit": {
+"name": "Didit",
+"tagline": "One API for identity and fraud \u2014 KYC, liveness, face match, AML, and more, with a no-broker key you mint in one call.",
+"description": "**Didit is one API for identity and fraud** \u2014 KYC/ID verification, liveness, face match, AML screening, proof of address, database validation, and email/phone OTP, wrapped as a single Pilot app. It fronts Didit's full platform: **hosted verification sessions**, reusable **workflows**, **users**, **billing**, **blocklists**, **questionnaires**, and **webhooks** \u2014 40 methods in all.\n\n## Your own key, minted in one call \u2014 no email, no code\n\nThe hard part of using an identity provider is usually onboarding: signing up, confirming an email code, and wiring the key. This app removes all of it. **`didit.signup` takes no arguments** and returns a working key:\n\n- It signs a keyless request (your Pilot identity) to Pilot's Didit broker. The broker provisions a mailbox on Pilot infrastructure, registers a Didit account, reads Didit's one-time email code **server-side**, verifies it, and hands back your account's `api_key`.\n- The adapter caches `{email, api_key}` to `$APP/secrets.json`. From then on **every other method sends your key as `x-api-key` automatically** \u2014 you never see an inbox, a code, or the key unless you ask (`didit.account`).\n- **Idempotent:** the broker mints at most one Didit account per Pilot identity, so a repeat call \u2014 or a fresh install on another machine \u2014 returns the *same* account. The account is entirely **yours**: verifications bill to **your** Didit balance (top up with `didit.billing_topup`), and Pilot adds no markup. Each account includes Didit's **500 free full-KYC checks/month**; account creation, management, sessions CRUD, users, billing, blocklists, questionnaires and webhooks are all **free** \u2014 you pay only per verification you run.\n\n## The fast path\n\n1. `didit.signup {}` \u2192 your key is cached (one call, ~5s, no email).\n2. `didit.create_workflow` `{workflow_label:\"KYC\", features:[{feature:\"OCR\"},{feature:\"LIVENESS\"},{feature:\"FACE_MATCH\"}]}` \u2192 get `uuid`.\n3. `didit.create_session` `{workflow_id, vendor_data:\"user-123\"}` \u2192 send the user to the returned `url`.\n4. `didit.get_decision` `{session_id}` (or a webhook) \u2192 read the Approved/Declined result and extracted data.\n\n`didit.account` returns your provisioned email + key any time.\n\n## What each area does\n\n- **Sessions** \u2014 hosted flows where the user completes verification at a Didit URL, so you never handle document images: `create_session`, `get_decision`, `list_sessions`, `update_session_status` (approve/decline/resubmit), `delete_session`, `batch_delete_sessions`, `share_session` / `import_session` (B2B KYC reuse), `list_reviews`, `create_review`.\n- **Workflows** \u2014 templates built from an ordered `features` array (`OCR`, `LIVENESS`, `FACE_MATCH`, `AML`, `PROOF_OF_ADDRESS`, `PHONE_VERIFICATION`, `EMAIL_VERIFICATION`, `DATABASE_VALIDATION`, `IP_ANALYSIS`, `AGE_ESTIMATION`, `NFC`, `QUESTIONNAIRE`, `KYB_*`), each with an optional per-feature `config`: `create_workflow`, `list_workflows`, `get_workflow`, `update_workflow`, `delete_workflow`.\n- **Standalone checks (JSON, no session)** \u2014 `aml` (sanctions/PEP/adverse-media, $0.20), `database_validation` (gov sources, from $0.05).\n- **Contact** \u2014 `email_send`/`email_check` ($0.03) and `phone_send`/`phone_check` (from $0.03) OTP verification.\n- **Billing** \u2014 `billing_balance`, `billing_topup` (Stripe checkout URL).\n- **Governance** \u2014 `blocklist_*` (auto-flag repeat faces/docs/phones/emails), `questionnaire_*` (custom forms), `users_*` (people grouped by your `vendor_data`), `get_webhook`/`update_webhook` (set + rotate the HMAC secret programmatically).\n\n## Pricing\n\nPay-per-check on **your** Didit balance \u2014 no Pilot markup. See the full rate card in `didit.help`. Highlights: full KYC bundle **$0.33/check** (first **500/month free**), ID verification $0.15, passive liveness $0.10, face match $0.05, **face search free**, AML $0.20, PoA $0.20, email/phone from $0.03. Image-upload APIs (direct ID scan, liveness, face match, face search, age estimation, PoA) run through the **hosted session** flow rather than as direct methods.\n\n## Notes\n\n- The adapter dials exactly two hosts: Pilot's broker (`broker.pilotprotocol.network`) for the one-call `didit.signup`, and Didit (`verification.didit.me`) for every operational call with your cached key. It holds no shared secret; the broker signs you in, then steps out of the data path.\n- Plain request/response REST \u2014 no websockets, no async jobs. Rate limits: ~600 session-creates/min, 300/min per other method; the account OTP register is 5/IP/hour.\n- Errors surface verbatim: `401` (run `didit.signup` first), `403` (top up credits), `429` (back off).\n",
+"vendor": "Didit",
+"vendorUrl": "https://didit.me",
+"license": "Proprietary",
+"sourceUrl": "https://github.com/didit-protocol/skills",
+"homepage": "https://didit.me",
+"version": "1.0.0",
+"keywords": [
+"kyc",
+"identity",
+"verification",
+"aml",
+"liveness",
+"face-match",
+"biometrics",
+"proof-of-address",
+"sanctions",
+"pep",
+"onboarding",
+"fraud",
+"kyb",
+"otp",
+"didit"
+],
+"bundleBytes": 5017077,
+"installedBytes": 9324763,
+"changelog": [
+{
+"version": "1.0.0",
+"notes": [
+"Initial release \u2014 the full Didit identity platform over one byo HTTPS app: 39 methods + didit.help.",
+"One-call broker signup: didit.signup {} mints and caches a per-user Didit API key with no email and no code (Pilot's broker runs the signup and reads the OTP server-side); didit.account retrieves it; ops stay direct to Didit.",
+"KYC/ID, liveness, face match, AML, proof-of-address, database validation, email/phone OTP, hosted sessions, workflows, billing, blocklist, questionnaires, users, webhooks \u2014 per-endpoint pricing in didit.help."
+]
+}
+],
+"minPilotVersion": "1.10.0",
+"runtimes": [
+"go"
+],
+"protection": "shareable",
+"publishedAt": "2026-07-07",
+"grants": [
+"fs.read:$APP/config.json",
+"fs.read:$APP/secrets.json",
+"fs.write:$APP/secrets.json",
+"key.sign:self",
+"net.dial:verification.didit.me",
+"net.dial:broker.pilotprotocol.network",
+"audit.log:*"
+],
 "inCatalogue": true
 }
 }
