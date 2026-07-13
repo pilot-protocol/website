@@ -15,6 +15,9 @@ const bodyContent = `<h1>Go SDK</h1>
       <li><a href="#datagrams">Datagrams</a></li>
       <li><a href="#trust">Trust & handshakes</a></li>
       <li><a href="#admin">Admin methods</a></li>
+      <li><a href="#verified-identity">Verified identity</a></li>
+      <li><a href="#request-signing">Request signing</a></li>
+      <li><a href="#managed">Managed networks & policy</a></li>
       <li><a href="#networks">Networks</a></li>
       <li><a href="#examples">Examples</a></li>
     </ul>
@@ -78,7 +81,11 @@ func main() {
 
   <h3>DialAddr</h3>
   <pre><code>func (d *Driver) DialAddr(dst protocol.Addr, port uint16) (*Conn, error)</code></pre>
-  <p>Like <code>Dial</code> but takes a parsed <code>protocol.Addr</code> and port number directly.</p>
+  <p>Like <code>Dial</code> but takes a parsed <code>protocol.Addr</code> and port number directly. Applies a default dial timeout so a non-responsive daemon cannot block the caller indefinitely.</p>
+
+  <h3>DialAddrTimeout</h3>
+  <pre><code>func (d *Driver) DialAddrTimeout(dst protocol.Addr, port uint16, timeout time.Duration) (*Conn, error)</code></pre>
+  <p>Like <code>DialAddr</code> but with an explicit client-side timeout. If the daemon does not respond within <code>timeout</code>, the dial is cancelled.</p>
 
   <h3>Listen</h3>
   <pre><code>func (d *Driver) Listen(port uint16) (*Listener, error)</code></pre>
@@ -108,8 +115,9 @@ func main() {
       <tr><td><code>Close() error</code></td><td>Close the connection (sends FIN to remote).</td></tr>
       <tr><td><code>LocalAddr() net.Addr</code></td><td>Returns the local pilot address.</td></tr>
       <tr><td><code>RemoteAddr() net.Addr</code></td><td>Returns the remote pilot address.</td></tr>
-      <tr><td><code>SetDeadline(t time.Time) error</code></td><td>Sets the read deadline. Write deadlines are a no-op in the current driver, so this effectively sets the read deadline only.</td></tr>
+      <tr><td><code>SetDeadline(t time.Time) error</code></td><td>Sets both the read and write deadlines to <code>t</code>.</td></tr>
       <tr><td><code>SetReadDeadline(t time.Time) error</code></td><td>Sets the read deadline. A zero value means no deadline.</td></tr>
+      <tr><td><code>SetWriteDeadline(t time.Time) error</code></td><td>Sets the write deadline. A passed deadline makes <code>Write</code> return <code>os.ErrDeadlineExceeded</code>; it is enforced before each chunk. Because <code>Write</code> only enqueues to the local daemon over IPC (it never blocks on the remote peer), this bounds a slow local write rather than a slow peer. A zero value clears it.</td></tr>
     </tbody>
   </table>
 
@@ -172,6 +180,49 @@ func main() {
       <tr><td><code>ResolveHostname(hostname string)</code></td><td>Resolve a hostname to node info.</td></tr>
       <tr><td><code>Deregister()</code></td><td>Remove this node from the registry.</td></tr>
       <tr><td><code>Disconnect(connID uint32)</code></td><td>Close a connection by ID.</td></tr>
+      <tr><td><code>PreferDirect(nodeID uint32)</code></td><td>Best-effort hint asking the daemon to prefer a direct path over a relay for <code>nodeID</code> (e.g. to unstick a beacon-mediated tunnel). An old daemon returns an "unknown command" error - treat that as a no-op and proceed.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="verified-identity">Verified identity</h2>
+
+  <p>Verified-address badges and recovery enrollment. The <code>badge</code>, <code>badgeSig</code>, <code>enrollment</code>, and <code>enrollmentSig</code> strings are produced out-of-band by the verifier sidecar; the daemon signs proof of the current key before forwarding to the registry.</p>
+
+  <table>
+    <thead><tr><th>Method</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>SubmitBadge(badge, badgeSig string)</code></td><td>Attach a verified-address badge to this node's registry entry. The registry verifies the badge offline against the pinned issuer key. Optional - nodes without a badge keep working.</td></tr>
+      <tr><td><code>EnrollRecovery(enrollment, enrollmentSig string)</code></td><td>Record an opaque recovery commitment so the address can be recovered if the current key is lost. The raw external identity never leaves the verifier - only the commitment.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="request-signing">Request signing (reqsig)</h2>
+
+  <p>Sign and verify request-signature envelopes (<code>common/reqsig</code>) so a peer can prove a request came from a given pilot address. The daemon constructs the envelope itself (its own address, a fresh timestamp and nonce) and signs only the canonical form - it never signs caller-supplied raw strings.</p>
+
+  <table>
+    <thead><tr><th>Method</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>SignEnvelope(audience, bodyHash string)</code></td><td>Sign a reqsig envelope for <code>audience</code> over <code>bodyHash</code> (64-hex sha256 of the request body). Returns <code>{envelope, signature, address}</code>.</td></tr>
+      <tr><td><code>VerifyEnvelope(envelope, sigB64 string, checkStanding bool)</code></td><td>Verify a canonical envelope + base64 signature. The daemon resolves the signer's key from cache then the registry. With <code>checkStanding</code> it also reports the signer's registry standing. A failed check is not an error - the reply carries <code>valid=false</code> plus a reason.</td></tr>
+      <tr><td><code>VerifyEnvelopeMaxSkew(envelope, sigB64 string, checkStanding bool, maxSkewSecs uint32)</code></td><td>Same as <code>VerifyEnvelope</code> with an explicit freshness window in seconds. <code>0</code> selects the daemon default.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="managed">Managed networks &amp; policy</h2>
+
+  <p>Inspect and drive managed-network engines and their programmable policy. Policy and member-tag writes are gated by an admin token (see <a href="/docs/enterprise-policies">Network Policies</a>).</p>
+
+  <table>
+    <thead><tr><th>Method</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>ManagedStatus(networkID uint16)</code></td><td>Return the status of a managed network engine.</td></tr>
+      <tr><td><code>ManagedForceCycle(networkID uint16)</code></td><td>Force a prune/fill cycle in a managed network.</td></tr>
+      <tr><td><code>ManagedReconcile(networkID uint16)</code></td><td>Ask the policy runner for <code>networkID</code> to poll the registry and refresh its peer set without running a policy cycle. Returns <code>{network_id, peers}</code>.</td></tr>
+      <tr><td><code>PolicyGet(networkID uint16)</code></td><td>Retrieve the active policy for a network.</td></tr>
+      <tr><td><code>PolicySet(networkID uint16, policyJSON []byte, adminToken string)</code></td><td>Send a policy document for immediate application. The <code>adminToken</code> authenticates the caller; managed-mode daemons reject an empty token.</td></tr>
+      <tr><td><code>MemberTagsGet(networkID uint16, nodeID uint32)</code></td><td>Retrieve admin-assigned member tags for a node in a network.</td></tr>
+      <tr><td><code>MemberTagsSet(networkID uint16, nodeID uint32, tags []string)</code></td><td>Set admin-assigned member tags for a node in a network.</td></tr>
     </tbody>
   </table>
 

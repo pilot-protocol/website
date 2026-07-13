@@ -177,7 +177,7 @@ const bodyContent = `<h1>CLI Reference</h1>
 
   <h3 id="broadcast">broadcast</h3>
   <pre><code><span class="cmd">pilotctl</span> broadcast &lt;network_id&gt; &lt;message&gt; [--port &lt;port&gt;]</code></pre>
-  <p>Fans a best-effort datagram out to every member of the network. The daemon iterates registered members and sends one datagram each; there is no per-recipient ACK.</p>
+  <p>Fans a best-effort datagram out to every member of the network. The daemon iterates registered members and sends one datagram each; there is no per-recipient ACK. <code>--port</code> defaults to 1000. Requires an admin token (<code>PILOT_ADMIN_TOKEN</code> env var or <code>admin_token</code> in <code>~/.pilot/config.json</code>).</p>
   <p>Returns: <code>network_id</code>, <code>port</code>, <code>bytes</code></p>
 
   <h3 id="subscribe">subscribe</h3>
@@ -273,8 +273,8 @@ const bodyContent = `<h1>CLI Reference</h1>
   <p>Returns: <code>files</code> [{<code>name</code>, <code>bytes</code>, <code>modified</code>, <code>path</code>}], <code>total</code>, <code>dir</code></p>
 
   <h3 id="inbox">inbox</h3>
-  <pre><code><span class="cmd">pilotctl</span> inbox [--clear] [--full] [--latest] [--limit &lt;n&gt;] [--since &lt;dur&gt;] [read &lt;id&gt;]</code></pre>
-  <p>Lists messages in <code>~/.pilot/inbox/</code>. Use <code>--clear</code> to delete all (returns <code>{cleared: N}</code>); relative age and byte count are shown by default.</p>
+  <pre><code><span class="cmd">pilotctl</span> inbox [--clear] [--full] [--latest] [--limit &lt;n&gt;] [--since &lt;dur&gt;] [--from &lt;peer&gt;] [--before &lt;dur&gt;] [read &lt;id&gt;]</code></pre>
+  <p>Lists messages in <code>~/.pilot/inbox/</code>. Use <code>--clear</code> to delete all (returns <code>{cleared: N}</code>); relative age and byte count are shown by default. <code>--from &lt;peer&gt;</code> filters to a single sender (address or hostname). <code>--before &lt;dur&gt;</code> scopes a <code>--clear</code> to messages older than the duration (e.g. <code>--clear --before 24h</code> keeps today's messages).</p>
   <p>Returns: <code>messages</code> [{<code>id</code>, <code>from</code>, <code>type</code>, <code>bytes</code>, <code>received_at</code>, <code>preview</code>}], <code>total</code>, <code>shown</code>, <code>dir</code>. The full plain-text payload (<code>data</code>) replaces <code>preview</code> when you pass <code>--full</code> or <code>--latest</code>.</p>
 
   <h2 id="networks">Networks</h2>
@@ -415,8 +415,8 @@ const bodyContent = `<h1>CLI Reference</h1>
   <p>Returns: <code>target</code>, <code>sent_bytes</code>, <code>recv_bytes</code>, <code>send_duration_ms</code>, <code>total_duration_ms</code>, <code>send_mbps</code>, <code>total_mbps</code></p>
 
   <h3 id="peers">peers</h3>
-  <pre><code><span class="cmd">pilotctl</span> peers [--search &lt;query&gt;]</code></pre>
-  <p>Lists currently connected peers and their connection quality. The pilotctl client strips real endpoints before printing, so the output carries the relay-vs-direct breakdown rather than IP:port pairs.</p>
+  <pre><code><span class="cmd">pilotctl</span> peers [--search &lt;query&gt;] [--all] [--limit &lt;n&gt;]</code></pre>
+  <p>Lists currently connected peers and their connection quality. The pilotctl client strips real endpoints before printing, so the output carries the relay-vs-direct breakdown rather than IP:port pairs. <code>--limit &lt;n&gt;</code> caps the number of rows (default 20); <code>--all</code> lists every peer regardless of the limit.</p>
   <p>Returns: <code>peers</code> [{<code>node_id</code>, <code>encrypted</code>, <code>authenticated</code>, <code>relay</code> (bool)}], <code>total</code>, <code>encrypted</code> (count)</p>
 
   <h3 id="connections">connections</h3>

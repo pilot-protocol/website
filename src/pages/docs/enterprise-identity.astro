@@ -15,6 +15,7 @@ const bodyContent = `<h1>Identity & SSO</h1>
       <li><a href="#security">Security</a></li>
       <li><a href="#webhook-identity">Webhook identity</a></li>
       <li><a href="#external-ids">External IDs</a></li>
+      <li><a href="#key-info">Key metadata</a></li>
       <li><a href="#directory-sync">Directory sync</a></li>
     </ul>
   </div>
@@ -137,6 +138,18 @@ const bodyContent = `<h1>Identity & SSO</h1>
 
   <p>Your endpoint receives a POST with the agent&rsquo;s identity information and must return a JSON response indicating whether the agent is authorized.</p>
 
+  <h3>Outbound identity webhook</h3>
+
+  <p>Separately from the webhook IDP above, the registry can <em>push</em> identity events (joins, external-ID changes) to an endpoint you own. Set that URL with the <code>set_identity_webhook</code> command (also settable via the <code>identity_url</code> field of a blueprint's <code>webhooks</code> object):</p>
+
+  <pre><code>{
+  "type": "set_identity_webhook",
+  "url": "https://ops.example.com/pilot-identity",
+  "admin_token": "your-admin-token"
+}</code></pre>
+
+  <p>Returns <code>{"type": "set_identity_webhook_ok", "status": "enabled"}</code> (or <code>"disabled"</code> when the URL is empty). The URL is validated for SSRF safety before it is stored.</p>
+
   <h2 id="external-ids">External IDs</h2>
 
   <p>Map agents to external identity systems using external IDs:</p>
@@ -157,6 +170,17 @@ const bodyContent = `<h1>Identity & SSO</h1>
 }</code></pre>
 
   <p>External IDs are free-form strings - email addresses, UPNs, LDAP DNs, or any identifier from your external system. They are stored in the registry and included in audit events. An <code>identity.external_id_set</code> audit event is emitted on change, recording both old and new values.</p>
+
+  <h2 id="key-info">Key metadata</h2>
+
+  <p>Query a node's key lifecycle metadata with the <code>get_key_info</code> command - useful for enforcing rotation policies or auditing key age:</p>
+
+  <pre><code>{
+  "type": "get_key_info",
+  "node_id": 5
+}</code></pre>
+
+  <p>Returns <code>node_id</code>, <code>created_at</code>, and <code>rotate_count</code>, plus <code>rotated_at</code> / <code>expires_at</code> when set, and a derived <code>key_age_days</code> (measured from the last rotation, or creation if never rotated).</p>
 
   <h2 id="directory-sync">Directory sync</h2>
 
