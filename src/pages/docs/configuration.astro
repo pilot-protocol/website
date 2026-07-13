@@ -150,6 +150,7 @@ const bodyContent = `<h1>Configuration</h1>
       <tr><td>-compat-beacon &lt;url&gt;</td><td>wss://beacon.pilotprotocol.network/v1/compat</td><td>WSS endpoint used when <code>-transport=compat</code></td></tr>
       <tr><td>-tls-trust &lt;mode&gt;</td><td>system</td><td>Compat-mode TLS trust store: <code>system</code> (default — OS trust store; matches the public beacon's Let's Encrypt cert) or <code>pinned</code> (Pilot CA root embedded in the daemon binary; rejects any cert not signed by it). Default will flip back to <code>pinned</code> in a future release once the production Pilot CA root ships embedded in client binaries. End-to-end Ed25519 protects payload identity in both modes.</td></tr>
       <tr><td>-advertise-endpoint &lt;host:port&gt;</td><td>(none)</td><td>Override the STUN-discovered endpoint advertised to the registry (for k8s pods where STUN returns unreachable IPs)</td></tr>
+      <tr><td>-no-rx-watchdog</td><td>false</td><td>Disable the inbound-path watchdog. By default the daemon detects when it keeps transmitting but has received nothing for minutes (stale NAT/relay mapping), soft-recovers by re-registering with the beacon and registry, and — if the wedge persists on a supervised daemon — exits with code 86 so launchd/systemd respawns it with a fresh transport</td></tr>
     </tbody>
   </table>
 
