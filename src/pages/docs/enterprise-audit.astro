@@ -100,7 +100,7 @@ const bodyContent = `<h1>Audit & Compliance</h1>
   <p>Protocol command:</p>
 
   <pre><code>{
-  "command": "get_audit_log",
+  "type": "get_audit_log",
   "network_id": 1,
   "admin_token": "your-admin-token"
 }</code></pre>
@@ -114,7 +114,7 @@ const bodyContent = `<h1>Audit & Compliance</h1>
   <p>Audit export forwards events to external systems in real time. Configure an export endpoint with the <code>set_audit_export</code> protocol command or through a <a href="enterprise-blueprints">blueprint</a>.</p>
 
   <pre><code>{
-  "command": "set_audit_export",
+  "type": "set_audit_export",
   "format": "splunk_hec",
   "endpoint": "https://splunk.example.com:8088/services/collector",
   "token": "your-hec-token",
@@ -151,7 +151,7 @@ const bodyContent = `<h1>Audit & Compliance</h1>
   <p>Splunk HEC (HTTP Event Collector) integration sends events in Splunk&rsquo;s native format:</p>
 
   <pre><code>{
-  "command": "set_audit_export",
+  "type": "set_audit_export",
   "format": "splunk_hec",
   "endpoint": "https://splunk.example.com:8088/services/collector",
   "token": "your-hec-token",
@@ -165,7 +165,7 @@ const bodyContent = `<h1>Audit & Compliance</h1>
   <p>Common Event Format (CEF) output is compatible with ArcSight, QRadar, and other SIEM systems that accept CEF-formatted syslog:</p>
 
   <pre><code>{
-  "command": "set_audit_export",
+  "type": "set_audit_export",
   "format": "syslog_cef",
   "endpoint": "https://siem.example.com/api/events",
   "admin_token": "your-admin-token"
@@ -178,13 +178,24 @@ const bodyContent = `<h1>Audit & Compliance</h1>
   <p>Generic JSON export sends the raw audit event as a JSON POST to any HTTP endpoint:</p>
 
   <pre><code>{
-  "command": "set_audit_export",
+  "type": "set_audit_export",
   "format": "json",
   "endpoint": "https://logs.example.com/ingest",
   "admin_token": "your-admin-token"
 }</code></pre>
 
   <p>The exported JSON payload is the full audit <code>Entry</code>, including the <code>prev_hash</code>/<code>hash</code> chain fields — a superset of what <code>get_audit_log</code> returns (which omits those). Use this for custom integrations, log aggregators, or data pipelines.</p>
+
+  <h3>Inspect the export config</h3>
+
+  <p>Read back the current export configuration with the <code>get_audit_export</code> command:</p>
+
+  <pre><code>{
+  "type": "get_audit_export",
+  "admin_token": "your-admin-token"
+}</code></pre>
+
+  <p>Returns <code>enabled</code> (bool), and when enabled the <code>format</code> and <code>endpoint</code>, plus running <code>exported</code> / <code>dropped</code> counters.</p>
 
   <h2 id="webhooks">Webhooks & DLQ</h2>
 
@@ -197,7 +208,7 @@ const bodyContent = `<h1>Audit & Compliance</h1>
   <h3>Query the DLQ</h3>
 
   <pre><code>{
-  "command": "get_webhook_dlq",
+  "type": "get_webhook_dlq",
   "admin_token": "your-admin-token"
 }</code></pre>
 
@@ -206,6 +217,17 @@ const bodyContent = `<h1>Audit & Compliance</h1>
   <h3>Configure webhooks</h3>
 
   <p>Webhooks are configured via the <code>set_webhook</code> command (or the <code>webhooks</code> field in a <a href="enterprise-blueprints">blueprint</a>); <code>set_audit_export</code> configures the audit exporter, not webhooks.</p>
+
+  <h3>Query webhook status</h3>
+
+  <p>Read the current webhook wiring and health with the <code>get_webhook</code> command:</p>
+
+  <pre><code>{
+  "type": "get_webhook",
+  "admin_token": "your-admin-token"
+}</code></pre>
+
+  <p>Returns <code>enabled</code> (bool), the configured <code>url</code>, delivery counters (<code>delivered</code>, <code>failed</code>, <code>dropped</code>), and DLQ health (<code>dlq_size</code>, <code>dlq_dropped</code>).</p>
 
   <h2 id="metrics">Metrics</h2>
 

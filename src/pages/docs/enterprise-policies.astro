@@ -12,6 +12,8 @@ const bodyContent = `<h1>Network Policies</h1>
       <li><a href="#allowed-ports">AllowedPorts</a></li>
       <li><a href="#description">Description</a></li>
       <li><a href="#setting">Setting policies</a></li>
+      <li><a href="#expr">Programmable (expr) policies</a></li>
+      <li><a href="#member-tags">Member tags</a></li>
       <li><a href="#persistence">Persistence</a></li>
     </ul>
   </div>
@@ -109,6 +111,58 @@ const bodyContent = `<h1>Network Policies</h1>
   <h3>Audit trail</h3>
 
   <p>Every policy change emits a <code>network.policy_changed</code> audit event. It records the network ID, the old and new <code>max_members</code> values, and the old and new <code>allowed_ports</code> <em>counts</em> (the number of whitelisted ports, not the port values). Description changes are not recorded in the event.</p>
+
+  <h2 id="expr">Programmable (expr) policies</h2>
+
+  <p>Beyond the static caps above, an enterprise network can carry a <strong>programmable expression policy</strong> - a versioned document of rules (using the <code>expr-lang</code> expression language) that the managed-network policy runner evaluates on membership events to gate joins and to prune or fill trust links. This is a separate slot from the static <code>set_network_policy</code> record and is managed with its own RPCs.</p>
+
+  <h3>Set an expr policy</h3>
+
+  <p>Protocol command: <code>set_expr_policy</code>. Requires owner/admin role (or admin token). The <code>expr_policy</code> field is required and may be a JSON string or object; it must declare <code>"version": 1</code> and at least one rule. Sending an empty string or <code>"null"</code> clears the policy.</p>
+
+  <pre><code>{
+  "type": "set_expr_policy",
+  "network_id": 1,
+  "expr_policy": {
+    "version": 1,
+    "rules": [ /* ... */ ]
+  },
+  "admin_token": "your-admin-token"
+}</code></pre>
+
+  <p>The reply is <code>{"type": "set_expr_policy_ok", "network_id": 1}</code> (with <code>"cleared": true</code> when the policy was removed). Setting or clearing an expr policy emits a <code>network.expr_policy_set</code> / <code>network.expr_policy_cleared</code> audit event.</p>
+
+  <h3>Get an expr policy</h3>
+
+  <p>Protocol command: <code>get_expr_policy</code>. Returns <code>{"type": "get_expr_policy_ok", "network_id": N, "expr_policy": {...}}</code>; the <code>expr_policy</code> field is omitted when the network has no programmable policy.</p>
+
+  <h3>Go SDK</h3>
+
+  <p>The registry client exposes <code>SetExprPolicy(networkID uint16, policyJSON json.RawMessage, adminToken string)</code> and <code>GetExprPolicy(networkID uint16)</code>. Blueprints can provision the same document declaratively via the <code>expr_policy</code> field - see <a href="enterprise-blueprints">Blueprints</a>.</p>
+
+  <h2 id="member-tags">Member tags</h2>
+
+  <p>Member tags are admin-assigned labels attached to a specific node <em>within a network</em> (distinct from the node's own capability tags). They are the inputs programmable (expr) policies match against - e.g. keeping only nodes tagged <code>gpu</code>, or evicting nodes without a required tag.</p>
+
+  <h3>Set member tags</h3>
+
+  <p>Protocol command: <code>set_member_tags</code>. Requires an admin token. Takes <code>network_id</code>, <code>target_node_id</code>, and a <code>tags</code> array (max 10, lowercase alphanumeric with hyphens; an empty array clears them).</p>
+
+  <pre><code>{
+  "type": "set_member_tags",
+  "network_id": 1,
+  "target_node_id": 42,
+  "tags": ["gpu", "us-east"],
+  "admin_token": "your-admin-token"
+}</code></pre>
+
+  <p>Returns <code>{"type": "set_member_tags_ok", "network_id": N, "target_node_id": M, "tags": [...]}</code> and emits a <code>member_tags.changed</code> audit event.</p>
+
+  <h3>Get member tags</h3>
+
+  <p>Protocol command: <code>get_member_tags</code>. Pass <code>network_id</code> with a <code>target_node_id</code> for one node's tags, or <code>target_node_id: 0</code> to return the tags of every member.</p>
+
+  <p>The Go SDK exposes <code>MemberTagsGet(networkID uint16, nodeID uint32)</code> and <code>MemberTagsSet(networkID uint16, nodeID uint32, tags []string)</code> for the same operations.</p>
 
   <h2 id="persistence">Persistence</h2>
 
