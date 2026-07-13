@@ -16,8 +16,13 @@ on:
     paths:
       - public/install.sh
       - .github/workflows/sync-install-sh.yml
+  # Event-driven: pilot-protocol/release fires this via repository_dispatch
+  # the moment its install.sh changes on main, so a security fix reaches
+  # R2 in seconds instead of waiting for the daily cron.
+  repository_dispatch:
+    types: [release-install-sh-changed]
   schedule:
-    - cron: '17 6 * * *'   # daily — catches changes that land only in pilot-protocol/release
+    - cron: '17 6 * * *'   # daily safety net — catches any missed dispatch
   workflow_dispatch:
 
 permissions:
