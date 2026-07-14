@@ -20,6 +20,12 @@ const installCmd = `pilotctl appstore install ${app.id}`;
 const oses = [...new Set(app.bundles.map((b) => osOf(b.platform)))];
 const bundleFor = (p) => app.bundles.find((b) => b.platform === p);
 
+// Split the method surface into free vs upgrade-gated so the app page can show
+// a clear separator (some apps mark methods that need a paid/invite upgrade).
+const freeMethods = app.methods.filter((m) => !m.gated);
+const gatedMethods = app.methods.filter((m) => m.gated);
+const hasGated = gatedMethods.length > 0;
+
 // tiny inline markdown: escape, then **bold**, `code`, and [text](url)
 function inline(s) {
   const esc = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -148,17 +154,55 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
           </button>
         </section>
 
+        {app.limits && app.limits.length > 0 && (
+        <section>
+          <h2 class="sec-h">Plan &amp; limits</h2>
+          <div class="limit-list">
+            {app.limits.map((l) => (
+              <div class="lrow"><div class="ll">{l.label}</div><div class="lv">{l.value}</div></div>
+            ))}
+          </div>
+        </section>
+        )}
+
         <section>
           <h2 class="sec-h">Methods{app.methods.length ? ` · ${app.methods.length}` : ''}</h2>
           {app.methods.length > 0 ? (
-            <div class="method-list">
-              {app.methods.map((m) => (
-                <div class="mrow">
-                  <code>{m.name}</code>
-                  <div class="ms">{m.summary ?? '—'}</div>
-                </div>
-              ))}
-            </div>
+            <>
+              {hasGated && (
+                <p class="method-group-note">{freeMethods.length} methods work on the free plan. The {gatedMethods.length} below the divider need an account upgrade (paid plan, invite, or a verified custom domain).</p>
+              )}
+              <div class="method-list">
+                {freeMethods.map((m) => (
+                  <div class="mrow">
+                    <code class="mname">{m.name}</code>
+                    <div class="ms">{m.summary ?? '—'}</div>
+                    {m.example && m.example !== '{}' && (
+                      <pre class="mex"><span class="mex-k">example</span>{m.example}</pre>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {hasGated && (
+                <>
+                  <div class="method-divider"><span>Requires an upgrade · {gatedMethods.length}</span></div>
+                  <div class="method-list">
+                    {gatedMethods.map((m) => (
+                      <div class="mrow is-gated">
+                        <code class="mname">{m.name}</code>
+                        <span class="gated-badge">upgrade</span>
+                        <div class="ms">{m.summary ?? '—'}</div>
+                        <div class="mgate">{m.gated}</div>
+                        {m.example && m.example !== '{}' && (
+                          <pre class="mex"><span class="mex-k">example</span>{m.example}</pre>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
           ) : (
             <p style="font-size:14.5px;color:var(--ink-dim);line-height:1.6;">This app publishes its method surface at runtime — call <code style="font-family:var(--mono);font-size:.9em;">{app.id.split('.').pop()}.help</code> after install to discover every method, its parameters, and latency class.</p>
           )}
