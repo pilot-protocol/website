@@ -1,4 +1,58 @@
 {
+"io.pilot.primitive": {
+"name": "Primitive",
+"tagline": "Email for AI agents \u2014 provision a managed inbox in one call, then send, receive, reply, and search real email over one REST API",
+"description": "# Primitive \u2014 email for AI agents\n\n[Primitive](https://www.primitive.dev) gives an agent a real, working email identity with **no SMTP credentials, no DNS, and no human in the loop**. `primitive.signup` provisions a free account plus a managed `*.primitive.email` inbox in **one call** (no email, no code). The adapter caches the API key locally under `~/.pilot` and **injects it on every subsequent call automatically** \u2014 the agent never sees, stores, or passes it. Call signup once; everything else authenticates as you.\n\n## What you can do on the free plan\n- **Send** outbound mail, **reply** on-thread, and **batch-send**, with attachments and idempotency keys.\n- **Receive** at your managed inbox: list, get, search, download raw MIME + attachments, and follow conversations. Long-poll for new mail with `?since=<cursor>&wait=30`.\n- **Filter** inbound mail, register **webhook endpoints**, and read **inbox readiness**.\n- **Primitive Memories** \u2014 durable JSON key-value state across turns, retries, and inbound messages.\n\n## Auth model\nOne step: `primitive.signup`. It mints a `prim_` API key + a provisioned inbox, caches both locally, and the key is injected on every call thereafter. **Idempotent** \u2014 a host that already has a key keeps it. Any method called before signup **soft-fails with exact activation instructions** instead of erroring.\n\n## Requires an upgrade\nFour families are marked in `primitive.help` under a free-plan disclaimer: **Functions** (hosted JavaScript on inbound mail), **Wake** schedules, **x402** USDC payments over email (invite-only), and **custom Domains**. They ship implemented and callable, and return a plan/entitlement error until the account is upgraded at [primitive.dev](https://www.primitive.dev).",
+"vendor": "Primitive",
+"vendorUrl": "https://www.primitive.dev",
+"license": "Proprietary",
+"sourceUrl": "https://github.com/pilot-protocol/app-template/tree/main/submissions/io.pilot.primitive",
+"homepage": "https://www.primitive.dev",
+"version": "1.0.0",
+"categoriesRaw": [
+"email",
+"communication",
+"inbox",
+"messaging"
+],
+"keywords": [
+"email",
+"smtp",
+"inbox",
+"agents",
+"mail",
+"primitive",
+"send",
+"receive"
+],
+"bundleBytes": 5092912,
+"installedBytes": 9376865,
+"changelog": [
+{
+"version": "1.0.0",
+"notes": [
+"Initial release \u2014 Primitive's email API for agents over one byo HTTPS app: 110 methods + primitive.help.",
+"Emailless one-call signup (primitive.signup): mints a prim_ API key + a managed *.primitive.email inbox with no email or code; the key is cached locally and injected on every call automatically.",
+"Full email lifecycle on the free plan: send/reply/batch, inbound list/get/search/raw/attachments/conversations, threads, filters, webhook endpoints, and durable Memories.",
+"Functions, Wake schedules, x402 payments, and custom domains are implemented and marked gated until the account is upgraded."
+]
+}
+],
+"minPilotVersion": "1.10.0",
+"runtimes": [
+"go"
+],
+"protection": "shareable",
+"publishedAt": "2026-07-14",
+"grants": [
+"fs.read:$APP/config.json",
+"fs.read:$APP/secrets.json",
+"fs.write:$APP/secrets.json",
+"net.dial:api.primitive.dev",
+"audit.log:*"
+],
+"inCatalogue": true
+},
 "io.pilot.agentphone": {
 "name": "AgentPhone",
 "tagline": "A real phone number for your agent \u2014 voice calls, SMS/iMessage, and conversations over REST",

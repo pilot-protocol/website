@@ -61,12 +61,538 @@ export const categories: Category[] = [
   {
     "id": "comms",
     "name": "Communications",
-    "blurb": "Give an agent its own phone number — voice, SMS/iMessage, and threaded conversations.",
+    "blurb": "Give an agent its own phone number or email inbox — voice, SMS/iMessage, email, and threaded conversations.",
     "hue": 315
   }
 ];
 
 export const apps: App[] = [
+  {
+    "id": "io.pilot.primitive",
+    "name": "Primitive",
+    "tagline": "Email for AI agents — provision a managed inbox in one call, then send, receive, reply, and search real email over one REST API",
+    "description": "# Primitive — email for AI agents\n\n[Primitive](https://www.primitive.dev) gives an agent a real, working email identity with **no SMTP credentials, no DNS, and no human in the loop**. `primitive.signup` provisions a free account plus a managed `*.primitive.email` inbox in **one call** (no email, no code). The adapter caches the API key locally under `~/.pilot` and **injects it on every subsequent call automatically** — the agent never sees, stores, or passes it. Call signup once; everything else authenticates as you.\n\n## What you can do on the free plan\n- **Send** outbound mail, **reply** on-thread, and **batch-send**, with attachments and idempotency keys.\n- **Receive** at your managed inbox: list, get, search, download raw MIME + attachments, and follow conversations. Long-poll for new mail with `?since=<cursor>&wait=30`.\n- **Filter** inbound mail, register **webhook endpoints**, and read **inbox readiness**.\n- **Primitive Memories** — durable JSON key-value state across turns, retries, and inbound messages.\n\n## Auth model\nOne step: `primitive.signup`. It mints a `prim_` API key + a provisioned inbox, caches both locally, and the key is injected on every call thereafter. **Idempotent** — a host that already has a key keeps it. Any method called before signup **soft-fails with exact activation instructions** instead of erroring.\n\n## Requires an upgrade\nFour families are marked in `primitive.help` under a free-plan disclaimer: **Functions** (hosted JavaScript on inbound mail), **Wake** schedules, **x402** USDC payments over email (invite-only), and **custom Domains**. They ship implemented and callable, and return a plan/entitlement error until the account is upgraded at [primitive.dev](https://www.primitive.dev).",
+    "categories": [
+      "comms"
+    ],
+    "primaryCategory": "comms",
+    "keywords": [
+      "email",
+      "smtp",
+      "inbox",
+      "agents",
+      "mail",
+      "primitive",
+      "send",
+      "receive"
+    ],
+    "version": "1.0.0",
+    "vendor": "Primitive",
+    "vendorUrl": "https://www.primitive.dev",
+    "license": "Proprietary",
+    "sourceUrl": "https://github.com/pilot-protocol/app-template/tree/main/submissions/io.pilot.primitive",
+    "homepage": "https://www.primitive.dev",
+    "methods": [
+      {
+        "name": "primitive.signup",
+        "summary": "Provision your own Primitive account and a managed *.primitive.email inbox in ONE call — no email, no code, no human step"
+      },
+      {
+        "name": "primitive.get_account",
+        "summary": "Get account info"
+      },
+      {
+        "name": "primitive.update_account",
+        "summary": "Update account settings"
+      },
+      {
+        "name": "primitive.get_storage_stats",
+        "summary": "Get storage usage"
+      },
+      {
+        "name": "primitive.get_webhook_secret",
+        "summary": "Get webhook signing secret"
+      },
+      {
+        "name": "primitive.rotate_webhook_secret",
+        "summary": "Rotate webhook signing secret"
+      },
+      {
+        "name": "primitive.list_domains",
+        "summary": "List all domains"
+      },
+      {
+        "name": "primitive.add_domain",
+        "summary": "Claim a new domain"
+      },
+      {
+        "name": "primitive.update_domain",
+        "summary": "Update domain settings"
+      },
+      {
+        "name": "primitive.delete_domain",
+        "summary": "Delete a domain"
+      },
+      {
+        "name": "primitive.verify_domain",
+        "summary": "Verify domain ownership"
+      },
+      {
+        "name": "primitive.download_domain_zone_file",
+        "summary": "Download domain DNS zone file"
+      },
+      {
+        "name": "primitive.get_inbox_status",
+        "summary": "Get inbound inbox readiness"
+      },
+      {
+        "name": "primitive.list_emails",
+        "summary": "List inbound emails"
+      },
+      {
+        "name": "primitive.search_emails",
+        "summary": "Search inbound emails"
+      },
+      {
+        "name": "primitive.get_email",
+        "summary": "Get inbound email by id"
+      },
+      {
+        "name": "primitive.delete_email",
+        "summary": "Delete an email"
+      },
+      {
+        "name": "primitive.download_raw_email",
+        "summary": "Download raw email"
+      },
+      {
+        "name": "primitive.download_attachments",
+        "summary": "Download email attachments"
+      },
+      {
+        "name": "primitive.reply_to_email",
+        "summary": "Reply to an inbound email"
+      },
+      {
+        "name": "primitive.replay_email_webhooks",
+        "summary": "Replay email webhooks"
+      },
+      {
+        "name": "primitive.discard_email_content",
+        "summary": "Discard email content"
+      },
+      {
+        "name": "primitive.get_conversation",
+        "summary": "Get the conversation an email belongs to"
+      },
+      {
+        "name": "primitive.list_endpoints",
+        "summary": "List webhook endpoints"
+      },
+      {
+        "name": "primitive.create_endpoint",
+        "summary": "Create a webhook endpoint"
+      },
+      {
+        "name": "primitive.update_endpoint",
+        "summary": "Update a webhook endpoint"
+      },
+      {
+        "name": "primitive.delete_endpoint",
+        "summary": "Delete a webhook endpoint"
+      },
+      {
+        "name": "primitive.test_endpoint",
+        "summary": "Send a test webhook"
+      },
+      {
+        "name": "primitive.list_filters",
+        "summary": "List filter rules"
+      },
+      {
+        "name": "primitive.create_filter",
+        "summary": "Create a filter rule"
+      },
+      {
+        "name": "primitive.update_filter",
+        "summary": "Update a filter rule"
+      },
+      {
+        "name": "primitive.delete_filter",
+        "summary": "Delete a filter rule"
+      },
+      {
+        "name": "primitive.list_wake_schedules",
+        "summary": "List wake schedules"
+      },
+      {
+        "name": "primitive.create_wake_schedule",
+        "summary": "Create a wake schedule"
+      },
+      {
+        "name": "primitive.get_wake_schedule",
+        "summary": "Get a wake schedule"
+      },
+      {
+        "name": "primitive.update_wake_schedule",
+        "summary": "Update a wake schedule"
+      },
+      {
+        "name": "primitive.delete_wake_schedule",
+        "summary": "Delete a wake schedule"
+      },
+      {
+        "name": "primitive.run_wake_schedule",
+        "summary": "Run a wake schedule now"
+      },
+      {
+        "name": "primitive.list_wake_authorizations",
+        "summary": "List wake authorizations"
+      },
+      {
+        "name": "primitive.create_wake_authorization",
+        "summary": "Create a wake authorization"
+      },
+      {
+        "name": "primitive.update_wake_authorization",
+        "summary": "Update a wake authorization"
+      },
+      {
+        "name": "primitive.delete_wake_authorization",
+        "summary": "Delete a wake authorization"
+      },
+      {
+        "name": "primitive.list_wake_dispatches",
+        "summary": "List recent wake dispatches"
+      },
+      {
+        "name": "primitive.list_routes",
+        "summary": "List recipient routes"
+      },
+      {
+        "name": "primitive.create_route",
+        "summary": "Create a recipient route"
+      },
+      {
+        "name": "primitive.reorder_routes",
+        "summary": "Reorder recipient routes"
+      },
+      {
+        "name": "primitive.simulate_route",
+        "summary": "Simulate routing for a recipient"
+      },
+      {
+        "name": "primitive.update_route",
+        "summary": "Update a recipient route"
+      },
+      {
+        "name": "primitive.delete_route",
+        "summary": "Delete a recipient route"
+      },
+      {
+        "name": "primitive.list_deliveries",
+        "summary": "List webhook deliveries"
+      },
+      {
+        "name": "primitive.replay_delivery",
+        "summary": "Replay a webhook delivery"
+      },
+      {
+        "name": "primitive.get_send_permissions",
+        "summary": "List send-permission rules"
+      },
+      {
+        "name": "primitive.send_email",
+        "summary": "Send outbound email"
+      },
+      {
+        "name": "primitive.semantic_search",
+        "summary": "Semantic search across received and sent mail"
+      },
+      {
+        "name": "primitive.list_sent_emails",
+        "summary": "List outbound sent emails"
+      },
+      {
+        "name": "primitive.get_sent_email",
+        "summary": "Get a sent email by id"
+      },
+      {
+        "name": "primitive.get_thread",
+        "summary": "Get a conversation thread by id"
+      },
+      {
+        "name": "primitive.list_functions",
+        "summary": "List functions"
+      },
+      {
+        "name": "primitive.create_function",
+        "summary": "Deploy a function"
+      },
+      {
+        "name": "primitive.get_function",
+        "summary": "Get a function"
+      },
+      {
+        "name": "primitive.update_function",
+        "summary": "Update and redeploy a function"
+      },
+      {
+        "name": "primitive.delete_function",
+        "summary": "Delete a function"
+      },
+      {
+        "name": "primitive.test_function",
+        "summary": "Send a test invocation"
+      },
+      {
+        "name": "primitive.get_function_test_run_trace",
+        "summary": "Get a function test run trace"
+      },
+      {
+        "name": "primitive.get_org_routing_topology",
+        "summary": "Get the org's function routing topology"
+      },
+      {
+        "name": "primitive.get_function_routing",
+        "summary": "Get a function's current route binding"
+      },
+      {
+        "name": "primitive.set_function_route",
+        "summary": "Bind a route to a function"
+      },
+      {
+        "name": "primitive.unset_function_route",
+        "summary": "Unbind any route from a function"
+      },
+      {
+        "name": "primitive.list_function_secrets",
+        "summary": "List a function's secrets"
+      },
+      {
+        "name": "primitive.create_function_secret",
+        "summary": "Create or update a secret"
+      },
+      {
+        "name": "primitive.set_function_secret",
+        "summary": "Set a secret by key"
+      },
+      {
+        "name": "primitive.delete_function_secret",
+        "summary": "Delete a secret"
+      },
+      {
+        "name": "primitive.list_org_secrets",
+        "summary": "List org-level (global) secrets"
+      },
+      {
+        "name": "primitive.create_org_secret",
+        "summary": "Create or update an org secret"
+      },
+      {
+        "name": "primitive.set_org_secret",
+        "summary": "Set an org secret by key"
+      },
+      {
+        "name": "primitive.delete_org_secret",
+        "summary": "Delete an org secret"
+      },
+      {
+        "name": "primitive.list_function_logs",
+        "summary": "List a function's execution logs"
+      },
+      {
+        "name": "primitive.set_memory",
+        "summary": "Set a memory"
+      },
+      {
+        "name": "primitive.get_memory",
+        "summary": "Get a memory"
+      },
+      {
+        "name": "primitive.delete_memory",
+        "summary": "Delete a memory"
+      },
+      {
+        "name": "primitive.search_memories",
+        "summary": "Search memories"
+      },
+      {
+        "name": "primitive.register_payout_address",
+        "summary": "Register a payout address"
+      },
+      {
+        "name": "primitive.list_payout_addresses",
+        "summary": "List payout addresses"
+      },
+      {
+        "name": "primitive.create_email_challenge",
+        "summary": "Create an email-native payment challenge"
+      },
+      {
+        "name": "primitive.create_challenge",
+        "summary": "Create a payment challenge"
+      },
+      {
+        "name": "primitive.get_challenge",
+        "summary": "Get a payment challenge"
+      },
+      {
+        "name": "primitive.pay_challenge",
+        "summary": "Pay a payment challenge"
+      },
+      {
+        "name": "primitive.get_spend_policy",
+        "summary": "Get your spend policy"
+      },
+      {
+        "name": "primitive.update_spend_policy",
+        "summary": "Update your spend policy"
+      },
+      {
+        "name": "primitive.list_declined_payments",
+        "summary": "List declined payments"
+      },
+      {
+        "name": "primitive.list_registries",
+        "summary": "List the registries you own"
+      },
+      {
+        "name": "primitive.create_registry",
+        "summary": "Create a registry"
+      },
+      {
+        "name": "primitive.get_registry",
+        "summary": "Get a public registry's metadata"
+      },
+      {
+        "name": "primitive.update_registry",
+        "summary": "Update a registry you own"
+      },
+      {
+        "name": "primitive.delete_registry",
+        "summary": "Delete a registry you own"
+      },
+      {
+        "name": "primitive.list_registry_agents",
+        "summary": "List agents in a registry"
+      },
+      {
+        "name": "primitive.publish_agent",
+        "summary": "Publish an agent into a registry"
+      },
+      {
+        "name": "primitive.resolve_registry_handle",
+        "summary": "Resolve a registry handle to its agent"
+      },
+      {
+        "name": "primitive.unpublish_agent",
+        "summary": "Unpublish an agent from a registry"
+      },
+      {
+        "name": "primitive.list_registry_requests",
+        "summary": "List pending publication requests"
+      },
+      {
+        "name": "primitive.decide_registry_request",
+        "summary": "Approve or reject a publication request"
+      },
+      {
+        "name": "primitive.define_agent",
+        "summary": "Define an agent identity"
+      },
+      {
+        "name": "primitive.get_agent",
+        "summary": "Get an agent's public profile by address"
+      },
+      {
+        "name": "primitive.list_templates",
+        "summary": "List function templates"
+      },
+      {
+        "name": "primitive.get_template",
+        "summary": "Get a function template"
+      },
+      {
+        "name": "primitive.install_template",
+        "summary": "Install a function template"
+      },
+      {
+        "name": "primitive.get_template_install",
+        "summary": "Get template install status"
+      },
+      {
+        "name": "primitive.send_mail_batch",
+        "summary": "Send a batch of emails in one request"
+      },
+      {
+        "name": "primitive.ask",
+        "summary": "Ask about Primitive — NLWeb query (no authentication)"
+      },
+      {
+        "name": "primitive.get_health",
+        "summary": "Service health check"
+      }
+    ],
+    "changelog": [
+      {
+        "version": "1.0.0",
+        "notes": [
+          "Initial release — Primitive's email API for agents over one byo HTTPS app: 110 methods + primitive.help.",
+          "Emailless one-call signup (primitive.signup): mints a prim_ API key + a managed *.primitive.email inbox with no email or code; the key is cached locally and injected on every call automatically.",
+          "Full email lifecycle on the free plan: send/reply/batch, inbound list/get/search/raw/attachments/conversations, threads, filters, webhook endpoints, and durable Memories.",
+          "Functions, Wake schedules, x402 payments, and custom domains are implemented and marked gated until the account is upgraded."
+        ]
+      }
+    ],
+    "grants": [
+      "fs.read:$APP/config.json",
+      "fs.read:$APP/secrets.json",
+      "fs.write:$APP/secrets.json",
+      "net.dial:api.primitive.dev",
+      "audit.log:*"
+    ],
+    "bundles": [
+      {
+        "platform": "darwin-arm64",
+        "bytes": 4787337
+      },
+      {
+        "platform": "darwin-amd64",
+        "bytes": 5194770
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": 5041983
+      },
+      {
+        "platform": "linux-amd64",
+        "bytes": 5449416
+      }
+    ],
+    "installedBytes": 9376865,
+    "depends": [],
+    "protection": "shareable",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "image",
+      "img": "/appicons/io.pilot.primitive.png",
+      "fit": "contain",
+      "pos": "center",
+      "color": "#0b0b0a",
+      "ink": false,
+      "file": null,
+      "hue": 315
+    },
+    "minPilotVersion": "1.10.0",
+    "runtimes": [
+      "go"
+    ],
+    "publishedAt": "2026-07-14",
+    "updatedAt": "2026-07-14"
+  },
   {
     "id": "io.pilot.agentphone",
     "name": "AgentPhone",

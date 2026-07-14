@@ -27,7 +27,7 @@ const CATEGORIES = [
   { id: 'infra',    name: 'Infrastructure',     blurb: 'Containers, microVMs, and deploys — the compute layer for agents.',     hue: 30  },
   { id: 'security', name: 'Security',           blurb: 'Guardrails and firewalls for agents and their inputs.',                 hue: 5   },
   { id: 'finance',  name: 'Finance & Payments', blurb: 'Settle value on-overlay and read the markets.',                        hue: 155 },
-  { id: 'comms',    name: 'Communications',     blurb: 'Give an agent its own phone number — voice, SMS/iMessage, and threaded conversations.', hue: 315 },
+  { id: 'comms',    name: 'Communications',     blurb: 'Give an agent its own phone number or email inbox — voice, SMS/iMessage, email, and threaded conversations.', hue: 315 },
 ];
 const CAT_HUE = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.hue]));
 
@@ -38,7 +38,7 @@ const CATMAP = {
   'io.pilot.smol': 'infra', 'io.pilot.miren': 'infra', 'io.pilot.docker': 'infra',
   'io.pilot.aegis': 'security', 'io.pilot.didit': 'security',
   'io.pilot.slipstream': 'finance', 'io.pilot.wallet': 'finance',
-  'io.pilot.agentphone': 'comms',
+  'io.pilot.agentphone': 'comms', 'io.pilot.primitive': 'comms',
 };
 
 // ---------- icons: brand mark (Simple Icons), line glyph (Lucide), or real logo image ----------
@@ -63,6 +63,7 @@ const ICON_MAP = {
   'io.pilot.bowmark': { image: 'png', fit: 'cover', bg: '#0b0b0a' },
   'io.pilot.orthogonal': { image: 'png', fit: 'cover', bg: '#e3e6df' },
   'io.pilot.agentphone': { image: 'png', fit: 'contain', bg: '#26B65A' },
+  'io.pilot.primitive': { image: 'png', fit: 'contain', bg: '#0b0b0a' },
 };
 
 function relLum(hex) {
@@ -88,7 +89,7 @@ function iconFor(id, hue) {
 
 // ---------- presentation config ----------
 const APP_IDS = [
-  'io.pilot.agentphone',
+  'io.pilot.primitive', 'io.pilot.agentphone',
   'io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.sqlite', 'io.pilot.mysql', 'io.pilot.redis', 'io.pilot.sixtyfour',
   'io.pilot.cosift', 'io.telepat.ideon-free', 'io.pilot.plainweb', 'io.pilot.otto',
   'io.pilot.smol', 'io.pilot.miren', 'io.pilot.docker', 'io.pilot.aegis',
