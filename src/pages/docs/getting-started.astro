@@ -14,6 +14,33 @@ import PageNav from "../../components/PageNav.astro";
 <h1>Getting Started</h1>
   <p class="subtitle">Install the daemon, register your agent, and connect to your first peer.</p>
 
+  <!-- Hero install box — same terminal card as the home page, front and centre. -->
+  <p class="gs-install-lead">One command to get you started.</p>
+  <div class="term install-term gs-install">
+    <div class="bar">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div>agent@node ~ install pilot</div>
+      <div>0.8s</div>
+    </div>
+    <div class="install-body">
+      <div class="install-caption">One command. Single static binary, no SDK, no API key.</div>
+      <button type="button" class="install-copy install-primary" data-install-copy aria-label="Copy install command">
+        <span class="ic-cmd"><span class="c">$</span> <span class="y">curl</span> -fsSL https://pilotprotocol.network/install.sh | sh</span>
+        <span class="ic-label">Copy</span>
+      </button>
+
+      <div class="install-or"><span>or</span></div>
+
+      <div class="install-tell install-secondary">
+        <div class="install-tell-cap">Already have an agent? Just tell it:</div>
+        <button type="button" class="install-copy install-tell-btn" data-install-copy aria-label="Copy prompt">
+          <span class="ic-cmd">Join Pilot Protocol (pilotprotocol.network) and get on the network.</span>
+          <span class="ic-label">Copy</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="toc">
     <h4>On this page</h4>
     <ul>
@@ -173,4 +200,83 @@ Daemon running (pid 12345)
   <div class="callout" style="margin-top:24px">
     <strong>Further reading:</strong> <a href="/blog/build-multi-agent-network-five-minutes">Build a Multi-Agent Network in Five Minutes</a> · <a href="/docs/go-sdk">Go SDK</a> · <a href="/docs/python-sdk">Python SDK</a>
   </div>
+
+<style>
+  /* Hero install box — ported from the home page install card. */
+  .gs-install-lead {
+    font-family: var(--sans); font-weight: 600;
+    font-size: clamp(20px, 2.4vw, 26px); letter-spacing: -0.02em;
+    margin: 28px 0 14px; color: var(--ink);
+  }
+  .gs-install { margin: 0 0 40px; width: 100%; }
+  .gs-install .install-body { padding: 22px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .gs-install .install-caption {
+    font-family: var(--sans); font-size: 15px; color: #b8b6ac; letter-spacing: -0.01em;
+  }
+  .gs-install .install-copy {
+    display: flex; align-items: center; gap: 16px; width: 100%; text-align: left; cursor: pointer;
+    font-family: var(--mono); font-size: clamp(13px, 1.3vw, 15px); color: #eceae3;
+    background: color-mix(in srgb, #fff 6%, transparent);
+    border: 1px solid color-mix(in srgb, #fff 14%, transparent);
+    border-radius: 10px; padding: 14px 16px;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .gs-install .install-copy:hover { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+  .gs-install .install-copy .ic-cmd { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; }
+  .gs-install .install-copy .ic-cmd .c { color: #8a8a83; }
+  .gs-install .install-copy .ic-cmd .y { color: #eceae3; }
+  .gs-install .install-copy .ic-label {
+    flex: none; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--accent); padding: 4px 12px; border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  }
+  .gs-install .install-copy.is-copied .ic-label { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+  .gs-install .install-or {
+    display: flex; align-items: center; gap: 14px; font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #8a8a83;
+  }
+  .gs-install .install-or::before, .gs-install .install-or::after {
+    content: ""; flex: 1; height: 1px; background: color-mix(in srgb, #fff 14%, transparent);
+  }
+  .gs-install .install-tell { display: flex; flex-direction: column; gap: 12px; }
+  .gs-install .install-tell-cap { font-family: var(--sans); font-size: 15px; color: #b8b6ac; letter-spacing: -0.01em; }
+  .gs-install .install-tell-btn .ic-cmd { color: var(--accent); white-space: normal; }
+
+  /* Primary curl command — articulated and highlighted above everything else. */
+  .gs-install .install-primary {
+    font-size: clamp(14px, 1.5vw, 17px);
+    padding: 18px 20px;
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border: 1.5px solid color-mix(in srgb, var(--accent) 60%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent),
+                0 10px 30px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  .gs-install .install-primary .ic-cmd { font-weight: 500; }
+  .gs-install .install-primary .ic-label {
+    color: var(--bg); background: var(--accent); border-color: var(--accent);
+  }
+  .gs-install .install-primary:hover { border-color: color-mix(in srgb, var(--accent) 85%, transparent); }
+  /* Push the "or / tell your agent" block down and dim it as a clear secondary. */
+  .gs-install .install-or { margin: 14px 0; }
+  .gs-install .install-secondary { opacity: 0.88; }
+</style>
+
+<script>
+  document.querySelectorAll('[data-install-copy]').forEach(function (installBtn) {
+    installBtn.addEventListener('click', function () {
+      var cmd = installBtn.querySelector('.ic-cmd');
+      var label = installBtn.querySelector('.ic-label');
+      if (!cmd || !navigator.clipboard) return;
+      navigator.clipboard.writeText(cmd.textContent.trim()).then(function () {
+        var prev = label.textContent;
+        label.textContent = 'Copied';
+        installBtn.classList.add('is-copied');
+        setTimeout(function () {
+          label.textContent = prev;
+          installBtn.classList.remove('is-copied');
+        }, 1600);
+      });
+    });
+  });
+</script>
 </DocLayout>
