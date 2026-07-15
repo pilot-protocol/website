@@ -2,7 +2,8 @@
 // (src/data/app-overrides.json + app-methods.json). Do not edit by hand.
 // No ratings or install counts — those are not published by the catalogue.
 
-export interface AppMethod { name: string; summary: string | null; }
+export interface AppMethod { name: string; summary: string | null; example: string | null; gated: string | null; }
+export interface AppLimit { label: string; value: string; }
 export interface AppChangelog { version: string; date?: string | null; notes: string[]; }
 export interface AppBundle { platform: string; bytes: number | null; }
 export interface AppDependency { id: string; reason: string; optional?: boolean; }
@@ -18,6 +19,7 @@ export interface App {
   featured: boolean; real: boolean; inCatalogue: boolean;
   icon: AppIcon; minPilotVersion: string; runtimes: string[];
   publishedAt: string | null; updatedAt: string | null;
+  limits: AppLimit[] | null;
 }
 export interface Category { id: string; name: string; blurb: string; hue: number; }
 
@@ -61,12 +63,784 @@ export const categories: Category[] = [
   {
     "id": "comms",
     "name": "Communications",
-    "blurb": "Give an agent its own phone number — voice, SMS/iMessage, and threaded conversations.",
+    "blurb": "Give an agent its own phone number or email inbox — voice, SMS/iMessage, email, and threaded conversations.",
     "hue": 315
   }
 ];
 
 export const apps: App[] = [
+  {
+    "id": "io.pilot.primitive",
+    "name": "Primitive",
+    "tagline": "Email for AI agents — provision a managed inbox in one call, then send, receive, reply, and search real email over one REST API",
+    "description": "# Primitive — email for AI agents\n\n[Primitive](https://www.primitive.dev) gives an agent a real, working email identity with **no SMTP credentials, no DNS, and no human in the loop**. `primitive.signup` provisions a free account plus a managed `*.primitive.email` inbox in **one call** (no email, no code). The adapter caches the API key locally under `~/.pilot` and **injects it on every subsequent call automatically** — the agent never sees, stores, or passes it. Call signup once; everything else authenticates as you.\n\n## What you can do on the free plan\n- **Send** outbound mail, **reply** on-thread, and **batch-send**, with attachments and idempotency keys.\n- **Receive** at your managed inbox: list, get, search, download raw MIME + attachments, and follow conversations. Long-poll for new mail with `?since=<cursor>&wait=30`.\n- **Filter** inbound mail, register **webhook endpoints**, and read **inbox readiness**.\n- **Primitive Memories** — durable JSON key-value state across turns, retries, and inbound messages.\n\n## Auth model\nOne step: `primitive.signup`. It mints a `prim_` API key + a provisioned inbox, caches both locally, and the key is injected on every call thereafter. **Idempotent** — a host that already has a key keeps it. Any method called before signup **soft-fails with exact activation instructions** instead of erroring.\n\n## Requires an upgrade\nFour families are marked in `primitive.help` under a free-plan disclaimer: **Functions** (hosted JavaScript on inbound mail), **Wake** schedules, **x402** USDC payments over email (invite-only), and **custom Domains**. They ship implemented and callable, and return a plan/entitlement error until the account is upgraded at [primitive.dev](https://www.primitive.dev).",
+    "categories": [
+      "comms"
+    ],
+    "primaryCategory": "comms",
+    "keywords": [
+      "email",
+      "smtp",
+      "inbox",
+      "agents",
+      "mail",
+      "primitive",
+      "send",
+      "receive"
+    ],
+    "version": "1.0.0",
+    "vendor": "Primitive",
+    "vendorUrl": "https://www.primitive.dev",
+    "license": "Proprietary",
+    "sourceUrl": "https://github.com/pilot-protocol/app-template/tree/main/submissions/io.pilot.primitive",
+    "homepage": "https://www.primitive.dev",
+    "methods": [
+      {
+        "name": "primitive.signup",
+        "summary": "Provision your own Primitive account and a managed *.primitive.email inbox in ONE call — no email, no code, no human step",
+        "example": "{}",
+        "gated": null
+      },
+      {
+        "name": "primitive.get_account",
+        "summary": "Get account info",
+        "example": "{}",
+        "gated": null
+      },
+      {
+        "name": "primitive.update_account",
+        "summary": "Update account settings",
+        "example": "{\"spam_threshold\": 10, \"discard_content_on_webhook_confirmed\": true}",
+        "gated": null
+      },
+      {
+        "name": "primitive.get_storage_stats",
+        "summary": "Get storage usage",
+        "example": "{}",
+        "gated": null
+      },
+      {
+        "name": "primitive.get_webhook_secret",
+        "summary": "Get webhook signing secret",
+        "example": "{}",
+        "gated": null
+      },
+      {
+        "name": "primitive.rotate_webhook_secret",
+        "summary": "Rotate webhook signing secret",
+        "example": "{}",
+        "gated": null
+      },
+      {
+        "name": "primitive.list_domains",
+        "summary": "List all domains",
+        "example": "{}",
+        "gated": null
+      },
+      {
+        "name": "primitive.add_domain",
+        "summary": "Claim a new domain",
+        "example": "{\"domain\": \"<domain>\", \"confirmed\": true, \"outbound\": true}",
+        "gated": "requires a custom domain whose DNS you control — the managed *.primitive.email inbox needs no domain setup"
+      },
+      {
+        "name": "primitive.update_domain",
+        "summary": "Update domain settings",
+        "example": "{\"id\": \"<id>\", \"is_active\": true, \"spam_threshold\": 10}",
+        "gated": null
+      },
+      {
+        "name": "primitive.delete_domain",
+        "summary": "Delete a domain",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.verify_domain",
+        "summary": "Verify domain ownership",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": "requires a custom domain whose DNS you control"
+      },
+      {
+        "name": "primitive.download_domain_zone_file",
+        "summary": "Download domain DNS zone file",
+        "example": "{\"id\": \"<id>\", \"outbound_only\": true}",
+        "gated": "requires a custom domain whose DNS you control"
+      },
+      {
+        "name": "primitive.get_inbox_status",
+        "summary": "Get inbound inbox readiness",
+        "example": "{}",
+        "gated": null
+      },
+      {
+        "name": "primitive.list_emails",
+        "summary": "List inbound emails",
+        "example": "{\"cursor\": \"<cursor>\", \"limit\": 20, \"domain_id\": \"<domain_id>\", \"status\": \"<status>\", \"search\": \"search terms\", \"date_from\": \"<date_from>\", \"date_to\": \"<date_to>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.search_emails",
+        "summary": "Search inbound emails",
+        "example": "{\"q\": \"search terms\", \"from\": \"you@your-inbox.primitive.email\", \"to\": \"someone@example.com\", \"subject\": \"Subject line\", \"body\": \"<body>\", \"domain_id\": \"<domain_id>\", \"reply_to_sent_email_id\": \"<reply_to_sent_email_id>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.get_email",
+        "summary": "Get inbound email by id",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.delete_email",
+        "summary": "Delete an email",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.download_raw_email",
+        "summary": "Download raw email",
+        "example": "{\"id\": \"<id>\", \"token\": \"<token>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.download_attachments",
+        "summary": "Download email attachments",
+        "example": "{\"id\": \"<id>\", \"token\": \"<token>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.reply_to_email",
+        "summary": "Reply to an inbound email",
+        "example": "{\"id\": \"<id>\", \"body_text\": \"Plain-text body\", \"body_html\": \"<p>HTML body</p>\", \"from\": \"you@your-inbox.primitive.email\", \"wait\": 30, \"attachments\": [\"...\"]}",
+        "gated": null
+      },
+      {
+        "name": "primitive.replay_email_webhooks",
+        "summary": "Replay email webhooks",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.discard_email_content",
+        "summary": "Discard email content",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.get_conversation",
+        "summary": "Get the conversation an email belongs to",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.list_endpoints",
+        "summary": "List webhook endpoints",
+        "example": "{}",
+        "gated": null
+      },
+      {
+        "name": "primitive.create_endpoint",
+        "summary": "Create a webhook endpoint",
+        "example": "{\"kind\": \"http\", \"url\": \"https://example.com/webhook\", \"function_id\": \"<function_id>\", \"enabled\": true, \"domain_id\": \"<domain_id>\", \"rules\": {\"...\": \"...\"}, \"is_route_target\": true}",
+        "gated": null
+      },
+      {
+        "name": "primitive.update_endpoint",
+        "summary": "Update a webhook endpoint",
+        "example": "{\"id\": \"<id>\", \"url\": \"https://example.com/webhook\", \"enabled\": true, \"domain_id\": \"<domain_id>\", \"rules\": {\"...\": \"...\"}}",
+        "gated": null
+      },
+      {
+        "name": "primitive.delete_endpoint",
+        "summary": "Delete a webhook endpoint",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.test_endpoint",
+        "summary": "Send a test webhook",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.list_filters",
+        "summary": "List filter rules",
+        "example": "{}",
+        "gated": null
+      },
+      {
+        "name": "primitive.create_filter",
+        "summary": "Create a filter rule",
+        "example": "{\"type\": \"whitelist\", \"pattern\": \"*@example.com\", \"domain_id\": \"<domain_id>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.update_filter",
+        "summary": "Update a filter rule",
+        "example": "{\"id\": \"<id>\", \"enabled\": true}",
+        "gated": null
+      },
+      {
+        "name": "primitive.delete_filter",
+        "summary": "Delete a filter rule",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.list_wake_schedules",
+        "summary": "List wake schedules",
+        "example": "{}",
+        "gated": "requires a plan/entitlement upgrade — Wake scheduling is not on the free agent plan"
+      },
+      {
+        "name": "primitive.create_wake_schedule",
+        "summary": "Create a wake schedule",
+        "example": "{\"from_address\": \"<from_address>\", \"target_address\": \"<target_address>\", \"command\": \"<command>\", \"cron_expr\": \"<cron_expr>\", \"args\": {\"...\": \"...\"}, \"timezone\": \"<timezone>\", \"note\": \"<note>\"}",
+        "gated": "requires a plan/entitlement upgrade — Wake scheduling is not on the free agent plan"
+      },
+      {
+        "name": "primitive.get_wake_schedule",
+        "summary": "Get a wake schedule",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": "requires a plan/entitlement upgrade — Wake scheduling is not on the free agent plan"
+      },
+      {
+        "name": "primitive.update_wake_schedule",
+        "summary": "Update a wake schedule",
+        "example": "{\"id\": \"<id>\", \"enabled\": true, \"command\": \"<command>\", \"args\": {\"...\": \"...\"}, \"cron_expr\": \"<cron_expr>\", \"timezone\": \"<timezone>\", \"from_address\": \"<from_address>\"}",
+        "gated": "requires a plan/entitlement upgrade — Wake scheduling is not on the free agent plan"
+      },
+      {
+        "name": "primitive.delete_wake_schedule",
+        "summary": "Delete a wake schedule",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": "requires a plan/entitlement upgrade — Wake scheduling is not on the free agent plan"
+      },
+      {
+        "name": "primitive.run_wake_schedule",
+        "summary": "Run a wake schedule now",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": "requires a plan/entitlement upgrade — Wake scheduling is not on the free agent plan"
+      },
+      {
+        "name": "primitive.list_wake_authorizations",
+        "summary": "List wake authorizations",
+        "example": "{\"recipient_endpoint_id\": \"<recipient_endpoint_id>\"}",
+        "gated": "requires a plan/entitlement upgrade — Wake scheduling is not on the free agent plan"
+      },
+      {
+        "name": "primitive.create_wake_authorization",
+        "summary": "Create a wake authorization",
+        "example": "{\"recipient_endpoint_id\": \"<recipient_endpoint_id>\", \"allowed_sender_domain\": \"<allowed_sender_domain>\", \"allowed_sender_address\": \"<allowed_sender_address>\", \"allowed_commands\": [\"...\"], \"note\": \"<note>\"}",
+        "gated": "requires a plan/entitlement upgrade — Wake scheduling is not on the free agent plan"
+      },
+      {
+        "name": "primitive.update_wake_authorization",
+        "summary": "Update a wake authorization",
+        "example": "{\"id\": \"<id>\", \"enabled\": true}",
+        "gated": "requires a plan/entitlement upgrade — Wake scheduling is not on the free agent plan"
+      },
+      {
+        "name": "primitive.delete_wake_authorization",
+        "summary": "Delete a wake authorization",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": "requires a plan/entitlement upgrade — Wake scheduling is not on the free agent plan"
+      },
+      {
+        "name": "primitive.list_wake_dispatches",
+        "summary": "List recent wake dispatches",
+        "example": "{\"limit\": 20}",
+        "gated": "requires a plan/entitlement upgrade — Wake scheduling is not on the free agent plan"
+      },
+      {
+        "name": "primitive.list_routes",
+        "summary": "List recipient routes",
+        "example": "{}",
+        "gated": "requires the recipient-routing feature — disabled on the free agent plan (the managed inbox routes to storage automatically)"
+      },
+      {
+        "name": "primitive.create_route",
+        "summary": "Create a recipient route",
+        "example": "{\"match_type\": \"to\", \"pattern\": \"*@example.com\", \"endpoint_id\": \"<endpoint_id>\", \"function_id\": \"<function_id>\", \"domain_id\": \"<domain_id>\", \"priority\": 0, \"enabled\": true}",
+        "gated": "requires the recipient-routing feature — disabled on the free agent plan (the managed inbox routes to storage automatically)"
+      },
+      {
+        "name": "primitive.reorder_routes",
+        "summary": "Reorder recipient routes",
+        "example": "{\"updates\": [\"...\"]}",
+        "gated": "requires the recipient-routing feature — disabled on the free agent plan (the managed inbox routes to storage automatically)"
+      },
+      {
+        "name": "primitive.simulate_route",
+        "summary": "Simulate routing for a recipient",
+        "example": "{\"recipient\": \"someone@example.com\", \"event_type\": \"<event_type>\"}",
+        "gated": "requires the recipient-routing feature — disabled on the free agent plan (the managed inbox routes to storage automatically)"
+      },
+      {
+        "name": "primitive.update_route",
+        "summary": "Update a recipient route",
+        "example": "{\"id\": \"<id>\", \"match_type\": \"to\", \"pattern\": \"*@example.com\", \"endpoint_id\": \"<endpoint_id>\", \"domain_id\": \"<domain_id>\", \"priority\": 0, \"enabled\": true}",
+        "gated": "requires the recipient-routing feature — disabled on the free agent plan (the managed inbox routes to storage automatically)"
+      },
+      {
+        "name": "primitive.delete_route",
+        "summary": "Delete a recipient route",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": "requires the recipient-routing feature — disabled on the free agent plan (the managed inbox routes to storage automatically)"
+      },
+      {
+        "name": "primitive.list_deliveries",
+        "summary": "List webhook deliveries",
+        "example": "{\"cursor\": \"<cursor>\", \"limit\": 20, \"email_id\": \"<email_id>\", \"status\": \"<status>\", \"date_from\": \"<date_from>\", \"date_to\": \"<date_to>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.replay_delivery",
+        "summary": "Replay a webhook delivery",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.get_send_permissions",
+        "summary": "List send-permission rules",
+        "example": "{}",
+        "gated": null
+      },
+      {
+        "name": "primitive.send_email",
+        "summary": "Send outbound email",
+        "example": "{\"from\": \"you@your-inbox.primitive.email\", \"to\": \"someone@example.com\", \"subject\": \"Subject line\", \"body_text\": \"Plain-text body\", \"body_html\": \"<p>HTML body</p>\", \"in_reply_to\": \"<message-id>\", \"references\": [\"...\"]}",
+        "gated": null
+      },
+      {
+        "name": "primitive.semantic_search",
+        "summary": "Semantic search across received and sent mail",
+        "example": "{\"query\": \"search terms\", \"mode\": \"<mode>\", \"corpus\": [\"...\"], \"search_in\": [\"...\"], \"exclude\": [\"...\"], \"date_from\": \"<date_from>\", \"date_to\": \"<date_to>\"}",
+        "gated": "requires the Pro plan — semantic search over mail is not on the free agent plan"
+      },
+      {
+        "name": "primitive.list_sent_emails",
+        "summary": "List outbound sent emails",
+        "example": "{\"cursor\": \"<cursor>\", \"limit\": 20, \"status\": \"<status>\", \"request_id\": \"<request_id>\", \"idempotency_key\": \"<idempotency_key>\", \"date_from\": \"<date_from>\", \"date_to\": \"<date_to>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.get_sent_email",
+        "summary": "Get a sent email by id",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.get_thread",
+        "summary": "Get a conversation thread by id",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.list_functions",
+        "summary": "List functions",
+        "example": "{}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.create_function",
+        "summary": "Deploy a function",
+        "example": "{\"name\": \"<name>\", \"code\": \"<code>\", \"sourceMap\": \"<sourceMap>\", \"files\": {\"...\": \"...\"}}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.get_function",
+        "summary": "Get a function",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.update_function",
+        "summary": "Update and redeploy a function",
+        "example": "{\"id\": \"<id>\", \"code\": \"<code>\", \"sourceMap\": \"<sourceMap>\", \"files\": {\"...\": \"...\"}}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.delete_function",
+        "summary": "Delete a function",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.test_function",
+        "summary": "Send a test invocation",
+        "example": "{\"id\": \"<id>\", \"local_part\": \"<local_part>\"}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.get_function_test_run_trace",
+        "summary": "Get a function test run trace",
+        "example": "{\"id\": \"<id>\", \"run_id\": \"<run_id>\"}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.get_org_routing_topology",
+        "summary": "Get the org's function routing topology",
+        "example": "{}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.get_function_routing",
+        "summary": "Get a function's current route binding",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.set_function_route",
+        "summary": "Bind a route to a function",
+        "example": "{\"id\": \"<id>\", \"target\": {\"...\": \"...\"}, \"takeover\": true}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.unset_function_route",
+        "summary": "Unbind any route from a function",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.list_function_secrets",
+        "summary": "List a function's secrets",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.create_function_secret",
+        "summary": "Create or update a secret",
+        "example": "{\"id\": \"<id>\", \"key\": \"namespace/key\", \"value\": {\"any\": \"json\"}}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.set_function_secret",
+        "summary": "Set a secret by key",
+        "example": "{\"id\": \"<id>\", \"key\": \"namespace/key\", \"value\": {\"any\": \"json\"}}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.delete_function_secret",
+        "summary": "Delete a secret",
+        "example": "{\"id\": \"<id>\", \"key\": \"namespace/key\"}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.list_org_secrets",
+        "summary": "List org-level (global) secrets",
+        "example": "{}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.create_org_secret",
+        "summary": "Create or update an org secret",
+        "example": "{\"key\": \"namespace/key\", \"value\": {\"any\": \"json\"}}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.set_org_secret",
+        "summary": "Set an org secret by key",
+        "example": "{\"key\": \"namespace/key\", \"value\": {\"any\": \"json\"}}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.delete_org_secret",
+        "summary": "Delete an org secret",
+        "example": "{\"key\": \"namespace/key\"}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.list_function_logs",
+        "summary": "List a function's execution logs",
+        "example": "{\"id\": \"<id>\", \"limit\": 20, \"cursor\": \"<cursor>\"}",
+        "gated": "requires the developer plan — confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+      },
+      {
+        "name": "primitive.set_memory",
+        "summary": "Set a memory",
+        "example": "{\"key\": \"namespace/key\", \"value\": {\"any\": \"json\"}, \"scope\": {\"...\": \"...\"}, \"ttl_seconds\": 10, \"expires_at\": \"<expires_at>\", \"clear_ttl\": true, \"if_absent\": true}",
+        "gated": null
+      },
+      {
+        "name": "primitive.get_memory",
+        "summary": "Get a memory",
+        "example": "{\"key\": \"namespace/key\", \"scope_type\": \"<scope_type>\", \"scope_id\": \"<scope_id>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.delete_memory",
+        "summary": "Delete a memory",
+        "example": "{\"key\": \"namespace/key\", \"scope_type\": \"<scope_type>\", \"scope_id\": \"<scope_id>\", \"if_version\": \"<if_version>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.search_memories",
+        "summary": "Search memories",
+        "example": "{\"prefix\": \"search terms\", \"cursor\": \"<cursor>\", \"limit\": 20, \"include_value\": \"<include_value>\", \"updated_after\": \"<updated_after>\", \"updated_before\": \"<updated_before>\", \"scope_type\": \"<scope_type>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.register_payout_address",
+        "summary": "Register a payout address",
+        "example": "{\"address\": \"someone@example.com\", \"network\": \"<network>\", \"signature\": \"<signature>\", \"issued_at\": \"<issued_at>\", \"label\": \"<label>\"}",
+        "gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+      },
+      {
+        "name": "primitive.list_payout_addresses",
+        "summary": "List payout addresses",
+        "example": "{}",
+        "gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+      },
+      {
+        "name": "primitive.create_email_challenge",
+        "summary": "Create an email-native payment challenge",
+        "example": "{\"from\": \"you@your-inbox.primitive.email\", \"to\": \"someone@example.com\", \"amount\": \"<amount>\", \"network\": \"<network>\", \"expires_in\": 10, \"resource\": \"<resource>\", \"description\": \"<description>\"}",
+        "gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+      },
+      {
+        "name": "primitive.create_challenge",
+        "summary": "Create a payment challenge",
+        "example": "{\"amount\": \"<amount>\", \"network\": \"<network>\", \"payer_org\": \"<payer_org>\", \"expires_in\": 10, \"resource\": \"<resource>\", \"description\": \"<description>\"}",
+        "gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+      },
+      {
+        "name": "primitive.get_challenge",
+        "summary": "Get a payment challenge",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+      },
+      {
+        "name": "primitive.pay_challenge",
+        "summary": "Pay a payment challenge",
+        "example": "{\"id\": \"<id>\", \"payment\": {\"...\": \"...\"}}",
+        "gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+      },
+      {
+        "name": "primitive.get_spend_policy",
+        "summary": "Get your spend policy",
+        "example": "{}",
+        "gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+      },
+      {
+        "name": "primitive.update_spend_policy",
+        "summary": "Update your spend policy",
+        "example": "{\"paused\": true, \"max_per_payment\": \"<max_per_payment>\", \"max_per_day\": \"<max_per_day>\", \"allowlist\": [\"...\"]}",
+        "gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+      },
+      {
+        "name": "primitive.list_declined_payments",
+        "summary": "List declined payments",
+        "example": "{}",
+        "gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+      },
+      {
+        "name": "primitive.list_registries",
+        "summary": "List the registries you own",
+        "example": "{}",
+        "gated": null
+      },
+      {
+        "name": "primitive.create_registry",
+        "summary": "Create a registry",
+        "example": "{\"slug\": \"<slug>\", \"name\": \"<name>\", \"description\": \"<description>\", \"is_public\": true, \"publish_policy\": \"<publish_policy>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.get_registry",
+        "summary": "Get a public registry's metadata",
+        "example": "{\"slug\": \"<slug>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.update_registry",
+        "summary": "Update a registry you own",
+        "example": "{\"slug\": \"<slug>\", \"name\": \"<name>\", \"description\": \"<description>\", \"is_public\": true, \"publish_policy\": \"<publish_policy>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.delete_registry",
+        "summary": "Delete a registry you own",
+        "example": "{\"slug\": \"<slug>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.list_registry_agents",
+        "summary": "List agents in a registry",
+        "example": "{\"slug\": \"<slug>\", \"limit\": 20, \"cursor\": \"<cursor>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.publish_agent",
+        "summary": "Publish an agent into a registry",
+        "example": "{\"slug\": \"<slug>\", \"address\": \"someone@example.com\", \"handle\": \"<handle>\", \"display_name\": \"<display_name>\", \"endpoint_id\": \"<endpoint_id>\", \"title\": \"<title>\", \"description\": \"<description>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.resolve_registry_handle",
+        "summary": "Resolve a registry handle to its agent",
+        "example": "{\"slug\": \"<slug>\", \"handle\": \"<handle>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.unpublish_agent",
+        "summary": "Unpublish an agent from a registry",
+        "example": "{\"slug\": \"<slug>\", \"handle\": \"<handle>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.list_registry_requests",
+        "summary": "List pending publication requests",
+        "example": "{\"slug\": \"<slug>\", \"limit\": 20}",
+        "gated": null
+      },
+      {
+        "name": "primitive.decide_registry_request",
+        "summary": "Approve or reject a publication request",
+        "example": "{\"slug\": \"<slug>\", \"id\": \"<id>\", \"decision\": \"<decision>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.define_agent",
+        "summary": "Define an agent identity",
+        "example": "{\"address\": \"someone@example.com\", \"display_name\": \"<display_name>\", \"endpoint_id\": \"<endpoint_id>\", \"title\": \"<title>\", \"description\": \"<description>\", \"tags\": [\"...\"]}",
+        "gated": null
+      },
+      {
+        "name": "primitive.get_agent",
+        "summary": "Get an agent's public profile by address",
+        "example": "{\"address\": \"someone@example.com\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.list_templates",
+        "summary": "List function templates",
+        "example": "{\"q\": \"search terms\", \"tag\": \"<tag>\", \"cursor\": \"<cursor>\", \"limit\": 20}",
+        "gated": null
+      },
+      {
+        "name": "primitive.get_template",
+        "summary": "Get a function template",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": null
+      },
+      {
+        "name": "primitive.install_template",
+        "summary": "Install a function template",
+        "example": "{\"id\": \"<id>\", \"address\": \"someone@example.com\", \"domain\": \"<domain>\", \"variables\": {\"...\": \"...\"}, \"secrets\": {\"...\": \"...\"}}",
+        "gated": "requires the developer plan — installs a template as a hosted Function"
+      },
+      {
+        "name": "primitive.get_template_install",
+        "summary": "Get template install status",
+        "example": "{\"id\": \"<id>\"}",
+        "gated": "requires the developer plan — tracks a hosted Function install"
+      },
+      {
+        "name": "primitive.send_mail_batch",
+        "summary": "Send a batch of emails in one request",
+        "example": "{\"messages\": [\"...\"]}",
+        "gated": null
+      },
+      {
+        "name": "primitive.ask",
+        "summary": "Ask about Primitive — NLWeb query (no authentication)",
+        "example": "{\"q\": \"search terms\", \"prefer\": {\"...\": \"...\"}}",
+        "gated": null
+      },
+      {
+        "name": "primitive.get_health",
+        "summary": "Service health check",
+        "example": "{}",
+        "gated": null
+      }
+    ],
+    "changelog": [
+      {
+        "version": "1.0.0",
+        "notes": [
+          "Initial release — Primitive's email API for agents over one byo HTTPS app: 110 methods + primitive.help.",
+          "Emailless one-call signup (primitive.signup): mints a prim_ API key + a managed *.primitive.email inbox with no email or code; the key is cached locally and injected on every call automatically.",
+          "Full email lifecycle on the free plan: send/reply/batch, inbound list/get/search/raw/attachments/conversations, threads, filters, webhook endpoints, and durable Memories.",
+          "Functions, Wake schedules, x402 payments, and custom domains are implemented and marked gated until the account is upgraded."
+        ]
+      }
+    ],
+    "grants": [
+      "fs.read:$APP/config.json",
+      "fs.read:$APP/secrets.json",
+      "fs.write:$APP/secrets.json",
+      "net.dial:api.primitive.dev",
+      "audit.log:*"
+    ],
+    "bundles": [
+      {
+        "platform": "darwin-arm64",
+        "bytes": 4787337
+      },
+      {
+        "platform": "darwin-amd64",
+        "bytes": 5194770
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": 5041983
+      },
+      {
+        "platform": "linux-amd64",
+        "bytes": 5449416
+      }
+    ],
+    "installedBytes": 9376865,
+    "depends": [],
+    "protection": "shareable",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "image",
+      "img": "/appicons/io.pilot.primitive.png",
+      "fit": "cover",
+      "pos": "center",
+      "color": "#111110",
+      "ink": false,
+      "file": null,
+      "hue": 315
+    },
+    "minPilotVersion": "1.10.0",
+    "runtimes": [
+      "go"
+    ],
+    "publishedAt": "2026-07-14",
+    "updatedAt": "2026-07-14",
+    "limits": [
+      {
+        "label": "Outbound send",
+        "value": "10 / hour · 50 / day (free 'agent' plan)"
+      },
+      {
+        "label": "API requests",
+        "value": "60 / minute"
+      },
+      {
+        "label": "Mailbox storage",
+        "value": "1024 MB"
+      },
+      {
+        "label": "Webhook endpoints",
+        "value": "1 (global) on the free plan"
+      },
+      {
+        "label": "Account creation",
+        "value": "rate-limited per IP (429 after several new accounts/day) — signup is idempotent, so reuse the cached key"
+      },
+      {
+        "label": "Recipient scope",
+        "value": "reply-only: send to other Primitive-managed addresses + anyone who has mailed you; upgrade for any recipient"
+      }
+    ]
+  },
   {
     "id": "io.pilot.agentphone",
     "name": "AgentPhone",
@@ -95,215 +869,321 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "agentphone.usage",
-        "summary": "Account status: plan, phone-number hold limit (used/limit/remaining), and message/call/webhook stats. Call this first to orient in a session. Read-only; no charge."
+        "summary": "Account status: plan, phone-number hold limit (used/limit/remaining), and message/call/webhook stats. Call this first to orient in a session. Read-only; no charge.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.usage_daily",
-        "summary": "Daily usage breakdown for the last N days (max 365). Read-only."
+        "summary": "Daily usage breakdown for the last N days (max 365). Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.usage_monthly",
-        "summary": "Monthly usage aggregation. Read-only."
+        "summary": "Monthly usage aggregation. Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.usage_by_number",
-        "summary": "Usage broken down per phone number. Read-only."
+        "summary": "Usage broken down per phone number. Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.usage_by_agent",
-        "summary": "Usage broken down per agent over a period. Read-only."
+        "summary": "Usage broken down per agent over a period. Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.list_voices",
-        "summary": "List available text-to-speech voices (voice_id, voice_name, provider, gender, accent, preview_audio_url) across ElevenLabs, Cartesia, OpenAI, and platform voices. gender/accent/preview may be null — do not crash on missing fields. Use voice_id when creating/updating an agent. Read-only."
+        "summary": "List available text-to-speech voices (voice_id, voice_name, provider, gender, accent, preview_audio_url) across ElevenLabs, Cartesia, OpenAI, and platform voices. gender/accent/preview may be null — do not crash on missing fields. Use voice_id when creating/updating an agent. Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.list_agents",
-        "summary": "List your agents (phone personas: name, voiceMode, model tier, system prompt, attached numbers). You get one starter agent on account setup — ALWAYS list before creating another. Read-only."
+        "summary": "List your agents (phone personas: name, voiceMode, model tier, system prompt, attached numbers). You get one starter agent on account setup — ALWAYS list before creating another. Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.create_agent",
-        "summary": "Create an agent (phone persona). For AI-driven use pass voiceMode:\"hosted\" explicitly (the backend defaults to \"webhook\", which needs a configured webhook or inbound calls fail). systemPrompt is required for hosted. Pick a voice from agentphone.list_voices. Free (no telephony spend)."
+        "summary": "Create an agent (phone persona). For AI-driven use pass voiceMode:\"hosted\" explicitly (the backend defaults to \"webhook\", which needs a configured webhook or inbound calls fail). systemPrompt is required for hosted. Pick a voice from agentphone.list_voices. Free (no telephony spend).",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.get_agent",
-        "summary": "Get one agent's full config and its attached numbers. Read-only."
+        "summary": "Get one agent's full config and its attached numbers. Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.update_agent",
-        "summary": "Update an agent — only the fields you send change. Any create field is updatable (systemPrompt, voice, modelTier, …). Free."
+        "summary": "Update an agent — only the fields you send change. Any create field is updatable (systemPrompt, voice, modelTier, …). Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.delete_agent",
-        "summary": "Delete an agent. Irreversible — clears the agent's references on its numbers/conversations/calls (those are NOT deleted). Confirm with your human first. Free."
+        "summary": "Delete an agent. Irreversible — clears the agent's references on its numbers/conversations/calls (those are NOT deleted). Confirm with your human first. Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.attach_number",
-        "summary": "Attach an existing number to an agent so the agent can call/text from it. Free."
+        "summary": "Attach an existing number to an agent so the agent can call/text from it. Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.detach_number",
-        "summary": "Detach a number from an agent (the number is kept, just unassigned). Free."
+        "summary": "Detach a number from an agent (the number is kept, just unassigned). Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.list_agent_conversations",
-        "summary": "List an agent's conversation threads, newest activity first (data[], hasMore, total). Read-only."
+        "summary": "List an agent's conversation threads, newest activity first (data[], hasMore, total). Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.list_agent_calls",
-        "summary": "List an agent's calls (data[], hasMore, total). Read-only."
+        "summary": "List an agent's calls (data[], hasMore, total). Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.list_numbers",
-        "summary": "List your active phone numbers (id, phoneNumber, country, status, agentId). Read-only."
+        "summary": "List your active phone numbers (id, phoneNumber, country, status, agentId). Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.buy_number",
-        "summary": "Provision a new US/CA phone number. COSTS $3.00 from your $5 Pilot budget (402 if it would overdraw). The provisioned number is saved to this host's ~/.pilot/.agentphone so you can recall it later with agentphone.mynumber — no need to store it yourself. Optionally attach to an agent and request an area code."
+        "summary": "Provision a new US/CA phone number. COSTS $3.00 from your $5 Pilot budget (402 if it would overdraw). The provisioned number is saved to this host's ~/.pilot/.agentphone so you can recall it later with agentphone.mynumber — no need to store it yourself. Optionally attach to an agent and request an area code.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.get_number",
-        "summary": "Get one phone number by id (any status, including released). Read-only."
+        "summary": "Get one phone number by id (any status, including released). Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.release_number",
-        "summary": "Release (delete) a number. IRREVERSIBLE — the number returns to the carrier pool; no refund for the unused month. Confirm with your human first. Free to call."
+        "summary": "Release (delete) a number. IRREVERSIBLE — the number returns to the carrier pool; no refund for the unused month. Confirm with your human first. Free to call.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.list_number_messages",
-        "summary": "List messages on a number (inbound + outbound), newest first, cursor-paginated. THE non-websocket way to detect SMS replies: poll with the `after` cursor and filter direction==\"inbound\". Read-only."
+        "summary": "List messages on a number (inbound + outbound), newest first, cursor-paginated. THE non-websocket way to detect SMS replies: poll with the `after` cursor and filter direction==\"inbound\". Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.list_number_calls",
-        "summary": "List calls on a number. Read-only."
+        "summary": "List calls on a number. Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.get_contact_card",
-        "summary": "Get the iMessage contact card shown on a number (firstName, lastName, displayName, hasAvatar). iMessage only. Read-only."
+        "summary": "Get the iMessage contact card shown on a number (firstName, lastName, displayName, hasAvatar). iMessage only. Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.set_contact_card",
-        "summary": "Create/replace the iMessage contact card on a number (name + avatar shown to recipients). iMessage only. Free."
+        "summary": "Create/replace the iMessage contact card on a number (name + avatar shown to recipients). iMessage only. Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.delete_contact_card",
-        "summary": "Remove the iMessage contact card from a number. Free."
+        "summary": "Remove the iMessage contact card from a number. Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.send_message",
-        "summary": "Send an SMS/iMessage. COSTS MONEY (~$0.01–0.02, debited from your $5 budget → 402 if over). Auto-delivers over iMessage when both sides support it, else SMS/MMS — the response `channel` (sms|mms|imessage) tells you how it went. E.164 for `to_number` (or a group id grp_… for an iMessage group). iMessage-only extras (send_style, reply_to_message_id) are silently ignored on SMS."
+        "summary": "Send an SMS/iMessage. COSTS MONEY (~$0.01–0.02, debited from your $5 budget → 402 if over). Auto-delivers over iMessage when both sides support it, else SMS/MMS — the response `channel` (sms|mms|imessage) tells you how it went. E.164 for `to_number` (or a group id grp_… for an iMessage group). iMessage-only extras (send_style, reply_to_message_id) are silently ignored on SMS.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.react",
-        "summary": "Send a tapback reaction to a message. iMessage ONLY — returns 400 on SMS. Free."
+        "summary": "Send a tapback reaction to a message. iMessage ONLY — returns 400 on SMS. Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.list_calls",
-        "summary": "List calls for the account (filter by status/direction). Read-only."
+        "summary": "List calls for the account (filter by status/direction). Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.place_call",
-        "summary": "Place an OUTBOUND voice call. COSTS MONEY (per-minute, ~$0.05+, debited from your $5 budget → 402 if over). With `systemPrompt` the AI runs the call autonomously (recommended); without it, each turn is POSTed to the agent's webhook. Returns a call id IMMEDIATELY (async) — the phone rings in a second or two. Then POLL agentphone.get_call every few seconds until status is completed/failed to read the transcript. Cannot call 911 / N11 / crisis lines (blocked)."
+        "summary": "Place an OUTBOUND voice call. COSTS MONEY (per-minute, ~$0.05+, debited from your $5 budget → 402 if over). With `systemPrompt` the AI runs the call autonomously (recommended); without it, each turn is POSTed to the agent's webhook. Returns a call id IMMEDIATELY (async) — the phone rings in a second or two. Then POLL agentphone.get_call every few seconds until status is completed/failed to read the transcript. Cannot call 911 / N11 / crisis lines (blocked).",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.get_call",
-        "summary": "Get a call and its embedded transcripts[]. THE poll target for a call outcome (no websockets): call every few seconds until status is completed or failed (in-progress means partial/empty transcript). Also carries durationSeconds, startedAt, endedAt. Read-only."
+        "summary": "Get a call and its embedded transcripts[]. THE poll target for a call outcome (no websockets): call every few seconds until status is completed or failed (in-progress means partial/empty transcript). Also carries durationSeconds, startedAt, endedAt. Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.end_call",
-        "summary": "Terminate an in-progress call. status/endedAt settle shortly after via the provider — keep polling agentphone.get_call until terminal. Free."
+        "summary": "Terminate an in-progress call. status/endedAt settle shortly after via the provider — keep polling agentphone.get_call until terminal. Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.get_transcript",
-        "summary": "Get the full ordered transcript of a call as plain JSON (user utterance + agent response per turn). This is the REST/polling alternative to the SSE live-transcript stream — the adapter never uses the stream. Read-only."
+        "summary": "Get the full ordered transcript of a call as plain JSON (user utterance + agent response per turn). This is the REST/polling alternative to the SSE live-transcript stream — the adapter never uses the stream. Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.list_conversations",
-        "summary": "List conversation threads (one per external contact or iMessage group), sorted by lastMessageAt desc (data[], hasMore, total). Read-only."
+        "summary": "List conversation threads (one per external contact or iMessage group), sorted by lastMessageAt desc (data[], hasMore, total). Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.get_conversation",
-        "summary": "Get one conversation with its recent messages (participant, isGroup, group roster, messageCount, metadata). Read-only."
+        "summary": "Get one conversation with its recent messages (participant, isGroup, group roster, messageCount, metadata). Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.update_conversation",
-        "summary": "Update a conversation's `metadata` (attach custom AI context/state to the thread). Free."
+        "summary": "Update a conversation's `metadata` (attach custom AI context/state to the thread). Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.list_conversation_messages",
-        "summary": "List a conversation's messages, cursor-paginated (data[], hasMore). Poll with `after` to catch new inbound replies in a thread. Read-only."
+        "summary": "List a conversation's messages, cursor-paginated (data[], hasMore). Poll with `after` to catch new inbound replies in a thread. Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.typing",
-        "summary": "Show a typing indicator before you reply. iMessage only, best-effort, auto-expires (no stop call). Free."
+        "summary": "Show a typing indicator before you reply. iMessage only, best-effort, auto-expires (no stop call). Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.set_background",
-        "summary": "Set a chat background image for a conversation. iMessage only. Free."
+        "summary": "Set a chat background image for a conversation. iMessage only. Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.clear_background",
-        "summary": "Clear a conversation's chat background. iMessage only. Free."
+        "summary": "Clear a conversation's chat background. iMessage only. Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.list_contacts",
-        "summary": "List saved contacts (data[], hasMore, total); `search` filters by name/phone. Read-only."
+        "summary": "List saved contacts (data[], hasMore, total); `search` filters by name/phone. Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.create_contact",
-        "summary": "Save a contact so you can look them up by name later. phoneNumber is normalized to E.164; returns 409 if the phone already exists. Free."
+        "summary": "Save a contact so you can look them up by name later. phoneNumber is normalized to E.164; returns 409 if the phone already exists. Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.get_contact",
-        "summary": "Get one contact by id. Read-only."
+        "summary": "Get one contact by id. Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.update_contact",
-        "summary": "Update a contact — only the fields you send change (phone is re-normalized; 409 on conflict). Free."
+        "summary": "Update a contact — only the fields you send change (phone is re-normalized; 409 on conflict). Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.delete_contact",
-        "summary": "Delete a contact. Confirm with your human first. Free."
+        "summary": "Delete a contact. Confirm with your human first. Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.get_webhook",
-        "summary": "Get the account-level webhook config. Read-only. (Polling is the default event model for this adapter; webhooks are optional.)"
+        "summary": "Get the account-level webhook config. Read-only. (Polling is the default event model for this adapter; webhooks are optional.)",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.set_webhook",
-        "summary": "Set the account-level webhook URL (returns a signing `secret`; a new one each call). NOTE: on the shared Pilot AgentPhone account this is a GLOBAL setting — prefer per-agent webhooks or polling. Free."
+        "summary": "Set the account-level webhook URL (returns a signing `secret`; a new one each call). NOTE: on the shared Pilot AgentPhone account this is a GLOBAL setting — prefer per-agent webhooks or polling. Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.delete_webhook",
-        "summary": "Remove the account-level webhook. Global on the shared account — use with care. Free."
+        "summary": "Remove the account-level webhook. Global on the shared account — use with care. Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.list_webhook_deliveries",
-        "summary": "List recent webhook delivery attempts (items[], total). Read-only."
+        "summary": "List recent webhook delivery attempts (items[], total). Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.webhook_delivery_stats",
-        "summary": "Aggregated webhook delivery stats over the last N hours (success/failed/pending, byEventType, byHour). Read-only."
+        "summary": "Aggregated webhook delivery stats over the last N hours (success/failed/pending, byEventType, byHour). Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.test_webhook",
-        "summary": "Send a synthetic test event to verify your endpoint is reachable and verifying signatures. Free."
+        "summary": "Send a synthetic test event to verify your endpoint is reachable and verifying signatures. Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.get_agent_webhook",
-        "summary": "Get an agent-specific webhook (overrides the account default for that agent). Read-only."
+        "summary": "Get an agent-specific webhook (overrides the account default for that agent). Read-only.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.set_agent_webhook",
-        "summary": "Set an agent-specific webhook URL (overrides the account default for THIS agent only — safer than the account-level webhook on a shared account). Free."
+        "summary": "Set an agent-specific webhook URL (overrides the account default for THIS agent only — safer than the account-level webhook on a shared account). Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.delete_agent_webhook",
-        "summary": "Delete an agent-specific webhook (the agent falls back to the account default). Free."
+        "summary": "Delete an agent-specific webhook (the agent falls back to the account default). Free.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "agentphone.mynumber",
-        "summary": "Recall the phone number(s) THIS daemon provisioned (local, no backend call, free). Reads ~/.pilot/.agentphone, populated automatically by agentphone.buy_number. Returns {entries:[{id,phoneNumber,status,agentId,...}]} — empty if this host hasn't provisioned one yet. Use it to find 'my number' without listing the shared account."
+        "summary": "Recall the phone number(s) THIS daemon provisioned (local, no backend call, free). Reads ~/.pilot/.agentphone, populated automatically by agentphone.buy_number. Returns {entries:[{id,phoneNumber,status,agentId,...}]} — empty if this host hasn't provisioned one yet. Use it to find 'my number' without listing the shared account.",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -363,7 +1243,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": "2026-07-07",
-    "updatedAt": "2026-07-07"
+    "updatedAt": "2026-07-07",
+    "limits": null
   },
   {
     "id": "io.pilot.postgres",
@@ -396,55 +1277,81 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "postgres.initdb",
-        "summary": "Create (configure) a brand-new PostgreSQL data directory / cluster on this host — the one-time setup before a local server can start. Initializes `datadir` with superuser `postgres` and `trust` local auth (no password for local connections). Run once per cluster; `start` then brings it up. This is `initdb -D <datadir> -U postgres -A trust --encoding=UTF8`."
+        "summary": "Create (configure) a brand-new PostgreSQL data directory / cluster on this host — the one-time setup before a local server can start. Initializes `datadir` with superuser `postgres` and `trust` local auth (no password for local connections). Run once per cluster; `start` then brings it up. This is `initdb -D <datadir> -U postgres -A trust --encoding=UTF8`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "postgres.start",
-        "summary": "Start a local PostgreSQL server from an initialized `datadir`, listening on 127.0.0.1:`port` and on a Unix socket in `datadir`. Backgrounds the server and waits until it accepts connections; logs go to `<datadir>/postgres.log`. After this, connect with uri `host=127.0.0.1 port=<port> user=postgres dbname=postgres`. This is `pg_ctl -D <datadir> -o '-p <port> -k <datadir> -h 127.0.0.1' -l <datadir>/postgres.log -w start`."
+        "summary": "Start a local PostgreSQL server from an initialized `datadir`, listening on 127.0.0.1:`port` and on a Unix socket in `datadir`. Backgrounds the server and waits until it accepts connections; logs go to `<datadir>/postgres.log`. After this, connect with uri `host=127.0.0.1 port=<port> user=postgres dbname=postgres`. This is `pg_ctl -D <datadir> -o '-p <port> -k <datadir> -h 127.0.0.1' -l <datadir>/postgres.log -w start`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "postgres.stop",
-        "summary": "Stop a running local server (fast shutdown) for the given `datadir`. This is `pg_ctl -D <datadir> -m fast -w stop`."
+        "summary": "Stop a running local server (fast shutdown) for the given `datadir`. This is `pg_ctl -D <datadir> -m fast -w stop`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "postgres.status",
-        "summary": "Report whether the server for `datadir` is running, with its PID and command line. This is `pg_ctl -D <datadir> status`."
+        "summary": "Report whether the server for `datadir` is running, with its PID and command line. This is `pg_ctl -D <datadir> status`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "postgres.ready",
-        "summary": "Connection preflight: check whether a server is accepting connections on 127.0.0.1:`port`. This is `pg_isready -h 127.0.0.1 -p <port>`."
+        "summary": "Connection preflight: check whether a server is accepting connections on 127.0.0.1:`port`. This is `pg_isready -h 127.0.0.1 -p <port>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "postgres.createdb",
-        "summary": "Create a new database named `dbname` on the local server at 127.0.0.1:`port` (owner postgres). This is `createdb -h 127.0.0.1 -p <port> -U postgres <dbname>`."
+        "summary": "Create a new database named `dbname` on the local server at 127.0.0.1:`port` (owner postgres). This is `createdb -h 127.0.0.1 -p <port> -U postgres <dbname>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "postgres.query",
-        "summary": "Run a single SQL statement (or semicolon-separated batch) against a PostgreSQL server and return an aligned text table. Works against the local cluster or any remote server. Runs with ON_ERROR_STOP=1 so a SQL error is a non-zero exit with the server message in stderr. This is `psql -d <uri> -c <sql>`."
+        "summary": "Run a single SQL statement (or semicolon-separated batch) against a PostgreSQL server and return an aligned text table. Works against the local cluster or any remote server. Runs with ON_ERROR_STOP=1 so a SQL error is a non-zero exit with the server message in stderr. This is `psql -d <uri> -c <sql>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "postgres.query_csv",
-        "summary": "Same as postgres.query but returns the result set as CSV (header + rows) — the right shape when an agent needs to parse output. This is `psql -d <uri> --csv -c <sql>`. ON_ERROR_STOP=1 is set."
+        "summary": "Same as postgres.query but returns the result set as CSV (header + rows) — the right shape when an agent needs to parse output. This is `psql -d <uri> --csv -c <sql>`. ON_ERROR_STOP=1 is set.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "postgres.command",
-        "summary": "Run a single psql backslash meta-command for schema introspection. Pass it in `command`, e.g. `\\dt` (tables), `\\dn` (schemas), `\\du` (roles), `\\l` (databases), `\\df` (functions), `\\d tablename` (describe a relation). Plain SQL works here too. This is `psql -d <uri> -c <command>`."
+        "summary": "Run a single psql backslash meta-command for schema introspection. Pass it in `command`, e.g. `\\dt` (tables), `\\dn` (schemas), `\\du` (roles), `\\l` (databases), `\\df` (functions), `\\d tablename` (describe a relation). Plain SQL works here too. This is `psql -d <uri> -c <command>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "postgres.list",
-        "summary": "List the databases on the server (owner, encoding, collation, access privileges) as an aligned table — a quick connectivity + inventory check. This is `psql -d <uri> -l`."
+        "summary": "List the databases on the server (owner, encoding, collation, access privileges) as an aligned table — a quick connectivity + inventory check. This is `psql -d <uri> -l`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "postgres.exec",
-        "summary": "Run any PostgreSQL client/server tool shipped in this bundle with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[<tool>, ...]} where the first element is the tool name (psql, initdb, pg_ctl, createdb, dropdb, pg_isready, pg_dump, pg_restore, pg_dumpall, vacuumdb, pg_basebackup, postgres) and the rest are its flags; optional {\"stdin\":\"...\"} is piped to the tool. Examples: {\"args\":[\"psql\",\"-d\",\"postgresql://127.0.0.1:5599/postgres\",\"-A\",\"-t\",\"-c\",\"select 1\"]}; {\"args\":[\"pg_dump\",\"-h\",\"127.0.0.1\",\"-p\",\"5599\",\"-U\",\"postgres\",\"mydb\"]}; {\"args\":[\"psql\",\"-d\",\"<uri>\"],\"stdin\":\"select 1;\\nselect 2;\"}. Connection can also come from PG* env vars passed through to the child."
+        "summary": "Run any PostgreSQL client/server tool shipped in this bundle with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[<tool>, ...]} where the first element is the tool name (psql, initdb, pg_ctl, createdb, dropdb, pg_isready, pg_dump, pg_restore, pg_dumpall, vacuumdb, pg_basebackup, postgres) and the rest are its flags; optional {\"stdin\":\"...\"} is piped to the tool. Examples: {\"args\":[\"psql\",\"-d\",\"postgresql://127.0.0.1:5599/postgres\",\"-A\",\"-t\",\"-c\",\"select 1\"]}; {\"args\":[\"pg_dump\",\"-h\",\"127.0.0.1\",\"-p\",\"5599\",\"-U\",\"postgres\",\"mydb\"]}; {\"args\":[\"psql\",\"-d\",\"<uri>\"],\"stdin\":\"select 1;\\nselect 2;\"}. Connection can also come from PG* env vars passed through to the child.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "postgres.psql_help",
-        "summary": "Return the complete `psql --help` text (all options of the PostgreSQL interactive terminal) straight from the delivered binary. The full reference for what postgres.query/postgres.exec accept. This is `psql --help`."
+        "summary": "Return the complete `psql --help` text (all options of the PostgreSQL interactive terminal) straight from the delivered binary. The full reference for what postgres.query/postgres.exec accept. This is `psql --help`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "postgres.version",
-        "summary": "Print the delivered client version, e.g. \"psql (PostgreSQL) 17.10\". Needs no server. This is `psql --version`."
+        "summary": "Print the delivered client version, e.g. \"psql (PostgreSQL) 17.10\". Needs no server. This is `psql --version`.",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -495,7 +1402,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": null,
-    "updatedAt": null
+    "updatedAt": null,
+    "limits": null
   },
   {
     "id": "io.pilot.duckdb",
@@ -529,47 +1437,69 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "duckdb.query",
-        "summary": "Run a SQL statement (or `;`-separated batch) and return an aligned `box` table — the default, human-readable shape. Works in-memory (`database=\":memory:\"`) or against a DuckDB file, and can query CSV/Parquet/JSON files in place, e.g. `SELECT region, sum(amount) FROM '/data/*.parquet' GROUP BY region`. This is `duckdb <database> -box -c <sql>`."
+        "summary": "Run a SQL statement (or `;`-separated batch) and return an aligned `box` table — the default, human-readable shape. Works in-memory (`database=\":memory:\"`) or against a DuckDB file, and can query CSV/Parquet/JSON files in place, e.g. `SELECT region, sum(amount) FROM '/data/*.parquet' GROUP BY region`. This is `duckdb <database> -box -c <sql>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "duckdb.query_csv",
-        "summary": "Same as duckdb.query but returns the result set as CSV (header + rows) — the right shape when an agent needs to parse the output. This is `duckdb <database> -csv -c <sql>`."
+        "summary": "Same as duckdb.query but returns the result set as CSV (header + rows) — the right shape when an agent needs to parse the output. This is `duckdb <database> -csv -c <sql>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "duckdb.query_json",
-        "summary": "Run SQL and return the result set as a JSON array of row objects — the most directly machine-parseable output. This is `duckdb <database> -json -c <sql>`."
+        "summary": "Run SQL and return the result set as a JSON array of row objects — the most directly machine-parseable output. This is `duckdb <database> -json -c <sql>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "duckdb.query_markdown",
-        "summary": "Run SQL and return the result set as a GitHub-flavored Markdown table — handy when the output is going straight into a report or PR comment. This is `duckdb <database> -markdown -c <sql>`."
+        "summary": "Run SQL and return the result set as a GitHub-flavored Markdown table — handy when the output is going straight into a report or PR comment. This is `duckdb <database> -markdown -c <sql>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "duckdb.file",
-        "summary": "Execute a `.sql` script file against the database and exit — for multi-statement setups, migrations, or ETL scripts the agent has written to disk. This is `duckdb <database> -f <file>`."
+        "summary": "Execute a `.sql` script file against the database and exit — for multi-statement setups, migrations, or ETL scripts the agent has written to disk. This is `duckdb <database> -f <file>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "duckdb.tables",
-        "summary": "List every table and view across all attached databases/schemas (name, database, schema, column list) as a `box` table — a quick inventory of what a DuckDB file holds. This is `duckdb <database> -box -c \"SHOW ALL TABLES\"`."
+        "summary": "List every table and view across all attached databases/schemas (name, database, schema, column list) as a `box` table — a quick inventory of what a DuckDB file holds. This is `duckdb <database> -box -c \"SHOW ALL TABLES\"`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "duckdb.schema",
-        "summary": "Print the `CREATE` statements for every table, view, and index in the database — the DDL, via DuckDB's `.schema` meta-command. This is `duckdb <database> -no-stdin -cmd \".schema\"`."
+        "summary": "Print the `CREATE` statements for every table, view, and index in the database — the DDL, via DuckDB's `.schema` meta-command. This is `duckdb <database> -no-stdin -cmd \".schema\"`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "duckdb.exec",
-        "summary": "Run the DuckDB CLI with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[...]} (the args passed straight to `duckdb`) plus optional {\"stdin\":\"...\"} piped to the process. Use it for any flag or meta-command the curated methods don't cover: a different output mode (`-line`, `-html`, `-ascii`), reading a script with `-init`, a `.mode`/`.import`/`.read` dot-command via `-cmd`, or a multi-statement session over stdin. Examples: {\"args\":[\":memory:\",\"-line\",\"-c\",\"SELECT 1\"]}; {\"args\":[\"/data/app.duckdb\",\"-csv\",\"-cmd\",\".import /data/in.csv t\",\"-c\",\"SELECT count(*) FROM t\"]}; {\"args\":[\":memory:\"],\"stdin\":\"CREATE TABLE t(x int);\\nINSERT INTO t VALUES (1),(2);\\nSELECT sum(x) FROM t;\"}."
+        "summary": "Run the DuckDB CLI with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[...]} (the args passed straight to `duckdb`) plus optional {\"stdin\":\"...\"} piped to the process. Use it for any flag or meta-command the curated methods don't cover: a different output mode (`-line`, `-html`, `-ascii`), reading a script with `-init`, a `.mode`/`.import`/`.read` dot-command via `-cmd`, or a multi-statement session over stdin. Examples: {\"args\":[\":memory:\",\"-line\",\"-c\",\"SELECT 1\"]}; {\"args\":[\"/data/app.duckdb\",\"-csv\",\"-cmd\",\".import /data/in.csv t\",\"-c\",\"SELECT count(*) FROM t\"]}; {\"args\":[\":memory:\"],\"stdin\":\"CREATE TABLE t(x int);\\nINSERT INTO t VALUES (1),(2);\\nSELECT sum(x) FROM t;\"}.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "duckdb.cli_help",
-        "summary": "Return the complete DuckDB CLI help — every command-line option AND every dot-command (`.mode`, `.tables`, `.schema`, `.read`, `.import`, `.export`, `.timer`, …) — captured verbatim from the delivered binary and rendered as clean, color-free text. The full reference for what duckdb.query / duckdb.exec accept."
+        "summary": "Return the complete DuckDB CLI help — every command-line option AND every dot-command (`.mode`, `.tables`, `.schema`, `.read`, `.import`, `.export`, `.timer`, …) — captured verbatim from the delivered binary and rendered as clean, color-free text. The full reference for what duckdb.query / duckdb.exec accept.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "duckdb.version",
-        "summary": "Print the delivered DuckDB version, e.g. \"v1.5.4 (Variegata) 08e34c447b\". Needs no database. This is `duckdb -version`."
+        "summary": "Print the delivered DuckDB version, e.g. \"v1.5.4 (Variegata) 08e34c447b\". Needs no database. This is `duckdb -version`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "duckdb.help",
-        "summary": "Discovery: every method with params, kind, and latency class."
+        "summary": "Discovery: every method with params, kind, and latency class.",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -620,7 +1550,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": null,
-    "updatedAt": null
+    "updatedAt": null,
+    "limits": null
   },
   {
     "id": "io.pilot.sqlite",
@@ -650,35 +1581,51 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "sqlite.query",
-        "summary": "Run a SQL statement (or `;`-separated batch) against a database file (or `:memory:`) and return the rows as a JSON array of row objects — the most directly machine-parseable output. This is `sqlite3 -json <database> <sql>`."
+        "summary": "Run a SQL statement (or `;`-separated batch) against a database file (or `:memory:`) and return the rows as a JSON array of row objects — the most directly machine-parseable output. This is `sqlite3 -json <database> <sql>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sqlite.script",
-        "summary": "Run a multi-statement SQL script against a database file and return whatever the statements print. Ideal for schema setup, migrations, seed data, or an ETL batch: DDL + DML + a trailing SELECT in one call. This is `sqlite3 <database> <sql>` (SQLite executes every `;`-separated statement in order). For very large scripts or piping a file, use `sqlite.exec` with a `stdin` payload."
+        "summary": "Run a multi-statement SQL script against a database file and return whatever the statements print. Ideal for schema setup, migrations, seed data, or an ETL batch: DDL + DML + a trailing SELECT in one call. This is `sqlite3 <database> <sql>` (SQLite executes every `;`-separated statement in order). For very large scripts or piping a file, use `sqlite.exec` with a `stdin` payload.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sqlite.schema",
-        "summary": "Print the `CREATE` statements (DDL) for every table, index, view, and trigger in the database — via SQLite's `.schema` meta-command. This is `sqlite3 <database> .schema`."
+        "summary": "Print the `CREATE` statements (DDL) for every table, index, view, and trigger in the database — via SQLite's `.schema` meta-command. This is `sqlite3 <database> .schema`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sqlite.tables",
-        "summary": "List the names of the tables (and views) in the database — via SQLite's `.tables` meta-command. This is `sqlite3 <database> .tables`."
+        "summary": "List the names of the tables (and views) in the database — via SQLite's `.tables` meta-command. This is `sqlite3 <database> .tables`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sqlite.exec",
-        "summary": "Run the sqlite3 CLI with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[...]} (the args passed straight to `sqlite3`) plus optional {\"stdin\":\"...\"} piped to the process. Use it for any flag, output mode, or dot-command the curated methods don't cover: a different output mode (`-csv`, `-table`, `-markdown`, `-line`, `-html`, `-box`), `.dump`/`.import`/`.backup`/`.clone`/`.read` via `-cmd`, or a multi-statement session piped over stdin. Examples: {\"args\":[\":memory:\",\"-csv\",\"SELECT 1 AS a, 2 AS b\"]}; {\"args\":[\"/data/app.db\",\"-cmd\",\".mode csv\",\"-cmd\",\".import /data/in.csv t\",\"SELECT count(*) FROM t\"]}; {\"args\":[\"/data/app.db\"],\"stdin\":\"CREATE TABLE t(x);\\nINSERT INTO t VALUES (1),(2);\\nSELECT sum(x) FROM t;\"}."
+        "summary": "Run the sqlite3 CLI with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[...]} (the args passed straight to `sqlite3`) plus optional {\"stdin\":\"...\"} piped to the process. Use it for any flag, output mode, or dot-command the curated methods don't cover: a different output mode (`-csv`, `-table`, `-markdown`, `-line`, `-html`, `-box`), `.dump`/`.import`/`.backup`/`.clone`/`.read` via `-cmd`, or a multi-statement session piped over stdin. Examples: {\"args\":[\":memory:\",\"-csv\",\"SELECT 1 AS a, 2 AS b\"]}; {\"args\":[\"/data/app.db\",\"-cmd\",\".mode csv\",\"-cmd\",\".import /data/in.csv t\",\"SELECT count(*) FROM t\"]}; {\"args\":[\"/data/app.db\"],\"stdin\":\"CREATE TABLE t(x);\\nINSERT INTO t VALUES (1),(2);\\nSELECT sum(x) FROM t;\"}.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sqlite.cli_help",
-        "summary": "Return the complete sqlite3 CLI help — every command-line option AND every dot-command (`.dump`, `.import`, `.backup`, `.clone`, `.mode`, `.schema`, `.tables`, `.read`, …) — captured verbatim from the delivered binary and rendered as clean, color-free text. The full reference for what sqlite.query / sqlite.exec accept."
+        "summary": "Return the complete sqlite3 CLI help — every command-line option AND every dot-command (`.dump`, `.import`, `.backup`, `.clone`, `.mode`, `.schema`, `.tables`, `.read`, …) — captured verbatim from the delivered binary and rendered as clean, color-free text. The full reference for what sqlite.query / sqlite.exec accept.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sqlite.version",
-        "summary": "Print the delivered SQLite version, e.g. \"3.45.2 2024-03-12 …\". Needs no database. This is `sqlite3 -version`."
+        "summary": "Print the delivered SQLite version, e.g. \"3.45.2 2024-03-12 …\". Needs no database. This is `sqlite3 -version`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sqlite.help",
-        "summary": "Discovery: every method with its params, kind, and latency class — the self-describing contract."
+        "summary": "Discovery: every method with its params, kind, and latency class — the self-describing contract.",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -729,7 +1676,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": null,
-    "updatedAt": null
+    "updatedAt": null,
+    "limits": null
   },
   {
     "id": "io.pilot.mysql",
@@ -761,59 +1709,87 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "mysql.initialize",
-        "summary": "Initialize a new MySQL data directory (system tables + an insecure `root@localhost` with an empty password) — the one-time setup before the first start. This is `mysqld --initialize-insecure --datadir=<datadir>`. The bundle's basedir/plugin-dir/error-messages are wired in automatically."
+        "summary": "Initialize a new MySQL data directory (system tables + an insecure `root@localhost` with an empty password) — the one-time setup before the first start. This is `mysqld --initialize-insecure --datadir=<datadir>`. The bundle's basedir/plugin-dir/error-messages are wired in automatically.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "mysql.start",
-        "summary": "Start a local MySQL server from a data directory, listening on 127.0.0.1:<port>. Runs detached (`--daemonize`) and returns once the server is accepting connections. This is `mysqld --daemonize --datadir=<datadir> --socket=<datadir>/mysql.sock --port=<port> --bind-address=127.0.0.1 --mysqlx=OFF --pid-file=<datadir>/mysqld.pid --log-error=<datadir>/mysqld.err`."
+        "summary": "Start a local MySQL server from a data directory, listening on 127.0.0.1:<port>. Runs detached (`--daemonize`) and returns once the server is accepting connections. This is `mysqld --daemonize --datadir=<datadir> --socket=<datadir>/mysql.sock --port=<port> --bind-address=127.0.0.1 --mysqlx=OFF --pid-file=<datadir>/mysqld.pid --log-error=<datadir>/mysqld.err`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "mysql.stop",
-        "summary": "Stop the local server listening on <port> (a clean shutdown). This is `mysqladmin -h 127.0.0.1 -P <port> -u root shutdown`."
+        "summary": "Stop the local server listening on <port> (a clean shutdown). This is `mysqladmin -h 127.0.0.1 -P <port> -u root shutdown`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "mysql.ping",
-        "summary": "Check whether the server on <port> is up and accepting connections (liveness probe). This is `mysqladmin -h 127.0.0.1 -P <port> -u root ping`."
+        "summary": "Check whether the server on <port> is up and accepting connections (liveness probe). This is `mysqladmin -h 127.0.0.1 -P <port> -u root ping`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "mysql.createdb",
-        "summary": "Create a database on the running server (no-op if it already exists). This is `mysql -h 127.0.0.1 -P <port> -u root -e \"CREATE DATABASE IF NOT EXISTS <dbname>\"`."
+        "summary": "Create a database on the running server (no-op if it already exists). This is `mysql -h 127.0.0.1 -P <port> -u root -e \"CREATE DATABASE IF NOT EXISTS <dbname>\"`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "mysql.query",
-        "summary": "Run SQL against a database and return an aligned ASCII table — the default, human-readable shape. May contain multiple `;`-separated statements. This is `mysql -h 127.0.0.1 -P <port> -u root -D <database> --table -e <sql>`."
+        "summary": "Run SQL against a database and return an aligned ASCII table — the default, human-readable shape. May contain multiple `;`-separated statements. This is `mysql -h 127.0.0.1 -P <port> -u root -D <database> --table -e <sql>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "mysql.query_tsv",
-        "summary": "Same as mysql.query but returns tab-separated values (header + rows) via `--batch` — the machine-parseable shape. This is `mysql -h 127.0.0.1 -P <port> -u root -D <database> --batch -e <sql>`."
+        "summary": "Same as mysql.query but returns tab-separated values (header + rows) via `--batch` — the machine-parseable shape. This is `mysql -h 127.0.0.1 -P <port> -u root -D <database> --batch -e <sql>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "mysql.databases",
-        "summary": "List the databases on the server (`SHOW DATABASES`). This is `mysql -h 127.0.0.1 -P <port> -u root --table -e \"SHOW DATABASES\"`."
+        "summary": "List the databases on the server (`SHOW DATABASES`). This is `mysql -h 127.0.0.1 -P <port> -u root --table -e \"SHOW DATABASES\"`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "mysql.tables",
-        "summary": "List the tables in a database (`SHOW TABLES`). This is `mysql -h 127.0.0.1 -P <port> -u root -D <database> --table -e \"SHOW TABLES\"`."
+        "summary": "List the tables in a database (`SHOW TABLES`). This is `mysql -h 127.0.0.1 -P <port> -u root -D <database> --table -e \"SHOW TABLES\"`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "mysql.dump",
-        "summary": "Dump a database as SQL (schema + data) with mysqldump — a portable logical backup the agent can save or replay. This is `mysqldump -h 127.0.0.1 -P <port> -u root --no-tablespaces <database>`."
+        "summary": "Dump a database as SQL (schema + data) with mysqldump — a portable logical backup the agent can save or replay. This is `mysqldump -h 127.0.0.1 -P <port> -u root --no-tablespaces <database>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "mysql.exec",
-        "summary": "Run any bundled MySQL tool with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[tool, ...]} where tool is one of `mysql`, `mysqld`, `mysqladmin`, `mysqldump`, `mysqlshow`, plus optional {\"stdin\":\"...\"} piped to the process. Examples: {\"args\":[\"mysql\",\"--protocol=TCP\",\"-h\",\"127.0.0.1\",\"-P\",\"13306\",\"-u\",\"root\",\"-D\",\"app\",\"--vertical\",\"-e\",\"SELECT * FROM t\\\\G\"]}; {\"args\":[\"mysqlshow\",\"--protocol=TCP\",\"-h\",\"127.0.0.1\",\"-P\",\"13306\",\"-u\",\"root\",\"app\"]}; {\"args\":[\"mysql\",\"--protocol=TCP\",\"-h\",\"127.0.0.1\",\"-P\",\"13306\",\"-u\",\"root\",\"-D\",\"app\"],\"stdin\":\"SOURCE /work/schema.sql;\"}."
+        "summary": "Run any bundled MySQL tool with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[tool, ...]} where tool is one of `mysql`, `mysqld`, `mysqladmin`, `mysqldump`, `mysqlshow`, plus optional {\"stdin\":\"...\"} piped to the process. Examples: {\"args\":[\"mysql\",\"--protocol=TCP\",\"-h\",\"127.0.0.1\",\"-P\",\"13306\",\"-u\",\"root\",\"-D\",\"app\",\"--vertical\",\"-e\",\"SELECT * FROM t\\\\G\"]}; {\"args\":[\"mysqlshow\",\"--protocol=TCP\",\"-h\",\"127.0.0.1\",\"-P\",\"13306\",\"-u\",\"root\",\"app\"]}; {\"args\":[\"mysql\",\"--protocol=TCP\",\"-h\",\"127.0.0.1\",\"-P\",\"13306\",\"-u\",\"root\",\"-D\",\"app\"],\"stdin\":\"SOURCE /work/schema.sql;\"}.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "mysql.mysql_help",
-        "summary": "Return the full `mysql` client help — every command-line option — captured from the delivered binary. The reference for what mysql.query / mysql.exec accept."
+        "summary": "Return the full `mysql` client help — every command-line option — captured from the delivered binary. The reference for what mysql.query / mysql.exec accept.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "mysql.version",
-        "summary": "Print the delivered MySQL version, e.g. \"mysql  Ver 9.7.1 for … (conda-forge)\". This is `mysql --version`."
+        "summary": "Print the delivered MySQL version, e.g. \"mysql  Ver 9.7.1 for … (conda-forge)\". This is `mysql --version`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "mysql.help",
-        "summary": "Discovery: every method with its params, kind, and latency class — the self-describing contract."
+        "summary": "Discovery: every method with its params, kind, and latency class — the self-describing contract.",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -864,7 +1840,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": null,
-    "updatedAt": null
+    "updatedAt": null,
+    "limits": null
   },
   {
     "id": "io.pilot.redis",
@@ -896,47 +1873,69 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "redis.start",
-        "summary": "Start a local Redis server, daemonized, listening on 127.0.0.1:`port`. Writes its pidfile, logfile, and RDB snapshot under `dir`; returns once the server has forked into the background. After this, use redis.ping/redis.set/redis.get/redis.exec against the same `port`. This is `redis-server --port <port> --dir <dir> --daemonize yes --pidfile <dir>/redis-<port>.pid --logfile <dir>/redis-<port>.log`."
+        "summary": "Start a local Redis server, daemonized, listening on 127.0.0.1:`port`. Writes its pidfile, logfile, and RDB snapshot under `dir`; returns once the server has forked into the background. After this, use redis.ping/redis.set/redis.get/redis.exec against the same `port`. This is `redis-server --port <port> --dir <dir> --daemonize yes --pidfile <dir>/redis-<port>.pid --logfile <dir>/redis-<port>.log`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "redis.stop",
-        "summary": "Stop the local server on 127.0.0.1:`port` (no final save — use redis.exec with SAVE/BGSAVE first if you need to persist). This is `redis-cli -p <port> SHUTDOWN NOSAVE`."
+        "summary": "Stop the local server on 127.0.0.1:`port` (no final save — use redis.exec with SAVE/BGSAVE first if you need to persist). This is `redis-cli -p <port> SHUTDOWN NOSAVE`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "redis.ping",
-        "summary": "Liveness check: PING the server on 127.0.0.1:`port` (returns PONG). This is `redis-cli -p <port> PING`."
+        "summary": "Liveness check: PING the server on 127.0.0.1:`port` (returns PONG). This is `redis-cli -p <port> PING`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "redis.set",
-        "summary": "Set string `key` to `value`. This is `redis-cli -p <port> SET <key> <value>`."
+        "summary": "Set string `key` to `value`. This is `redis-cli -p <port> SET <key> <value>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "redis.get",
-        "summary": "Get the value of string `key` (empty if missing). This is `redis-cli -p <port> GET <key>`."
+        "summary": "Get the value of string `key` (empty if missing). This is `redis-cli -p <port> GET <key>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "redis.info",
-        "summary": "Return the server's INFO (version, memory, clients, persistence, stats, replication, keyspace) as plain text — a full health/inventory snapshot. This is `redis-cli -p <port> INFO`."
+        "summary": "Return the server's INFO (version, memory, clients, persistence, stats, replication, keyspace) as plain text — a full health/inventory snapshot. This is `redis-cli -p <port> INFO`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "redis.dbsize",
-        "summary": "Number of keys in the current database. This is `redis-cli -p <port> DBSIZE`."
+        "summary": "Number of keys in the current database. This is `redis-cli -p <port> DBSIZE`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "redis.exec",
-        "summary": "Run any bundled Redis tool with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[<tool>, ...]} where the first element is the tool (redis-cli, redis-server, redis-benchmark, redis-check-rdb, redis-check-aof, redis-sentinel) and the rest are its args; optional {\"stdin\":\"...\"} is piped to it. This is how you run ANY Redis command: {\"args\":[\"redis-cli\",\"-p\",\"6399\",\"LPUSH\",\"mylist\",\"a\",\"b\",\"c\"]}, {\"args\":[\"redis-cli\",\"-p\",\"6399\",\"-n\",\"1\",\"HSET\",\"h\",\"f\",\"v\"]}, a pipelined script via stdin {\"args\":[\"redis-cli\",\"-p\",\"6399\"],\"stdin\":\"SET a 1\\nINCR a\\nGET a\"}, or a benchmark {\"args\":[\"redis-benchmark\",\"-p\",\"6399\",\"-n\",\"1000\",\"-q\"]}. The REDISCLI_AUTH env var is passed through for password auth."
+        "summary": "Run any bundled Redis tool with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[<tool>, ...]} where the first element is the tool (redis-cli, redis-server, redis-benchmark, redis-check-rdb, redis-check-aof, redis-sentinel) and the rest are its args; optional {\"stdin\":\"...\"} is piped to it. This is how you run ANY Redis command: {\"args\":[\"redis-cli\",\"-p\",\"6399\",\"LPUSH\",\"mylist\",\"a\",\"b\",\"c\"]}, {\"args\":[\"redis-cli\",\"-p\",\"6399\",\"-n\",\"1\",\"HSET\",\"h\",\"f\",\"v\"]}, a pipelined script via stdin {\"args\":[\"redis-cli\",\"-p\",\"6399\"],\"stdin\":\"SET a 1\\nINCR a\\nGET a\"}, or a benchmark {\"args\":[\"redis-benchmark\",\"-p\",\"6399\",\"-n\",\"1000\",\"-q\"]}. The REDISCLI_AUTH env var is passed through for password auth.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "redis.cli_help",
-        "summary": "Return the complete `redis-cli --help` (every option of the Redis command-line client) straight from the delivered binary — the reference for what redis.exec accepts. This is `redis-cli --help`."
+        "summary": "Return the complete `redis-cli --help` (every option of the Redis command-line client) straight from the delivered binary — the reference for what redis.exec accepts. This is `redis-cli --help`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "redis.version",
-        "summary": "Print the delivered client version, e.g. \"redis-cli 8.6.2\". Needs no server. This is `redis-cli --version`."
+        "summary": "Print the delivered client version, e.g. \"redis-cli 8.6.2\". Needs no server. This is `redis-cli --version`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "redis.help",
-        "summary": "Discovery: every method with params, kind, and latency class."
+        "summary": "Discovery: every method with params, kind, and latency class.",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -987,7 +1986,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": null,
-    "updatedAt": null
+    "updatedAt": null,
+    "limits": null
   },
   {
     "id": "io.pilot.sixtyfour",
@@ -1017,51 +2017,75 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "sixtyfour.people_intelligence",
-        "summary": "People Intelligence: full, source-backed enrichment of a person from seed details."
+        "summary": "People Intelligence: full, source-backed enrichment of a person from seed details.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sixtyfour.company_intelligence",
-        "summary": "Company Intelligence: full, source-backed company profile, optionally with people."
+        "summary": "Company Intelligence: full, source-backed company profile, optionally with people.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sixtyfour.find_email",
-        "summary": "Contact discovery: find a verified email for a person from partial details."
+        "summary": "Contact discovery: find a verified email for a person from partial details.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sixtyfour.find_phone",
-        "summary": "Contact discovery: find a phone number for a person from partial details."
+        "summary": "Contact discovery: find a phone number for a person from partial details.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sixtyfour.reverse_email",
-        "summary": "Reverse lookup: identify the person and company behind an email address."
+        "summary": "Reverse lookup: identify the person and company behind an email address.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sixtyfour.reverse_phone",
-        "summary": "Reverse lookup: identify the person and company behind a phone number."
+        "summary": "Reverse lookup: identify the person and company behind a phone number.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sixtyfour.enrich_linkedin",
-        "summary": "Enrich a person directly from their LinkedIn profile URL."
+        "summary": "Enrich a person directly from their LinkedIn profile URL.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sixtyfour.qa",
-        "summary": "Agentic QA researcher: answer free-form qualification questions about a person or company, with sources."
+        "summary": "Agentic QA researcher: answer free-form qualification questions about a person or company, with sources.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sixtyfour.research_agent",
-        "summary": "Research agent: autonomous multi-step research over an entity, returning structured findings with sources."
+        "summary": "Research agent: autonomous multi-step research over an entity, returning structured findings with sources.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sixtyfour.filter_search",
-        "summary": "Filter Search: structured field-based search across the corpus; returns matching entities."
+        "summary": "Filter Search: structured field-based search across the corpus; returns matching entities.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sixtyfour.deep_search",
-        "summary": "Deep Search (agentic): start a natural-language search. Returns a task_id; results are retrieved asynchronously (see caveats)."
+        "summary": "Deep Search (agentic): start a natural-language search. Returns a task_id; results are retrieved asynchronously (see caveats).",
+        "example": null,
+        "gated": null
       },
       {
         "name": "sixtyfour.help",
-        "summary": "Discovery: every method with params, kind, and latency class."
+        "summary": "Discovery: every method with params, kind, and latency class.",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -1117,7 +2141,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": "2026-06-21",
-    "updatedAt": "2026-06-21"
+    "updatedAt": "2026-06-21",
+    "limits": null
   },
   {
     "id": "io.pilot.cosift",
@@ -1145,35 +2170,51 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "cosift.search",
-        "summary": "Keyword + semantic search over the crawled corpus"
+        "summary": "Keyword + semantic search over the crawled corpus",
+        "example": null,
+        "gated": null
       },
       {
         "name": "cosift.find_similar",
-        "summary": "Find documents similar to a given result"
+        "summary": "Find documents similar to a given result",
+        "example": null,
+        "gated": null
       },
       {
         "name": "cosift.contents",
-        "summary": "Fetch the full contents of a document"
+        "summary": "Fetch the full contents of a document",
+        "example": null,
+        "gated": null
       },
       {
         "name": "cosift.answer",
-        "summary": "Single-shot grounded answer with citations"
+        "summary": "Single-shot grounded answer with citations",
+        "example": null,
+        "gated": null
       },
       {
         "name": "cosift.research",
-        "summary": "Multi-step research report over the corpus"
+        "summary": "Multi-step research report over the corpus",
+        "example": null,
+        "gated": null
       },
       {
         "name": "cosift.stats",
-        "summary": "Corpus and index statistics"
+        "summary": "Corpus and index statistics",
+        "example": null,
+        "gated": null
       },
       {
         "name": "cosift.health",
-        "summary": "Service health check"
+        "summary": "Service health check",
+        "example": null,
+        "gated": null
       },
       {
         "name": "cosift.help",
-        "summary": "Discovery: methods, params, and latency classes"
+        "summary": "Discovery: methods, params, and latency classes",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -1231,7 +2272,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": "2026-06-09",
-    "updatedAt": "2026-06-09"
+    "updatedAt": "2026-06-09",
+    "limits": null
   },
   {
     "id": "io.telepat.ideon-free",
@@ -1257,15 +2299,21 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "ideon-free.generate",
-        "summary": null
+        "summary": null,
+        "example": null,
+        "gated": null
       },
       {
         "name": "ideon-free.poll",
-        "summary": null
+        "summary": null,
+        "example": null,
+        "gated": null
       },
       {
         "name": "ideon-free.help",
-        "summary": null
+        "summary": null,
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -1319,7 +2367,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": null,
-    "updatedAt": null
+    "updatedAt": null,
+    "limits": null
   },
   {
     "id": "io.pilot.plainweb",
@@ -1351,11 +2400,15 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "plainweb.fetch",
-        "summary": "Fetch any web page and return it as clean Markdown — no HTML, no JavaScript. Pass the full target URL as `url`; it is placed verbatim in the request path (GET /<url>). Scheme-less hosts (e.g. example.com) are sanitized to https://. The reply is `{\"content_type\":\"text/markdown; charset=utf-8\",\"content\":\"<markdown>\"}`. Open and free — no API key needed."
+        "summary": "Fetch any web page and return it as clean Markdown — no HTML, no JavaScript. Pass the full target URL as `url`; it is placed verbatim in the request path (GET /<url>). Scheme-less hosts (e.g. example.com) are sanitized to https://. The reply is `{\"content_type\":\"text/markdown; charset=utf-8\",\"content\":\"<markdown>\"}`. Open and free — no API key needed.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "plainweb.help",
-        "summary": "Discovery: every method with params, kind, and latency class."
+        "summary": "Discovery: every method with params, kind, and latency class.",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -1410,7 +2463,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": null,
-    "updatedAt": null
+    "updatedAt": null,
+    "limits": null
   },
   {
     "id": "io.pilot.otto",
@@ -1444,63 +2498,93 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "otto.exec",
-        "summary": "Run any otto subcommand. Payload is {\"args\":[...]} — the verbatim otto argv. Use this for the full CLI surface beyond the curated methods (config, client register/login/remove, pair, listener unsubscribe, extension update, agent install, site-filtered `commands list --site`, filtered `logs list`, etc.). Add \"--json\" where the command supports it. Example args: [\"commands\",\"list\",\"--site\",\"reddit.com\",\"--json\"]. Note: interactive/streaming subcommands (setup, settings, logs follow, listener subscribe-network, test with stream/wait flags, mcp serve, start --attached) are not suitable over one-shot IPC."
+        "summary": "Run any otto subcommand. Payload is {\"args\":[...]} — the verbatim otto argv. Use this for the full CLI surface beyond the curated methods (config, client register/login/remove, pair, listener unsubscribe, extension update, agent install, site-filtered `commands list --site`, filtered `logs list`, etc.). Add \"--json\" where the command supports it. Example args: [\"commands\",\"list\",\"--site\",\"reddit.com\",\"--json\"]. Note: interactive/streaming subcommands (setup, settings, logs follow, listener subscribe-network, test with stream/wait flags, mcp serve, start --attached) are not suitable over one-shot IPC.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "otto.status",
-        "summary": "Relay daemon status as JSON: running pid, port, uptime, log path, and the list of currently connected browser node IDs. The right preflight before any page command — an empty node list means no Chrome extension node is paired/online."
+        "summary": "Relay daemon status as JSON: running pid, port, uptime, log path, and the list of currently connected browser node IDs. The right preflight before any page command — an empty node list means no Chrome extension node is paired/online.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "otto.commands",
-        "summary": "List the automation commands the connected node(s) expose, as JSON. Use to learn which site commands are available before calling otto.test. For a single site, use otto.exec with [\"commands\",\"list\",\"--site\",\"<domain>\",\"--json\"]."
+        "summary": "List the automation commands the connected node(s) expose, as JSON. Use to learn which site commands are available before calling otto.test. For a single site, use otto.exec with [\"commands\",\"list\",\"--site\",\"<domain>\",\"--json\"].",
+        "example": null,
+        "gated": null
       },
       {
         "name": "otto.extract",
-        "summary": "Extract the readable content of a web page through a live paired browser tab, as JSON markdown. Opens a temporary tab on the node, extracts, and closes it. Requires a running relay and a paired Chrome node."
+        "summary": "Extract the readable content of a web page through a live paired browser tab, as JSON markdown. Opens a temporary tab on the node, extracts, and closes it. Requires a running relay and a paired Chrome node.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "otto.extract.format",
-        "summary": "Extract page content in a chosen format: markdown, distilled_html, clean_html, raw_html, or text. Returns JSON. Like otto.extract but lets you pick the output representation."
+        "summary": "Extract page content in a chosen format: markdown, distilled_html, clean_html, raw_html, or text. Returns JSON. Like otto.extract but lets you pick the output representation.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "otto.screenshot",
-        "summary": "Capture a screenshot of a page through a live browser tab; returns JSON (base64 PNG in the envelope, no local Preview window). Requires a running relay and a paired Chrome node."
+        "summary": "Capture a screenshot of a page through a live browser tab; returns JSON (base64 PNG in the envelope, no local Preview window). Requires a running relay and a paired Chrome node.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "otto.test",
-        "summary": "Run a registered site command on a browser node (opens a tab, runs the command, returns JSON). Provide site (e.g. reddit.com), command id (e.g. getPosts), and a JSON payload string (use {} for none, e.g. {\"limit\":10}). One-shot; requires relay + paired node."
+        "summary": "Run a registered site command on a browser node (opens a tab, runs the command, returns JSON). Provide site (e.g. reddit.com), command id (e.g. getPosts), and a JSON payload string (use {} for none, e.g. {\"limit\":10}). One-shot; requires relay + paired node.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "otto.cmd",
-        "summary": "Send a single raw action to the target browser node and return the full JSON envelope. Provide the action name and a JSON payload string (use {} for none). Use for low-level primitives (e.g. primitive.tab.open) not covered by a curated method."
+        "summary": "Send a single raw action to the target browser node and return the full JSON envelope. Provide the action name and a JSON payload string (use {} for none). Use for low-level primitives (e.g. primitive.tab.open) not covered by a curated method.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "otto.logs",
-        "summary": "Read recent relay logs as JSON. For filtered queries (level/source/since/request-id) use otto.exec with [\"logs\",\"list\",...,\"--json\"]."
+        "summary": "Read recent relay logs as JSON. For filtered queries (level/source/since/request-id) use otto.exec with [\"logs\",\"list\",...,\"--json\"].",
+        "example": null,
+        "gated": null
       },
       {
         "name": "otto.logs.status",
-        "summary": "Relay log storage status as JSON (retention, counts, sizes). Check whether logging is healthy and how much history is available."
+        "summary": "Relay log storage status as JSON (retention, counts, sizes). Check whether logging is healthy and how much history is available.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "otto.client.status",
-        "summary": "Local controller client identity state and where its secret resolves from (env vs keychain), as JSON. Verify the controller is registered and logged in before running page commands."
+        "summary": "Local controller client identity state and where its secret resolves from (env vs keychain), as JSON. Verify the controller is registered and logged in before running page commands.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "otto.authcode",
-        "summary": "List pending pairing codes from the relay as JSON. See codes awaiting approval when bringing a new Chrome extension node online (approve with `otto pair <code>` via otto.exec)."
+        "summary": "List pending pairing codes from the relay as JSON. See codes awaiting approval when bringing a new Chrome extension node online (approve with `otto pair <code>` via otto.exec).",
+        "example": null,
+        "gated": null
       },
       {
         "name": "otto.extension.info",
-        "summary": "Installed Chrome extension artifact metadata (version, unpacked path, checksum) and configured relay URLs, as JSON. Confirm which extension build the host has staged for the Load-unpacked handoff."
+        "summary": "Installed Chrome extension artifact metadata (version, unpacked path, checksum) and configured relay URLs, as JSON. Confirm which extension build the host has staged for the Load-unpacked handoff.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "otto.agent.status",
-        "summary": "Which agent frameworks (claude, codex, cursor, vscode, …) currently have the Otto MCP server registered, as JSON."
+        "summary": "Which agent frameworks (claude, codex, cursor, vscode, …) currently have the Otto MCP server registered, as JSON.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "otto.help",
-        "summary": "Discovery: every method with params, kind, and latency class."
+        "summary": "Discovery: every method with params, kind, and latency class.",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -1551,7 +2635,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": null,
-    "updatedAt": null
+    "updatedAt": null,
+    "limits": null
   },
   {
     "id": "io.pilot.smol",
@@ -1580,39 +2665,57 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "smol.exec",
-        "summary": "Run ANY smolvm subcommand in a fast, hardware-isolated Linux microVM LOCALLY. Payload is {\"args\":[...]} (verbatim smolvm argv) with optional {\"stdin\":\"...\"}. This one method exposes the whole smolvm CLI — for the complete agent reference call smol.exec {\"args\":[\"--help\"]}, and for any subcommand call smol.exec {\"args\":[\"<group>\",\"--help\"]}.\n\nCOMMAND SURFACE:\n• machine run — create an EPHEMERAL VM, run one command, tear down (nothing persists). e.g. [\"machine\",\"run\",\"--net\",\"--image\",\"alpine\",\"--\",\"sh\",\"-c\",\"echo hi\"].\n• machine create | start | stop | delete — lifecycle of a PERSISTENT named VM (--name, default \"default\").\n• machine exec — run a command in a persistent VM; FILESYSTEM CHANGES PERSIST across sessions (package installs stick). e.g. [\"machine\",\"exec\",\"--name\",\"myvm\",\"--\",\"apk\",\"add\",\"python3\"].\n• machine status | ls | images | monitor — read-only introspection (do NOT stop a running VM).\n• machine cp — copy files host↔VM (HOST:GUEST). machine update — change mounts/ports/env/cpu/memory on a STOPPED VM. machine prune — reclaim layers (prune --all needs the VM stopped).\n• pack create -o <out> — build a portable, self-contained .smolmachine executable; pack run — run one. machine create --from <artifact>.smolmachine for fast start.\n• serve start --listen <addr> — HTTP API server (POST/GET /api/v1/machines…); serve openapi — the spec.\n• config — manage registries + defaults.\n\nKEY FLAGS: --net (networking is OFF by default), --image <oci ref | ./archive.tar | ./rootfs/ | ->, -v HOST:GUEST[:ro] (mount; -v host:/workspace replaces the default workspace), -p HOST:GUEST (port), --gpu, --ssh-agent (forward host SSH agent; keys never enter the VM), --secret-env GUEST=HOST / --secret-file GUEST=/abs / -s Smolfile (inject secrets by reference), --from <artifact>, --cpus, --memory.\n\nDEFAULTS: network off; cpus 4; memory 8192 MiB; storage 20 GiB; name \"default\". Elastic memory/CPU via virtio balloon.\n\nNOT SUPPORTED OVER IPC: interactive sessions (-it / machine shell) and long-running serve (no attached TTY)."
+        "summary": "Run ANY smolvm subcommand in a fast, hardware-isolated Linux microVM LOCALLY. Payload is {\"args\":[...]} (verbatim smolvm argv) with optional {\"stdin\":\"...\"}. This one method exposes the whole smolvm CLI — for the complete agent reference call smol.exec {\"args\":[\"--help\"]}, and for any subcommand call smol.exec {\"args\":[\"<group>\",\"--help\"]}.\n\nCOMMAND SURFACE:\n• machine run — create an EPHEMERAL VM, run one command, tear down (nothing persists). e.g. [\"machine\",\"run\",\"--net\",\"--image\",\"alpine\",\"--\",\"sh\",\"-c\",\"echo hi\"].\n• machine create | start | stop | delete — lifecycle of a PERSISTENT named VM (--name, default \"default\").\n• machine exec — run a command in a persistent VM; FILESYSTEM CHANGES PERSIST across sessions (package installs stick). e.g. [\"machine\",\"exec\",\"--name\",\"myvm\",\"--\",\"apk\",\"add\",\"python3\"].\n• machine status | ls | images | monitor — read-only introspection (do NOT stop a running VM).\n• machine cp — copy files host↔VM (HOST:GUEST). machine update — change mounts/ports/env/cpu/memory on a STOPPED VM. machine prune — reclaim layers (prune --all needs the VM stopped).\n• pack create -o <out> — build a portable, self-contained .smolmachine executable; pack run — run one. machine create --from <artifact>.smolmachine for fast start.\n• serve start --listen <addr> — HTTP API server (POST/GET /api/v1/machines…); serve openapi — the spec.\n• config — manage registries + defaults.\n\nKEY FLAGS: --net (networking is OFF by default), --image <oci ref | ./archive.tar | ./rootfs/ | ->, -v HOST:GUEST[:ro] (mount; -v host:/workspace replaces the default workspace), -p HOST:GUEST (port), --gpu, --ssh-agent (forward host SSH agent; keys never enter the VM), --secret-env GUEST=HOST / --secret-file GUEST=/abs / -s Smolfile (inject secrets by reference), --from <artifact>, --cpus, --memory.\n\nDEFAULTS: network off; cpus 4; memory 8192 MiB; storage 20 GiB; name \"default\". Elastic memory/CPU via virtio balloon.\n\nNOT SUPPORTED OVER IPC: interactive sessions (-it / machine shell) and long-running serve (no attached TTY).",
+        "example": null,
+        "gated": null
       },
       {
         "name": "smol.version",
-        "summary": "Report the local smolvm engine version. This is `smolvm --version`."
+        "summary": "Report the local smolvm engine version. This is `smolvm --version`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "smol.provision",
-        "summary": "Provision (or fetch) this Pilot user's proprietary smol cloud key and free credit balance. Runs automatically on install and on smol.help — you rarely call it directly. The key is bound to your Pilot identity, stored only in your app's private secrets, and used to push and isolate your cloud VMs. Returns {key, credits}."
+        "summary": "Provision (or fetch) this Pilot user's proprietary smol cloud key and free credit balance. Runs automatically on install and on smol.help — you rarely call it directly. The key is bound to your Pilot identity, stored only in your app's private secrets, and used to push and isolate your cloud VMs. Returns {key, credits}.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "smol.balance",
-        "summary": "Report your remaining smol cloud credit balance. Returns {credits}."
+        "summary": "Report your remaining smol cloud credit balance. Returns {credits}.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "smol.push",
-        "summary": "Push a VM to the smol cloud as YOU (your provisioned key) and START it running. Provide either a local packed artifact (base64 of a `smolvm pack` output) OR an OCI `image` reference the cloud pulls; pass {\"net\":true} for outbound networking (off by default). BILLING: you must have credit to start (402 if empty); the running VM then drains your credit by REAL usage (CPU + memory + disk per the rate card in smol.help) and the broker STOPS it when your credit runs out. The machine is tagged as owned by you, so no other user can see or touch it. Returns the created machine."
+        "summary": "Push a VM to the smol cloud as YOU (your provisioned key) and START it running. Provide either a local packed artifact (base64 of a `smolvm pack` output) OR an OCI `image` reference the cloud pulls; pass {\"net\":true} for outbound networking (off by default). BILLING: you must have credit to start (402 if empty); the running VM then drains your credit by REAL usage (CPU + memory + disk per the rate card in smol.help) and the broker STOPS it when your credit runs out. The machine is tagged as owned by you, so no other user can see or touch it. Returns the created machine.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "smol.list",
-        "summary": "List YOUR smol cloud machines (only yours — the broker filters by owner). Free (no credit). Returns an array of machines."
+        "summary": "List YOUR smol cloud machines (only yours — the broker filters by owner). Free (no credit). Returns an array of machines.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "smol.key",
-        "summary": "Get your current smol cloud key (the per-user credential bound to your Pilot identity). Idempotent — safe to call anytime. The key is also cached in your app's private secrets. Returns {key, credits}."
+        "summary": "Get your current smol cloud key (the per-user credential bound to your Pilot identity). Idempotent — safe to call anytime. The key is also cached in your app's private secrets. Returns {key, credits}.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "smol.rotate",
-        "summary": "Rotate your smol cloud key if it leaked. Your OLD key stops working immediately and a NEW key is issued — your credit and cloud machines are NOT affected (only the key changes). Returns {key, credits, rotated}."
+        "summary": "Rotate your smol cloud key if it leaked. Your OLD key stops working immediately and a NEW key is issued — your credit and cloud machines are NOT affected (only the key changes). Returns {key, credits, rotated}.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "smol.help",
-        "summary": "Discovery: every method with params, kind, and latency class."
+        "summary": "Discovery: every method with params, kind, and latency class.",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -1674,7 +2777,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": null,
-    "updatedAt": null
+    "updatedAt": null,
+    "limits": null
   },
   {
     "id": "io.pilot.miren",
@@ -1706,63 +2810,93 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "miren.exec",
-        "summary": "Run any miren subcommand. Payload is {\"args\":[...]} — the verbatim miren argv. Use this for the full CLI surface beyond the curated methods below (addon, auth, env, route, cluster, disk, sandbox, etc.). Run `miren help` or `miren <command> --help` for the surface. Example args: [\"app\",\"list\",\"--json\"]. Note: interactive subcommands (e.g. `app run`, `login`) and long-running ones (e.g. `server start`) are not suitable over IPC."
+        "summary": "Run any miren subcommand. Payload is {\"args\":[...]} — the verbatim miren argv. Use this for the full CLI surface beyond the curated methods below (addon, auth, env, route, cluster, disk, sandbox, etc.). Run `miren help` or `miren <command> --help` for the surface. Example args: [\"app\",\"list\",\"--json\"]. Note: interactive subcommands (e.g. `app run`, `login`) and long-running ones (e.g. `server start`) are not suitable over IPC.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "miren.apps",
-        "summary": "List all applications on the cluster (alias for `app list`)."
+        "summary": "List all applications on the cluster (alias for `app list`).",
+        "example": null,
+        "gated": null
       },
       {
         "name": "miren.app",
-        "summary": "Show the current status of one application. Provide the app name."
+        "summary": "Show the current status of one application. Provide the app name.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "miren.app.history",
-        "summary": "Show an application's deployment history."
+        "summary": "Show an application's deployment history.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "miren.logs",
-        "summary": "Read recent logs for an application as JSON."
+        "summary": "Read recent logs for an application as JSON.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "miren.deploy",
-        "summary": "Build and deploy the app in the current directory (non-interactive, --force)."
+        "summary": "Build and deploy the app in the current directory (non-interactive, --force).",
+        "example": null,
+        "gated": null
       },
       {
         "name": "miren.deploy.analyze",
-        "summary": "Analyze the app's detected stack/services without building or deploying."
+        "summary": "Analyze the app's detected stack/services without building or deploying.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "miren.rollback",
-        "summary": "Roll an application back to its previous deployed version."
+        "summary": "Roll an application back to its previous deployed version.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "miren.doctor",
-        "summary": "Diagnose the miren environment and connectivity."
+        "summary": "Diagnose the miren environment and connectivity.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "miren.whoami",
-        "summary": "Show the current authenticated user and cluster."
+        "summary": "Show the current authenticated user and cluster.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "miren.server.install",
-        "summary": "Install the miren server as a systemd service on this host (Linux only)."
+        "summary": "Install the miren server as a systemd service on this host (Linux only).",
+        "example": null,
+        "gated": null
       },
       {
         "name": "miren.server.status",
-        "summary": "Show miren server service status (Linux only)."
+        "summary": "Show miren server service status (Linux only).",
+        "example": null,
+        "gated": null
       },
       {
         "name": "miren.debug.connection",
-        "summary": "Test connectivity and authentication with the miren server."
+        "summary": "Test connectivity and authentication with the miren server.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "miren.debug.advertise",
-        "summary": "Show which addresses the server would advertise and why."
+        "summary": "Show which addresses the server would advertise and why.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "miren.help",
-        "summary": "Discovery: every method with params, kind, and latency class."
+        "summary": "Discovery: every method with params, kind, and latency class.",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -1813,7 +2947,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": null,
-    "updatedAt": null
+    "updatedAt": null,
+    "limits": null
   },
   {
     "id": "io.pilot.docker",
@@ -1845,51 +2980,75 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "docker.engine_start",
-        "summary": "Start a local Docker Engine (dockerd) on this Linux host, daemonized, on a private unix socket under `DOCKER_DIR` (default /tmp/pilot-docker); waits until the API is ready. Subsequent docker methods auto-target this socket. Requires root (dockerd manages namespaces/cgroups). This is the bundled `dockerd` with `--data-root/--exec-root` under DOCKER_DIR."
+        "summary": "Start a local Docker Engine (dockerd) on this Linux host, daemonized, on a private unix socket under `DOCKER_DIR` (default /tmp/pilot-docker); waits until the API is ready. Subsequent docker methods auto-target this socket. Requires root (dockerd manages namespaces/cgroups). This is the bundled `dockerd` with `--data-root/--exec-root` under DOCKER_DIR.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "docker.engine_stop",
-        "summary": "Stop the local dockerd started by docker.engine_start."
+        "summary": "Stop the local dockerd started by docker.engine_start.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "docker.version",
-        "summary": "Print docker client + server (if reachable) version info. This is `docker version`."
+        "summary": "Print docker client + server (if reachable) version info. This is `docker version`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "docker.info",
-        "summary": "Show system-wide Docker info (containers, images, storage driver, kernel, runtimes). This is `docker info`."
+        "summary": "Show system-wide Docker info (containers, images, storage driver, kernel, runtimes). This is `docker info`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "docker.ps",
-        "summary": "List all containers (running and stopped). This is `docker ps -a`."
+        "summary": "List all containers (running and stopped). This is `docker ps -a`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "docker.images",
-        "summary": "List images in the local store. This is `docker images`."
+        "summary": "List images in the local store. This is `docker images`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "docker.pull",
-        "summary": "Pull an image from a registry. This is `docker pull <image>`."
+        "summary": "Pull an image from a registry. This is `docker pull <image>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "docker.run",
-        "summary": "Run a container from `image` with its default command and remove it on exit (`docker run --rm <image>`). For flags/commands (detached, ports, volumes, a custom command) use docker.exec, e.g. {\"args\":[\"run\",\"-d\",\"-p\",\"8080:80\",\"nginx\"]}."
+        "summary": "Run a container from `image` with its default command and remove it on exit (`docker run --rm <image>`). For flags/commands (detached, ports, volumes, a custom command) use docker.exec, e.g. {\"args\":[\"run\",\"-d\",\"-p\",\"8080:80\",\"nginx\"]}.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "docker.logs",
-        "summary": "Fetch the logs of a container. This is `docker logs <container>`."
+        "summary": "Fetch the logs of a container. This is `docker logs <container>`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "docker.exec",
-        "summary": "Run the docker CLI with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[...]} passed straight to `docker` (+ optional {\"stdin\":\"...\"}). This is how you run a container with any flags, build an image, exec into a container, manage networks/volumes/compose, etc. Examples: {\"args\":[\"run\",\"-d\",\"--name\",\"web\",\"-p\",\"8080:80\",\"nginx\"]}; {\"args\":[\"run\",\"--rm\",\"alpine\",\"sh\",\"-c\",\"echo hi\"]}; {\"args\":[\"build\",\"-t\",\"myapp\",\"/work\"]}; {\"args\":[\"exec\",\"web\",\"nginx\",\"-v\"]}. The wrapper's own verbs `engine-start`/`engine-stop` also work here."
+        "summary": "Run the docker CLI with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[...]} passed straight to `docker` (+ optional {\"stdin\":\"...\"}). This is how you run a container with any flags, build an image, exec into a container, manage networks/volumes/compose, etc. Examples: {\"args\":[\"run\",\"-d\",\"--name\",\"web\",\"-p\",\"8080:80\",\"nginx\"]}; {\"args\":[\"run\",\"--rm\",\"alpine\",\"sh\",\"-c\",\"echo hi\"]}; {\"args\":[\"build\",\"-t\",\"myapp\",\"/work\"]}; {\"args\":[\"exec\",\"web\",\"nginx\",\"-v\"]}. The wrapper's own verbs `engine-start`/`engine-stop` also work here.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "docker.cli_help",
-        "summary": "Return the complete `docker --help` (all commands + global options) from the delivered binary. This is `docker --help`."
+        "summary": "Return the complete `docker --help` (all commands + global options) from the delivered binary. This is `docker --help`.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "docker.help",
-        "summary": "Discovery: every method with params, kind, and latency class."
+        "summary": "Discovery: every method with params, kind, and latency class.",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -1932,7 +3091,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": null,
-    "updatedAt": null
+    "updatedAt": null,
+    "limits": null
   },
   {
     "id": "io.pilot.aegis",
@@ -1961,31 +3121,45 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "aegis.scan",
-        "summary": "One-shot scan of a file or directory for prompt injection, jailbreaks, homoglyph/leetspeak obfuscation, and impersonation."
+        "summary": "One-shot scan of a file or directory for prompt injection, jailbreaks, homoglyph/leetspeak obfuscation, and impersonation.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "aegis.status",
-        "summary": "Tail the HMAC-chained audit log of recent verdicts."
+        "summary": "Tail the HMAC-chained audit log of recent verdicts.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "aegis.targets",
-        "summary": "List the agent surfaces AEGIS is protecting (inbox, tool results, skill files, memory)."
+        "summary": "List the agent surfaces AEGIS is protecting (inbox, tool results, skill files, memory).",
+        "example": null,
+        "gated": null
       },
       {
         "name": "aegis.config",
-        "summary": "Show the effective AEGIS configuration."
+        "summary": "Show the effective AEGIS configuration.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "aegis.version",
-        "summary": "Print the AEGIS version."
+        "summary": "Print the AEGIS version.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "aegis.exec",
-        "summary": "Run any AEGIS subcommand verbatim — including the scan-cmd / scan-result blocking gates (allow 0 / block 2) via stdin."
+        "summary": "Run any AEGIS subcommand verbatim — including the scan-cmd / scan-result blocking gates (allow 0 / block 2) via stdin.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "aegis.help",
-        "summary": "Print usage and the subcommand list."
+        "summary": "Print usage and the subcommand list.",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -2038,7 +3212,8 @@ export const apps: App[] = [
       "rust"
     ],
     "publishedAt": null,
-    "updatedAt": null
+    "updatedAt": null,
+    "limits": null
   },
   {
     "id": "io.pilot.slipstream",
@@ -2064,39 +3239,57 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "slipstream.leaderboard",
-        "summary": null
+        "summary": null,
+        "example": null,
+        "gated": null
       },
       {
         "name": "slipstream.signals",
-        "summary": null
+        "summary": null,
+        "example": null,
+        "gated": null
       },
       {
         "name": "slipstream.tape",
-        "summary": null
+        "summary": null,
+        "example": null,
+        "gated": null
       },
       {
         "name": "slipstream.markets",
-        "summary": null
+        "summary": null,
+        "example": null,
+        "gated": null
       },
       {
         "name": "slipstream.wallet",
-        "summary": null
+        "summary": null,
+        "example": null,
+        "gated": null
       },
       {
         "name": "slipstream.skilled",
-        "summary": null
+        "summary": null,
+        "example": null,
+        "gated": null
       },
       {
         "name": "slipstream.opportunities",
-        "summary": null
+        "summary": null,
+        "example": null,
+        "gated": null
       },
       {
         "name": "slipstream.stats",
-        "summary": null
+        "summary": null,
+        "example": null,
+        "gated": null
       },
       {
         "name": "slipstream.help",
-        "summary": null
+        "summary": null,
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [],
@@ -2140,7 +3333,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": null,
-    "updatedAt": null
+    "updatedAt": null,
+    "limits": null
   },
   {
     "id": "io.pilot.wallet",
@@ -2170,63 +3364,93 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "wallet.balance",
-        "summary": "USDC balance for the wallet."
+        "summary": "USDC balance for the wallet.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "wallet.balances",
-        "summary": "Balances across all configured chains."
+        "summary": "Balances across all configured chains.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "wallet.address",
-        "summary": "The wallet receive address."
+        "summary": "The wallet receive address.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "wallet.request",
-        "summary": "Create an x402 payment request."
+        "summary": "Create an x402 payment request.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "wallet.pay",
-        "summary": "Pay an x402 / EIP-3009 USDC request."
+        "summary": "Pay an x402 / EIP-3009 USDC request.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "wallet.verify",
-        "summary": "Verify a payment authorization."
+        "summary": "Verify a payment authorization.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "wallet.settle",
-        "summary": "Settle a verified payment on-chain."
+        "summary": "Settle a verified payment on-chain.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "wallet.topup",
-        "summary": "Top up the wallet balance."
+        "summary": "Top up the wallet balance.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "wallet.history",
-        "summary": "Recent payment history."
+        "summary": "Recent payment history.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "wallet.spend_caps",
-        "summary": "Show the supervisor-enforced spend caps."
+        "summary": "Show the supervisor-enforced spend caps.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "wallet.evm.address",
-        "summary": "EVM receive address."
+        "summary": "EVM receive address.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "wallet.evm.balance",
-        "summary": "EVM USDC balance (optional chain_id)."
+        "summary": "EVM USDC balance (optional chain_id).",
+        "example": null,
+        "gated": null
       },
       {
         "name": "wallet.evm.satisfy",
-        "summary": "Satisfy an EVM x402 payment requirement."
+        "summary": "Satisfy an EVM x402 payment requirement.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "wallet.evm.verify",
-        "summary": "Verify an EVM payment authorization."
+        "summary": "Verify an EVM payment authorization.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "wallet.evm.chains",
-        "summary": "List configured EVM chains (Base, Ethereum, Polygon)."
+        "summary": "List configured EVM chains (Base, Ethereum, Polygon).",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -2303,7 +3527,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": "2026-06-08",
-    "updatedAt": "2026-06-08"
+    "updatedAt": "2026-06-08",
+    "limits": null
   },
   {
     "id": "io.pilot.bowmark",
@@ -2334,15 +3559,21 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "bowmark.ask",
-        "summary": "Give it a site and a plain-English task (e.g. 'find Apple's latest 10-K') and it returns a ready-to-run cheatsheet — a URL shortcut to fill and navigate and/or a short ui_procedure of steps. Call it before any browser action, in place of exploring the page yourself, and execute open-loop. status=ok returns an id; no_useful_data/site_not_supported → browse manually; ambiguous_scope → retry with scopeHint; rate_limited → back off. Pass variants:{auth_state:'logged_in'} for signed-in surfaces. Intent, not a URL."
+        "summary": "Give it a site and a plain-English task (e.g. 'find Apple's latest 10-K') and it returns a ready-to-run cheatsheet — a URL shortcut to fill and navigate and/or a short ui_procedure of steps. Call it before any browser action, in place of exploring the page yourself, and execute open-loop. status=ok returns an id; no_useful_data/site_not_supported → browse manually; ambiguous_scope → retry with scopeHint; rate_limited → back off. Pass variants:{auth_state:'logged_in'} for signed-in surfaces. Intent, not a URL.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "bowmark.report_outcome",
-        "summary": "After running a cheatsheet from ask, report whether every step ran exactly as written (envelope_id + success, optional evidence). success=true only if it ran clean — no retries, no raw-JS fallback, no extra clicks; false on any deviation, even if you still got the answer. Honest results trigger a re-crawl that keeps the cheatsheet fresh."
+        "summary": "After running a cheatsheet from ask, report whether every step ran exactly as written (envelope_id + success, optional evidence). success=true only if it ran clean — no retries, no raw-JS fallback, no extra clicks; false on any deviation, even if you still got the answer. Honest results trigger a re-crawl that keeps the cheatsheet fresh.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "bowmark.help",
-        "summary": "Discovery: every method with params, kind, and latency class."
+        "summary": "Discovery: every method with params, kind, and latency class.",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -2399,7 +3630,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": "2026-07-03",
-    "updatedAt": "2026-07-03"
+    "updatedAt": "2026-07-03",
+    "limits": null
   },
   {
     "id": "io.pilot.orthogonal",
@@ -2432,31 +3664,45 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "orthogonal.search",
-        "summary": "★ Natural-language API router. Describe a task in plain English (prompt) and get back the ranked Orthogonal APIs + endpoints that can do it — grouped by API, each with slug, path, method and a 0–1 relevance score. FREE. Start here when you don't know which of the 851 endpoints to use, then price it with orthogonal.details and execute with orthogonal.run."
+        "summary": "★ Natural-language API router. Describe a task in plain English (prompt) and get back the ranked Orthogonal APIs + endpoints that can do it — grouped by API, each with slug, path, method and a 0–1 relevance score. FREE. Start here when you don't know which of the 851 endpoints to use, then price it with orthogonal.details and execute with orthogonal.run.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "orthogonal.details",
-        "summary": "Full request schema (path/query/body params with types + required flags) AND the exact price in dollars for one endpoint. FREE. Call this before orthogonal.run to know the cost — it is the authoritative price source (prices are null in search/list). Price may be the string 'dynamic' for endpoints priced only after the call."
+        "summary": "Full request schema (path/query/body params with types + required flags) AND the exact price in dollars for one endpoint. FREE. Call this before orthogonal.run to know the cost — it is the authoritative price source (prices are null in search/list). Price may be the string 'dynamic' for endpoints priced only after the call.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "orthogonal.integrate",
-        "summary": "Ready-to-paste code snippets for one endpoint. FREE. format ∈ orth-sdk (default) | run-api | curl | x402-fetch | x402-python | all."
+        "summary": "Ready-to-paste code snippets for one endpoint. FREE. format ∈ orth-sdk (default) | run-api | curl | x402-fetch | x402-python | all.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "orthogonal.list",
-        "summary": "Browse the whole catalog — 58 APIs / 851 endpoints with descriptions and param schemas, paginated by limit/offset. FREE. Prices are null here; use orthogonal.details for the price of a specific endpoint."
+        "summary": "Browse the whole catalog — 58 APIs / 851 endpoints with descriptions and param schemas, paginated by limit/offset. FREE. Prices are null here; use orthogonal.details for the price of a specific endpoint.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "orthogonal.run",
-        "summary": "★ Execute any of the 851 provider endpoints via a JSON payload {api, path, body?, query?} (the HTTP method is chosen automatically; body is the provider request body, query is its query-string params). THIS IS THE ONLY CALL THAT COSTS MONEY: you are billed the target endpoint's real price and it is debited from your $5 Pilot budget. The response returns priceCents (cents actually charged) alongside the provider data, and X-Pilot-Credits-Remaining shows your budget. Once your $5 is spent, run returns 402 while the free discovery calls keep working. Prices range $0.001–$3.50; 104 endpoints are 'dynamic' (priced only from the response) — check orthogonal.details first when you need the cost up front."
+        "summary": "★ Execute any of the 851 provider endpoints via a JSON payload {api, path, body?, query?} (the HTTP method is chosen automatically; body is the provider request body, query is its query-string params). THIS IS THE ONLY CALL THAT COSTS MONEY: you are billed the target endpoint's real price and it is debited from your $5 Pilot budget. The response returns priceCents (cents actually charged) alongside the provider data, and X-Pilot-Credits-Remaining shows your budget. Once your $5 is spent, run returns 402 while the free discovery calls keep working. Prices range $0.001–$3.50; 104 endpoints are 'dynamic' (priced only from the response) — check orthogonal.details first when you need the cost up front.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "orthogonal.balance",
-        "summary": "YOUR remaining per-user budget on this app — returned by the broker from its own ledger as '$X.XX' plus credits_remaining (micro-USD; $5 = 5000000) and credits_seed. FREE, read-only, no upstream call. This is your personal budget, seeded at $5 on first use and debited by your own runs; the shared provider account's balance is never exposed. The same figure is on the X-Pilot-Credits-Remaining header of every response."
+        "summary": "YOUR remaining per-user budget on this app — returned by the broker from its own ledger as '$X.XX' plus credits_remaining (micro-USD; $5 = 5000000) and credits_seed. FREE, read-only, no upstream call. This is your personal budget, seeded at $5 on first use and debited by your own runs; the shared provider account's balance is never exposed. The same figure is on the X-Pilot-Credits-Remaining header of every response.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "orthogonal.help",
-        "summary": "The self-describing discovery contract: every method with params, cost note, and latency class. Local, free, no backend call."
+        "summary": "The self-describing discovery contract: every method with params, cost note, and latency class. Local, free, no backend call.",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -2513,7 +3759,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": "2026-07-07",
-    "updatedAt": "2026-07-07"
+    "updatedAt": "2026-07-07",
+    "limits": null
   },
   {
     "id": "io.pilot.didit",
@@ -2550,163 +3797,243 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "didit.signup",
-        "summary": "Get your own Didit API key in ONE call — no email, no code, no human step. This signs a keyless request to Pilot's Didit broker, which provisions a mailbox on Pilot infrastructure, registers a Didit account, reads the emailed one-time code server-side, verifies it, and returns your account's api_key. The adapter caches {email, api_key} to $APP/secrets.json, and from then on EVERY other didit.* method authenticates automatically (x-api-key) — you never handle the key or an inbox. Idempotent: the broker mints at most one account per Pilot identity, so a repeat call (or a fresh install) returns the SAME account. Run this ONCE before any other method. FREE — account creation costs nothing; you pay only per verification you run, and each account includes Didit's 500 free full-KYC checks/month. The account (email + key) is retrievable any time via didit.account. Takes no arguments."
+        "summary": "Get your own Didit API key in ONE call — no email, no code, no human step. This signs a keyless request to Pilot's Didit broker, which provisions a mailbox on Pilot infrastructure, registers a Didit account, reads the emailed one-time code server-side, verifies it, and returns your account's api_key. The adapter caches {email, api_key} to $APP/secrets.json, and from then on EVERY other didit.* method authenticates automatically (x-api-key) — you never handle the key or an inbox. Idempotent: the broker mints at most one account per Pilot identity, so a repeat call (or a fresh install) returns the SAME account. Run this ONCE before any other method. FREE — account creation costs nothing; you pay only per verification you run, and each account includes Didit's 500 free full-KYC checks/month. The account (email + key) is retrievable any time via didit.account. Takes no arguments.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.account",
-        "summary": "Retrieve your cached Didit account — the email the broker provisioned for you and your api_key — plus a signed_up flag. Local, instant, FREE (reads $APP/secrets.json; no backend call). Use it to confirm you're signed up or to read your key. If signed_up is false, call didit.signup first."
+        "summary": "Retrieve your cached Didit account — the email the broker provisioned for you and your api_key — plus a signed_up flag. Local, instant, FREE (reads $APP/secrets.json; no backend call). Use it to confirm you're signed up or to read your key. If signed_up is false, call didit.signup first.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.billing_balance",
-        "summary": "Check your remaining Didit credit balance (and auto-refill settings). FREE. Returns {balance, auto_refill_enabled, auto_refill_amount, auto_refill_threshold}. Verifications draw down this balance; check it before a batch of checks."
+        "summary": "Check your remaining Didit credit balance (and auto-refill settings). FREE. Returns {balance, auto_refill_enabled, auto_refill_amount, auto_refill_threshold}. Verifications draw down this balance; check it before a batch of checks.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.billing_topup",
-        "summary": "Add credit to your Didit balance. FREE call — returns a Stripe checkout URL (checkout_session_url) to present to the user; the charge happens on Stripe, not through Pilot."
+        "summary": "Add credit to your Didit balance. FREE call — returns a Stripe checkout URL (checkout_session_url) to present to the user; the charge happens on Stripe, not through Pilot.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.create_workflow",
-        "summary": "Create a verification workflow — the reusable template that defines which checks a hosted session runs, in order. FREE to create; you're billed per feature only when a session actually runs it. Returns {uuid} — pass it as workflow_id to didit.create_session. The v3 API takes a `features` ARRAY (in the order users complete them); each item is {feature, config?} where feature is one of OCR, NFC, LIVENESS, FACE_MATCH, PROOF_OF_ADDRESS, QUESTIONNAIRE, DOCUMENT_AI, PHONE_VERIFICATION, EMAIL_VERIFICATION, DATABASE_VALIDATION, AML, IP_ANALYSIS, AGE_ESTIMATION, KYB_REGISTRY, KYB_DOCUMENTS, KYB_KEY_PEOPLE. Example: [{\"feature\":\"OCR\"},{\"feature\":\"LIVENESS\",\"config\":{\"face_liveness_method\":\"PASSIVE\"}},{\"feature\":\"FACE_MATCH\"}]. The API uses a strict field whitelist — any undeclared key (e.g. workflow_type) is a 400. Max 50 workflows per account."
+        "summary": "Create a verification workflow — the reusable template that defines which checks a hosted session runs, in order. FREE to create; you're billed per feature only when a session actually runs it. Returns {uuid} — pass it as workflow_id to didit.create_session. The v3 API takes a `features` ARRAY (in the order users complete them); each item is {feature, config?} where feature is one of OCR, NFC, LIVENESS, FACE_MATCH, PROOF_OF_ADDRESS, QUESTIONNAIRE, DOCUMENT_AI, PHONE_VERIFICATION, EMAIL_VERIFICATION, DATABASE_VALIDATION, AML, IP_ANALYSIS, AGE_ESTIMATION, KYB_REGISTRY, KYB_DOCUMENTS, KYB_KEY_PEOPLE. Example: [{\"feature\":\"OCR\"},{\"feature\":\"LIVENESS\",\"config\":{\"face_liveness_method\":\"PASSIVE\"}},{\"feature\":\"FACE_MATCH\"}]. The API uses a strict field whitelist — any undeclared key (e.g. workflow_type) is a 400. Max 50 workflows per account.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.list_workflows",
-        "summary": "List your verification workflows with their features and total_price. FREE."
+        "summary": "List your verification workflows with their features and total_price. FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.get_workflow",
-        "summary": "Get one workflow by id. FREE."
+        "summary": "Get one workflow by id. FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.update_workflow",
-        "summary": "Update a workflow (partial — send only the fields to change; same field set as create_workflow, e.g. a replacement `features` array, workflow_label, status, is_default). FREE."
+        "summary": "Update a workflow (partial — send only the fields to change; same field set as create_workflow, e.g. a replacement `features` array, workflow_label, status, is_default). FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.delete_workflow",
-        "summary": "Delete a workflow. FREE. Existing sessions are unaffected. Returns 204."
+        "summary": "Delete a workflow. FREE. Existing sessions are unaffected. Returns 204.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.create_session",
-        "summary": "Start a hosted verification session for a user and get a URL to send them to. This is Didit's recommended path for ID/liveness/face-match/AML/PoA/etc. — the user completes everything at the hosted URL, so you never handle document images yourself. COST is the sum of the features the workflow enables (e.g. a full KYC bundle ≈ $0.33/check; 500 full-KYC checks/month are free), charged to your Didit balance when the session runs. Returns {session_id, session_token, url, status}. Poll didit.get_decision or set a webhook for the result. Nested objects (contact_details, expected_details) are passed as JSON objects."
+        "summary": "Start a hosted verification session for a user and get a URL to send them to. This is Didit's recommended path for ID/liveness/face-match/AML/PoA/etc. — the user completes everything at the hosted URL, so you never handle document images yourself. COST is the sum of the features the workflow enables (e.g. a full KYC bundle ≈ $0.33/check; 500 full-KYC checks/month are free), charged to your Didit balance when the session runs. Returns {session_id, session_token, url, status}. Poll didit.get_decision or set a webhook for the result. Nested objects (contact_details, expected_details) are passed as JSON objects.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.get_decision",
-        "summary": "Get the full decision and extracted data for a session — status plus id_verifications, liveness_checks, face_matches, aml_screenings, phone/email verifications, poa_verifications, database_validations, ip_analyses, and reviews. FREE (reading results). Image URLs in the response expire after 60 minutes. Statuses: Not Started | In Progress | In Review | Approved | Declined | Abandoned | Expired | Resubmitted."
+        "summary": "Get the full decision and extracted data for a session — status plus id_verifications, liveness_checks, face_matches, aml_screenings, phone/email verifications, poa_verifications, database_validations, ip_analyses, and reviews. FREE (reading results). Image URLs in the response expire after 60 minutes. Statuses: Not Started | In Progress | In Review | Approved | Declined | Abandoned | Expired | Resubmitted.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.list_sessions",
-        "summary": "List/filter your sessions (paginated). FREE."
+        "summary": "List/filter your sessions (paginated). FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.update_session_status",
-        "summary": "Manually override a session's status (approve/decline/resubmit) — the programmatic-review action. FREE. For Resubmitted, pass nodes_to_resubmit; the session must be Declined, In Review, or Abandoned."
+        "summary": "Manually override a session's status (approve/decline/resubmit) — the programmatic-review action. FREE. For Resubmitted, pass nodes_to_resubmit; the session must be Declined, In Review, or Abandoned.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.delete_session",
-        "summary": "Permanently delete a session and all its data. FREE. Returns 204."
+        "summary": "Permanently delete a session and all its data. FREE. Returns 204.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.batch_delete_sessions",
-        "summary": "Delete many sessions at once by number (or all). FREE."
+        "summary": "Delete many sessions at once by number (or all). FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.share_session",
-        "summary": "Generate a share_token so a partner can import a finished session (B2B KYC reuse). FREE. Works only for finished sessions."
+        "summary": "Generate a share_token so a partner can import a finished session (B2B KYC reuse). FREE. Works only for finished sessions.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.import_session",
-        "summary": "Import a session shared by a partner via its share_token. FREE."
+        "summary": "Import a session shared by a partner via its share_token. FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.list_reviews",
-        "summary": "List the manual-review activity for a session (status changes, notes). FREE."
+        "summary": "List the manual-review activity for a session (status changes, notes). FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.create_review",
-        "summary": "Add a manual review decision to a session (Approved/Declined/In Review). FREE."
+        "summary": "Add a manual review decision to a session (Approved/Declined/In Review). FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.aml",
-        "summary": "Screen a person or company against sanctions, PEP, and adverse-media watchlists (standalone, no session). COST $0.20/check on your Didit balance. Returns matches with scores and categories."
+        "summary": "Screen a person or company against sanctions, PEP, and adverse-media watchlists (standalone, no session). COST $0.20/check on your Didit balance. Returns matches with scores and categories.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.database_validation",
-        "summary": "Cross-check identity fields against government / authoritative databases (standalone). COST from $0.05/check (1x1, single source) to $0.30 (2x2, two-source cross-validation); varies by country/source. Covers 1,000+ sources across 18+ countries."
+        "summary": "Cross-check identity fields against government / authoritative databases (standalone). COST from $0.05/check (1x1, single source) to $0.30 (2x2, two-source cross-validation); varies by country/source. Covers 1,000+ sources across 18+ countries.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.email_send",
-        "summary": "Send a one-time verification code to an email address. Part of email verification ($0.03 per completed verification, charged to your Didit balance)."
+        "summary": "Send a one-time verification code to an email address. Part of email verification ($0.03 per completed verification, charged to your Didit balance).",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.email_check",
-        "summary": "Verify the email OTP the user received. Completes an email verification ($0.03)."
+        "summary": "Verify the email OTP the user received. Completes an email verification ($0.03).",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.phone_send",
-        "summary": "Send a one-time code by SMS / WhatsApp / Telegram. Part of phone verification (from $0.03 per completed verification, varies by channel)."
+        "summary": "Send a one-time code by SMS / WhatsApp / Telegram. Part of phone verification (from $0.03 per completed verification, varies by channel).",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.phone_check",
-        "summary": "Verify the phone OTP the user received. Completes a phone verification (from $0.03)."
+        "summary": "Verify the phone OTP the user received. Completes a phone verification (from $0.03).",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.blocklist_add",
-        "summary": "Add a session's face/document/phone/email to your blocklist so future matches auto-flag (FACE_IN_BLOCKLIST, etc.). FREE."
+        "summary": "Add a session's face/document/phone/email to your blocklist so future matches auto-flag (FACE_IN_BLOCKLIST, etc.). FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.blocklist_remove",
-        "summary": "Remove items from your blocklist. FREE."
+        "summary": "Remove items from your blocklist. FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.blocklist_list",
-        "summary": "List your blocklisted items. FREE."
+        "summary": "List your blocklisted items. FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.create_questionnaire",
-        "summary": "Create a custom form (7 element types) to attach to a questionnaire_verification workflow. FREE."
+        "summary": "Create a custom form (7 element types) to attach to a questionnaire_verification workflow. FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.list_questionnaires",
-        "summary": "List your questionnaires. FREE."
+        "summary": "List your questionnaires. FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.get_questionnaire",
-        "summary": "Get one questionnaire. FREE."
+        "summary": "Get one questionnaire. FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.update_questionnaire",
-        "summary": "Update a questionnaire (partial). FREE."
+        "summary": "Update a questionnaire (partial). FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.delete_questionnaire",
-        "summary": "Delete a questionnaire. FREE. Returns 204."
+        "summary": "Delete a questionnaire. FREE. Returns 204.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.list_users",
-        "summary": "List verified individuals (grouped by vendor_data) with status and session counts. FREE."
+        "summary": "List verified individuals (grouped by vendor_data) with status and session counts. FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.get_user",
-        "summary": "Get one user by your vendor_data. FREE."
+        "summary": "Get one user by your vendor_data. FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.update_user",
-        "summary": "Update a user's display name / manual status / metadata. FREE."
+        "summary": "Update a user's display name / manual status / metadata. FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.batch_delete_users",
-        "summary": "Delete many users by vendor_data (or all). FREE."
+        "summary": "Delete many users by vendor_data (or all). FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.get_webhook",
-        "summary": "Get your webhook configuration (url, version, HMAC secret_shared_key, capture_method). FREE."
+        "summary": "Get your webhook configuration (url, version, HMAC secret_shared_key, capture_method). FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.update_webhook",
-        "summary": "Set/rotate your webhook config programmatically — no console needed. FREE."
+        "summary": "Set/rotate your webhook config programmatically — no console needed. FREE.",
+        "example": null,
+        "gated": null
       },
       {
         "name": "didit.help",
-        "summary": "Discovery: every method with params, latency, and the per-endpoint pricing rate card."
+        "summary": "Discovery: every method with params, latency, and the per-endpoint pricing rate card.",
+        "example": null,
+        "gated": null
       }
     ],
     "changelog": [
@@ -2767,7 +4094,8 @@ export const apps: App[] = [
       "go"
     ],
     "publishedAt": "2026-07-07",
-    "updatedAt": "2026-07-07"
+    "updatedAt": "2026-07-07",
+    "limits": null
   }
 ];
 
