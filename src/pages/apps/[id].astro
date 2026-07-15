@@ -15,6 +15,7 @@ export function getStaticPaths() {
 const { app } = Astro.props;
 
 const catName = (id) => categories.find((c) => c.id === id)?.name ?? id;
+const demo = app.productDemo;
 const related = relatedApps(app);
 const installCmd = `pilotctl appstore install ${app.id}`;
 const oses = [...new Set(app.bundles.map((b) => osOf(b.platform)))];
@@ -163,6 +164,87 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
             <p style="font-size:14.5px;color:var(--ink-dim);line-height:1.6;">This app publishes its method surface at runtime — call <code style="font-family:var(--mono);font-size:.9em;">{app.id.split('.').pop()}.help</code> after install to discover every method, its parameters, and latency class.</p>
           )}
         </section>
+
+        {demo && (
+        <section class="demo">
+          <h2 class="sec-h">Full usage demo</h2>
+          <p class="demo-when">{demo.when_to_use}</p>
+
+          <div class="demo-step demo-first">
+            <div class="demo-step-head">
+              <span class="demo-step-title">Run this first{demo.quickstart.goal ? ` — ${demo.quickstart.goal}` : ''}</span>
+              {demo.metered && demo.quickstart.cost && <span class="demo-cost">{demo.quickstart.cost}</span>}
+            </div>
+            <div class="demo-cmd">
+              <div class="ib-bar"><span class="lbl">Call</span><button class="copy-btn" data-copy={demo.quickstart.command} type="button">Copy</button></div>
+              <pre class="demo-pre"><code>{demo.quickstart.command}</code></pre>
+              {demo.quickstart.expect && <div class="demo-expect"><span class="demo-arrow">→</span><code>{demo.quickstart.expect}</code></div>}
+            </div>
+            {demo.quickstart.note && <p class="demo-note">{demo.quickstart.note}</p>}
+          </div>
+
+          {demo.examples.length > 0 && (
+          <div class="demo-examples">
+            <h3 class="demo-subh">Worked examples</h3>
+            {demo.examples.map((ex) => (
+              <div class="demo-step">
+                <div class="demo-step-head">
+                  <span class="demo-step-title">{ex.title ?? ex.goal ?? 'Example'}</span>
+                  {demo.metered && ex.cost && <span class="demo-cost">{ex.cost}</span>}
+                </div>
+                <div class="demo-cmd">
+                  <div class="ib-bar"><span class="lbl">Call</span><button class="copy-btn" data-copy={ex.command} type="button">Copy</button></div>
+                  <pre class="demo-pre"><code>{ex.command}</code></pre>
+                  {ex.expect && <div class="demo-expect"><span class="demo-arrow">→</span><code>{ex.expect}</code></div>}
+                </div>
+                {ex.note && <p class="demo-note">{ex.note}</p>}
+              </div>
+            ))}
+          </div>
+          )}
+
+          {demo.metered && demo.cost && (
+          <div class="demo-costs">
+            <h3 class="demo-subh">What it costs</h3>
+            <div class="demo-free">
+              <span class="demo-free-amt">{demo.cost.free_budget}</span>
+              <span class="demo-free-lbl">free budget{demo.cost.unit ? ` · billed in ${demo.cost.unit}` : ''}</span>
+            </div>
+            <div class="demo-cost-table-wrap">
+              <table class="demo-cost-table">
+                <thead><tr><th>Operation</th><th>Price</th><th>Notes</th></tr></thead>
+                <tbody>
+                  {demo.cost.operations.map((op) => (
+                    <tr><td><code>{op.op}</code></td><td class="demo-price">{op.price}</td><td>{op.note ?? ''}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {demo.cost.worked_total && <p class="demo-total">{demo.cost.worked_total}</p>}
+            {demo.cost.check_balance && (
+            <div class="demo-cmd demo-check">
+              <div class="ib-bar"><span class="lbl">Check balance</span><button class="copy-btn" data-copy={demo.cost.check_balance} type="button">Copy</button></div>
+              <pre class="demo-pre"><code>{demo.cost.check_balance}</code></pre>
+            </div>
+            )}
+          </div>
+          )}
+
+          {demo.gotchas.length > 0 && (
+          <div class="demo-block">
+            <h3 class="demo-subh">Good to know</h3>
+            <ul class="demo-list">{demo.gotchas.map((g) => <li>{g}</li>)}</ul>
+          </div>
+          )}
+
+          {demo.next.length > 0 && (
+          <div class="demo-block">
+            <h3 class="demo-subh">Next</h3>
+            <ul class="demo-list demo-next">{demo.next.map((n) => <li><code>{n}</code></li>)}</ul>
+          </div>
+          )}
+        </section>
+        )}
 
         {app.pricing && (
         <section>

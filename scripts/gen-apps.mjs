@@ -16,6 +16,10 @@ const HERE = path.dirname(new URL(import.meta.url).pathname);
 const DATA = path.join(HERE, '..', 'src', 'data');
 const overrides = JSON.parse(fs.readFileSync(path.join(DATA, 'app-overrides.json'), 'utf8'));
 const methodsMap = JSON.parse(fs.readFileSync(path.join(DATA, 'app-methods.json'), 'utf8'));
+// Optional example-driven usage guides, keyed by app id. Apps without an entry
+// carry productDemo: null and render exactly as before. See src/data/app-demos.json.
+const demosPath = path.join(DATA, 'app-demos.json');
+const demosMap = fs.existsSync(demosPath) ? JSON.parse(fs.readFileSync(demosPath, 'utf8')) : {};
 
 function hash(str) { let h = 2166136261 >>> 0; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; }
 
@@ -142,6 +146,7 @@ function build(id) {
     runtimes: o.runtimes || ['go'],
     publishedAt: o.publishedAt ? String(o.publishedAt).slice(0, 10) : null,
     updatedAt: o.publishedAt ? String(o.publishedAt).slice(0, 10) : null,
+    productDemo: demosMap[id] || null,
   };
 }
 
@@ -154,6 +159,14 @@ export interface AppChangelog { version: string; date?: string | null; notes: st
 export interface AppBundle { platform: string; bytes: number | null; }
 export interface AppDependency { id: string; reason: string; optional?: boolean; }
 export interface AppIcon { mode: 'mask' | 'image'; img: string | null; fit: string | null; pos: string | null; color: string; ink: boolean; file: string | null; hue: number; }
+export interface DemoStep { title?: string | null; goal?: string | null; command: string; expect?: string | null; cost?: string | null; note?: string | null; }
+export interface DemoCostOp { op: string; price: string; note?: string | null; }
+export interface DemoCost { unit: string; free_budget: string; hard_cap_usd: number | null; operations: DemoCostOp[]; worked_total?: string | null; check_balance?: string | null; }
+export interface ProductDemo {
+  skill: string; title: string; when_to_use: string; metered: boolean;
+  quickstart: DemoStep; examples: DemoStep[]; cost: DemoCost | null;
+  gotchas: string[]; next: string[];
+}
 export interface App {
   id: string; name: string; tagline: string; description: string;
   categories: string[]; primaryCategory: string; keywords: string[];
@@ -165,6 +178,7 @@ export interface App {
   featured: boolean; real: boolean; inCatalogue: boolean;
   icon: AppIcon; minPilotVersion: string; runtimes: string[];
   publishedAt: string | null; updatedAt: string | null;
+  productDemo: ProductDemo | null;
 }
 export interface Category { id: string; name: string; blurb: string; hue: number; }
 
