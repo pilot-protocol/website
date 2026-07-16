@@ -20,6 +20,10 @@ set -e
 # Legacy env vars (still honored, lower precedence than flags):
 #   PILOT_RELEASE_TAG=vX.Y.Z   Same as --version.
 #   PILOT_RC=1                 Same as --channel edge.
+#   PILOT_EMAIL=you@host       Account-recovery email. Provide it inline for
+#                              non-interactive/headless installs (no TTY prompt).
+#                              If omitted headless, the daemon auto-synthesizes a
+#                              <fingerprint>@nodes.pilotprotocol.network identity.
 #
 # WHAT THIS SCRIPT DOES (read before piping to sh):
 #   1. Detects OS/arch (Linux/Darwin × amd64/arm64)
@@ -288,11 +292,21 @@ if [ -z "$EMAIL" ] && [ ! -x "$BIN_DIR/pilotctl" ]; then
         EMAIL=$(grep '"email"' "$PILOT_DIR/account.json" 2>/dev/null | head -1 | cut -d'"' -f4 || true)
     fi
     if [ -z "$EMAIL" ]; then
-        printf "  Email (for account recovery): "
-        read EMAIL < /dev/tty
+        # Interactive (TTY): prompt. Non-interactive (piped into a headless
+        # agent, no controlling terminal): do NOT block on /dev/tty — the
+        # daemon auto-synthesizes a <fingerprint>@nodes.pilotprotocol.network
+        # identity when email is empty, so a missing email must not abort.
+        if [ -t 0 ]; then
+            printf "  Email (for account recovery): "
+            read EMAIL < /dev/tty
+        fi
         if [ -z "$EMAIL" ]; then
-            echo "  Error: email is required. Set PILOT_EMAIL or enter when prompted."
-            exit 1
+            if [ -t 0 ]; then
+                echo "  Error: email is required. Set PILOT_EMAIL or enter when prompted."
+                exit 1
+            else
+                echo "  Note: no email provided (non-interactive). Set PILOT_EMAIL= for account recovery."
+            fi
         fi
     fi
 fi
@@ -528,7 +542,7 @@ echo "Config written to ${PILOT_DIR}/config.json"
 
 # --- Set up system service ---
 
-if [ "$OS" = "linux" ] && command -v systemctl >/dev/null 2>&1; then
+if [ "$OS" = "linux" ] && command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
     CAN_SUDO=false
     if [ "$(id -u)" = "0" ] || sudo -n true 2>/dev/null; then
         CAN_SUDO=true
@@ -587,7 +601,10 @@ WantedBy=multi-user.target
 USVC
     fi
 
-    sudo systemctl daemon-reload
+    # daemon-reload can fail on hosts where systemctl exists but systemd is
+    # not PID 1 (older containers, chroots). Never let it abort the install
+    # under `set -e` — the binaries and skill injection still matter.
+    sudo systemctl daemon-reload || true
     echo "  Service: pilot-daemon.service"
     echo "  Service: pilot-updater.service (auto-updates)"
     echo "  Start:   sudo systemctl start pilot-daemon pilot-updater"
@@ -595,6 +612,12 @@ USVC
     else
     echo "  Skipped systemd setup (run as root or with passwordless sudo to enable)"
     fi
+elif [ "$OS" = "linux" ]; then
+    # systemd is not the init system here (container / WSL / CI runner).
+    # There is no service to install — tell the agent the portable start path
+    # instead of silently leaving it with no daemon.
+    echo "No systemd detected (container / WSL / CI) — start the daemon manually:"
+    echo "  pilotctl daemon start"
 fi
 
 if [ "$OS" = "darwin" ]; then
@@ -757,15 +780,17 @@ else
 fi
 echo ""
 echo "  Per-tool target paths:"
-echo "    Claude Code   ~/.claude/skills/pilot-protocol/SKILL.md"
+echo "    Claude Code   ~/.claude/skills/pilotctl/SKILL.md"
 echo "                  + heartbeat ref in ~/.claude/CLAUDE.md"
-echo "    OpenClaw      ~/.openclaw/skills/pilot-protocol/SKILL.md"
+echo "    OpenClaw      ~/.openclaw/skills/pilotctl/SKILL.md"
 echo "                  + heartbeat ref in ~/.openclaw/workspace/AGENTS.md"
-echo "    PicoClaw      ~/.picoclaw/workspace/skills/pilot-protocol/SKILL.md"
-echo "                  + heartbeat ref in ~/.picoclaw/workspace/AGENT.md"
-echo "    OpenHands     ~/.openhands/microagents/pilot-protocol.md (self-heartbeat)"
-echo "    Hermes        ~/.hermes/skills/pilot-protocol/SKILL.md"
+echo "    PicoClaw      ~/.picoclaw/workspace/skills/pilotctl/SKILL.md"
+echo "                  + heartbeat ref in ~/.picoclaw/workspace/HEARTBEAT.md"
+echo "    OpenHands     ~/.openhands/microagents/pilotctl.md (self-heartbeat)"
+echo "    Hermes        ~/.hermes/skills/pilotctl/SKILL.md"
 echo "                  + heartbeat ref in ~/.hermes/SOUL.md"
+echo "    Goose         ~/.config/goose/skills/pilotctl/SKILL.md"
+echo "                  + heartbeat ref in ~/.config/goose/.goosehints"
 echo ""
 echo "  Inspect / force a refresh anytime:"
 echo "    pilotctl skills           # status of every install path"
