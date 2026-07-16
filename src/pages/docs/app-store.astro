@@ -10,7 +10,9 @@ const bodyContent = `<h1>App Store</h1>
       <li><a href="#overview">Overview</a></li>
       <li><a href="#using">Using apps</a></li>
       <li><a href="#discovery">Discovery &amp; the help convention</a></li>
+      <li><a href="#dynamic-context">Dynamic context on every call</a></li>
       <li><a href="#lifecycle">Lifecycle</a></li>
+      <li><a href="#updating">Keeping apps current</a></li>
       <li><a href="#building">Building an app</a></li>
       <li><a href="#publishing">Publishing an app</a></li>
       <li><a href="#install-models">Catalogue vs sideload</a></li>
@@ -76,6 +78,33 @@ const bodyContent = `<h1>App Store</h1>
 
   <p>Each method entry also carries a warm round-trip estimate the app publishes, so an agent can budget a call end-to-end (agent &rarr; daemon &rarr; app &rarr; backend &rarr; back).</p>
 
+  <h2 id="dynamic-context">Dynamic context on every call</h2>
+
+  <p>Two surfaces put the right next command in front of an agent at the two moments it is most likely to stall — right after install, and after every call. Both are authored once by the publisher and need no runtime code (see <a href="#authoring-context">Authoring dynamic context</a>).</p>
+
+  <h3 id="product-demo">Product demo at install</h3>
+
+  <p>When <code>pilotctl appstore install io.pilot.&lt;app&gt;</code> finishes, its last step is a compact, example-first <strong>&ldquo;Full usage demo&rdquo;</strong>: when to reach for the app, the one call to run first, and a handful of worked examples (with per-call cost for metered apps). It turns a bare install into a correct first call. The same demo renders as the <strong>Full usage demo</strong> section on the app's store page.</p>
+
+  <h3 id="next-steps">Next-steps after every call</h3>
+
+  <p>After every <code>pilotctl appstore call</code>, <code>pilotctl</code> prints a short <strong>next-steps</strong> block to <strong>stderr</strong> — the recommended commands for where the agent now stands, on success <em>and</em> on failure. <strong>stdout stays pure JSON</strong>, so an agent can still pipe the result into <code>jq</code>; the hints never touch it.</p>
+
+  <p>A missing param renders a corrected, runnable call; a needs-signup state names the signup command; a <code>402</code> points at the balance check. For example, a <code>sqlite.query</code> with no <code>database</code>:</p>
+
+  <pre><code><span class="comment"># stdout is the pure JSON result (here an error envelope) — the hints go to stderr:</span>
+<span class="cmd">pilotctl</span> appstore call io.pilot.sqlite sqlite.query '{"sql":"SELECT 42"}'
+<span class="comment">error: ipc: server error: backend: missing required param(s): database
+next:  sqlite needs an explicit database — there is no default
+  1. pilotctl appstore call io.pilot.sqlite sqlite.query '{"database":":memory:","sql":"SELECT 42 AS a"}'
+     why: pass database (:memory: for a scratch db) — fixes the error above</span></code></pre>
+
+  <p>Turn it off with <code>PILOT_NEXT_STEPS=off</code>. With <code>--json</code>, the hint arrives as a structured <code>next_steps</code> object instead of prose. A hint is never load-bearing: an absent, malformed, or unmatched graph prints nothing and leaves the call itself unchanged — no hint bug can ever turn a working call into a failed one.</p>
+
+  <h3 id="graph-refresh">Hints reach installed apps automatically</h3>
+
+  <p>The hints are driven by a small graph the app ships in the catalogue. Agents do <strong>not</strong> reinstall to get them: <code>pilotctl</code> lazily refreshes each app's cached graph from the catalogue in the background — a bounded check, at most about every 12 hours per app. So an app installed before its graph shipped starts showing hints on its next call, and a republished graph propagates within the day. No user action.</p>
+
   <h2 id="lifecycle">Lifecycle</h2>
 
   <pre><code><span class="cmd">pilotctl</span> appstore restart io.pilot.cosift    <span class="comment"># respawn (e.g. after writing a config.json)</span>
@@ -89,6 +118,20 @@ const bodyContent = `<h1>App Store</h1>
 
   <div class="callout">
     <p><strong>Upgrades key on the version.</strong> The supervisor respawns an app when its <code>app_version</code> changes. Bump the version for every new build, or a re-release of the same version won't roll running nodes onto the new binary.</p>
+  </div>
+
+  <h2 id="updating">Keeping apps current</h2>
+
+  <p>Apps are versioned in the catalogue. Two commands find and apply new versions:</p>
+
+  <pre><code><span class="cmd">pilotctl</span> appstore outdated                    <span class="comment"># installed apps with a newer — or rebuilt — catalogue version</span>
+<span class="cmd">pilotctl</span> appstore upgrade io.pilot.cosift      <span class="comment"># re-install one app: verified, then respawned</span>
+<span class="cmd">pilotctl</span> appstore upgrade --all               <span class="comment"># bring every installed app up to date</span></code></pre>
+
+  <p><code>upgrade</code> re-runs the same verified install (catalogue signature &rarr; tarball sha256 &rarr; manifest signature &rarr; publisher trust anchor), then the supervisor applies the version change and restarts the app, refusing any downgrade. <code>outdated</code> flags an app not only on a version bump but also as <strong>rebuilt</strong> when a same-version bundle was republished — so a fix shipped without a version change is still surfaced.</p>
+
+  <div class="callout">
+    <p><strong>Auto-update.</strong> <code>pilotctl</code>'s own updater — <code>pilotctl update status|enable|disable</code> — keeps the CLI and daemon current (automatic updates are off by default). With auto-update enabled, the updater also keeps installed app adapters current automatically, so you won't need to run <code>upgrade</code> by hand.</p>
   </div>
 
   <h2 id="building">Building an app</h2>
@@ -152,6 +195,57 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
   <p>This writes a detached <code>catalogue.json.sig</code> (commit both). <code>pilotctl</code> verifies it against the embedded catalogue key before trusting any entry - see <a href="#security">Security model</a>.</p>
 
   <p>Three integrity layers protect every install: the <em>catalogue</em> carries a detached ed25519 signature (a substituted app list fails), the catalogue pins each <em>tarball</em> sha256 (a swapped CDN byte fails), and the manifest pins the <em>binary</em> sha256 under an ed25519 signature (verified at scan time). The binary sha256 is re-checked immediately before every spawn.</p>
+
+  <h3 id="authoring-context">Authoring dynamic context</h3>
+
+  <p>The two runtime surfaces from <a href="#dynamic-context">Dynamic context on every call</a> are authored once in your app's submission and validated at submit time — no runtime code, and both are carried verbatim into the catalogue.</p>
+
+  <p><strong>Product demo.</strong> A <code>product_demo</code> block is the example-first usage guide that renders both at install and as the store page's <em>Full usage demo</em>: a one-sentence <code>when_to_use</code>, a <code>quickstart</code> call, 2–6 worked <code>examples</code>, and — for metered apps — a cost table. It is what turns an install into a first successful call.</p>
+
+  <p><strong>Next-steps graph.</strong> A <code>next_steps</code> graph is a flat list of edges. Each edge answers one question — <em>the agent just ran <code>from</code> and it went <code>on</code>; what now?</em> — and names 1–3 <strong>recommended</strong> commands:</p>
+
+  <pre><code>{
+  "schema": 1,
+  "app": "io.pilot.example",
+  "edges": [
+    {
+      "from": "*",
+      "on": "err",
+      "code": 402,
+      "why": "budget exhausted",
+      "then": [
+        { "cmd": "pilotctl appstore call io.pilot.example example.balance '{}'",
+          "why": "check what's left before spending again",
+          "kind": "recovery" }
+      ]
+    }
+  ]
+}</code></pre>
+
+  <table>
+    <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>from</code></td><td>the method just called, or <code>"*"</code> for any</td></tr>
+      <tr><td><code>on</code></td><td><code>"ok"</code> (exit 0) or <code>"err"</code> (exit 1)</td></tr>
+      <tr><td><code>match</code></td><td>regex over the outcome payload — the error text on <code>err</code>, the JSON result body on <code>ok</code></td></tr>
+      <tr><td><code>code</code></td><td>exact backend HTTP status; <code>err</code> edges only</td></tr>
+      <tr><td><code>why</code></td><td>one line of framing, printed above the steps</td></tr>
+      <tr><td><code>then</code></td><td>1–3 steps, each a full <code>pilotctl</code> command with its own <code>why</code> and an optional <code>kind</code> (<code>gateway</code> / <code>flow</code> / <code>recovery</code>)</td></tr>
+    </tbody>
+  </table>
+
+  <p>The most important case is often <em>not</em> an error: an app with a mandatory signup soft-fails with exit 0 and a <code>"needs_signup": true</code> body, so its gateway edge matches on <code>on:"ok"</code>. The best-matching edge wins on specificity, not file order, and there is no session state — a recommendation is a pure function of <code>(method, outcome, payload)</code>, so the app's own response is the only signal.</p>
+
+  <p>The authoring rules keep a graph small and trustworthy:</p>
+  <ul>
+    <li><strong>Recommended, not exhaustive.</strong> A graph is not <code>&lt;app&gt;.help</code> — name the few commands that move an agent toward value, not every method.</li>
+    <li><strong>Every step needs a <code>why</code></strong> — it is what turns a bare command into a decision.</li>
+    <li><strong>Cover the failures that end sessions</strong> — needs-signup, <code>402</code> budget, <code>429</code> quota, missing/invalid param, server-not-started — each with a corrected, runnable command.</li>
+    <li><strong>Commands must actually run.</strong> Every <code>cmd</code> is copy-pasteable and complete; a recovery step that still fails is worse than silence.</li>
+    <li>If your app has a mandatory first method, a <code>from:"*"</code> edge must route a cold agent to it.</li>
+  </ul>
+
+  <p>Because the graph lives in the catalogue metadata rather than the bundle, rewording or extending it is a metadata republish — no app rebuild — and existing installs pick it up automatically (see <a href="#graph-refresh">above</a>).</p>
 
   <h2 id="install-models">Catalogue vs sideload</h2>
 
