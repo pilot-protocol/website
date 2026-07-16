@@ -1347,6 +1347,23 @@ const featuredBlurbs: Record<string, string> = {
     transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.2s;
   }
   .appstore-callout > * { position: relative; z-index: 1; }
+
+  /* ---- Mobile scroll performance ----------------------------------------
+     backdrop-filter re-blurs whatever is behind these cards on every scroll
+     frame, which stutters on touch GPUs. On touch devices swap the frosted
+     glass for a near-solid fill and stop the expensive rotating conic blur.
+     Desktop (fine pointer) keeps the live glass effect. */
+  @media (hover: none) and (pointer: coarse) {
+    .pillar,
+    .appstore-callout {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      background: color-mix(in srgb, var(--bg-2) 94%, var(--bg));
+    }
+    /* The App Store callout's rotating conic-gradient "spotlight" (blur 40px)
+       repaints continuously — pause it on touch devices. */
+    .ac-featured::before { animation: none; }
+  }
   /* MCP section — harness logo row + typewriter cursor. */
   .mcp-harnesses {
     display: flex;
@@ -2469,9 +2486,21 @@ const featuredBlurbs: Record<string, string> = {
       b.x += b.vx; b.y += b.vy;
     }
     paint();
-    requestAnimationFrame(tick);
+    if (running) requestAnimationFrame(tick);
   }
-  requestAnimationFrame(tick);
+  // Only animate while the hero is actually on screen. A 50-boid O(N^2) sim
+  // running every frame after you've scrolled past the hero steals main-thread
+  // time and stutters scrolling — pause it when the hero leaves the viewport.
+  var running = false;
+  function start(){ if (!running) { running = true; requestAnimationFrame(tick); } }
+  function stop(){ running = false; }
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if (e.isIntersecting) { start(); } else { stop(); } });
+    }, { threshold: 0 }).observe(svg);
+  } else {
+    start();
+  }
 })();
 
 // Live stats refresh - fetches live stats on page load and every 60s so numbers
