@@ -1,4 +1,666 @@
 {
+"io.pilot.primitive": [
+{
+"name": "primitive.signup",
+"summary": "Provision your own Primitive account and a managed *.primitive.email inbox in ONE call \u2014 no email, no code, no human step",
+"example": "{}",
+"gated": null
+},
+{
+"name": "primitive.get_account",
+"summary": "Get account info",
+"example": "{}",
+"gated": null
+},
+{
+"name": "primitive.update_account",
+"summary": "Update account settings",
+"example": "{\"spam_threshold\": 10, \"discard_content_on_webhook_confirmed\": true}",
+"gated": null
+},
+{
+"name": "primitive.get_storage_stats",
+"summary": "Get storage usage",
+"example": "{}",
+"gated": null
+},
+{
+"name": "primitive.get_webhook_secret",
+"summary": "Get webhook signing secret",
+"example": "{}",
+"gated": null
+},
+{
+"name": "primitive.rotate_webhook_secret",
+"summary": "Rotate webhook signing secret",
+"example": "{}",
+"gated": null
+},
+{
+"name": "primitive.list_domains",
+"summary": "List all domains",
+"example": "{}",
+"gated": null
+},
+{
+"name": "primitive.add_domain",
+"summary": "Claim a new domain",
+"example": "{\"domain\": \"<domain>\", \"confirmed\": true, \"outbound\": true}",
+"gated": "requires a custom domain whose DNS you control \u2014 the managed *.primitive.email inbox needs no domain setup"
+},
+{
+"name": "primitive.update_domain",
+"summary": "Update domain settings",
+"example": "{\"id\": \"<id>\", \"is_active\": true, \"spam_threshold\": 10}",
+"gated": null
+},
+{
+"name": "primitive.delete_domain",
+"summary": "Delete a domain",
+"example": "{\"id\": \"<id>\"}",
+"gated": null
+},
+{
+"name": "primitive.verify_domain",
+"summary": "Verify domain ownership",
+"example": "{\"id\": \"<id>\"}",
+"gated": "requires a custom domain whose DNS you control"
+},
+{
+"name": "primitive.download_domain_zone_file",
+"summary": "Download domain DNS zone file",
+"example": "{\"id\": \"<id>\", \"outbound_only\": true}",
+"gated": "requires a custom domain whose DNS you control"
+},
+{
+"name": "primitive.get_inbox_status",
+"summary": "Get inbound inbox readiness",
+"example": "{}",
+"gated": null
+},
+{
+"name": "primitive.list_emails",
+"summary": "List inbound emails",
+"example": "{\"cursor\": \"<cursor>\", \"limit\": 20, \"domain_id\": \"<domain_id>\", \"status\": \"<status>\", \"search\": \"search terms\", \"date_from\": \"<date_from>\", \"date_to\": \"<date_to>\"}",
+"gated": null
+},
+{
+"name": "primitive.search_emails",
+"summary": "Search inbound emails",
+"example": "{\"q\": \"search terms\", \"from\": \"you@your-inbox.primitive.email\", \"to\": \"someone@example.com\", \"subject\": \"Subject line\", \"body\": \"<body>\", \"domain_id\": \"<domain_id>\", \"reply_to_sent_email_id\": \"<reply_to_sent_email_id>\"}",
+"gated": null
+},
+{
+"name": "primitive.get_email",
+"summary": "Get inbound email by id",
+"example": "{\"id\": \"<id>\"}",
+"gated": null
+},
+{
+"name": "primitive.delete_email",
+"summary": "Delete an email",
+"example": "{\"id\": \"<id>\"}",
+"gated": null
+},
+{
+"name": "primitive.download_raw_email",
+"summary": "Download raw email",
+"example": "{\"id\": \"<id>\", \"token\": \"<token>\"}",
+"gated": null
+},
+{
+"name": "primitive.download_attachments",
+"summary": "Download email attachments",
+"example": "{\"id\": \"<id>\", \"token\": \"<token>\"}",
+"gated": null
+},
+{
+"name": "primitive.reply_to_email",
+"summary": "Reply to an inbound email",
+"example": "{\"id\": \"<id>\", \"body_text\": \"Plain-text body\", \"body_html\": \"<p>HTML body</p>\", \"from\": \"you@your-inbox.primitive.email\", \"wait\": 30, \"attachments\": [\"...\"]}",
+"gated": null
+},
+{
+"name": "primitive.replay_email_webhooks",
+"summary": "Replay email webhooks",
+"example": "{\"id\": \"<id>\"}",
+"gated": null
+},
+{
+"name": "primitive.discard_email_content",
+"summary": "Discard email content",
+"example": "{\"id\": \"<id>\"}",
+"gated": null
+},
+{
+"name": "primitive.get_conversation",
+"summary": "Get the conversation an email belongs to",
+"example": "{\"id\": \"<id>\"}",
+"gated": null
+},
+{
+"name": "primitive.list_endpoints",
+"summary": "List webhook endpoints",
+"example": "{}",
+"gated": null
+},
+{
+"name": "primitive.create_endpoint",
+"summary": "Create a webhook endpoint",
+"example": "{\"kind\": \"http\", \"url\": \"https://example.com/webhook\", \"function_id\": \"<function_id>\", \"enabled\": true, \"domain_id\": \"<domain_id>\", \"rules\": {\"...\": \"...\"}, \"is_route_target\": true}",
+"gated": null
+},
+{
+"name": "primitive.update_endpoint",
+"summary": "Update a webhook endpoint",
+"example": "{\"id\": \"<id>\", \"url\": \"https://example.com/webhook\", \"enabled\": true, \"domain_id\": \"<domain_id>\", \"rules\": {\"...\": \"...\"}}",
+"gated": null
+},
+{
+"name": "primitive.delete_endpoint",
+"summary": "Delete a webhook endpoint",
+"example": "{\"id\": \"<id>\"}",
+"gated": null
+},
+{
+"name": "primitive.test_endpoint",
+"summary": "Send a test webhook",
+"example": "{\"id\": \"<id>\"}",
+"gated": null
+},
+{
+"name": "primitive.list_filters",
+"summary": "List filter rules",
+"example": "{}",
+"gated": null
+},
+{
+"name": "primitive.create_filter",
+"summary": "Create a filter rule",
+"example": "{\"type\": \"whitelist\", \"pattern\": \"*@example.com\", \"domain_id\": \"<domain_id>\"}",
+"gated": null
+},
+{
+"name": "primitive.update_filter",
+"summary": "Update a filter rule",
+"example": "{\"id\": \"<id>\", \"enabled\": true}",
+"gated": null
+},
+{
+"name": "primitive.delete_filter",
+"summary": "Delete a filter rule",
+"example": "{\"id\": \"<id>\"}",
+"gated": null
+},
+{
+"name": "primitive.list_wake_schedules",
+"summary": "List wake schedules",
+"example": "{}",
+"gated": "requires a plan/entitlement upgrade \u2014 Wake scheduling is not on the free agent plan"
+},
+{
+"name": "primitive.create_wake_schedule",
+"summary": "Create a wake schedule",
+"example": "{\"from_address\": \"<from_address>\", \"target_address\": \"<target_address>\", \"command\": \"<command>\", \"cron_expr\": \"<cron_expr>\", \"args\": {\"...\": \"...\"}, \"timezone\": \"<timezone>\", \"note\": \"<note>\"}",
+"gated": "requires a plan/entitlement upgrade \u2014 Wake scheduling is not on the free agent plan"
+},
+{
+"name": "primitive.get_wake_schedule",
+"summary": "Get a wake schedule",
+"example": "{\"id\": \"<id>\"}",
+"gated": "requires a plan/entitlement upgrade \u2014 Wake scheduling is not on the free agent plan"
+},
+{
+"name": "primitive.update_wake_schedule",
+"summary": "Update a wake schedule",
+"example": "{\"id\": \"<id>\", \"enabled\": true, \"command\": \"<command>\", \"args\": {\"...\": \"...\"}, \"cron_expr\": \"<cron_expr>\", \"timezone\": \"<timezone>\", \"from_address\": \"<from_address>\"}",
+"gated": "requires a plan/entitlement upgrade \u2014 Wake scheduling is not on the free agent plan"
+},
+{
+"name": "primitive.delete_wake_schedule",
+"summary": "Delete a wake schedule",
+"example": "{\"id\": \"<id>\"}",
+"gated": "requires a plan/entitlement upgrade \u2014 Wake scheduling is not on the free agent plan"
+},
+{
+"name": "primitive.run_wake_schedule",
+"summary": "Run a wake schedule now",
+"example": "{\"id\": \"<id>\"}",
+"gated": "requires a plan/entitlement upgrade \u2014 Wake scheduling is not on the free agent plan"
+},
+{
+"name": "primitive.list_wake_authorizations",
+"summary": "List wake authorizations",
+"example": "{\"recipient_endpoint_id\": \"<recipient_endpoint_id>\"}",
+"gated": "requires a plan/entitlement upgrade \u2014 Wake scheduling is not on the free agent plan"
+},
+{
+"name": "primitive.create_wake_authorization",
+"summary": "Create a wake authorization",
+"example": "{\"recipient_endpoint_id\": \"<recipient_endpoint_id>\", \"allowed_sender_domain\": \"<allowed_sender_domain>\", \"allowed_sender_address\": \"<allowed_sender_address>\", \"allowed_commands\": [\"...\"], \"note\": \"<note>\"}",
+"gated": "requires a plan/entitlement upgrade \u2014 Wake scheduling is not on the free agent plan"
+},
+{
+"name": "primitive.update_wake_authorization",
+"summary": "Update a wake authorization",
+"example": "{\"id\": \"<id>\", \"enabled\": true}",
+"gated": "requires a plan/entitlement upgrade \u2014 Wake scheduling is not on the free agent plan"
+},
+{
+"name": "primitive.delete_wake_authorization",
+"summary": "Delete a wake authorization",
+"example": "{\"id\": \"<id>\"}",
+"gated": "requires a plan/entitlement upgrade \u2014 Wake scheduling is not on the free agent plan"
+},
+{
+"name": "primitive.list_wake_dispatches",
+"summary": "List recent wake dispatches",
+"example": "{\"limit\": 20}",
+"gated": "requires a plan/entitlement upgrade \u2014 Wake scheduling is not on the free agent plan"
+},
+{
+"name": "primitive.list_routes",
+"summary": "List recipient routes",
+"example": "{}",
+"gated": "requires the recipient-routing feature \u2014 disabled on the free agent plan (the managed inbox routes to storage automatically)"
+},
+{
+"name": "primitive.create_route",
+"summary": "Create a recipient route",
+"example": "{\"match_type\": \"to\", \"pattern\": \"*@example.com\", \"endpoint_id\": \"<endpoint_id>\", \"function_id\": \"<function_id>\", \"domain_id\": \"<domain_id>\", \"priority\": 0, \"enabled\": true}",
+"gated": "requires the recipient-routing feature \u2014 disabled on the free agent plan (the managed inbox routes to storage automatically)"
+},
+{
+"name": "primitive.reorder_routes",
+"summary": "Reorder recipient routes",
+"example": "{\"updates\": [\"...\"]}",
+"gated": "requires the recipient-routing feature \u2014 disabled on the free agent plan (the managed inbox routes to storage automatically)"
+},
+{
+"name": "primitive.simulate_route",
+"summary": "Simulate routing for a recipient",
+"example": "{\"recipient\": \"someone@example.com\", \"event_type\": \"<event_type>\"}",
+"gated": "requires the recipient-routing feature \u2014 disabled on the free agent plan (the managed inbox routes to storage automatically)"
+},
+{
+"name": "primitive.update_route",
+"summary": "Update a recipient route",
+"example": "{\"id\": \"<id>\", \"match_type\": \"to\", \"pattern\": \"*@example.com\", \"endpoint_id\": \"<endpoint_id>\", \"domain_id\": \"<domain_id>\", \"priority\": 0, \"enabled\": true}",
+"gated": "requires the recipient-routing feature \u2014 disabled on the free agent plan (the managed inbox routes to storage automatically)"
+},
+{
+"name": "primitive.delete_route",
+"summary": "Delete a recipient route",
+"example": "{\"id\": \"<id>\"}",
+"gated": "requires the recipient-routing feature \u2014 disabled on the free agent plan (the managed inbox routes to storage automatically)"
+},
+{
+"name": "primitive.list_deliveries",
+"summary": "List webhook deliveries",
+"example": "{\"cursor\": \"<cursor>\", \"limit\": 20, \"email_id\": \"<email_id>\", \"status\": \"<status>\", \"date_from\": \"<date_from>\", \"date_to\": \"<date_to>\"}",
+"gated": null
+},
+{
+"name": "primitive.replay_delivery",
+"summary": "Replay a webhook delivery",
+"example": "{\"id\": \"<id>\"}",
+"gated": null
+},
+{
+"name": "primitive.get_send_permissions",
+"summary": "List send-permission rules",
+"example": "{}",
+"gated": null
+},
+{
+"name": "primitive.send_email",
+"summary": "Send outbound email",
+"example": "{\"from\": \"you@your-inbox.primitive.email\", \"to\": \"someone@example.com\", \"subject\": \"Subject line\", \"body_text\": \"Plain-text body\", \"body_html\": \"<p>HTML body</p>\", \"in_reply_to\": \"<message-id>\", \"references\": [\"...\"]}",
+"gated": null
+},
+{
+"name": "primitive.semantic_search",
+"summary": "Semantic search across received and sent mail",
+"example": "{\"query\": \"search terms\", \"mode\": \"<mode>\", \"corpus\": [\"...\"], \"search_in\": [\"...\"], \"exclude\": [\"...\"], \"date_from\": \"<date_from>\", \"date_to\": \"<date_to>\"}",
+"gated": "requires the Pro plan \u2014 semantic search over mail is not on the free agent plan"
+},
+{
+"name": "primitive.list_sent_emails",
+"summary": "List outbound sent emails",
+"example": "{\"cursor\": \"<cursor>\", \"limit\": 20, \"status\": \"<status>\", \"request_id\": \"<request_id>\", \"idempotency_key\": \"<idempotency_key>\", \"date_from\": \"<date_from>\", \"date_to\": \"<date_to>\"}",
+"gated": null
+},
+{
+"name": "primitive.get_sent_email",
+"summary": "Get a sent email by id",
+"example": "{\"id\": \"<id>\"}",
+"gated": null
+},
+{
+"name": "primitive.get_thread",
+"summary": "Get a conversation thread by id",
+"example": "{\"id\": \"<id>\"}",
+"gated": null
+},
+{
+"name": "primitive.list_functions",
+"summary": "List functions",
+"example": "{}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.create_function",
+"summary": "Deploy a function",
+"example": "{\"name\": \"<name>\", \"code\": \"<code>\", \"sourceMap\": \"<sourceMap>\", \"files\": {\"...\": \"...\"}}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.get_function",
+"summary": "Get a function",
+"example": "{\"id\": \"<id>\"}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.update_function",
+"summary": "Update and redeploy a function",
+"example": "{\"id\": \"<id>\", \"code\": \"<code>\", \"sourceMap\": \"<sourceMap>\", \"files\": {\"...\": \"...\"}}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.delete_function",
+"summary": "Delete a function",
+"example": "{\"id\": \"<id>\"}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.test_function",
+"summary": "Send a test invocation",
+"example": "{\"id\": \"<id>\", \"local_part\": \"<local_part>\"}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.get_function_test_run_trace",
+"summary": "Get a function test run trace",
+"example": "{\"id\": \"<id>\", \"run_id\": \"<run_id>\"}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.get_org_routing_topology",
+"summary": "Get the org's function routing topology",
+"example": "{}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.get_function_routing",
+"summary": "Get a function's current route binding",
+"example": "{\"id\": \"<id>\"}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.set_function_route",
+"summary": "Bind a route to a function",
+"example": "{\"id\": \"<id>\", \"target\": {\"...\": \"...\"}, \"takeover\": true}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.unset_function_route",
+"summary": "Unbind any route from a function",
+"example": "{\"id\": \"<id>\"}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.list_function_secrets",
+"summary": "List a function's secrets",
+"example": "{\"id\": \"<id>\"}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.create_function_secret",
+"summary": "Create or update a secret",
+"example": "{\"id\": \"<id>\", \"key\": \"namespace/key\", \"value\": {\"any\": \"json\"}}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.set_function_secret",
+"summary": "Set a secret by key",
+"example": "{\"id\": \"<id>\", \"key\": \"namespace/key\", \"value\": {\"any\": \"json\"}}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.delete_function_secret",
+"summary": "Delete a secret",
+"example": "{\"id\": \"<id>\", \"key\": \"namespace/key\"}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.list_org_secrets",
+"summary": "List org-level (global) secrets",
+"example": "{}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.create_org_secret",
+"summary": "Create or update an org secret",
+"example": "{\"key\": \"namespace/key\", \"value\": {\"any\": \"json\"}}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.set_org_secret",
+"summary": "Set an org secret by key",
+"example": "{\"key\": \"namespace/key\", \"value\": {\"any\": \"json\"}}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.delete_org_secret",
+"summary": "Delete an org secret",
+"example": "{\"key\": \"namespace/key\"}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.list_function_logs",
+"summary": "List a function's execution logs",
+"example": "{\"id\": \"<id>\", \"limit\": 20, \"cursor\": \"<cursor>\"}",
+"gated": "requires the developer plan \u2014 confirm an email at primitive.dev to upgrade; hosted Functions are not on the free agent plan"
+},
+{
+"name": "primitive.set_memory",
+"summary": "Set a memory",
+"example": "{\"key\": \"namespace/key\", \"value\": {\"any\": \"json\"}, \"scope\": {\"...\": \"...\"}, \"ttl_seconds\": 10, \"expires_at\": \"<expires_at>\", \"clear_ttl\": true, \"if_absent\": true}",
+"gated": null
+},
+{
+"name": "primitive.get_memory",
+"summary": "Get a memory",
+"example": "{\"key\": \"namespace/key\", \"scope_type\": \"<scope_type>\", \"scope_id\": \"<scope_id>\"}",
+"gated": null
+},
+{
+"name": "primitive.delete_memory",
+"summary": "Delete a memory",
+"example": "{\"key\": \"namespace/key\", \"scope_type\": \"<scope_type>\", \"scope_id\": \"<scope_id>\", \"if_version\": \"<if_version>\"}",
+"gated": null
+},
+{
+"name": "primitive.search_memories",
+"summary": "Search memories",
+"example": "{\"prefix\": \"search terms\", \"cursor\": \"<cursor>\", \"limit\": 20, \"include_value\": \"<include_value>\", \"updated_after\": \"<updated_after>\", \"updated_before\": \"<updated_before>\", \"scope_type\": \"<scope_type>\"}",
+"gated": null
+},
+{
+"name": "primitive.register_payout_address",
+"summary": "Register a payout address",
+"example": "{\"address\": \"someone@example.com\", \"network\": \"<network>\", \"signature\": \"<signature>\", \"issued_at\": \"<issued_at>\", \"label\": \"<label>\"}",
+"gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+},
+{
+"name": "primitive.list_payout_addresses",
+"summary": "List payout addresses",
+"example": "{}",
+"gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+},
+{
+"name": "primitive.create_email_challenge",
+"summary": "Create an email-native payment challenge",
+"example": "{\"from\": \"you@your-inbox.primitive.email\", \"to\": \"someone@example.com\", \"amount\": \"<amount>\", \"network\": \"<network>\", \"expires_in\": 10, \"resource\": \"<resource>\", \"description\": \"<description>\"}",
+"gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+},
+{
+"name": "primitive.create_challenge",
+"summary": "Create a payment challenge",
+"example": "{\"amount\": \"<amount>\", \"network\": \"<network>\", \"payer_org\": \"<payer_org>\", \"expires_in\": 10, \"resource\": \"<resource>\", \"description\": \"<description>\"}",
+"gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+},
+{
+"name": "primitive.get_challenge",
+"summary": "Get a payment challenge",
+"example": "{\"id\": \"<id>\"}",
+"gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+},
+{
+"name": "primitive.pay_challenge",
+"summary": "Pay a payment challenge",
+"example": "{\"id\": \"<id>\", \"payment\": {\"...\": \"...\"}}",
+"gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+},
+{
+"name": "primitive.get_spend_policy",
+"summary": "Get your spend policy",
+"example": "{}",
+"gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+},
+{
+"name": "primitive.update_spend_policy",
+"summary": "Update your spend policy",
+"example": "{\"paused\": true, \"max_per_payment\": \"<max_per_payment>\", \"max_per_day\": \"<max_per_day>\", \"allowlist\": [\"...\"]}",
+"gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+},
+{
+"name": "primitive.list_declined_payments",
+"summary": "List declined payments",
+"example": "{}",
+"gated": "requires the invite-only x402_payments + interactions_enabled entitlements"
+},
+{
+"name": "primitive.list_registries",
+"summary": "List the registries you own",
+"example": "{}",
+"gated": null
+},
+{
+"name": "primitive.create_registry",
+"summary": "Create a registry",
+"example": "{\"slug\": \"<slug>\", \"name\": \"<name>\", \"description\": \"<description>\", \"is_public\": true, \"publish_policy\": \"<publish_policy>\"}",
+"gated": null
+},
+{
+"name": "primitive.get_registry",
+"summary": "Get a public registry's metadata",
+"example": "{\"slug\": \"<slug>\"}",
+"gated": null
+},
+{
+"name": "primitive.update_registry",
+"summary": "Update a registry you own",
+"example": "{\"slug\": \"<slug>\", \"name\": \"<name>\", \"description\": \"<description>\", \"is_public\": true, \"publish_policy\": \"<publish_policy>\"}",
+"gated": null
+},
+{
+"name": "primitive.delete_registry",
+"summary": "Delete a registry you own",
+"example": "{\"slug\": \"<slug>\"}",
+"gated": null
+},
+{
+"name": "primitive.list_registry_agents",
+"summary": "List agents in a registry",
+"example": "{\"slug\": \"<slug>\", \"limit\": 20, \"cursor\": \"<cursor>\"}",
+"gated": null
+},
+{
+"name": "primitive.publish_agent",
+"summary": "Publish an agent into a registry",
+"example": "{\"slug\": \"<slug>\", \"address\": \"someone@example.com\", \"handle\": \"<handle>\", \"display_name\": \"<display_name>\", \"endpoint_id\": \"<endpoint_id>\", \"title\": \"<title>\", \"description\": \"<description>\"}",
+"gated": null
+},
+{
+"name": "primitive.resolve_registry_handle",
+"summary": "Resolve a registry handle to its agent",
+"example": "{\"slug\": \"<slug>\", \"handle\": \"<handle>\"}",
+"gated": null
+},
+{
+"name": "primitive.unpublish_agent",
+"summary": "Unpublish an agent from a registry",
+"example": "{\"slug\": \"<slug>\", \"handle\": \"<handle>\"}",
+"gated": null
+},
+{
+"name": "primitive.list_registry_requests",
+"summary": "List pending publication requests",
+"example": "{\"slug\": \"<slug>\", \"limit\": 20}",
+"gated": null
+},
+{
+"name": "primitive.decide_registry_request",
+"summary": "Approve or reject a publication request",
+"example": "{\"slug\": \"<slug>\", \"id\": \"<id>\", \"decision\": \"<decision>\"}",
+"gated": null
+},
+{
+"name": "primitive.define_agent",
+"summary": "Define an agent identity",
+"example": "{\"address\": \"someone@example.com\", \"display_name\": \"<display_name>\", \"endpoint_id\": \"<endpoint_id>\", \"title\": \"<title>\", \"description\": \"<description>\", \"tags\": [\"...\"]}",
+"gated": null
+},
+{
+"name": "primitive.get_agent",
+"summary": "Get an agent's public profile by address",
+"example": "{\"address\": \"someone@example.com\"}",
+"gated": null
+},
+{
+"name": "primitive.list_templates",
+"summary": "List function templates",
+"example": "{\"q\": \"search terms\", \"tag\": \"<tag>\", \"cursor\": \"<cursor>\", \"limit\": 20}",
+"gated": null
+},
+{
+"name": "primitive.get_template",
+"summary": "Get a function template",
+"example": "{\"id\": \"<id>\"}",
+"gated": null
+},
+{
+"name": "primitive.install_template",
+"summary": "Install a function template",
+"example": "{\"id\": \"<id>\", \"address\": \"someone@example.com\", \"domain\": \"<domain>\", \"variables\": {\"...\": \"...\"}, \"secrets\": {\"...\": \"...\"}}",
+"gated": "requires the developer plan \u2014 installs a template as a hosted Function"
+},
+{
+"name": "primitive.get_template_install",
+"summary": "Get template install status",
+"example": "{\"id\": \"<id>\"}",
+"gated": "requires the developer plan \u2014 tracks a hosted Function install"
+},
+{
+"name": "primitive.send_mail_batch",
+"summary": "Send a batch of emails in one request",
+"example": "{\"messages\": [\"...\"]}",
+"gated": null
+},
+{
+"name": "primitive.ask",
+"summary": "Ask about Primitive \u2014 NLWeb query (no authentication)",
+"example": "{\"q\": \"search terms\", \"prefer\": {\"...\": \"...\"}}",
+"gated": null
+},
+{
+"name": "primitive.get_health",
+"summary": "Service health check",
+"example": "{}",
+"gated": null
+}
+],
 "io.pilot.agentphone": [
 {
 "name": "agentphone.usage",

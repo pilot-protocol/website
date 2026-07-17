@@ -364,7 +364,13 @@ const bodyContent = `<h1>CLI Reference</h1>
   <h3 id="appstore-install">install</h3>
   <pre><code><span class="cmd">pilotctl</span> appstore install &lt;app-id&gt; [--force]
 <span class="cmd">pilotctl</span> appstore install &lt;bundle-dir&gt; --local [--force]</code></pre>
-  <p>Install by catalogue ID (fetches, verifies, and extracts), or sideload a local bundle with <code>--local</code> (sandboxed: <code>fs.read</code>/<code>fs.write</code> under <code>$APP</code> + <code>audit.log</code>; no net, no <code>key.sign</code>, no hooks). The daemon auto-spawns the app on install.</p>
+  <p>Install by catalogue ID (fetches, verifies, and extracts), or sideload a local bundle with <code>--local</code> (sandboxed: <code>fs.read</code>/<code>fs.write</code> under <code>$APP</code> + <code>audit.log</code>; no net, no <code>key.sign</code>, no hooks). The daemon auto-spawns the app on install. The last step prints the app's example-first <strong>&ldquo;Full usage demo&rdquo;</strong> — when to use it, the first call, and a few worked examples.</p>
+
+  <h3 id="appstore-outdated">outdated / upgrade</h3>
+  <pre><code><span class="cmd">pilotctl</span> appstore outdated
+<span class="cmd">pilotctl</span> appstore upgrade &lt;id&gt;
+<span class="cmd">pilotctl</span> appstore upgrade --all</code></pre>
+  <p><code>outdated</code> lists installed apps with a newer catalogue version, and also flags an app as <strong>rebuilt</strong> when a same-version bundle was republished. <code>upgrade</code> re-runs the verified install for one app (or <code>--all</code>) and the supervisor respawns it, refusing any downgrade. With <a href="#update">auto-update</a> enabled, installed app adapters are kept current automatically.</p>
 
   <h3 id="appstore-list">list</h3>
   <pre><code><span class="cmd">pilotctl</span> appstore list</code></pre>
@@ -372,7 +378,7 @@ const bodyContent = `<h1>CLI Reference</h1>
 
   <h3 id="appstore-call">call</h3>
   <pre><code><span class="cmd">pilotctl</span> appstore call &lt;id&gt; &lt;method&gt; [json-args] [--timeout &lt;dur&gt;]</code></pre>
-  <p>Dispatches an IPC call into an app and prints the JSON result on stdout. Every app exposes <code>&lt;app&gt;.help</code> listing its methods, params, and latency class. Default timeout 120s (also <code>$PILOT_APPSTORE_CALL_TIMEOUT</code>).</p>
+  <p>Dispatches an IPC call into an app and prints the JSON result on stdout. Every app exposes <code>&lt;app&gt;.help</code> listing its methods, params, and latency class. Default timeout 120s (also <code>$PILOT_APPSTORE_CALL_TIMEOUT</code>). After each call, a short <strong>next-steps</strong> block prints to <strong>stderr</strong> (stdout stays pure JSON for <code>jq</code>) — the recommended follow-up commands on success or failure, e.g. a corrected call for a missing param. Disable with <code>PILOT_NEXT_STEPS=off</code>; <code>--json</code> returns a structured <code>next_steps</code> object instead. See <a href="/docs/app-store#dynamic-context">Dynamic context on every call</a>.</p>
 
   <h3 id="appstore-status">status / caps / audit / actions</h3>
   <pre><code><span class="cmd">pilotctl</span> appstore status &lt;id&gt;
