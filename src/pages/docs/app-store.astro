@@ -137,28 +137,28 @@ next:  sqlite needs an explicit database — there is no default
 
   <h2 id="app-update-opt-out">Opting out of app auto-updates</h2>
 
-  <p>App auto-update is on by default: while <code>pilotctl update</code> is enabled, the <code>pilot-updater</code> service periodically runs <code>appstore upgrade --all</code> so installed apps stay current. To keep your apps pinned at the versions you installed — for example on a locked-down or reproducible host — opt out with the <code>APP_UPDATE_OPT_OUT</code> environment variable. It is <code>false</code> by default (app updates on).</p>
+  <p>App auto-update is on by default: while <code>pilotctl update</code> is enabled, the <code>pilot-updater</code> service periodically runs <code>appstore upgrade --all</code> so installed apps stay current. To keep your apps pinned at the versions you installed — for example on a locked-down or reproducible host — opt out with the <code>PILOT_APP_UPDATE_OPT_OUT</code> environment variable. It is <code>false</code> by default (app updates on).</p>
 
   <p>Set it in the updater's service environment, then restart the updater so it takes effect:</p>
 
   <pre><code><span class="comment"># Linux (systemd): set the env var on the pilot-updater service</span>
 <span class="cmd">sudo</span> systemctl edit pilot-updater
 <span class="comment">#   [Service]</span>
-<span class="comment">#   Environment=APP_UPDATE_OPT_OUT=true</span>
+<span class="comment">#   Environment=PILOT_APP_UPDATE_OPT_OUT=true</span>
 <span class="cmd">sudo</span> systemctl restart pilot-updater
 
-<span class="comment"># macOS (launchd): add APP_UPDATE_OPT_OUT to the plist's EnvironmentVariables, then reload</span>
+<span class="comment"># macOS (launchd): add PILOT_APP_UPDATE_OPT_OUT to the plist's EnvironmentVariables, then reload</span>
 <span class="cmd">launchctl</span> unload ~/Library/LaunchAgents/network.pilotprotocol.pilot-updater.plist
 <span class="cmd">launchctl</span> load   ~/Library/LaunchAgents/network.pilotprotocol.pilot-updater.plist</code></pre>
 
-  <p>With <code>APP_UPDATE_OPT_OUT=true</code> the updater no longer checks for or installs app updates — your installed apps stay exactly where they are. Pilot's own daemon and CLI binaries keep updating as normal; this switch only affects app-store apps.</p>
+  <p>With <code>PILOT_APP_UPDATE_OPT_OUT=true</code> the updater no longer checks for or installs app updates — your installed apps stay exactly where they are. Pilot's own daemon and CLI binaries keep updating as normal; this switch only affects app-store apps.</p>
 
   <h3 id="app-update-opt-in">Switching app updates back on</h3>
 
-  <p>Opting back in is the reverse: remove <code>APP_UPDATE_OPT_OUT</code> from the updater's environment (or set it to <code>false</code>, the default) and restart the updater. The next cycle resumes <code>appstore upgrade --all</code> and brings your apps current. You can always upgrade by hand with <code>pilotctl appstore upgrade &lt;id&gt;</code> or <code>upgrade --all</code>, regardless of the setting.</p>
+  <p>Opting back in is the reverse: remove <code>PILOT_APP_UPDATE_OPT_OUT</code> from the updater's environment (or set it to <code>false</code>, the default) and restart the updater. The next cycle resumes <code>appstore upgrade --all</code> and brings your apps current. You can always upgrade by hand with <code>pilotctl appstore upgrade &lt;id&gt;</code> or <code>upgrade --all</code>, regardless of the setting.</p>
 
   <div class="callout">
-    <p><strong>Truthy values.</strong> <code>APP_UPDATE_OPT_OUT</code> reads <code>1</code>, <code>true</code>, <code>yes</code>, or <code>on</code> (case-insensitive) as opted-out; anything else — including unset — means opted-in. The value is read when the updater starts, so restart it after a change. (The legacy <code>PILOT_UPDATER_NO_APP_UPGRADE</code> variable still works as an alias.)</p>
+    <p><strong>Truthy values.</strong> <code>PILOT_APP_UPDATE_OPT_OUT</code> reads <code>1</code>, <code>true</code>, <code>yes</code>, or <code>on</code> (case-insensitive) as opted-out; anything else — including unset — means opted-in. The value is read when the updater starts, so restart it after a change. (The legacy <code>PILOT_UPDATER_NO_APP_UPGRADE</code> variable still works as an alias.)</p>
   </div>
 
   <h2 id="building">Building an app</h2>
