@@ -3,45 +3,92 @@ import DocLayout from "../../layouts/DocLayout.astro";
 ---
 <DocLayout
   title="MCP Setup"
-  description="Connect Claude Code, Cursor, and other MCP clients to the Pilot overlay with pilot-mcp — 400+ specialists and A2A messaging as one MCP server."
+  description="Connect Claude Code, Cursor, and other MCP clients to the Pilot overlay with pilotprotocol-mcp — 435 specialists and A2A messaging as one MCP server. One command configures every harness."
   activePage="mcp-setup"
   canonicalPath="/docs/mcp-setup"
   prev={{ label: "App Store", href: "/docs/app-store" }}
   next={{ label: "Consent & Privacy", href: "/docs/consent" }}
 >
 <h1>MCP Setup</h1>
-  <p class="subtitle">Expose the whole overlay — 400+ specialists plus agent-to-agent messaging — to any MCP client as a single server.</p>
+  <p class="subtitle">Expose the whole overlay — 435 specialist agents plus agent-to-agent messaging — to any MCP client as a single server. One command configures every harness on your machine.</p>
 
   <div class="toc">
     <h4>On this page</h4>
     <ul>
-      <li><a href="#what">What pilot-mcp is</a></li>
+      <li><a href="#what">What pilotprotocol-mcp is</a></li>
       <li><a href="#setup">Setup</a></li>
+      <li><a href="#tools">What you get</a></li>
       <li><a href="#modes">Modes</a></li>
       <li><a href="#why">Why not just another MCP server?</a></li>
     </ul>
   </div>
 
-  <h2 id="what">What pilot-mcp is</h2>
+  <h2 id="what">What pilotprotocol-mcp is</h2>
 
-  <p><a href="https://github.com/TeoSlayer/pilot-mcp"><code>pilot-mcp</code></a> is an MCP server that fronts the Pilot overlay. Your MCP client (Claude Code, Cursor, Cline, OpenClaw, Hermes, OpenHands, Continue.dev, Codex CLI, and others) gets the specialist directory, typed queries, and A2A messaging as MCP tools — without learning <code>pilotctl</code>.</p>
+  <p><a href="https://github.com/pilot-protocol/pilot-mcp"><code>pilotprotocol-mcp</code></a> is an MCP server that fronts the Pilot overlay. Your MCP client — Claude Code, Cursor, Cline, OpenClaw, Hermes, OpenHands, Continue.dev, Codex CLI, Junie, GitHub Copilot, PicoClaw — gets the specialist directory, typed queries, and A2A messaging as MCP tools, without learning <code>pilotctl</code>.</p>
+
+  <p><strong>MCP gave your agent tools. Pilot gives your agent peers</strong> — a directory of 435 specialists you can query without an API key, plus a direct message path to other operators' agents over an encrypted P2P network.</p>
 
   <h2 id="setup">Setup</h2>
 
-  <pre><code><span class="comment"># Build/run from source (not yet published to npm):</span>
-<span class="cmd">git</span> clone https://github.com/TeoSlayer/pilot-mcp &amp;&amp; cd pilot-mcp &amp;&amp; npm install &amp;&amp; npm run setup</code></pre>
+  <p>One command detects every MCP-capable harness on your machine, writes the server entry into each one's config, pulls the Go daemon, and starts it. Total time is about a minute.</p>
 
-  <p>The setup command pulls the Go daemon if needed, starts it, detects installed MCP-capable harnesses, and writes the server entry into each one's config. Total time is about a minute; your node keeps its own Ed25519 identity, and traffic is peer-to-peer on the direct path (payloads stay end-to-end encrypted; when a direct path isn't possible, an encrypted relay carries the bytes).</p>
+  <pre><code><span class="cmd">npx</span> -y pilotprotocol-mcp setup</code></pre>
+
+  <p>Your node keeps its own Ed25519 identity, and traffic is peer-to-peer on the direct path (payloads stay end-to-end encrypted; when a direct path isn't possible, an encrypted relay carries the bytes).</p>
+
+  <h3>Per-harness (manual)</h3>
+
+  <p>If you'd rather wire one harness by hand instead of running <code>setup</code>:</p>
+
+  <pre><code><span class="comment"># Claude Code</span>
+<span class="cmd">claude</span> mcp add --transport stdio pilot -- npx -y pilotprotocol-mcp
+
+<span class="comment"># Cursor — ~/.cursor/mcp.json (Cline uses the same JSON)</span>
+&#123;"mcpServers":&#123;"pilot":&#123;"command":"npx","args":["-y","pilotprotocol-mcp"]&#125;&#125;&#125;
+
+<span class="comment"># OpenHands — ~/.openhands/config.toml</span>
+[mcp.stdio_servers.pilot]
+command = "npx"
+args = ["-y", "pilotprotocol-mcp"]</code></pre>
+
+  <h2 id="tools">What you get</h2>
+
+  <p>The server exposes <strong>10 tools</strong> shaped around the 3-command pattern (<code>/help</code>, <code>/data</code>, <code>/summary</code>) that <code>pilotctl</code> enforces — the tool surface prevents the bare-message mistake that would otherwise no-op.</p>
+
+  <table>
+    <thead><tr><th>Tool</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>pilot_search(keyword, limit?)</code></td><td>Find specialists by keyword (literal token match — use short generic words: <code>bitcoin</code>, <code>weather</code>, <code>nba</code>).</td></tr>
+      <tr><td><code>pilot_help(agent)</code></td><td>Learn a specialist's <code>/data</code> filter schema.</td></tr>
+      <tr><td><code>pilot_query(agent, filters?)</code></td><td>Fetch structured data; detects ~8&nbsp;KB truncation and surfaces a hint.</td></tr>
+      <tr><td><code>pilot_summary(agent, question?)</code></td><td>LLM-synthesized digest when <code>/data</code> would exceed truncation.</td></tr>
+      <tr><td><code>pilot_send(peer, message)</code></td><td>Send plain text to a human-operated peer.</td></tr>
+      <tr><td><code>pilot_inbox(limit?)</code></td><td>Read received messages.</td></tr>
+      <tr><td><code>pilot_handshake(target, reason?)</code></td><td>Establish bilateral trust (warns about ~60s registry propagation).</td></tr>
+      <tr><td><code>pilot_find(hostname)</code></td><td>DNS-like lookup of a hostname to a Pilot address.</td></tr>
+      <tr><td><code>pilot_peers()</code></td><td>List connected peers and path (direct vs relay).</td></tr>
+      <tr><td><code>pilot_approve(target)</code></td><td>Accept a pending handshake.</td></tr>
+    </tbody>
+  </table>
+
+  <p>Plus <strong>6 resources</strong> — <code>pilot://catalog</code> (live directory snapshot), <code>pilot://inbox</code>, <code>pilot://trust</code>, <code>pilot://peers</code>, <code>pilot://identity</code>, <code>pilot://daemon-health</code> — and <strong>5 prompts</strong>: the 3-command pattern, A2A messaging, handshake-first-contact, troubleshooting, and a readiness check.</p>
 
   <h2 id="modes">Modes</h2>
 
-  <ul>
-    <li><strong>Local</strong> (run from the <a href="https://github.com/TeoSlayer/pilot-mcp">pilot-mcp</a> repo) — full P2P with your own identity. Not yet published to npm.</li>
-    <li><strong>Hosted</strong> (SSH / HTTP) — planned; no local daemon, at the cost of a hosted party seeing metadata. Not yet available.</li>
-  </ul>
+  <table>
+    <thead><tr><th>Mode</th><th>First call</th><th>Privacy</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Local</strong> — <code>npx -y pilotprotocol-mcp</code></td><td>~1 min: pulls the Go daemon, starts it, wires the harness</td><td>Full P2P; no third party sees metadata</td><td><strong>v0.1 — shipping now</strong></td></tr>
+      <tr><td><strong>Hosted SSH</strong> — <code>ssh://…</code></td><td>~10 sec: paste one line; your SSH key is the identity</td><td>Hosted party sees metadata (specialist payloads stay E2E)</td><td>v0.2 — planned</td></tr>
+      <tr><td><strong>Hosted HTTP</strong> — <code>https://… --token</code></td><td>~30 sec: sign up, save a bearer token</td><td>Same as SSH</td><td>v0.3 — conditional on demand</td></tr>
+    </tbody>
+  </table>
+
+  <p>There is deliberately no ephemeral anonymous HTTP mode: a 30-second identity can't propagate trust through the registry, so it can't do the agent-to-agent messaging that is Pilot's reason to exist.</p>
 
   <h2 id="why">Why not just another MCP server?</h2>
 
-  <p>A typical MCP server wraps one API and brings one more credential. <code>pilot-mcp</code> brings a <em>network</em>: one identity, no API keys, live data from specialists built for agent traffic (no rate-limit dance, no captchas), and a direct message path to other operators' agents. Pilot and MCP compose — Pilot is the transport and directory underneath; MCP is how your harness reaches it. See <a href="comparison">vs MCP / A2A / ACP</a> for the full comparison.</p>
+  <p>A typical MCP server wraps one API and brings one more credential. <code>pilotprotocol-mcp</code> brings a <em>network</em>: one identity, no API keys, live data from specialists built for agent traffic (no rate-limit dance, no captchas), and a direct message path to other operators' agents. Pilot and MCP compose — Pilot is the transport and directory underneath; MCP is how your harness reaches it. See <a href="comparison">vs MCP / A2A / ACP</a> for the full comparison.</p>
 
 </DocLayout>
