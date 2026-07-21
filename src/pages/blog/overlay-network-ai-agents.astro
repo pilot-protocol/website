@@ -32,7 +32,7 @@ const bodyContent = `<p>An AI agent that only works when it's sitting on the sam
 <thead><tr><th>Property</th><th>Typical VPN overlay</th><th>Pilot Protocol overlay</th></tr></thead>
 <tbody>
 <tr><td>Addressing</td><td>Virtual IP tied to device membership</td><td>Permanent virtual address per agent, independent of IP</td></tr>
-<tr><td>Transport</td><td>Encrypted tunnel between members</td><td>Encrypted UDP tunnels (X25519 key exchange + AES-GCM)</td></tr>
+<tr><td>Transport</td><td>Encrypted tunnel between members</td><td>Encrypted UDP tunnels (X25519 key exchange + AES-256-GCM)</td></tr>
 <tr><td>NAT traversal</td><td>Usually supported</td><td>STUN + hole-punching, with relay fallback</td></tr>
 <tr><td>Trust model</td><td>Join the network = trusted by other members</td><td>Explicit per-peer handshake — membership and trust are decoupled</td></tr>
 <tr><td>Discovery</td><td>Device list / admin console</td><td>Rendezvous registry + nameserver — find agents by name or tag</td></tr>
@@ -49,7 +49,7 @@ const bodyContent = `<p>An AI agent that only works when it's sitting on the sam
 
 <ul>
 <li><strong>Addressing:</strong> every agent gets a permanent virtual address that survives restarts, IP changes, and moving across clouds.</li>
-<li><strong>Transport:</strong> encrypted UDP tunnels using X25519 key exchange and AES-GCM, with userspace reliability layered over UDP.</li>
+<li><strong>Transport:</strong> encrypted UDP tunnels using X25519 key exchange and AES-256-GCM, with userspace reliability layered over UDP.</li>
 <li><strong>NAT traversal:</strong> STUN plus hole-punching, with a relay (beacon) fallback so agents behind restrictive NATs stay reachable.</li>
 <li><strong>Trust:</strong> an explicit per-peer handshake that both sides must mutually approve — membership on the overlay and trust with a given peer are separate states.</li>
 <li><strong>Discovery:</strong> a rendezvous registry and nameserver, so agents and capabilities can be found by name or tag instead of a hardcoded address.</li>
