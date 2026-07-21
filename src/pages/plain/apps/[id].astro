@@ -1,0 +1,93 @@
+---
+// Plain-text (no-JS) twin for the app detail page's "Full usage demo" section.
+// Hand-written, data-driven from src/data/apps.ts (via app-demos.json) — it carries
+// no regen provenance stamp, so scripts/check-plain-coverage.mjs skips the drift check.
+// Only apps that ship a product_demo get a page here; the rest have no plain detail twin.
+import PlainLayout from '../../../layouts/PlainLayout.astro';
+import { apps } from '../../../data/apps';
+
+export function getStaticPaths() {
+  return apps.filter((a) => a.productDemo).map((app) => ({ params: { id: app.id }, props: { app } }));
+}
+const { app } = Astro.props;
+const demo = app.productDemo!;
+const title = `${app.name} — Full usage demo — Pilot Protocol`;
+const canonical = `https://pilotprotocol.network/plain/apps/${app.id}`;
+---
+<PlainLayout title={title} description={app.tagline} canonical={canonical}>
+
+<p><a href={`/apps/${app.id}`}>[ Styled app page &rarr; ]</a></p>
+
+<h1>{app.name} — Full usage demo</h1>
+
+<p>{app.tagline}.</p>
+
+<h2>Install</h2>
+<pre><code>pilotctl appstore install {app.id}</code></pre>
+
+<h2>When to use</h2>
+<p>{demo.when_to_use}</p>
+
+<h2>Run this first{demo.quickstart.goal ? ` — ${demo.quickstart.goal}` : ''}</h2>
+<pre><code>{demo.quickstart.command}</code></pre>
+{demo.quickstart.expect && <p>Expect: <code>{demo.quickstart.expect}</code></p>}
+{demo.metered && demo.quickstart.cost && <p>Cost: {demo.quickstart.cost}</p>}
+{demo.quickstart.note && <p>{demo.quickstart.note}</p>}
+
+{demo.examples.length > 0 && (
+<>
+<h2>Worked examples</h2>
+{demo.examples.map((ex) => (
+<>
+<h3>{ex.title ?? ex.goal ?? 'Example'}{demo.metered && ex.cost ? ` — ${ex.cost}` : ''}</h3>
+<pre><code>{ex.command}</code></pre>
+{ex.expect && <p>Expect: <code>{ex.expect}</code></p>}
+{ex.note && <p>{ex.note}</p>}
+</>
+))}
+</>
+)}
+
+{demo.metered && demo.cost && (
+<>
+<h2>What it costs</h2>
+<p>{demo.cost.free_budget} free budget{demo.cost.unit ? ` (billed in ${demo.cost.unit})` : ''}.</p>
+<table>
+  <thead><tr><th>Operation</th><th>Price</th><th>Notes</th></tr></thead>
+  <tbody>
+    {demo.cost.operations.map((op) => (
+      <tr><td><code>{op.op}</code></td><td>{op.price}</td><td>{op.note ?? ''}</td></tr>
+    ))}
+  </tbody>
+</table>
+{demo.cost.worked_total && <p>{demo.cost.worked_total}</p>}
+{demo.cost.check_balance && (
+<>
+<p>Check your balance:</p>
+<pre><code>{demo.cost.check_balance}</code></pre>
+</>
+)}
+</>
+)}
+
+{demo.gotchas.length > 0 && (
+<>
+<h2>Good to know</h2>
+<ul>{demo.gotchas.map((g) => <li>{g}</li>)}</ul>
+</>
+)}
+
+{demo.next.length > 0 && (
+<>
+<h2>Next</h2>
+<ul>{demo.next.map((n) => <li><code>{n}</code></li>)}</ul>
+</>
+)}
+
+<h2>Related</h2>
+<ul>
+  <li><a href={`/apps/${app.id}`}>{app.name} — full styled app page</a></li>
+  <li><a href="/plain/app-store">App Store</a></li>
+</ul>
+
+</PlainLayout>
