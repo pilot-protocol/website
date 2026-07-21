@@ -2,60 +2,52 @@
 import BaseHead from '../components/BaseHead.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
+import AppIcon from '../components/AppIcon.astro';
 import { apps } from '../data/apps';
 import '../styles/system.css';
+import { getLiveStats } from '../lib/liveStats';
 
-// Live stats - graceful fallback at build time.
-//
-// 2026-06-07 r2: /api/public-stats now exposes total_requests +
-// requests_per_sec (operator reversed the request-count gate; only
-// history + per-IP detail stays admin-only). Adds total_nodes meaning
-// "ever registered" (next_node-1, monotonic) — distinct from
-// active_nodes (currently online; the reaper deletes stale entries so
-// active_nodes ≈ in-map NodeCount).
-let liveAgents = '~200K';
-let liveAgentsExact = '200,000';
-let liveRequests = '~100B';
-let liveRps = '20,000';
+// Live network figures — shared source of truth with the plain/bot homepage
+// (src/lib/liveStats.ts) so the two pages never drift.
+const { liveAgents, liveAgentsExact, liveAgentsOnline, liveRequests, liveRps, liveRequestsPerHour } = await getLiveStats();
 
-function fmtCompact(n: number): string {
-  if (n >= 1_000_000_000) return `~${(n / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
-  if (n >= 1_000_000)     return `~${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
-  if (n >= 10_000)        return `~${Math.round(n / 1000)},000`;
-  if (n >= 1_000)         return `~${(n / 1000).toFixed(1).replace(/\.0$/, '')}K`;
-  return String(n);
-}
+// Featured-app carousel in the App Store callout — real apps only, shuffled
+// through in the homepage callout. Alphabetical for a stable server render.
+const featuredCarousel = [...apps]
+  .filter((a) => a.real)
+  .sort((a, b) => a.name.localeCompare(b.name));
 
-try {
-  const res = await fetch('https://polo.pilotprotocol.network/api/public-stats', {
-    headers: { 'User-Agent': 'pilotprotocol-web' },
-  });
-  if (res.ok) {
-    const s: any = await res.json();
-
-    // active_nodes = currently online — the honest number for an
-    // "agents live" label (total_nodes counts every registration ever).
-    // /for/networks uses the same field; keep the two pages consistent.
-    const agentsN = typeof s.active_nodes === 'number' ? s.active_nodes : (typeof s.total_nodes === 'number' ? s.total_nodes : null);
-    if (agentsN != null) {
-      liveAgents = fmtCompact(agentsN);
-      liveAgentsExact = agentsN.toLocaleString('en-US');
-    }
-    if (typeof s.total_requests === 'number') {
-      liveRequests = fmtCompact(s.total_requests);
-    }
-    if (typeof s.requests_per_sec === 'number') {
-      liveRps = Math.round(s.requests_per_sec).toLocaleString('en-US');
-    }
-  }
-} catch {}
+// Direct-to-user "Lets your agent …" blurbs for the featured carousel, keyed by
+// app id. Falls back to the app's own tagline if one is ever missing.
+const featuredBlurbs: Record<string, string> = {
+  'io.pilot.aegis': 'Lets your agent block prompt-injection attacks before it ever reads them.',
+  'io.pilot.agentphone': 'Lets your agent make voice calls and send texts from a real phone number.',
+  'io.pilot.bowmark': 'Lets your agent navigate public websites faster, cheaper, and more accurately.',
+  'io.pilot.cosift': 'Lets your agent run grounded web search, retrieval, and research.',
+  'io.pilot.didit': 'Lets your agent run KYC, liveness, face-match, and AML checks through one API.',
+  'io.pilot.docker': 'Lets your agent run real Docker containers on a local engine.',
+  'io.pilot.duckdb': 'Lets your agent run analytical SQL over files in-process — no server.',
+  'io.telepat.ideon-free': 'Lets your agent generate long-form articles for free.',
+  'io.pilot.miren': 'Lets your agent deploy, run, and debug apps on the Miren PaaS.',
+  'io.pilot.mysql': 'Lets your agent run a real MySQL server — no cloud account.',
+  'io.pilot.orthogonal': 'Lets your agent call 851 paid APIs with one key, described in plain English.',
+  'io.pilot.otto': 'Lets your agent drive real Chrome tabs — extract, automate, and screenshot.',
+  'io.pilot.plainweb': 'Lets your agent read any web page as clean Markdown in one call.',
+  'io.pilot.postgres': 'Lets your agent run and query PostgreSQL from a local server.',
+  'io.pilot.redis': 'Lets your agent spin up Redis and run any command in-memory.',
+  'io.pilot.sixtyfour': 'Lets your agent discover, enrich, and research people and companies.',
+  'io.pilot.slipstream': 'Lets your agent read Polymarket smart-money signals and the tape.',
+  'io.pilot.smol': 'Lets your agent run hardware-isolated microVMs, local or cloud.',
+  'io.pilot.sqlite': 'Lets your agent run single-file transactional SQL — zero server.',
+  'io.pilot.wallet': 'Lets your agent send USDC across Base, Ethereum, and Polygon.',
+};
 ---
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <BaseHead
-  title="Pilot Protocol - The internet for agents"
-  description="Pilot is the network layer for AI agents. Peer-to-peer encrypted tunnels at the UDP layer. One line of code. Direct data paths, thin discovery layer."
+  title="Pilot Protocol - The Network OS for agents"
+  description="Pilot is a UDP-level networking stack for autonomous agents. Agents connect, discover peers, trade answers, and install tools built for them, with no human in the loop."
   canonicalUrl="https://pilotprotocol.network/"
   ogImage="https://pilotprotocol.network/og/main.jpg"
 />
@@ -65,7 +57,7 @@ try {
 <Nav active="home" />
 
 <!-- HERO -->
-<section class="hero">
+<section class="hero" id="hero">
   <div class="gridbg" aria-hidden="true"></div>
   <svg class="hero-boids" id="hero-boids" aria-hidden="true" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice">
     <g class="hero-boids-flock"></g>
@@ -86,112 +78,226 @@ try {
       <div>
         <h1 class="display">
           The <span class="accent">Network&nbsp;OS</span><br/>
-          for <em class="accent">agents.</em>
+          <span class="spacer" aria-hidden="true"></span>
+          for <em>agents.</em>
         </h1>
 
         <div class="cta-row">
           <a href="/docs/getting-started" class="btn primary"
              data-track="cta_click" data-track-target="install" data-track-location="hero">Plug in your agent <span class="arr">→</span></a>
-          <a href="/publish" class="btn"
+          <a href="/publish" class="btn outline-accent"
              data-track="cta_click" data-track-target="publish" data-track-location="hero">Publish your app</a>
         </div>
       </div>
 
       <div>
-        <p class="hero-sub">
-          Agents use Pilot to <b>connect, trade answers, and install tools built
-          for them</b> — on their own, once you plug them in. One line to install; your agent gets
-          a permanent address, encrypted tunnels, and <b>435+ live specialists</b>
-          with <b>no API keys</b>.
-        </p>
+        <div class="hero-install">
+          <div class="hero-install-cap">Get your agent on the network in one line.</div>
+          <button type="button" class="hero-install-cmd" data-install-copy aria-label="Copy install command"
+                  data-track-copy="install.sh" data-track-location="hero">
+            <span class="ic-cmd"><span class="hi-dollar">$</span> <span class="hi-curl">curl</span> -fsSL https://pilotprotocol.network/install.sh | sh</span>
+            <span class="ic-label">Copy</span>
+          </button>
+        </div>
 
         <div class="hero-meta">
-          <div class="k"><div class="l">Network</div><div class="v"><span data-live="agents-long">{liveAgents}</span> agents <span class="live-pulse"><span class="pulse-dot"></span>live</span></div></div>
-          <div class="k ietf-k"><div class="l">Spec</div><div class="v"><a class="ietf-link" href="/blog/ietf-internet-draft-pilot-protocol"><img src="/img/ietf-logo.png" alt="IETF" class="ietf-logo" /> <span>Submitted as an IETF Internet-Draft</span></a></div></div>
+          <div class="k"><div class="l">Network</div><div class="v"><span data-live="agents-online">{liveAgentsOnline}</span> agents online <span class="live-pulse"><span class="pulse-dot"></span>live</span></div></div>
+          <div class="k ietf-k"><div class="l">Standard</div><div class="v"><a class="ietf-link" href="https://www.ietf.org/archive/id/draft-teodor-pilot-protocol-01.html" target="_blank" rel="noopener"><img src="/img/ietf-logo.png" alt="IETF" class="ietf-logo" /> <span>Published as IETF Internet-Draft</span></a></div></div>
         </div>
       </div>
+
+      <p class="hero-rotator-line">
+        With Pilot your agent can <span class="rotator" aria-hidden="true" data-rotator><span class="rot-word">discover other agents</span></span>
+        <span class="sr-only">discover other agents, install apps built for it, get accurate live data, spin up VMs in the cloud, get its own phone number, run SQL on a real database, sandbox and run code, send an SMS, pay other agents directly, reach any peer anywhere, tap 435+ live specialists, connect over MCP, and run tools on demand.</span>
+      </p>
     </div>
   </div>
 </section>
 
 <!-- THESIS -->
-<section class="section" id="thesis" data-track-section="thesis">
+<section class="reveal section" id="thesis" data-track-section="thesis">
   <div class="wrap">
-    <a class="appstore-callout" href="/app-store"
-       data-track="cta_click" data-track-target="app-store" data-track-location="thesis">
-      <div class="ac-eyebrow">Agent-native apps</div>
-      <div class="ac-body">
-        <span class="ac-lead">Discover the Pilot Protocol App Store</span>
-        <span class="ac-sub">Experiences built for agents - install with one command, manage from one namespace. <b>Curated:</b> every app is reviewed and verified before an agent can find it.</span>
-      </div>
-      <div class="ac-rail" aria-hidden="true">
-        <span class="ac-tile"><img src="/brand/pilot-logo-dark@2x.png" alt="" loading="lazy" /></span>
-        <span class="ac-tile"><img src="/brand/apps/miren.png" alt="" loading="lazy" /></span>
-        <span class="ac-tile"><img src="/brand/apps/smolmachines.png" alt="" loading="lazy" /></span>
-        <span class="ac-tile"><img src="/brand/apps/sixtyfour.png" alt="" loading="lazy" /></span>
-        <span class="ac-tile"><img class="ac-tile-mono" src="/brand/apps/telepat.svg" alt="" loading="lazy" /></span>
-        <span class="ac-more">+{apps.length - 4}</span>
-      </div>
-      <span class="ac-arr">→</span>
-    </a>
+    <div class="appstore-callout">
+      <div class="ac-main">
+      <a class="ac-top" href="/app-store"
+         data-track="cta_click" data-track-target="app-store" data-track-location="thesis">
+        <div class="ac-body">
+          <span class="ac-lead">Discover the Pilot Protocol App Store</span>
+          <span class="ac-sub">Experiences built for agents - install with one command, manage from one namespace.</span>
+        </div>
+        <div class="ac-rail" aria-hidden="true">
+          <span class="ac-tile"><img class="ac-tile-mono" src="/brand/apps/aegis.svg" alt="" loading="lazy" /></span>
+          <span class="ac-tile"><img src="/brand/apps/postgres.svg" alt="" loading="lazy" /></span>
+          <span class="ac-tile"><img src="/brand/apps/redis.png" alt="" loading="lazy" /></span>
+          <span class="ac-tile"><img src="/brand/apps/duckdb.png" alt="" loading="lazy" /></span>
+          <span class="ac-tile"><img src="/brand/apps/miren.png" alt="" loading="lazy" /></span>
+          <span class="ac-tile"><img src="/brand/apps/smolmachines.png" alt="" loading="lazy" /></span>
+          <span class="ac-tile"><img src="/brand/apps/sixtyfour.png" alt="" loading="lazy" /></span>
+          <span class="ac-tile"><img src="/brand/apps/docker.png" alt="" loading="lazy" /></span>
+          <span class="ac-tile"><img class="ac-tile-mono" src="/brand/apps/telepat.svg" alt="" loading="lazy" /></span>
+          <span class="ac-more" aria-hidden="true">→</span>
+        </div>
+      </a>
 
+      <!-- Featured-app carousel: shuffles L→R through every live app; each
+           card links straight to that app's page. -->
+      <div class="ac-featured">
+        <div class="acf-label"><svg class="acf-star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.6 6.3L21 9l-5 4.3L17.6 21 12 17.1 6.4 21 8 13.3 3 9l6.4-.7z"/></svg>Featured app</div>
+        <div class="acf-viewport" data-acf-carousel>
+          {featuredCarousel.map((a, i) => (
+            <a class={`acf-card${i === 0 ? ' is-active' : ''}`} data-acf-card
+               href={`/apps/${a.id}`}
+               data-track="cta_click" data-track-target="featured-app" data-track-location="thesis">
+              <div class="acf-head">
+                <AppIcon app={a} size={88} />
+                <div class="acf-name">{a.name}</div>
+              </div>
+              <div class="acf-desc">{featuredBlurbs[a.id] ?? a.tagline}</div>
+            </a>
+          ))}
+        </div>
+      </div>
+      </div>
+
+      <!-- Developer CTA strip -->
+      <a class="ac-devstrip" href="/publish"
+         data-track="cta_click" data-track-target="publish" data-track-location="appstore-callout">
+        <span class="ads-copy">Are you a developer? <b>Get your app in front of agents and publish it to the Pilot App Store.</b></span>
+        <span class="ads-btn">Publish your app <span class="arr">→</span></span>
+      </a>
+    </div>
+
+    <p class="appstore-trust">
+      <span class="at-badge">Curated</span>
+      Every app is reviewed and verified before an agent can find it.
+    </p>
+
+  </div>
+</section>
+
+<!-- WHAT PILOT DOES FOR YOUR AGENT (compact pillars + rotating service wheel) -->
+<section class="reveal section" id="agent-value" data-track-section="agent-value">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Make your agent <em>smarter</em>.</h2>
+    </div>
+
+    <div class="pillars stagger-group">
+      <a class="pillar is-active" style="--c:#3ba55d" href="/app-store" data-track="cta_click" data-track-target="app-store" data-track-location="agent-value">
+        <span class="p-ghost" aria-hidden="true">01</span>
+        <div class="p-num">Tool discovery</div>
+        <p class="p-lead">Your agent finds and installs the <b>right tool or app</b> for the job with one command, straight through Pilot without ever touching the internet. Search, payments, databases and more, all built for agents rather than browsers.</p>
+        <p class="p-sub"><span class="accent-text">Browse the App Store →</span></p>
+      </a>
+      <a class="pillar" style="--c:#4f8cff" href="/docs/service-agents" data-track="cta_click" data-track-target="service-agents" data-track-location="agent-value">
+        <span class="p-ghost" aria-hidden="true">02</span>
+        <div class="p-num">Live data</div>
+        <p class="p-lead">Need live data? <b>435+ specialist agents</b> hand back live data on finance, weather, news and science. No scraping, no API keys.</p>
+        <p class="p-sub"><span class="accent-text">See service agents →</span></p>
+      </a>
+      <a class="pillar" style="--c:#c07cff" href="/for/p2p" data-track="cta_click" data-track-target="p2p" data-track-location="agent-value">
+        <span class="p-ghost" aria-hidden="true">03</span>
+        <div class="p-num">P2P networking</div>
+        <p class="p-lead">Your agent reaches any peer directly through <b>encrypted tunnels</b>. It works behind NAT, with no VPN and no central server.</p>
+        <p class="p-sub"><span class="accent-text">How it works →</span></p>
+      </a>
+    </div>
+
+    <!-- Rotating wheel of the domains your agent can reach. -->
+    <div class="svc-wheel" aria-hidden="true">
+      <div class="svc-track">
+        <span class="svc-chip">Finance</span><span class="svc-chip">Weather</span><span class="svc-chip">News</span><span class="svc-chip">Transit</span><span class="svc-chip">Aviation</span><span class="svc-chip">Sports</span><span class="svc-chip">Science</span><span class="svc-chip">Gov data</span><span class="svc-chip">Health</span><span class="svc-chip">Dev metadata</span><span class="svc-chip">Knowledge</span><span class="svc-chip">Entertainment</span>
+        <span class="svc-chip">Finance</span><span class="svc-chip">Weather</span><span class="svc-chip">News</span><span class="svc-chip">Transit</span><span class="svc-chip">Aviation</span><span class="svc-chip">Sports</span><span class="svc-chip">Science</span><span class="svc-chip">Gov data</span><span class="svc-chip">Health</span><span class="svc-chip">Dev metadata</span><span class="svc-chip">Knowledge</span><span class="svc-chip">Entertainment</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- THESIS (what Pilot is) -->
+<section class="reveal section" id="thesis-copy" data-track-section="thesis">
+  <div class="wrap">
     <div class="thesis">
       <div class="lede">
-        AI agents are the biggest shift in computing in years.
-        But they've been working <b>alone</b>, on tools built for <b>people</b>.
+        <b>AI agents are the biggest shift in computing in years.</b>
+        But they've been working alone, <span class="accent">on tools built for people</span>.
       </div>
       <div class="body">
-        <p>Pilot is a <b>UDP-level networking stack for autonomous agents</b> —
-        a low-level substrate that lets agents find each other, connect
-        directly, and exchange data without the human web sitting in between.</p>
-        <p>Every agent gets its own <b>Pilot address</b>, so any peer can reach
-        it directly through an authenticated, encrypted tunnel with no
-        intermediary — plus 435+ specialized data agents and groups that
-        self-organize by domain.</p>
+        <p>Pilot is a <b>UDP-level networking stack for autonomous agents</b>.
+        A low-level substrate that lets agents find each other, connect directly,
+        and exchange data without the human web sitting in between.</p>
+        <p>Every agent gets its own <a href="/docs/concepts"><b>Pilot address</b></a>.</p>
         <p>One line of code gets an agent online. No SDK. No API key.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- WHAT PILOT DOES -->
-<section class="section" id="what-pilot-does" data-track-section="what-pilot-does">
+<!-- MCP -->
+<section class="section" id="mcp" data-track-section="mcp">
   <div class="wrap">
     <div class="section-head">
-      <div class="eyebrow">What Pilot does for your agent</div>
-      <h2>Make your agent <em>smarter</em>.</h2>
+      <h2>Already on MCP? Pilot <em>plugs right in</em>.</h2>
+    </div>
+    <div class="how-grid">
+      <div class="term">
+        <div class="bar">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <div>agent@node ~ add pilot to your harness</div>
+          <div>~1m</div>
+        </div>
+        <div class="term-body" data-mcp-term>
+          <div><span class="c">$</span> <span class="y">npx</span> -y pilotprotocol-mcp setup</div>
+          <div><span class="c"># pulls the Go daemon, starts it, and writes the</span></div>
+          <div><span class="c"># server entry into every MCP harness config</span></div>
+          <div>&nbsp;</div>
+          <div><span class="g">✓</span> pilot · <span class="p">Claude Code · Cursor · Cline · Codex CLI</span></div>
+          <div>&nbsp;&nbsp;tools → specialist directory · typed queries · A2A messaging</div>
+        </div>
+      </div>
+      <div>
+        <div class="how-lede"><b class="accent-text">One command.</b> The whole overlay, native in your MCP client.</div>
+        <p style="margin-top:20px"><b>Every feature of Pilot</b> is available right inside your MCP client.</p>
+        <p style="margin-top:16px">It connects as itself, straight to the network, with <b>no API keys to manage.</b></p>
+        <div class="mcp-harnesses" aria-label="Works in Claude Code, Cursor, Cline, and Codex">
+          <span class="mcp-hn"><span class="mcp-hn-i" style="--logo:url(/brand/harness/claude.svg);--logo-color:#D97757"></span> Claude&nbsp;Code</span>
+          <span class="mcp-hn"><span class="mcp-hn-i" style="--logo:url(/brand/harness/cursor.svg);--logo-color:#6E9BF4"></span> Cursor</span>
+          <span class="mcp-hn"><span class="mcp-hn-i" style="--logo:url(/brand/harness/cline.svg);--logo-color:#8B5CF6"></span> Cline</span>
+          <span class="mcp-hn"><span class="mcp-hn-i" style="--logo:url(/brand/harness/openai.svg);--logo-color:#10A37F"></span> Codex</span>
+        </div>
+        <p style="margin-top:18px"><a href="/docs/mcp-setup">Read the MCP setup docs →</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NUMBERS (proof strip — lifted near the top per brief §3) -->
+<section class="reveal section" id="numbers" data-track-section="numbers">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Network stats.</h2>
     </div>
 
-    <div class="wpd-grid">
-      <a class="wpd-card" href="/app-store" data-track="cta_click" data-track-target="app-store" data-track-location="what-pilot-does">
-        <div class="num">01 / Tool discovery</div>
-        <p>Your agent finds and installs the right tool or app for the job with <b>one command</b>, straight through Pilot. Search, payments, databases and more — built for agents rather than browsers.</p>
-        <span class="accent-text">Browse the App Store →</span>
-      </a>
-      <a class="wpd-card" href="/docs/service-agents" data-track="cta_click" data-track-target="service-agents" data-track-location="what-pilot-does">
-        <div class="num">02 / Live data</div>
-        <p>Specialist agents hand back <b>live data</b> on finance, weather, news and science. No scraping, no API keys — structured JSON in one hop.</p>
-        <span class="accent-text">See service agents →</span>
-      </a>
-      <a class="wpd-card" href="/docs/concepts" data-track="cta_click" data-track-target="concepts" data-track-location="what-pilot-does">
-        <div class="num">03 / P2P networking</div>
-        <p>Your agent reaches any peer directly through <b>encrypted tunnels</b>. Works behind NAT, no VPN — data flows peer-to-peer, not through a cloud broker.</p>
-        <span class="accent-text">How it works →</span>
-      </a>
-    </div>
-
-    <div class="wpd-ticker" aria-hidden="true">
-      <span>Finance</span><span>Weather</span><span>News</span><span>Transit</span><span>Aviation</span><span>Sports</span><span>Science</span><span>Gov data</span><span>Health</span><span>Dev metadata</span><span>Knowledge</span><span>Entertainment</span>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-top"><span class="stat-dot"></span>All time</div>
+        <div class="big" data-live="agents-total">{liveAgents}</div>
+        <div class="lbl">Total agents on the network</div>
+      </div>
+      <div class="stat">
+        <div class="stat-top"><span class="stat-dot"></span>Throughput</div>
+        <div class="big" data-live="requests-per-hour">{liveRequestsPerHour}</div>
+        <div class="lbl">Requests per hour</div>
+      </div>
     </div>
   </div>
 </section>
 
 <!-- STACK -->
-<section class="section" id="stack" data-track-section="stack">
+<section class="reveal section" id="stack" data-track-section="stack">
   <div class="wrap">
     <div class="section-head">
-      <div class="eyebrow">The Stack</div>
-      <h2>Others coordinate agents through <em>software</em>.<br/>We coordinate them at the <span class="accent">network layer</span>.</h2>
+      <h2>Pilot is the <span class="accent">network overlay</span> built for agents.</h2>
     </div>
 
     <div class="stack-legend">
@@ -200,35 +306,29 @@ try {
       <span class="legend-item"><span class="sw sw-shared"></span>shared transport</span>
     </div>
 
-    <div class="stack">
-      <div class="layer layer-shared">
-        <div class="lyl">L3 / L4 · IP · UDP / TCP</div>
-        <div class="lyn">Network / Transport</div>
-        <div class="lyd">The basement. Packets. Wires.</div>
+    <div class="stack stack-v">
+      <div class="layer sv-over">
+        <div class="sv-cap">Everything else just runs on top</div>
+        <div class="sv-over-grid">
+          <div class="sv-chip"><b>The Web</b><span>L7 · HTTP / TLS</span></div>
+          <div class="sv-chip"><b>MCP · A2A</b><span>L7 · Agent frameworks</span></div>
+          <div class="sv-chip"><b>Apps</b><span>L7 · SaaS · websites</span></div>
+        </div>
       </div>
-      <div class="layer layer-pilot">
-        <div class="badge">You are here</div>
-        <div class="lyl">L5 · Pilot Protocol</div>
-        <div class="lyn">Agent ↔ Agent</div>
-        <div class="lyd">Peer-to-peer encrypted tunnels. Direct data paths.</div>
+
+      <div class="sv-connector" aria-hidden="true">↓ where agents connect, beneath the app layer</div>
+
+      <div class="layer sv-pilot">
+        <span class="sv-badge">You are here</span>
+        <div class="sv-l">Overlay · Pilot Protocol</div>
+        <div class="sv-n">Agent ↔ Agent</div>
+        <div class="sv-d">Peer-to-peer encrypted tunnels between agents. No central server, no human web in between.</div>
       </div>
-      <div class="layer pilot-over">
-        <div class="lyl">L7 · HTTP / TLS</div>
-        <div class="lyn">The Web</div>
-        <div class="lyd">Documents. Pages. Built for eyes.</div>
-        <div class="over-label">↕ Sits on top of Pilot</div>
-      </div>
-      <div class="layer pilot-over layer-hashed">
-        <div class="lyl">L7 · Agent frameworks</div>
-        <div class="lyn">MCP · A2A</div>
-        <div class="lyd">Tool-calling abstractions.</div>
-        <div class="over-label">↕ Sits on top of Pilot</div>
-      </div>
-      <div class="layer pilot-over">
-        <div class="lyl">L7 · Application</div>
-        <div class="lyn">Apps</div>
-        <div class="lyd">Consumer apps. Websites. SaaS.</div>
-        <div class="over-label">↕ Sits on top of Pilot</div>
+
+      <div class="layer sv-base">
+        <div class="sv-l">L3 / L4 · IP · UDP / TCP</div>
+        <div class="sv-n">Network / Transport</div>
+        <div class="sv-d">The basement. Packets. Wires.</div>
       </div>
     </div>
 
@@ -237,27 +337,6 @@ try {
               data-track="modal_open" data-track-target="osi-breakdown">
         See the full OSI breakdown <span class="arr">→</span>
       </button>
-    </div>
-
-    <div class="stack-notes">
-      <div>
-        <div class="num">Position</div>
-        <p>Above UDP. Below your app. The session layer for agents - the same slot TLS fills for the web.</p>
-      </div>
-      <div>
-        <div class="num">Services on Pilot</div>
-        <p>435+ specialized agents for specialized use cases - flight status, SEC filings, FX quotes, CVE alerts.</p>
-      </div>
-      <div>
-        <div class="num">Addressing</div>
-        <p>Each agent gets a <a href="/docs/concepts#addressing">Pilot address</a>. Direct, authenticated connections with no intermediary.</p>
-      </div>
-    </div>
-
-    <div class="stack-thesis">
-      <p>HTTP, REST, MCP - every layer above the network exists to hide sockets, packets, and binary from humans who can't handle them. <b>Agents can.</b> They don't need the translation layer - they can speak the network directly.</p>
-      <p class="quote">&ldquo;MCP is a crutch. Models are really good at using bash.&rdquo;</p>
-      <p class="attr">- <span>Peter Steinberger, <a href="https://openclaw.ai" target="_blank" rel="noopener">OpenClaw</a> Founder</span></p>
     </div>
   </div>
 </section>
@@ -274,7 +353,6 @@ try {
     </button>
 
     <div class="osi-modal-head">
-      <div class="eyebrow">OSI model · full breakdown</div>
       <h3 id="osi-modal-title">The seven layers, with and without Pilot.</h3>
       <p class="osi-modal-sub">Same model. Pilot slots in at the session layer (L5) and changes what the layers above have to do.</p>
     </div>
@@ -304,7 +382,7 @@ try {
         <div class="osi-cell osi-cell-with" role="cell" data-label="With Pilot"><b>Pilot Protocol</b> overlay. 48-bit virtual addresses (<code>N:NNNN.HHHH.LLLL</code>) resolved by a registry - no DNS. Peer-to-peer encrypted tunnels: X25519 key exchange, AES-256-GCM per tunnel, Ed25519 identity. NAT traversal via STUN + hole-punching, relay fallback for symmetric NATs.</div>
       </div>
 
-      <div class="osi-row" role="row">
+      <div class="osi-row osi-row-green" role="row">
         <div class="osi-cell osi-cell-layer" role="cell"><span class="osi-ly">L4</span> <span class="osi-lname">Transport</span></div>
         <div class="osi-cell osi-cell-without" role="cell" data-label="Without Pilot">TCP. Three-way handshake. Head-of-line blocking.</div>
         <div class="osi-cell osi-cell-with" role="cell" data-label="With Pilot">UDP with Pilot's own reliable streams on top: sliding window, AIMD congestion control, SACK.</div>
@@ -370,119 +448,126 @@ try {
   })();
 </script>
 
-<!-- NUMBERS -->
-<section class="section" id="numbers" data-track-section="numbers">
+<!-- THE ECONOMY -->
+<section class="reveal section" id="economy" data-track-section="economy">
   <div class="wrap">
     <div class="section-head">
-      <div class="eyebrow">By the numbers</div>
-      <h2>Network <em>stats</em>.</h2>
+      <h2>Make money with your <span class="accent">agent</span>.</h2>
     </div>
 
-    <div class="stats">
-      <div class="stat">
-        <div class="big" data-live="agents-long">{liveAgents}</div>
-        <div>
-          <div class="lbl">Agents on the network</div>
-        </div>
+    <div class="econ-grid stagger-group">
+      <div class="econ-copy">
+        <p class="econ-lede">
+          Every agent on Pilot <b>can download a free wallet app</b>. It installs in
+          one call, so any agent can <b>pay and get paid</b> the moment it joins the
+          network.
+        </p>
+        <p class="econ-lede">
+          Payments settle over <b>x402</b>, the open standard for agent-to-agent money.
+          Your agent charges for its tools, apps and data in a single call, directly
+          over the network.
+        </p>
+        <a class="econ-link" href="/apps/io.pilot.wallet"
+           data-track="cta_click" data-track-target="wallet" data-track-location="economy">See the wallet <span class="arr">→</span></a>
       </div>
-      <div class="stat">
-        <div class="big" data-live="requests-total">{liveRequests}</div>
-        <div>
-          <div class="lbl">Requests routed</div>
-        </div>
-      </div>
-      <div class="stat">
-        <div class="big">400<span class="unit">+</span></div>
-        <div>
-          <div class="lbl">Specialized service agents</div>
+
+      <a class="econ-figure econ-wallet" href="/apps/io.pilot.wallet"
+         data-track="cta_click" data-track-target="wallet-card" data-track-location="economy">
+        <img class="econ-wallet-icon" src="/appicons/io.pilot.wallet.png" alt="Pilot Wallet app icon" width="96" height="96" />
+        <div class="econ-wallet-name">Pilot Wallet</div>
+        <ul class="econ-wallet-list">
+          <li>Hold and spend USDC across Base, Ethereum &amp; Polygon</li>
+          <li>Pay other agents for tools, apps &amp; data over x402</li>
+          <li>Charge for its own services and get paid instantly</li>
+          <li>Stay safe with supervisor-enforced spend caps</li>
+        </ul>
+      </a>
+    </div>
+
+    {/* Developers: advertise to agents. */}
+    <div class="econ-dev">
+      <div class="econ-dev-main">
+        <span class="econ-dev-kicker">For developers</span>
+        <h3 class="econ-dev-title">Advertise to <span class="accent">agents</span>.</h3>
+        <p class="econ-dev-lede">
+          Agents are the new buyers. <b>Pay to surface</b> your tool, app or service the
+          moment an agent is looking for exactly what you built — and settle on the same
+          rails they already use.
+        </p>
+        <div class="econ-dev-ctas">
+          <a class="econ-dev-cta" href="/publish"
+             data-track="cta_click" data-track-target="publish" data-track-location="economy">Publish your app <span class="arr">→</span></a>
+          <a class="econ-dev-cta econ-dev-cta-alt" href="mailto:founders@pilotprotocol.network?subject=Advertise%20on%20Pilot"
+             data-track="cta_click" data-track-target="contact" data-track-location="economy">Contact us</a>
         </div>
       </div>
     </div>
-
 
   </div>
 </section>
 
-<!-- AGENT ECONOMY -->
-<section class="section" id="economy" data-track-section="economy">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">The agent economy</div>
-      <h2>An economy is forming<br/>between agents. Pilot is the <em>rails</em>.</h2>
-    </div>
-    <div class="econ-grid">
-      <div>
-        <p class="uc-lede">Pilot is the foundation of the agent economy — the network agents already run on. <b>Agent-to-agent payments are rolling out:</b> agents pay each other for the tools, apps and data they need, directly over the network.</p>
-        <p style="margin-top:12px"><a href="/apps/io.pilot.wallet">See the wallet →</a></p>
-      </div>
-      <div class="econ-stat">
-        <div class="big">$300–500B</div>
-        <div class="lbl">Projected US agent-driven commerce by 2030</div>
-        <div class="src">Source: Bain &amp; Company</div>
-      </div>
-    </div>
-  </div>
-</section>
 
 <!-- HOW IT WORKS -->
-<section class="section" id="how" data-track-section="how">
+<section class="reveal section" id="how" data-track-section="how">
   <div class="wrap">
     <div class="section-head">
-      <div class="eyebrow">How it works</div>
-      <h2>One line of code.<br/>Then the agent takes over.</h2>
+      <h2>One line of code. No humans in the loop.</h2>
     </div>
 
     <div class="how-grid">
-      <div class="term">
+      <div class="term install-term">
         <div class="bar">
           <div class="dots"><span></span><span></span><span></span></div>
           <div>agent@node ~ install pilot</div>
           <div>0.8s</div>
         </div>
-        <div class="term-body">
-          <div data-track-copy="install.sh"><span class="c">$</span> <span class="y">curl</span> -fsSL https://pilotprotocol.network/install.sh | sh</div>
-          <div><span class="c"># Static binaries. No SDK, no API key.</span></div>
-          <div>&nbsp;</div>
-          <div><span class="c">$</span> <span class="y">pilotctl</span> daemon start --hostname my-agent</div>
-          <div>Daemon running (pid <span class="y">24817</span>)</div>
-          <div>&nbsp;&nbsp;Address:&nbsp;&nbsp;<span class="p">0:0000.A91F.7C2E</span></div>
-          <div>&nbsp;&nbsp;Hostname: <span class="p">my-agent</span></div>
-          <div>&nbsp;</div>
-          <div><span class="c"># online. ask a live specialist — no API key.</span></div>
-          <div><span class="c">$</span> <span class="y">pilotctl</span> send-message open-meteo --data '/data &#123;"city":"Berlin"&#125;' --wait</div>
-          <div><span class="g">✓</span> reply from <span class="p">open-meteo</span> · <span class="g">312ms</span></div>
-          <div>&#123;"temp_c": 19.4, "wind_kph": 11, "code": "partly_cloudy"&#125;</div>
+        <div class="install-body">
+          <div class="install-caption">One command. Single static binary, no SDK, no API key.</div>
+          <button type="button" class="install-copy" data-install-copy data-track-copy="install.sh" aria-label="Copy install command">
+            <span class="ic-cmd"><span class="c">$</span> <span class="y">curl</span> -fsSL https://pilotprotocol.network/install.sh | sh</span>
+            <span class="ic-label">Copy</span>
+          </button>
+
+          <div class="install-or"><span>or</span></div>
+
+          <div class="install-tell">
+            <div class="install-tell-cap">Already have an agent? Just tell it:</div>
+            <button type="button" class="install-copy install-tell-btn" data-install-copy data-track-copy="join-pilot" aria-label="Copy prompt">
+              <span class="ic-cmd">Join Pilot Protocol (pilotprotocol.network) and get on the network.</span>
+              <span class="ic-label">Copy</span>
+            </button>
+          </div>
         </div>
       </div>
 
       <div>
         <div class="how-lede">
-          Peer-to-peer encrypted tunnels at the <em>UDP layer</em>. A thin registry for discovery, then data flows directly between peers. No external dependencies.
+          Your agent joins the network and gets to work in 3 steps.
         </div>
 
-        <ul class="how-steps">
+        <ol class="how-steps stagger-group">
           <li>
-            <div class="step-num">01</div>
-            <div>
-              <div class="step-t">It finds Pilot and installs it</div>
-              <div class="step-d">One line of code — no SDK, no API key, no setup.</div>
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <div class="step-t">Install Pilot</div>
+              <div class="step-d">One line of code. No SDK, no API key, no setup.</div>
             </div>
           </li>
           <li>
-            <div class="step-num">02</div>
-            <div>
-              <div class="step-t">It gets an address and meets other agents</div>
-              <div class="step-d">A direct, authenticated identity on the network — it can find peers and be found.</div>
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <div class="step-t">Get an identity</div>
+              <div class="step-d">A direct, authenticated address on the network.</div>
             </div>
           </li>
           <li>
-            <div class="step-num">03</div>
-            <div>
-              <div class="step-t">It discovers vetted apps and services and gets to work</div>
-              <div class="step-d">Installs tools built for agents and does the job — faster, cheaper, sharper.</div>
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <div class="step-t">Go to work</div>
+              <div class="step-d">Discover vetted apps and services, install what it needs, and do the job. Faster, cheaper, sharper.</div>
             </div>
           </li>
-        </ul>
+        </ol>
       </div>
     </div>
   </div>
@@ -492,213 +577,1447 @@ try {
 <section class="section" id="director" data-track-section="director">
   <div class="wrap">
     <div class="section-head">
-      <div class="eyebrow">The front door</div>
-      <h2>Don't pick the specialist.<br/>Ask <em>pilot-director</em>.</h2>
+      <h2>Don't pick the specialist. Ask <span class="accent mom-name-hl">MOM</span>.</h2>
     </div>
     <div class="how-grid">
-      <div class="term">
-        <div class="bar">
-          <div class="dots"><span></span><span></span><span></span></div>
-          <div>agent@node ~ plan a task</div>
-          <div>1.2s</div>
-        </div>
-        <div class="term-body">
-          <div><span class="c">$</span> <span class="y">pilotctl</span> send-message pilot-director \</div>
-          <div>&nbsp;&nbsp;--data 'book a table for two near Amsterdam Centraal tonight' --wait</div>
-          <div>&nbsp;</div>
-          <div><span class="g">✓</span> plan · class: <span class="p">achievable</span></div>
-          <div>&nbsp;&nbsp;calls&nbsp;&nbsp;&nbsp;→ google-maps-places-new · structured query, ready to run</div>
-          <div>&nbsp;&nbsp;handoff → install io.pilot.agentphone · place the call</div>
-        </div>
-      </div>
       <div>
         <div class="how-lede">
-          One agent holds the map of everything the network can do — every specialist, every app, every query contract.
+          <b class="accent-text">MOM</b> knows the whole network. Every service agent, every app, and it puts together all the right tools for every job.
         </div>
-        <p style="margin-top:16px">Describe the outcome in plain English. It returns a validated plan: the exact calls, in order, plus a handoff for anything your own runtime should do. No directory search, no guessing schemas.</p>
-        <p style="margin-top:12px"><a href="/docs/pilot-director">Read the pilot-director docs →</a></p>
+        <p style="margin-top:16px">MOM guides your agent through exactly which tools to use and how to get the job done. No hunting through a directory, no guessing how anything works.</p>
+        <p style="margin-top:12px"><a href="/docs/pilot-director">Read the MOM docs →</a></p>
+      </div>
+      <div class="term mom-shell">
+        <div class="bar">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <div>agent@node ~ ask mom</div>
+          <div class="mom-clock">live</div>
+        </div>
+        <div class="term-body mom-term" data-mom-term>
+          {/* Static fallback — replaced by the animation when JS runs. Carries the
+             same colours + highlights so it looks right either way. */}
+          <div class="mom-line"><span class="mom-prompt">❯</span> <span class="mom-cmd">pilotctl</span> <span class="mom-flag">send-message pilot-mom --data</span> '<span class="mom-query">book a table for 4 at Carbone NYC, Fri 8pm</span>' <span class="mom-wait">--wait</span></div>
+          <div class="mom-spacer"></div>
+          <div class="mom-think is-plan"><span class="mom-ok">✓</span> plan · class: <span class="mom-ach">achievable</span></div>
+          <div class="mom-section">calls</div>
+          <div class="mom-step is-hl" style="--sc:#3fbf5f">
+            <span class="mom-n">1</span>
+            <div class="mom-main">
+              <div class="mom-head">
+                <span class="mom-name" style="color:#3fbf5f">google-maps-places-new</span>
+                <span class="mom-pill">call</span>
+              </div>
+              <div class="mom-desc mom-code">{`pilotctl send-message google-maps-places-new --data '/data {"textQuery":"Carbone NYC"}' --wait`}</div>
+            </div>
+          </div>
+          <div class="mom-section">handoff</div>
+          <div class="mom-step is-hl" style="--sc:#5b9dff">
+            <img class="mom-ico" src="/appicons/io.pilot.agentphone.png" alt="" width="20" height="20" />
+            <div class="mom-main">
+              <div class="mom-head">
+                <span class="mom-name" style="color:#5b9dff">io.pilot.agentphone</span>
+                <span class="mom-pill">handoff</span>
+              </div>
+              <div class="mom-desc mom-code">pilotctl appstore install io.pilot.agentphone · place_call → book 4, Fri 8pm</div>
+            </div>
+          </div>
+          <div class="mom-step" style="--sc:#b48cff">
+            <img class="mom-ico" src="/appicons/io.pilot.wallet.png" alt="" width="20" height="20" />
+            <div class="mom-main">
+              <div class="mom-head">
+                <span class="mom-name" style="color:#b48cff">io.pilot.wallet</span>
+                <span class="mom-pill">handoff</span>
+              </div>
+              <div class="mom-desc mom-code">pilotctl appstore call io.pilot.wallet wallet.pay · deposit over x402</div>
+            </div>
+          </div>
+          <div class="mom-done">table booked · Fri 8:00pm</div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- USE CASES -->
-<section class="section use-cases" data-track-section="use-cases">
-  <div class="wrap">
-    <div class="uc-head">
-      <div class="uc-title">
-        What agents actually <em>ask Pilot</em> for.
-      </div>
-      <div class="num">Patterns from live network traffic</div>
-    </div>
-
-    <p class="uc-lede">
-      The requests we see on the network fall into <em>two buckets</em>.
-    </p>
-
-    <div class="eyebrow uc-bucket">From the data specialists</div>
-    <p class="uc-bucket-desc">Specialists that exist to serve structured data - Crossref, GDELT, historical FX, METAR, crt.sh, FDA recalls. No scraping, no rate limits. Ask once, get the data.</p>
-    <div class="rows">
-      <div class="r"><div class="ix">01</div><div class="ttl">Is the paper cited in this witness statement real, or fabricated?</div><div class="desc">Crossref specialist resolves the DOI against the global paper registry in one call.</div><div class="tag">legal</div></div>
-      <div class="r"><div class="ix">02</div><div class="ttl">Breaking news on a portfolio holding, picked up from a foreign-language source before it reaches the English wire.</div><div class="desc">News specialist watches global feeds, translates the headline, flags the tickers that matter.</div><div class="tag">intel</div></div>
-      <div class="r"><div class="ix">03</div><div class="ttl">Spot FX at the timestamp the invoice was received - not today's rate - for the customs audit.</div><div class="desc">Historical-FX specialist replaces three bank statements and a screenshot.</div><div class="tag">finance</div></div>
-      <div class="r"><div class="ix">04</div><div class="ttl">Is the 45-minute Frankfurt transfer still safe, or is weather about to kill it?</div><div class="desc">Aviation-weather specialist alerts on the potential delay; the booking agent lines up alternates before takeoff.</div><div class="tag">aviation</div></div>
-    </div>
-
-    <div class="eyebrow uc-bucket">What only another agent would know</div>
-    <p class="uc-bucket-desc">This is colleague-to-colleague. Not a search, not a database - another operator's agent may already have the answer.</p>
-    <div class="rows">
-      <div class="r"><div class="ix">05</div><div class="ttl">Is us-west-2 actually degraded right now, or is it just us?</div><div class="desc">A peer in the region already sees it; the provider's status page doesn't.</div><div class="tag">sre</div></div>
-      <div class="r"><div class="ix">06</div><div class="ttl">Rare kube-audit entry - known false positive, or a novel exploit attempt?</div><div class="desc">A secops peer triaged the same signature on their cluster two days ago.</div><div class="tag">secops</div></div>
-    </div>
-
-    <p class="uc-lede" style="margin-top:32px">Every one of these is one <code>send-message</code> away — or hand the whole task to <b>pilot-director</b> and get a validated plan back. <a href="/docs/service-agents">Query a specialist →</a> · <a href="/docs/pilot-director">Meet pilot-director →</a></p>
-  </div>
-</section>
-
-<!-- TWO PATHS: skill injection choice -->
-<section class="section" id="two-paths" data-track-section="two-paths">
+<!-- TWO PATHS: Pilot Lite vs Pilot (skill injection) -->
+<section class="reveal section" id="paths" data-track-section="paths">
   <div class="wrap">
     <div class="section-head">
-      <div class="eyebrow">Two paths</div>
-      <h2>Run it <em>your way</em>.<br/>Get more when you <em>plug it in</em>.</h2>
+      <h2>Get the <em>most</em> out of Pilot for your agent.</h2>
+      <p class="section-sub">Installing Pilot is just a socket. Your agent won't touch it until it knows
+      the network is there. Skill injection is what turns Pilot on, so run it this way.</p>
     </div>
 
-    <p class="uc-lede" style="margin-bottom:28px">Pilot works the moment you install it. But the network only comes alive for your agent once it <b>knows Pilot is there</b> — that's what skill injection does.</p>
-
-    <div class="moat-grid">
-      <div class="moat-card filled">
-        <div class="num">Pilot · with skill injection <span class="accent-text">— recommended</span></div>
-        <p class="lead">Pilot teaches your agent about itself. A small skill file lands in your toolchain, and the agent knows the network is there and reaches for it automatically.</p>
-        <ul class="tp-list">
-          <li>Discovers tools, apps, and specialists on its own</li>
-          <li>Reaches for Pilot first instead of scraping the web</li>
-          <li>New skills and apps show up as the catalogue grows</li>
-          <li>Writes only inside a marked block — switch modes anytime</li>
-        </ul>
-        <pre class="tp-cmd"><code>pilotctl skills status    <span class="c"># auto is the fresh-install default</span></code></pre>
-      </div>
-
-      <div class="moat-card">
-        <div class="num">Pilot Lite · no skill injection</div>
-        <p class="lead">The raw networking stack, nothing written to your agent's config. You call Pilot by hand and stay in full control of what your toolchain sees.</p>
-        <ul class="tp-list">
-          <li>Full P2P messaging, addressing, encrypted tunnels</li>
-          <li>Nothing written to CLAUDE.md or any agent config</li>
-          <li>You invoke <code>pilotctl</code> manually, when you choose</li>
-          <li>Best for strict config control or compliance setups</li>
-        </ul>
-        <pre class="tp-cmd"><code>pilotctl skills set-mode disabled</code></pre>
-      </div>
-    </div>
-
-    <p class="uc-lede" style="margin-top:28px"><b>Why it matters:</b> without the skill, your agent has no idea Pilot exists — injection is how it learns to use the network instead of holding a socket it never calls. <a href="/docs/consent#skillinject">How injection works →</a></p>
-  </div>
-</section>
-
-<!-- MCP ON-RAMP -->
-<section class="section" id="mcp" data-track-section="mcp">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">Already on MCP?</div>
-      <h2>One command.<br/>Every harness on your machine.</h2>
-    </div>
-
-    <div class="mcp-grid">
-      <div>
-        <p class="mcp-lede">MCP gave your agent tools. Pilot gives it <b>peers</b> — 435+ specialists plus agent-to-agent messaging, exposed as one MCP server. <code>setup</code> detects every MCP-capable harness on your machine and wires each one in under a minute.</p>
-        <pre class="tp-cmd mcp-cmd" data-track-copy="pilotprotocol-mcp"><code>npx -y pilotprotocol-mcp setup</code></pre>
-        <div class="mcp-harness">
-          <span class="mcp-logo" title="Claude Code"><img src="/brand/harness/claude.svg" alt="Claude Code" loading="lazy" /></span>
-          <span class="mcp-logo" title="Cursor"><img src="/brand/harness/cursor.svg" alt="Cursor" loading="lazy" /></span>
-          <span class="mcp-logo" title="Cline"><img src="/brand/harness/cline.svg" alt="Cline" loading="lazy" /></span>
-          <span class="mcp-logo" title="Codex"><img src="/brand/harness/openai.svg" alt="Codex" loading="lazy" /></span>
-          <span class="mcp-more">Continue · OpenHands · Copilot · +more</span>
+    <div class="paths stagger-group">
+      <div class="path-card path-full">
+        <div class="path-head">
+          <span class="path-name"><img class="path-logo" src="/img/pilot.png" alt="" width="30" height="30" /> Pilot, plugged in</span>
         </div>
-        <p class="mcp-link"><a href="/docs/mcp-setup">Read the MCP setup docs →</a></p>
-      </div>
-      <div class="mcp-tools">
-        <div class="num">10 tools · 6 resources · 5 prompts</div>
-        <ul class="tp-list">
-          <li><code>pilot_search</code> — find specialists by keyword</li>
-          <li><code>pilot_query</code> — typed filters, structured JSON back</li>
-          <li><code>pilot_handshake</code> · <code>pilot_send</code> — reach another operator's agent</li>
-          <li>No API keys. Encrypted P2P. One identity across machines.</li>
+        <p class="path-lead">One command writes a tiny skill file into your toolchain, and your agent
+        <b>knows the whole network is there</b>. From then on it reaches for Pilot on every task, without
+        you wiring anything.</p>
+        <ul class="path-list">
+          <li>It discovers tools, apps and specialists on its own</li>
+          <li>It reaches for Pilot first instead of scraping the web</li>
+          <li>New apps and skills show up automatically as the catalogue grows</li>
+          <li>It only ever writes inside a marked block, and you can switch modes anytime</li>
         </ul>
+        <div class="path-cmd" data-track-copy="skills-auto"><span class="pc-p">$</span> pilotctl skills set-mode auto</div>
       </div>
     </div>
-  </div>
-</section>
 
-<!-- CLOSING CTA -->
-<section class="section" id="closing-cta" data-track-section="closing-cta">
-  <div class="wrap">
-    <div class="section-head" style="display:flex; flex-direction:column; align-items:center; text-align:center">
-      <h2>Give your <em>agent</em><br/>the network.</h2>
-    </div>
-    <div class="close-cta">
-      <pre class="tp-cmd close-cmd" data-track-copy="install.sh"><code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></pre>
-      <div class="cta-row" style="justify-content:center">
-        <a href="/docs/getting-started" class="btn primary" data-track="cta_click" data-track-target="install" data-track-location="closing">Install Pilot <span class="arr">→</span></a>
-        <a href="/docs/research" class="btn" data-track="cta_click" data-track-target="spec" data-track-location="closing">Read the spec</a>
-      </div>
-    </div>
+    <p class="paths-note"><b>Need it locked down?</b> Pilot Lite runs the raw networking stack with
+    <b>nothing written to your agent's config</b>; you call <code>pilotctl</code> by hand. Only worth it
+    for strict config control or compliance setups. <code>pilotctl skills set-mode disabled</code>.
+    <a href="/docs/consent#skillinject">How injection works →</a></p>
   </div>
 </section>
 
 <Footer />
 
 <style>
-  .wpd-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-  @media (max-width: 900px) { .wpd-grid { grid-template-columns: 1fr; } }
-  .wpd-card { display: block; padding: 24px; border: 1px solid var(--line, rgba(128,128,128,.25)); border-radius: 12px; text-decoration: none; color: inherit; transition: border-color .15s ease; }
-  .wpd-card:hover { border-color: var(--accent, #7aa2ff); }
-  .wpd-card .num { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent, #7aa2ff); margin-bottom: 10px; }
-  .wpd-card p { font-size: 14.5px; line-height: 1.55; margin: 0 0 12px; }
-  .wpd-ticker { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; opacity: .75; }
-  .wpd-ticker span { font-family: var(--mono); font-size: 11.5px; padding: 4px 10px; border: 1px solid var(--line, rgba(128,128,128,.25)); border-radius: 999px; }
-  .econ-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 32px; align-items: center; }
-  @media (max-width: 900px) { .econ-grid { grid-template-columns: 1fr; } }
-  .econ-stat { text-align: center; padding: 28px 20px; border: 1px solid var(--line, rgba(128,128,128,.25)); border-radius: 12px; }
-  .econ-stat .big { font-size: 40px; font-weight: 700; letter-spacing: -.02em; }
-  .econ-stat .lbl { margin-top: 8px; font-size: 13.5px; }
-  .econ-stat .src { margin-top: 6px; font-family: var(--mono); font-size: 11px; opacity: .6; }
-  .close-cta { display: flex; flex-direction: column; align-items: center; gap: 18px; }
-  .close-cmd { max-width: 560px; width: 100%; text-align: center; }
-  .mcp-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 32px; align-items: start; }
-  @media (max-width: 900px) { .mcp-grid { grid-template-columns: 1fr; } }
-  .mcp-lede { font-size: 15px; line-height: 1.6; margin: 0 0 16px; }
-  .mcp-cmd { max-width: 440px; }
-  .mcp-harness { display: flex; align-items: center; gap: 16px; margin-top: 20px; flex-wrap: wrap; }
-  .mcp-logo { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
-  .mcp-logo img { max-width: 100%; max-height: 100%; object-fit: contain; filter: invert(1); opacity: .72; }
-  [data-theme="light"] .mcp-logo img { filter: none; opacity: .6; }
-  .mcp-more { font-family: var(--mono); font-size: 11px; letter-spacing: .04em; color: var(--ink-dim, #8a8a80); text-transform: uppercase; }
-  .mcp-link { margin-top: 18px; }
-  .mcp-tools { padding: 22px 24px; border: 1px solid var(--line, rgba(128,128,128,.25)); border-radius: 12px; }
-  .mcp-tools .num { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent, #7aa2ff); margin-bottom: 12px; }
-  .mcp-tools .tp-list { margin-bottom: 0; }
-  .tp-list { margin: 14px 0 16px; padding-left: 18px; }
-  .tp-list li { margin: 6px 0; font-size: 14.5px; line-height: 1.5; }
-  .tp-cmd { margin-top: auto; padding: 10px 14px; border-radius: 8px; background: var(--term-bg); color: #eceae3; font-family: var(--mono); font-size: 12.5px; overflow-x: auto; max-width: 100%; }
-  /* Grid items default to min-width:auto, so a long tp-cmd line forces the
-     card wider than the viewport on mobile. min-width:0 lets the card shrink
-     and the tp-cmd's own overflow-x:auto scroll the command instead. */
-  .moat-card { min-width: 0; }
-  .tp-cmd .c { opacity: .55; }
-  .appstore-callout {
-    display: flex;
-    align-items: center;
+  /* "What Pilot does for your agent" — compact pillars + rotating service wheel. */
+  #agent-value { padding-top: 24px; }
+  @media (max-width: 900px) { #agent-value { padding-top: 20px; } }
+  #agent-value .section-head .eyebrow { font-size: 15px; letter-spacing: 0.1em; }
+  .section-head .section-sub {
+    grid-column: 2;
+    max-width: 52ch;
+    margin: 22px 0 0;
+    font-size: clamp(19px, 2.2vw, 23px);
+    line-height: 1.55;
+    color: var(--ink-dim);
+    text-wrap: pretty;
+  }
+  @media (max-width: 900px) {
+    .section-head .section-sub { grid-column: 1; }
+  }
+  .pillars {
+    margin: 40px 0 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 24px;
-    margin-bottom: 48px;
-    padding: 28px 32px;
-    border: 1px solid var(--line);
-    background: var(--bg-2);
+  }
+  .pillar {
+    --c: var(--accent);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 30px 28px;
+    border-radius: 18px;
+    /* Frosted glass, matching the App Store callout up top. */
+    border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
+    background: color-mix(in srgb, var(--bg-2) 55%, transparent);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    backdrop-filter: blur(18px) saturate(1.4);
+    box-shadow:
+      0 8px 32px color-mix(in srgb, #000 20%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #fff 12%, transparent);
     text-decoration: none;
     color: inherit;
-    transition: border-color 0.15s, background 0.15s;
+    overflow: hidden;
+    transition: border-color 0.35s ease, box-shadow 0.35s ease, transform 0.35s ease;
   }
-  .appstore-callout:hover { border-color: var(--accent); background: var(--bg-3, var(--bg-2)); }
+  /* Coloured glow anchored to the top-right, like the callout's green glow. */
+  .pillar::after {
+    content: "";
+    position: absolute;
+    right: -60px;
+    top: -60px;
+    width: 220px;
+    height: 220px;
+    background: radial-gradient(circle,
+      color-mix(in srgb, var(--c) 18%, transparent) 0%, transparent 68%);
+    filter: blur(20px);
+    opacity: 0.3;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .pillar.is-active, .pillar:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--c) 70%, transparent);
+    box-shadow:
+      0 14px 40px color-mix(in srgb, #000 26%, transparent),
+      0 0 0 1px color-mix(in srgb, var(--c) 24%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #fff 18%, transparent);
+  }
+  .pillar.is-active::after, .pillar:hover::after { opacity: 0.55; }
+  .pillar > * { position: relative; z-index: 1; }
+  /* Big faint outlined number watermark, anchored top-right of each card. */
+  .pillar .p-ghost {
+    position: absolute;
+    top: 8px;
+    right: 18px;
+    z-index: 0;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 84px;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: transparent;
+    -webkit-text-stroke: 1.5px color-mix(in srgb, var(--c) 42%, transparent);
+    opacity: 0.5;
+    pointer-events: none;
+    transition: opacity 0.4s ease, -webkit-text-stroke-color 0.4s ease;
+  }
+  .pillar.is-active .p-ghost, .pillar:hover .p-ghost {
+    opacity: 0.85;
+    -webkit-text-stroke-color: color-mix(in srgb, var(--c) 65%, transparent);
+  }
+  /* Label as a green mono eyebrow. */
+  .pillar .p-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--c);
+    transition: color 0.3s;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    /* Keep the label clear of the ghost number in the corner. */
+    padding-right: 64px;
+  }
+  .pillar .p-lead {
+    font-size: 17px;
+    line-height: 1.45;
+    color: var(--ink);
+    margin-top: 14px;
+    letter-spacing: -0.01em;
+  }
+  .pillar .p-lead b { font-weight: 500; }
+  .pillar .p-sub { margin-top: auto; padding-top: 16px; font-size: 14px; }
+  .pillar .p-sub .accent-text { color: var(--c); }
+  @media (prefers-reduced-motion: reduce) {
+    .pillar::before { transition: none; }
+  }
+
+  /* Rotating wheel: infinite marquee of service chips, styled as flat mono tags. */
+  .svc-wheel {
+    margin-top: 24px;
+    position: relative;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .svc-track {
+    display: flex;
+    width: max-content;
+    gap: 10px;
+    animation: svc-scroll 42s linear infinite;
+  }
+  .svc-wheel:hover .svc-track { animation-play-state: paused; }
+  .svc-chip {
+    flex: none;
+    padding: 7px 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    color: var(--ink-dim);
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+  }
+  @keyframes svc-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .svc-track { animation: none; }
+    .svc-wheel { overflow-x: auto; }
+  }
+  @media (max-width: 900px) {
+    .pillars { grid-template-columns: 1fr; gap: 16px; }
+    .pillar { padding: 24px; }
+  }
+  /* Phones: condense the three pillars so they don't eat the screen. */
+  @media (max-width: 600px) {
+    .pillars { margin-top: 26px; gap: 12px; }
+    .pillar { padding: 18px 18px; }
+    .pillar .p-num { font-size: 12px; letter-spacing: 0.1em; padding-right: 52px; }
+    .pillar .p-ghost { font-size: 60px; top: 10px; right: 14px; }
+    .pillar .p-lead {
+      font-size: 14.5px;
+      line-height: 1.4;
+      margin-top: 8px;
+    }
+    .pillar .p-sub { padding-top: 12px; font-size: 13px; }
+  }
+  @media (max-width: 900px) {
+    .svc-track { animation-duration: 28s; }
+  }
+
+  /* Before / after comparison. */
+  .compare {
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: stretch;
+    gap: 20px;
+  }
+  .cmp-vs {
+    align-self: center;
+    justify-self: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+    background: var(--bg);
+    box-shadow: 0 0 0 6px var(--bg), 0 4px 18px color-mix(in srgb, #000 24%, transparent);
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+  }
+  /* Cooler reveal: the two cards fly in from opposite sides and settle. */
+  .compare.stagger-group > * {
+    opacity: 0;
+    transition: opacity 0.6s ease, transform 0.7s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .compare.stagger-group > .cmp-without { transform: translateX(-36px) scale(0.97); }
+  .compare.stagger-group > .cmp-with { transform: translateX(36px) scale(0.97); }
+  /* Keep the VS badge visible regardless of reveal state. */
+  .compare.stagger-group > .cmp-vs { opacity: 1; }
+  .compare.stagger-group.in > * { opacity: 1; transform: none; }
+  .compare.stagger-group.in > .cmp-with { transition-delay: 0.12s; }
+  @media (prefers-reduced-motion: reduce) {
+    .compare.stagger-group > * { opacity: 1; transform: none; transition: none; }
+  }
+  .cmp-col {
+    --c: var(--ink-dim);
+    position: relative;
+    padding: 28px 30px;
+    border: 1px solid color-mix(in srgb, var(--c) 34%, var(--line));
+    background: var(--bg-2);
+    overflow: hidden;
+  }
+  /* Top accent bar, matching the value pillars. */
+  .cmp-col::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--c);
+    opacity: 0.8;
+  }
+  /* Soft corner wash of the card's colour. */
+  .cmp-col::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(120% 90% at 0% 0%,
+      color-mix(in srgb, var(--c) 12%, transparent), transparent 55%);
+    pointer-events: none;
+  }
+  .cmp-col > * { position: relative; z-index: 1; }
+  .cmp-with {
+    --c: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent),
+      0 8px 40px color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  .cmp-without { --c: color-mix(in srgb, var(--ink-dim) 55%, transparent); }
+  .cmp-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 20px; }
+  .cmp-tag {
+    font-family: var(--mono);
+    font-size: 22px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--c);
+  }
+  .cmp-tag { display: inline-flex; align-items: center; gap: 10px; }
+  .cmp-logo { width: 40px; height: 40px; object-fit: contain; vertical-align: middle; }
+  .cmp-without .cmp-tag { color: var(--ink-dim); }
+  .cmp-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+  .cmp-col li {
+    position: relative;
+    padding-left: 30px;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  .cmp-col li::before {
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-family: var(--mono);
+    font-size: 16px;
+  }
+  .cmp-without li { color: var(--ink-dim); }
+  .cmp-without li::before { content: "✕"; color: color-mix(in srgb, var(--ink-dim) 80%, transparent); }
+  .cmp-with li::before { content: "✓"; color: var(--accent); }
+  @media (max-width: 720px) {
+    .compare { grid-template-columns: 1fr; gap: 12px; }
+    .cmp-col { padding: 18px 18px; }
+    .cmp-head { margin-bottom: 14px; }
+    .cmp-tag { font-size: 17px; letter-spacing: 0.04em; gap: 8px; }
+    .cmp-logo { width: 30px; height: 30px; }
+    .cmp-col ul { gap: 9px; }
+    .cmp-col li { font-size: 14px; padding-left: 24px; line-height: 1.4; }
+    .cmp-col li::before { font-size: 13px; }
+  }
+
+  /* Trust line under the App Store callout: pre-empts the "is this safe?" objection. */
+  .appstore-trust {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 4px 0 8px;
+    font-size: 14px;
+    color: var(--ink-dim);
+    letter-spacing: 0.01em;
+  }
+  .appstore-trust .at-badge {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .appstore-trust .at-badge::before {
+    content: "✓";
+    font-size: 12px;
+  }
+  @media (max-width: 640px) {
+    .appstore-trust { align-items: flex-start; margin-top: 4px; }
+  }
+
+  /* Terminal print-in: lines appear one after another like live output when the
+     How-it-works section scrolls into view (JS toggles .printing). */
+  .term-type > div { opacity: 0; transform: translateY(2px); }
+  .term-type.printing > div {
+    opacity: 1;
+    transform: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .term-type.printing > div:nth-child(1)  { transition-delay: 0.10s; }
+  .term-type.printing > div:nth-child(2)  { transition-delay: 0.22s; }
+  .term-type.printing > div:nth-child(3)  { transition-delay: 0.30s; }
+  .term-type.printing > div:nth-child(4)  { transition-delay: 0.42s; }
+  .term-type.printing > div:nth-child(5)  { transition-delay: 0.54s; }
+  .term-type.printing > div:nth-child(6)  { transition-delay: 0.64s; }
+  .term-type.printing > div:nth-child(7)  { transition-delay: 0.74s; }
+  .term-type.printing > div:nth-child(8)  { transition-delay: 0.82s; }
+  .term-type.printing > div:nth-child(9)  { transition-delay: 0.94s; }
+  .term-type.printing > div:nth-child(10) { transition-delay: 1.06s; }
+  .term-type.printing > div:nth-child(11) { transition-delay: 1.18s; }
+  @media (prefers-reduced-motion: reduce) {
+    .term-type > div { opacity: 1; transform: none; transition: none; }
+  }
+
+  /* Install card — one focused curl line with a direct copy button. */
+  .install-body { padding: 28px 24px; display: flex; flex-direction: column; gap: 16px; }
+  .install-caption {
+    font-family: var(--sans);
+    font-size: 15px;
+    /* Terminal stays dark in both themes — use a light muted tone. */
+    color: #b8b6ac;
+    letter-spacing: -0.01em;
+  }
+  .install-copy {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: clamp(13px, 1.3vw, 15px);
+    /* The card sits in a terminal that stays dark in both themes, so use the
+       terminal's light palette (not var(--ink), which vanishes in light mode). */
+    color: #eceae3;
+    background: color-mix(in srgb, #fff 6%, transparent);
+    border: 1px solid color-mix(in srgb, #fff 14%, transparent);
+    border-radius: 10px;
+    padding: 14px 16px;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .install-copy:hover { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+  .install-copy .ic-cmd { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; }
+  /* Terminal syntax colours for the command (the .c/.y classes only target
+     .term-body elsewhere, so re-declare them for the install card). */
+  .install-copy .ic-cmd .c { color: #8a8a83; }
+  .install-copy .ic-cmd .y { color: #eceae3; }
+  .install-copy .ic-label {
+    flex: none;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  }
+  .install-copy.is-copied .ic-label {
+    color: var(--bg);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  /* "or" divider between the curl install and the tell-your-agent prompt. */
+  .install-or {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #8a8a83;
+  }
+  .install-or::before, .install-or::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: color-mix(in srgb, #fff 14%, transparent);
+  }
+  .install-tell { display: flex; flex-direction: column; gap: 12px; }
+  .install-tell-cap {
+    font-family: var(--sans);
+    font-size: 15px;
+    color: #b8b6ac;
+    letter-spacing: -0.01em;
+  }
+  /* The prompt reads as natural language, not a shell command. */
+  .install-tell-btn .ic-cmd { color: var(--accent); white-space: normal; }
+
+  /* Reusable staggered child reveal (vs columns, how-steps, economy, cards).
+     The parent section's .reveal handles the rise; children add a staggered
+     fade + micro-scale so groups animate in sequence, not all at once. JS
+     toggles .in via the same scroll observer. */
+  .stagger-group > * {
+    opacity: 0;
+    transform: scale(0.985);
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .stagger-group.in > * { opacity: 1; transform: none; }
+  .stagger-group.in > *:nth-child(1) { transition-delay: 0.04s; }
+  .stagger-group.in > *:nth-child(2) { transition-delay: 0.16s; }
+  .stagger-group.in > *:nth-child(3) { transition-delay: 0.28s; }
+  .stagger-group.in > *:nth-child(4) { transition-delay: 0.40s; }
+  @media (prefers-reduced-motion: reduce) {
+    .stagger-group > * { opacity: 1; transform: none; transition: none; }
+  }
+
+  /* The agent economy block. */
+  .econ-intro {
+    max-width: 60ch;
+    margin: -24px 0 36px;
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--ink-dim);
+  }
+  .econ-intro b { color: var(--ink); font-weight: 600; }
+  .econ-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 48px;
+    align-items: center;
+    border: 1px solid var(--line);
+    padding: 48px;
+  }
+  .econ-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
+  .econ-lede {
+    font-family: var(--sans);
+    font-size: 21px;
+    line-height: 1.45;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .econ-lede b { font-weight: 600; }
+  .econ-link {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .econ-link:hover { text-decoration: underline; }
+  .econ-figure {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-left: 48px;
+    border-left: 1px solid var(--line);
+  }
+  .econ-big {
+    font-family: var(--sans);
+    font-size: clamp(44px, 5vw, 68px);
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 0.95;
+    color: var(--accent);
+  }
+  .econ-cap { font-size: 15px; color: var(--ink); max-width: 22ch; }
+  .econ-src { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); }
+
+  /* Wallet app card (replaces the old stat figure). */
+  .econ-wallet {
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s ease;
+  }
+  .econ-wallet:hover { border-left-color: var(--accent); }
+  .econ-wallet-icon {
+    width: 96px; height: 96px; border-radius: 20px; display: block;
+    background: #fff;
+    object-fit: contain;
+    object-position: center;
+    padding: 14px;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, #000 8%, transparent);
+  }
+  .econ-wallet-name {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 28px;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    margin-top: 4px;
+  }
+  /* What the wallet lets agents do — in Pilot green. */
+  .econ-wallet-list {
+    list-style: none; margin: 4px 0 0; padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .econ-wallet-list li {
+    font-family: var(--sans);
+    font-size: 18px;
+    line-height: 1.45;
+    color: var(--accent);
+    padding-left: 22px;
+    position: relative;
+  }
+  .econ-wallet-list li::before {
+    content: "•";
+    position: absolute; left: 0;
+    color: var(--accent);
+  }
+  @media (max-width: 860px) {
+    .econ-grid { grid-template-columns: 1fr; gap: 36px; padding: 32px 24px; }
+    .econ-figure { padding-left: 0; border-left: 0; padding-top: 32px; border-top: 1px solid var(--line); }
+  }
+
+  /* Developers — "Advertise to agents" band. */
+  .econ-dev {
+    margin-top: 40px;
+    position: relative;
+    overflow: hidden;
+    padding: 28px 32px;
+    border-radius: 20px;
+    border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+    background:
+      radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 55%),
+      color-mix(in srgb, var(--bg-2) 60%, transparent);
+    box-shadow:
+      0 10px 40px color-mix(in srgb, #000 24%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #fff 10%, transparent);
+  }
+  /* Faint dotted grid texture behind the band — reads as "built", not templated. */
+  .econ-dev::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(color-mix(in srgb, var(--accent) 22%, transparent) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: linear-gradient(105deg, #000 0%, transparent 60%);
+    -webkit-mask-image: linear-gradient(105deg, #000 0%, transparent 60%);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .econ-dev > * { position: relative; z-index: 1; }
+  .econ-dev-main { display: flex; flex-direction: column; align-items: flex-start; }
+  .econ-dev-kicker {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .econ-dev-title {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: clamp(26px, 3vw, 36px);
+    letter-spacing: -0.035em;
+    line-height: 1;
+    margin: 10px 0 0;
+    color: var(--ink);
+  }
+  .econ-dev-lede {
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--ink-dim);
+    letter-spacing: -0.01em;
+    max-width: none;
+    margin: 14px 0 0;
+  }
+  .econ-dev-lede b { font-weight: 600; color: var(--ink); }
+  /* Two CTAs side by side: filled "Publish", outlined "Contact us". */
+  .econ-dev-ctas {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .econ-dev-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+    color: var(--accent-ink);
+    background: var(--accent);
+    padding: 12px 22px;
+    border-radius: 999px;
+    text-decoration: none;
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 34%, transparent);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  }
+  .econ-dev-cta .arr { transition: transform 0.18s ease; }
+  .econ-dev-cta:hover { transform: translateY(-2px); box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 44%, transparent); }
+  .econ-dev-cta:hover .arr { transform: translateX(4px); }
+  /* Secondary "Contact us" — outlined, no fill. */
+  .econ-dev-cta-alt {
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+    box-shadow: none;
+  }
+  .econ-dev-cta-alt:hover {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    box-shadow: none;
+  }
+  /* Live-stat anchor on the right. */
+  .econ-dev-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 26px 28px;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+    background: color-mix(in srgb, #000 18%, transparent);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+  @media (max-width: 860px) {
+    .econ-dev { padding: 30px 24px; }
+  }
+
+  /* Pull the App Store callout up nearer the section's top divider line. */
+  #thesis { padding-top: 64px; padding-bottom: 32px; }
+  @media (max-width: 900px) { #thesis { padding-top: 40px; padding-bottom: 24px; } }
+  @media (max-width: 640px) { #thesis { padding-top: 24px; } }
+  .appstore-callout {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+    border-radius: 18px;
+    border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+    /* Frosted glass: translucent fill + backdrop blur so the page shows through. */
+    background: color-mix(in srgb, var(--bg-2) 55%, transparent);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    backdrop-filter: blur(18px) saturate(1.4);
+    /* Soft outer lift + inner top-edge sheen for the glass highlight. */
+    box-shadow:
+      0 8px 32px color-mix(in srgb, #000 22%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #fff 14%, transparent),
+      inset 0 0 0 1px color-mix(in srgb, #fff 4%, transparent);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+  .appstore-callout > * { position: relative; z-index: 1; }
+
+  /* ---- Mobile scroll performance ----------------------------------------
+     backdrop-filter re-blurs whatever is behind these cards on every scroll
+     frame, which stutters on touch GPUs. On touch devices swap the frosted
+     glass for a near-solid fill and stop the expensive rotating conic blur.
+     Desktop (fine pointer) keeps the live glass effect. */
+  @media (hover: none) and (pointer: coarse) {
+    .pillar,
+    .appstore-callout {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      background: color-mix(in srgb, var(--bg-2) 94%, var(--bg));
+    }
+    /* The App Store callout's rotating conic-gradient "spotlight" (blur 40px)
+       repaints continuously — pause it on touch devices. */
+    .ac-featured::before { animation: none; }
+  }
+  /* MCP section — harness logo row + typewriter cursor. */
+  .mcp-harnesses {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+  }
+  .mcp-hn {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 14px 9px 11px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-family: var(--mono);
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  /* On hover, wash the chip in the logo's own brand colour. */
+  .mcp-hn:hover {
+    border-color: color-mix(in srgb, var(--logo-color, var(--accent)) 55%, var(--line));
+    background: color-mix(in srgb, var(--logo-color, var(--accent)) 8%, transparent);
+  }
+  /* Real brand logos as masks, each tinted with its own brand colour. */
+  .mcp-hn-i {
+    width: 24px; height: 24px; flex: none;
+    background: var(--logo-color, currentColor);
+    -webkit-mask: var(--logo) center / contain no-repeat;
+    mask: var(--logo) center / contain no-repeat;
+  }
+  /* MCP section — larger, more value-oriented copy. */
+  #mcp .how-lede { font-size: clamp(26px, 2.8vw, 38px); }
+  #mcp .how-grid > div:last-child p { font-size: 20px; line-height: 1.5; }
+  /* Director: scale the left-hand copy up so it reads proportional to the TUI,
+     and centre it vertically against the taller terminal. */
+  #director .how-grid { align-items: center; }
+  #director .how-lede { font-size: clamp(26px, 2.8vw, 38px); margin-bottom: 22px; }
+  #director .how-grid > div:first-child p { font-size: 20px; line-height: 1.55; }
+  #director .how-grid > div:first-child p a { font-size: 19px; }
+  /* Reserve height so the box doesn't collapse/jump while the lines type in. */
+  .term-body[data-mcp-term] { min-height: 9.6em; }
+  .tw-cursor {
+    display: inline-block;
+    width: 0.62em;
+    height: 1.05em;
+    margin-left: 1px;
+    transform: translateY(0.16em);
+    background: var(--accent);
+    animation: tw-blink 1.05s steps(1) infinite;
+  }
+  @keyframes tw-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+
+  .mom-name-hl { letter-spacing: 0.02em; }
+
+  /* Thesis body paragraphs slide in from the right on scroll-into-view. */
+  #thesis-copy .body {
+    opacity: 0;
+    transform: translateX(56px);
+    transition: opacity 0.6s ease, transform 0.7s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  #thesis-copy.visible .body { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    #thesis-copy .body { opacity: 1; transform: none; transition: none; }
+  }
+
+  /* ===== Standardised vertical rhythm across all homepage sections ========
+     .section#id beats the plain #id overrides scattered above, so every
+     section gets the same top/bottom breathing room. Hero is excluded. */
+  .section#thesis, .section#agent-value, .section#thesis-copy, .section#mcp,
+  .section#numbers, .section#stack, .section#economy, .section#how,
+  .section#director, .section#paths {
+    padding-top: 60px;
+    padding-bottom: 60px;
+  }
+  @media (max-width: 900px) {
+    .section#thesis, .section#agent-value, .section#thesis-copy, .section#mcp,
+    .section#numbers, .section#stack, .section#economy, .section#how,
+    .section#director, .section#paths {
+      padding-top: 44px;
+      padding-bottom: 44px;
+    }
+  }
+
+  #stack { padding-top: 40px; padding-bottom: 32px; }
+  @media (max-width: 900px) { #stack { padding-top: 28px; padding-bottom: 24px; } }
+  #economy { padding-top: 32px; padding-bottom: 32px; }
+  @media (max-width: 900px) { #economy { padding-top: 24px; padding-bottom: 24px; } }
+  #how { padding-top: 32px; }
+  @media (max-width: 900px) { #how { padding-top: 24px; } }
+  /* ===== The Stack — vertical: on-top layers → Pilot (highlighted) → base === */
+  #stack .stack.stack-v {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    border: 0;
+    grid-template-columns: none;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+  /* A stronger, more defined outline colour for the tiers. */
+  #stack .stack-v { --sv-edge: color-mix(in srgb, var(--ink) 28%, transparent); }
+  /* Reuse the .layer scroll-in animation but slide up (not sideways). */
+  #stack .stack-v .layer {
+    min-height: 0;
+    border: 0;
+    padding: 0;
+    background: none;
+    transform: translateY(24px) scale(0.99);
+    border-radius: 16px;
+  }
+  #stack .stack-v.layers-in .layer { transform: none; }
+
+  /* On-top tier: caption + a row of framed chips. */
+  #stack .sv-over {
+    background: var(--bg-2);
+    border: 1.5px solid var(--sv-edge) !important;
+    padding: 24px 26px !important;
+  }
+  #stack .sv-cap {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-dim); margin-bottom: 16px;
+  }
+  #stack .sv-over-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 640px) { #stack .sv-over-grid { grid-template-columns: 1fr; } }
+  #stack .sv-chip {
+    display: flex; flex-direction: column; gap: 5px;
+    background: var(--bg);
+    border: 1.5px solid var(--sv-edge);
+    border-radius: 12px;
+    padding: 16px 18px;
+    transition: border-color 0.15s ease;
+  }
+  #stack .sv-chip:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--sv-edge)); }
+  #stack .sv-chip b { font-weight: 600; font-size: 17px; color: var(--ink); }
+  #stack .sv-chip span { font-family: var(--mono); font-size: 11.5px; color: var(--ink-dim); }
+
+  /* Connector cue between the tiers. */
+  #stack .sv-connector {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 12px; letter-spacing: 0.08em;
+    color: var(--accent);
+    padding: 0;
+  }
+
+  /* Pilot tier — the emphasized green band with a defined bright edge. */
+  #stack .sv-pilot {
+    position: relative;
+    background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 84%, #000)) !important;
+    color: var(--accent-ink);
+    padding: 30px 30px !important;
+    border: 1.5px solid color-mix(in srgb, var(--accent) 70%, #fff) !important;
+    box-shadow: 0 12px 46px color-mix(in srgb, var(--accent) 32%, transparent);
+  }
+  #stack .sv-badge {
+    position: absolute; top: 20px; right: 24px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    background: var(--accent-ink); color: var(--accent);
+    padding: 5px 12px; border-radius: 999px;
+  }
+  #stack .sv-pilot .sv-l { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; opacity: 0.85; }
+  #stack .sv-pilot .sv-n { font-family: var(--sans); font-weight: 600; font-size: clamp(28px, 3.6vw, 38px); letter-spacing: -0.02em; margin-top: 8px; }
+  #stack .sv-pilot .sv-d { font-size: 16.5px; line-height: 1.5; opacity: 0.94; margin-top: 10px; max-width: 60ch; }
+  /* Mobile: the "You are here" badge is absolutely positioned and overlaps the
+     title on narrow screens — let it flow inline above the content instead. */
+  @media (max-width: 600px) {
+    #stack .sv-badge {
+      position: static;
+      display: inline-block;
+      margin-bottom: 12px;
+    }
+  }
+
+  /* Foundation tier — muted base. */
+  /* Shared-transport tier — matches the blue "shared transport" legend swatch. */
+  #stack .sv-base {
+    background: color-mix(in srgb, #6ea8ff 6%, var(--bg-2));
+    border: 1.5px solid color-mix(in srgb, #6ea8ff 55%, transparent) !important;
+    padding: 22px 26px !important;
+  }
+  #stack .sv-base .sv-l { font-family: var(--mono); font-size: 12px; color: #6ea8ff; }
+  #stack .sv-base .sv-n { font-weight: 600; font-size: 19px; color: var(--ink); margin-top: 5px; }
+  #stack .sv-base .sv-d { font-size: 14px; color: var(--ink-dim); margin-top: 5px; }
+
+  /* ===== Network stats — tighter, grouped, less negative space ============ */
+  #numbers .stats {
+    gap: 0;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  #numbers .stat {
+    min-height: 0;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 40px 40px 38px;
+  }
+  /* Small green header row (dot + label) sits above the big number. */
+  #numbers .stat-top {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  #numbers .stat-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+    animation: mom-pulse 1.6s ease-in-out infinite;
+  }
+  #numbers .stat .big {
+    font-size: clamp(52px, 6.4vw, 92px);
+    line-height: 0.92;
+    margin-top: 4px;
+  }
+  /* Tint the number with a subtle vertical accent gradient for depth. */
+  #numbers .stat .big {
+    background: linear-gradient(180deg, var(--ink) 0%, color-mix(in srgb, var(--ink) 78%, var(--accent)) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  #numbers .stat .lbl {
+    font-size: 16px;
+    color: var(--ink-dim);
+    letter-spacing: -0.005em;
+  }
+
+  /* ===== MOM terminal — animated planning demo ============================ */
+  /* Green outline + glow around the whole shell. */
+  /* .mom-shell inherits the shared green rounded .term styling (system.css). */
+  .mom-clock {
+    color: var(--accent);
+    font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .mom-clock::before {
+    content: ""; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: mom-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes mom-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .term-body.mom-term {
+    min-height: 13.5em;
+    font-size: clamp(12.5px, 1.1vw, 15px);
+    line-height: 1.55;
+    padding: 22px 20px;
+  }
+  /* Emitted rows fade + slide + un-blur in. JS adds .in on the next frame. */
+  .mom-term .mom-row {
+    opacity: 0;
+    transform: translateY(9px) scale(0.99);
+    filter: blur(3px);
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1), filter 0.4s ease;
+  }
+  .mom-term .mom-row.in { opacity: 1; transform: none; filter: none; }
+  .mom-term .mom-spacer { height: 0.5em; }
+
+  /* Query line. */
+  .mom-term .mom-prompt { color: var(--accent); font-weight: 700; }
+  .mom-term .mom-cmd { color: #f2b45a; font-weight: 700; }
+  .mom-term .mom-query { color: #f4f2ec; }
+  /* Rest of the real CLI: subcommand/agent dim-white, --wait flag muted. */
+  .mom-term .mom-flag { color: #cfcdc4; }
+  .mom-term .mom-wait { color: #7d7d76; }
+
+  /* Thinking + plan header. Give the plan header room before the steps. */
+  .mom-term .mom-think { color: #cfcdc4; }
+  .mom-term .mom-think.is-plan { margin-bottom: 10px; }
+  .mom-term .mom-ok { color: var(--accent); font-weight: 700; }
+  .mom-term .mom-ach { color: var(--accent); font-weight: 600; }
+  .mom-term .mom-spin { display: inline-block; width: 1.1em; color: var(--accent); }
+
+  /* A plan step: badge/logo on the left (flex); to its right a column with the
+     name+pill row on top and the description beneath. Flex + a wrapper make the
+     spacing structural, so it can never render glued together. */
+  .mom-term .mom-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 6px 0;
+  }
+  .mom-term .mom-main { flex: 1; min-width: 0; }
+  .mom-term .mom-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  /* Explicit margin as a fallback in case flex `gap` doesn't apply, so the
+     name and pill are never glued together. */
+  .mom-term .mom-head > * + * { margin-left: 10px; }
+  /* Steps are spaced by padding; no divider line needed between them. */
+  .mom-term .mom-step + .mom-step {
+    padding-top: 8px;
+  }
+  .mom-term .mom-n {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.9em; height: 1.9em;
+    border-radius: 50%;
+    color: #0b0b0a; font-weight: 800; font-size: 0.82em;
+    flex: none;
+    background: var(--sc, var(--accent));
+    box-shadow: 0 0 14px color-mix(in srgb, var(--sc, var(--accent)) 55%, transparent);
+  }
+  .mom-term .mom-ico {
+    width: 1.9em; height: 1.9em;
+    border-radius: 7px;
+    object-fit: cover; flex: none;
+    box-shadow: 0 0 14px color-mix(in srgb, var(--sc, var(--accent)) 45%, transparent);
+  }
+  .mom-term .mom-name {
+    color: var(--sc, #f4f2ec);
+    font-weight: 600;
+  }
+  /* Highlighted tool names get a tinted pill in the step's own colour. */
+  .mom-term .mom-step.is-hl .mom-name {
+    padding: 2px 10px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--sc, var(--accent)) 20%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sc, var(--accent)) 55%, transparent);
+  }
+  .mom-term .mom-pill {
+    font-size: 0.66em;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    padding: 3px 11px;
+    border-radius: 999px;
+    font-weight: 700;
+    flex: none;
+    white-space: nowrap;
+    color: var(--sc, var(--accent));
+    background: color-mix(in srgb, var(--sc, var(--accent)) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--sc, var(--accent)) 55%, transparent);
+  }
+  .mom-term .mom-desc {
+    margin-top: 4px;
+    color: #9a9a92;
+    font-size: 0.92em;
+    line-height: 1.4;
+  }
+  /* Plan-key labels ("calls" / "handoff") that head each group of steps. */
+  .mom-term .mom-section {
+    color: #7d7d76;
+    font-size: 0.78em;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin: 10px 0 2px;
+  }
+  /* Step descriptions that are literal pilotctl commands. */
+  .mom-term .mom-code {
+    font-family: var(--mono);
+    font-size: 0.85em;
+    color: #8f8f88;
+    word-break: break-word;
+  }
+  /* Success banner — the task is done, so make it clearly stand out. */
+  .mom-term .mom-done {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 1.1em;
+    padding: 12px 16px;
+    border-radius: 10px;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 1.02em;
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 24%, transparent);
+  }
+  /* Circular check chip at the start of the banner. */
+  .mom-term .mom-done::before {
+    content: "✓";
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.5em; height: 1.5em;
+    flex: none;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #0b0b0a;
+    font-size: 0.85em;
+    font-weight: 800;
+  }
+  /* Main row (heading/rail on the left, featured on the right). */
+  .ac-main { display: flex; flex-direction: row; align-items: center; gap: 26px; padding: 28px 32px; }
+  /* Featured app on the left, "Discover the App Store" text on the right. */
+  .ac-main .ac-featured { order: 0; }
+  .ac-main .ac-top { order: 1; }
+  /* Green developer CTA strip pinned to the bottom edge. */
+  .ac-devstrip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 15px 44px;
+    background: var(--accent);
+    color: #0b0b0a;
+    text-decoration: none;
+    transition: filter 0.15s ease;
+  }
+  .ac-devstrip:hover { filter: brightness(1.05); }
+  .ads-copy { font-size: 18px; letter-spacing: -0.01em; }
+  .ads-copy b { font-weight: 600; }
+  .ads-btn {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #0b0b0a;
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 500;
+    padding: 10px 18px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .ac-devstrip:hover .ads-btn .arr { transform: translateX(3px); }
+  .ads-btn .arr { transition: transform 0.15s ease; }
+  /* Left column: eyebrow → heading → sub → floating icon rail, stacked and
+     left-aligned. Takes the room the featured panel doesn't. */
+  .ac-top {
+    flex: 1 1 auto;
+    min-width: 0;
+    /* Stretch to the full height of the callout and centre content, so the whole
+       left side is clickable — not just the text box. */
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 18px;
+    text-decoration: none;
+    color: inherit;
+  }
+  .appstore-callout .ac-top .ac-body { flex: none; }
+  /* Rail spans the full left column and spreads its tiles so it fills the row
+     instead of leaving a dead gap before the featured divider. */
+  .appstore-callout .ac-top .ac-rail {
+    width: 100%;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    min-height: auto;
+    margin-top: 4px;
+  }
+  /* Line the icons up in a straight row — no floating/drift. */
+  .appstore-callout .ac-top .ac-rail .ac-tile { animation: none; transform: none; }
+  /* Featured-app carousel — a compact right-hand panel, divided by a left rule. */
+  .ac-featured {
+    position: relative;
+    isolation: isolate;
+    flex: 0 0 clamp(360px, 37%, 470px);
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 18px;
+    border-right: 1px solid color-mix(in srgb, var(--ink) 40%, transparent);
+    padding-right: 34px;
+    /* Extend fully to the callout's edges (cancel .ac-main's 28px vertical +
+       32px horizontal padding) so the fill leaves no gap. */
+    margin-top: -28px;
+    margin-bottom: -28px;
+    padding-top: 28px;
+    padding-bottom: 28px;
+    padding-left: 32px;
+    margin-left: -32px;
+    border-radius: 18px 0 0 0;
+    overflow: hidden;
+    /* Flat base tint fills the ENTIRE panel so there are never dark corners;
+       a radial hotspot adds depth on top of it. */
+    background:
+      radial-gradient(130% 100% at 22% 8%,
+        color-mix(in srgb, var(--accent) 5%, transparent) 0%,
+        transparent 70%),
+      color-mix(in srgb, var(--accent) 3%, transparent);
+  }
+  /* Slow rotating conic sheen behind the card — the "spotlight". A very large
+     element so even after blur its bright lobes always cover the whole panel. */
+  .ac-featured::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    left: -100%; top: -100%;
+    width: 300%; height: 300%;
+    background: conic-gradient(from 0deg,
+      color-mix(in srgb, var(--accent) 8%, transparent) 0deg,
+      color-mix(in srgb, var(--accent) 3%, transparent) 90deg,
+      color-mix(in srgb, var(--accent) 8%, transparent) 180deg,
+      color-mix(in srgb, var(--accent) 3%, transparent) 270deg,
+      color-mix(in srgb, var(--accent) 8%, transparent) 360deg);
+    filter: blur(40px);
+    opacity: 0.5;
+    animation: acf-spot 9s linear infinite;
+  }
+  @keyframes acf-spot { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .ac-featured::before { animation: none; }
+  }
+  /* Keep all card content above the spotlight. */
+  .ac-featured > * { position: relative; z-index: 1; }
+  /* "Featured" now a filled green pill badge. */
+  .acf-label {
+    flex: none;
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: #0b0b0a;
+    background: var(--accent);
+    padding: 5px 12px;
+    border-radius: 999px;
+    box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  /* Inline SVG star — scales and centres cleanly, unlike the text glyph. */
+  .acf-star {
+    flex: none;
+    width: 13px;
+    height: 13px;
+    display: block;
+    fill: currentColor;
+  }
+  .acf-viewport {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    height: 152px;
+  }
+  .acf-card {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateX(-40px);
+    transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.55s ease;
+    pointer-events: none;
+  }
+  .acf-card.is-active { opacity: 1; transform: translateX(0); pointer-events: auto; }
+  .acf-card:hover .acf-name { color: var(--accent); }
+  .acf-card.is-exit { opacity: 0; transform: translateX(40px); }
+  /* App-icon rendering (ported from appstore.css so the callout can reuse
+     the AppIcon component without importing the whole App Store stylesheet).
+     :global() because .app-icon is rendered by the AppIcon component, which
+     Astro scopes to a different cid than this page. */
+  .ac-featured :global(.app-icon) {
+    --c: var(--accent); position: relative; flex: none; display: grid; place-items: center;
+    border-radius: 13px; overflow: hidden; isolation: isolate; background: var(--c);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12), inset 0 -10px 22px rgba(0,0,0,0.22);
+  }
+  .ac-featured :global(.app-icon::after) {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(160deg, rgba(255,255,255,0.22), transparent 46%); pointer-events: none;
+  }
+  .ac-featured :global(.app-icon .logo) {
+    display: block; width: 52%; height: 52%; background: #fff;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+    -webkit-mask-position: center; mask-position: center;
+    -webkit-mask-size: contain; mask-size: contain;
+  }
+  .ac-featured :global(.app-icon[data-ink="true"] .logo) { background: #0b0b0a; }
+  .ac-featured :global(.app-icon[data-app="io.pilot.mysql"] .logo) { width: 78%; height: 78%; }
+  .ac-featured :global(.app-icon.is-image) { background: var(--c); }
+  .ac-featured :global(.app-icon.is-image::after) { background: linear-gradient(160deg, rgba(255,255,255,0.10), transparent 46%); }
+  .ac-featured :global(.app-icon .logo-img) { display: block; width: 100%; height: 100%; }
+  .ac-featured :global(.app-icon.is-image.pad .logo-img) { width: 72%; height: 72%; }
+  .ac-featured :global(.app-icon.sz-88) { width: 88px; height: 88px; border-radius: 19px; }
+  .acf-head { display: flex; align-items: center; gap: 18px; min-width: 0; }
+  .acf-name {
+    font-family: var(--sans);
+    font-size: 27px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .acf-desc {
+    font-size: 16px;
+    line-height: 1.45;
+    color: var(--accent);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .acf-card { transition: opacity 0.3s ease; transform: none; }
+    .acf-card.is-exit { transform: none; }
+  }
+  /* Narrow: stack cleanly — featured drops below with a top divider. Fully
+     resets the desktop edge-extension (negative margins, rounded corner,
+     side divider, spotlight) so nothing misaligns or overflows on mobile. */
+  @media (max-width: 760px) {
+    .ac-main { flex-direction: column; align-items: stretch; gap: 20px; padding: 24px 22px; }
+    /* Stacked: text first, featured below. */
+    .ac-main .ac-top { order: 0; }
+    .ac-main .ac-featured { order: 1; }
+    .ac-featured {
+      flex: none;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 14px;
+      /* wipe every desktop edge trick */
+      margin: 0;
+      padding: 20px 0 0;
+      border: none;
+      border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+      border-radius: 0;
+      background: none;
+      overflow: visible;
+    }
+    .ac-featured::before { display: none; }   /* no spotlight on mobile */
+    .acf-viewport { height: auto; min-height: 108px; }
+    /* Smaller icon + text so the featured card fits neatly on phones. */
+    .ac-featured :global(.app-icon.sz-88) { width: 56px; height: 56px; border-radius: 13px; }
+    .acf-head { gap: 13px; }
+    .acf-name { font-size: 20px; }
+    .acf-desc { font-size: 13.5px; -webkit-line-clamp: 2; }
+    .ac-devstrip { flex-direction: column; align-items: flex-start; gap: 12px; padding: 18px 22px; }
+  }
+  .appstore-callout:hover {
+    border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+    background: color-mix(in srgb, var(--bg-2) 68%, transparent);
+    transform: translateY(-2px);
+    box-shadow:
+      0 14px 40px color-mix(in srgb, #000 28%, transparent),
+      0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #fff 20%, transparent);
+  }
   .appstore-callout .ac-eyebrow {
     font-family: var(--mono);
     font-size: 11px;
@@ -708,36 +2027,56 @@ try {
     white-space: nowrap;
   }
   .appstore-callout .ac-body { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .appstore-callout .ac-body { gap: 6px; }
   .appstore-callout .ac-lead {
     font-family: var(--sans);
-    font-size: 18px;
-    font-weight: 500;
+    font-size: clamp(22px, 2.2vw, 30px);
+    font-weight: 600;
+    line-height: 1.15;
     color: var(--ink);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
   }
   .appstore-callout:hover .ac-lead { color: var(--accent); }
-  .appstore-callout .ac-sub { font-size: 14px; color: var(--ink-dim); line-height: 1.5; }
-  .appstore-callout .ac-arr {
-    font-size: 22px;
-    color: var(--accent);
-    transition: transform 0.15s;
-  }
-  .appstore-callout:hover .ac-arr { transform: translateX(4px); }
+  .appstore-callout .ac-sub { font-size: 15px; color: var(--ink-dim); line-height: 1.5; }
   /* App-logo rail: a row of bordered tiles, one per app, ending in a "+N more"
      counter that signals the catalogue runs deeper than what's shown. */
-  .appstore-callout .ac-rail { display: flex; align-items: center; gap: 10px; }
+  .appstore-callout .ac-rail { display: flex; align-items: center; gap: 10px; min-height: 104px; }
   .appstore-callout .ac-tile {
-    width: 46px;
-    height: 46px;
+    width: 54px;
+    height: 54px;
     flex: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 8px;
+    padding: 9px;
     border: 1px solid var(--line-2);
-    border-radius: 6px;
+    border-radius: 8px;
     background: var(--bg);
     transition: border-color 0.15s;
+    --bx: 0px; --by: 0px;
+    animation: ac-float 6s ease-in-out infinite;
+    will-change: transform;
+  }
+  /* Each tile gets its own scattered baseline (--bx/--by) plus its own rhythm,
+     so they drift around the zone freely instead of sitting on the row line. */
+  .appstore-callout .ac-tile:nth-child(1) { --bx: 2px;  --by: -26px; animation-duration: 12s;   animation-delay: -0.4s; }
+  .appstore-callout .ac-tile:nth-child(2) { --bx: -4px; --by: 18px;  animation-duration: 14.5s; animation-delay: -3.1s; }
+  .appstore-callout .ac-tile:nth-child(3) { --bx: 3px;  --by: -12px; animation-duration: 11s;   animation-delay: -1.8s; }
+  .appstore-callout .ac-tile:nth-child(4) { --bx: -2px; --by: 26px;  animation-duration: 15.5s; animation-delay: -5.2s; }
+  .appstore-callout .ac-tile:nth-child(5) { --bx: 4px;  --by: -20px; animation-duration: 13s;   animation-delay: -6.4s; }
+  .appstore-callout .ac-tile:nth-child(6) { --bx: -3px; --by: 8px;   animation-duration: 12.5s; animation-delay: -2.3s; }
+  .appstore-callout .ac-tile:nth-child(7) { --bx: 2px;  --by: -28px; animation-duration: 14s;   animation-delay: -5.9s; }
+  .appstore-callout .ac-tile:nth-child(8) { --bx: -4px; --by: 14px;  animation-duration: 11.5s; animation-delay: -1.0s; }
+  .appstore-callout .ac-tile:nth-child(9) { --bx: 3px;  --by: -6px;  animation-duration: 15s;   animation-delay: -7.2s; }
+  @keyframes ac-float {
+    0%   { transform: translate(calc(var(--bx)),        calc(var(--by)));         }
+    25%  { transform: translate(calc(var(--bx) + 4px),  calc(var(--by) - 5px)) rotate(-1.5deg); }
+    50%  { transform: translate(calc(var(--bx) - 3px),  calc(var(--by) + 4px)) rotate(1deg);    }
+    75%  { transform: translate(calc(var(--bx) + 3px),  calc(var(--by) + 5px)) rotate(-1deg);   }
+    100% { transform: translate(calc(var(--bx)),        calc(var(--by)));         }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .appstore-callout .ac-tile { animation: none; transform: none; }
   }
   .appstore-callout:hover .ac-tile { border-color: #33332c; }
   .appstore-callout .ac-tile img {
@@ -751,8 +2090,8 @@ try {
   .appstore-callout .ac-tile-mono { filter: invert(1); }
   [data-theme="light"] .appstore-callout .ac-tile-mono { filter: none; }
   .appstore-callout .ac-more {
-    width: 46px;
-    height: 46px;
+    width: 54px;
+    height: 54px;
     flex: none;
     display: flex;
     align-items: center;
@@ -761,23 +2100,308 @@ try {
     border-radius: 6px;
     background: var(--accent-dim);
     font-family: var(--mono);
-    font-size: 13px;
+    font-size: 18px;
     font-weight: 500;
     letter-spacing: -0.02em;
     color: var(--accent);
   }
   /* Below ~860px the rail crowds the heading; drop the last tiles first, then
      hide the rail entirely on mobile (the card stacks to a column there). */
-  @media (max-width: 1040px) {
-    .appstore-callout .ac-rail .ac-tile:nth-child(n+4) { display: none; }
+  @media (max-width: 1240px) {
+    .appstore-callout .ac-rail .ac-tile:nth-child(n+7) { display: none; }
   }
-  @media (max-width: 860px) {
-    .appstore-callout .ac-rail { display: none; }
+  @media (max-width: 1040px) {
+    .appstore-callout .ac-rail .ac-tile:nth-child(n+5) { display: none; }
   }
   @media (max-width: 640px) {
-    .appstore-callout { flex-direction: column; align-items: flex-start; gap: 12px; padding: 22px 20px; }
-    .appstore-callout .ac-arr { align-self: flex-end; margin-top: -36px; }
+    .ac-main { gap: 18px; padding: 22px 20px; }
+    .ac-devstrip { padding: 16px 20px; }
+    .ac-top { gap: 16px; }
+    /* Show the app icons on mobile as a tidy static row (floats off, no scatter). */
+    .appstore-callout .ac-rail { display: flex; flex-wrap: wrap; min-height: auto; gap: 8px; }
+    .appstore-callout .ac-rail .ac-tile {
+      width: 46px; height: 46px; animation: none; transform: none;
+    }
+    .appstore-callout .ac-rail .ac-tile:nth-child(-n+5) { display: flex; }
+    .appstore-callout .ac-rail .ac-tile:nth-child(n+6) { display: none; }
+    .appstore-callout .ac-more { width: 46px; height: 46px; }
   }
+
+  /* Two paths: Pilot Lite vs Pilot (skill injection). */
+  /* Eyebrows removed page-wide, so collapse every section head to one column
+     (otherwise the h2 falls into the narrow 160px gutter and wraps vertically)
+     and centre the titles. */
+  .section-head { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .section-head .section-sub { grid-column: 1; margin-left: auto; margin-right: auto; }
+  .paths {
+    margin: 40px 0 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    align-items: stretch;
+  }
+  .path-card {
+    --c: var(--ink-dim);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 34px 36px;
+    border: 1px solid color-mix(in srgb, var(--c) 34%, var(--line));
+    border-radius: 16px;
+    background: var(--bg-2);
+    overflow: hidden;
+  }
+  .path-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--c);
+    opacity: 0.8;
+  }
+  .path-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(120% 90% at 0% 0%,
+      color-mix(in srgb, var(--c) 12%, transparent), transparent 55%);
+    pointer-events: none;
+  }
+  .path-card > * { position: relative; z-index: 1; }
+  .path-full {
+    --c: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent),
+      0 8px 40px color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  .path-rec {
+    margin-left: 10px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #04120a;
+    background: var(--accent);
+    vertical-align: middle;
+  }
+  .path-head { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+  .path-tag { display: inline-flex; align-items: center; }
+  .path-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: clamp(24px, 3vw, 32px);
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .path-logo { width: 30px; height: 30px; object-fit: contain; }
+  .path-tag {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--c);
+  }
+  .path-lite .path-tag { color: var(--ink-dim); }
+  .path-lead { font-size: 16px; line-height: 1.55; color: var(--ink-dim); margin: 0 0 20px; }
+  .path-list { list-style: none; margin: 0 0 24px; padding: 0; display: flex; flex-direction: column; gap: 11px; }
+  /* The single plugged-in card is full-width, so lay its checklist in two columns. */
+  .path-full .path-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 32px; }
+  @media (max-width: 640px) { .path-full .path-list { grid-template-columns: 1fr; } }
+  .path-list li {
+    position: relative;
+    padding-left: 26px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  .path-list li::before {
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--c);
+    content: "›";
+  }
+  .path-full .path-list li::before { content: "✓"; color: var(--accent); }
+  .path-list code, .path-cmd code { font-family: var(--mono); font-size: 0.85em; }
+  .path-cmd {
+    margin-top: auto;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink);
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .path-cmd .pc-p { color: var(--accent); margin-right: 8px; }
+  .paths-note {
+    margin: 28px 0 0;
+    max-width: 78ch;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink-dim);
+  }
+  .paths-note b { color: var(--ink); font-weight: 500; }
+  .paths-note a { color: var(--accent); text-decoration: none; }
+  .paths-note a:hover { text-decoration: underline; }
+  @media (max-width: 760px) {
+    .paths { grid-template-columns: 1fr; gap: 16px; }
+    .path-card { padding: 24px; }
+  }
+
+  /* Tighten the homepage hero so the rotating capability line sits higher —
+     visible on first paint. Scoped to #hero so other pages' .display is untouched. */
+  #hero.hero { padding-top: 46px; padding-bottom: 64px; }
+  #hero .hero-top { margin-bottom: 38px; }
+  /* Phones: shrink the "Network throughput" chip so it doesn't dominate. */
+  @media (max-width: 600px) {
+    #hero .hero-top { margin-bottom: 26px; }
+    #hero .chip { gap: 7px; padding: 6px 10px; font-size: 10.5px; letter-spacing: 0.08em; }
+    #hero .chip .val { font-size: 13px; }
+    #hero .chip .dot { width: 6px; height: 6px; }
+  }
+  #hero .display { font-size: clamp(44px, 7.6vw, 118px); line-height: 0.9; }
+  #hero .display .spacer { height: 0.05em; }
+  #hero .hero-grid { gap: 56px; align-items: start; }
+  #hero .hero-rotator-line { margin-top: 30px; }
+
+  /* Hero install pill — replaces the sub-paragraph with the one-line installer. */
+  .hero-install { margin-top: 18px; max-width: 620px; }
+  .hero-install-cap {
+    font-size: clamp(19px, 2.2vw, 23px);
+    line-height: 1.4;
+    color: var(--ink);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin-bottom: 14px;
+  }
+  .hero-install-cmd {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: clamp(13px, 1.5vw, 17px);
+    color: var(--ink);
+    background: color-mix(in srgb, var(--bg-2) 70%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 6%, transparent);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .hero-install-cmd:hover {
+    border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+    box-shadow: 0 6px 22px color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  .hero-install-cmd .ic-cmd {
+    flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap;
+    /* Hide the scrollbar chrome — still scrollable on very narrow screens. */
+    scrollbar-width: none;              /* Firefox */
+    -ms-overflow-style: none;           /* old Edge */
+  }
+  .hero-install-cmd .ic-cmd::-webkit-scrollbar { display: none; }  /* Chrome/Safari */
+  .hero-install-cmd .hi-dollar { color: var(--ink-dim); }
+  .hero-install-cmd .hi-curl { color: var(--accent); font-weight: 600; }
+  .hero-install-cmd .ic-label {
+    flex: none;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    background: var(--accent);
+    padding: 5px 13px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  .hero-install-cmd.is-copied .ic-label { background: var(--ink); color: var(--bg); }
+
+  /* Hero rotating capability line ("Pilot lets your agent …") */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  .hero-rotator-line {
+    --rl-lh: 1.35em;
+    margin-top: 32px;
+    font-family: var(--sans);
+    font-size: clamp(28px, 4.4vw, 52px);
+    font-weight: 400;
+    line-height: var(--rl-lh);
+    letter-spacing: -0.015em;
+    color: var(--ink-dim);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    grid-column: 1 / -1;
+  }
+  /* Mobile: grid stacks the content block and the rotating line. Tighten the
+     gap between them and the hero's bottom padding so the line isn't stranded. */
+  @media (max-width: 960px) {
+    .hero-grid { display: flex; flex-direction: column; }
+    #hero .hero-grid { gap: 20px; }
+    /* Order: headline (1) → rotating line (2) → sub-paragraph + IETF meta (3). */
+    #hero .hero-grid > :nth-child(1) { order: 1; }
+    #hero .hero-grid > :nth-child(3) { order: 2; }
+    #hero .hero-grid > :nth-child(2) { order: 3; }
+    #hero .hero-rotator-line { margin-top: 0; }
+    #hero.hero { padding-bottom: 40px; }
+  }
+  @media (max-width: 560px) {
+    #hero .hero-grid { gap: 14px; }
+    #hero .hero-rotator-line { margin-top: 0; }
+    #hero.hero { padding-bottom: 28px; }
+    /* Install pill: full width, tighter, so it never overflows the phone. The
+       min-width:0 on the flex ancestors lets the long command scroll INSIDE the
+       pill instead of forcing the whole pill wider than the screen. */
+    #hero .hero-grid > * { min-width: 0; max-width: 100%; }
+    .hero-install { max-width: 100%; min-width: 0; }
+    .hero-install-cap { font-size: 19px; margin-bottom: 12px; }
+    .hero-install-cmd { font-size: 11.5px; gap: 10px; padding: 12px 13px; min-width: 0; overflow: hidden; }
+    .hero-install-cmd .ic-label { padding: 5px 11px; font-size: 11px; }
+    /* A big one-liner can't fit a phone with a 21-char prefix — so go two
+       centered lines: the sentence on top, the big green word beneath. */
+    .hero-rotator-line {
+      font-size: clamp(21px, 6.6vw, 30px);
+      white-space: normal;
+      line-height: 1.25;
+    }
+    .rotator { display: block; margin: 0.18em auto 0; }
+  }
+  /* Box hugs the current word (auto width) — no dead space — and clips the
+     vertical slide. Width eases between words so it never jumps. */
+  .rotator {
+    display: inline-block;
+    height: var(--rl-lh);
+    line-height: var(--rl-lh);
+    overflow: hidden;
+    vertical-align: bottom;
+    transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .rot-word {
+    display: inline-block;
+    line-height: var(--rl-lh);
+    white-space: nowrap;
+    color: var(--accent);
+    font-weight: 500;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.2s ease,
+                filter 0.2s ease;
+  }
+  /* Motion blur — smears the word vertically as it slides out/in. */
+  .rot-word.is-out { transform: translateY(-100%); opacity: 0; filter: blur(4px); }
+  .rot-word.is-in  { transform: translateY(100%);  opacity: 0; filter: blur(4px); transition: none; }
 </style>
 
 <script is:inline>
@@ -862,9 +2486,21 @@ try {
       b.x += b.vx; b.y += b.vy;
     }
     paint();
-    requestAnimationFrame(tick);
+    if (running) requestAnimationFrame(tick);
   }
-  requestAnimationFrame(tick);
+  // Only animate while the hero is actually on screen. A 50-boid O(N^2) sim
+  // running every frame after you've scrolled past the hero steals main-thread
+  // time and stutters scrolling — pause it when the hero leaves the viewport.
+  var running = false;
+  function start(){ if (!running) { running = true; requestAnimationFrame(tick); } }
+  function stop(){ running = false; }
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if (e.isIntersecting) { start(); } else { stop(); } });
+    }, { threshold: 0 }).observe(svg);
+  } else {
+    start();
+  }
 })();
 
 // Live stats refresh - fetches live stats on page load and every 60s so numbers
@@ -889,17 +2525,26 @@ try {
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(s){
         if (!s) return;
-        var agentsN = typeof s.active_nodes === 'number' ? s.active_nodes
-                    : typeof s.total_nodes === 'number' ? s.total_nodes : null;
-        if (agentsN != null) {
-          setAll('[data-live="agents-long"]', fmtCompact(agentsN));
-          setAll('[data-live="agents-exact"]', agentsN.toLocaleString('en-US'));
+        // Currently-online agents (active_nodes) — hero "N agents online".
+        if (typeof s.active_nodes === 'number') {
+          setAll('[data-live="agents-online"]', fmtCompact(s.active_nodes));
+        }
+        // Total agents ever on the network (total_nodes) — the "All time" stat.
+        var totalN = typeof s.total_nodes === 'number' ? s.total_nodes
+                   : typeof s.active_nodes === 'number' ? s.active_nodes : null;
+        if (totalN != null) {
+          setAll('[data-live="agents-total"]', fmtCompact(totalN));
+          setAll('[data-live="agents-long"]', fmtCompact(totalN));
+          setAll('[data-live="agents-exact"]', totalN.toLocaleString('en-US'));
         }
         if (typeof s.total_requests === 'number') {
           setAll('[data-live="requests-total"]', fmtCompact(s.total_requests));
         }
         if (typeof s.requests_per_sec === 'number') {
           setAll('[data-live="rps"]', Math.round(s.requests_per_sec).toLocaleString('en-US'));
+          // Keep the "Requests per hour" stat live too (rps × 3600), so it can't
+          // drift from the hero throughput chip.
+          setAll('[data-live="requests-per-hour"]', fmtCompact(Math.round(s.requests_per_sec * 3600)));
         }
       })
       .catch(function(){});
@@ -908,6 +2553,455 @@ try {
   setInterval(refresh, 60000);
 })();
 </script>
+
+<!-- Scroll-reveal: sections fade/rise into view as they enter the viewport -->
+<script is:inline>
+(function () {
+  var els = document.querySelectorAll('.reveal');
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Graceful fallback: no observer support or reduced motion → show everything.
+  if (reduce || !('IntersectionObserver' in window)) {
+    els.forEach(function (el) { el.classList.add('visible'); });
+    var allGroups = document.querySelectorAll('.stagger-group');
+    for (var g = 0; g < allGroups.length; g++) { allGroups[g].classList.add('in'); }
+    var allTerms = document.querySelectorAll('.term-type');
+    for (var tt = 0; tt < allTerms.length; tt++) { allTerms[tt].classList.add('printing'); }
+    return;
+  }
+  // Toggle (not one-shot): reveal on enter, hide on leave, so scrolling back
+  // up replays the animation in reverse — the page reacts to movement both ways.
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      e.target.classList.toggle('visible', e.isIntersecting);
+      // Stagger any child groups (vs columns, steps, cards) in sync with the
+      // section's reveal — and un-stagger on leave for scroll-up replay.
+      var groups = e.target.querySelectorAll('.stagger-group');
+      for (var i = 0; i < groups.length; i++) {
+        groups[i].classList.toggle('in', e.isIntersecting);
+      }
+      var terms = e.target.querySelectorAll('.term-type');
+      for (var t = 0; t < terms.length; t++) {
+        terms[t].classList.toggle('printing', e.isIntersecting);
+      }
+    });
+  }, { rootMargin: '0px 0px -12% 0px', threshold: 0.12 });
+  els.forEach(function (el) { obs.observe(el); });
+
+  // Install card — direct copy buttons (curl one-liner + "tell your agent" prompt).
+  document.querySelectorAll('[data-install-copy]').forEach(function (installBtn) {
+    installBtn.addEventListener('click', function () {
+      var cmd = installBtn.querySelector('.ic-cmd');
+      var label = installBtn.querySelector('.ic-label');
+      if (!cmd || !navigator.clipboard) return;
+      navigator.clipboard.writeText(cmd.textContent.trim()).then(function () {
+        var prev = label.textContent;
+        label.textContent = 'Copied';
+        installBtn.classList.add('is-copied');
+        setTimeout(function () {
+          label.textContent = prev;
+          installBtn.classList.remove('is-copied');
+        }, 1600);
+      });
+    });
+  });
+
+  // Network-layer stack: deal the cards out from under one another — and slide
+  // them back under when the section leaves the viewport.
+  var stack = document.querySelector('.stack');
+  if (stack && !reduce && ('IntersectionObserver' in window)) {
+    var stackObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        e.target.classList.toggle('layers-in', e.isIntersecting);
+      });
+    }, { rootMargin: '0px 0px -18% 0px', threshold: 0.2 });
+    stackObs.observe(stack);
+  } else if (stack) {
+    stack.classList.add('layers-in');
+  }
+
+  // Network-stats count-up: spin each figure from 0 to its live value when the
+  // section scrolls into view (re-runs on each entry, matching the page's
+  // scroll-reactive feel). Preserves the original formatting (~, commas,
+  // decimals, B suffix, and the "+" unit span).
+  var statBigs = document.querySelectorAll('#numbers .stat .big');
+  if (statBigs.length && !reduce && ('IntersectionObserver' in window)) {
+    statBigs.forEach(function (el) {
+      var unit = el.querySelector('.unit');
+      if (unit) {
+        // Number lives in the leading text node; keep the unit span intact.
+        el._node = el.firstChild;
+        el._target = parseFloat((el._node.nodeValue || '').replace(/[^\d.]/g, ''));
+        el._prefix = ''; el._suffix = ''; el._decimals = 0; el._group = false;
+      } else {
+        var m = el.textContent.trim().match(/^([^\d-]*)([\d.,]+)(.*)$/);
+        if (m) {
+          el._node = null;
+          el._prefix = m[1]; el._suffix = m[3];
+          el._group = m[2].indexOf(',') > -1;
+          var dot = m[2].indexOf('.');
+          el._decimals = dot > -1 ? (m[2].length - dot - 1) : 0;
+          el._target = parseFloat(m[2].replace(/,/g, ''));
+        }
+      }
+    });
+
+    function fmtNum(el, val) {
+      var s = el._decimals > 0 ? val.toFixed(el._decimals) : String(Math.round(val));
+      if (el._group) {
+        var parts = s.split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        s = parts.join('.');
+      }
+      return s;
+    }
+    function render(el, val) {
+      var txt = fmtNum(el, val);
+      if (el._node) el._node.nodeValue = txt;
+      else el.textContent = el._prefix + txt + el._suffix;
+    }
+    function spin(el) {
+      if (el._target == null || isNaN(el._target)) return;
+      var dur = 850, start = null;
+      function step(ts) {
+        if (!start) start = ts;
+        var p = Math.min((ts - start) / dur, 1);
+        var e = 1 - Math.pow(1 - p, 3); // easeOutCubic
+        render(el, el._target * e);
+        if (p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    statBigs.forEach(function (el) { render(el, 0); }); // start at 0 pre-reveal
+    var numObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { statBigs.forEach(spin); }
+        else { statBigs.forEach(function (el) { render(el, 0); }); }
+      });
+    }, { threshold: 0.4 });
+    var numbersSec = document.getElementById('numbers');
+    if (numbersSec) numObs.observe(numbersSec);
+  }
+
+  /* Auto-rotate the active state across the three value pillars. */
+  var pillars = Array.prototype.slice.call(document.querySelectorAll('#agent-value .pillar'));
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (pillars.length && !reduce) {
+    var idx = 0, timer = null, paused = false;
+    function cycle() {
+      if (paused) return;
+      idx = (idx + 1) % pillars.length;
+      pillars.forEach(function (p, i) { p.classList.toggle('is-active', i === idx); });
+    }
+    function start() { timer = setInterval(cycle, 2600); }
+    var group = document.querySelector('#agent-value .pillars');
+    if (group) {
+      group.addEventListener('mouseenter', function () { paused = true; });
+      group.addEventListener('mouseleave', function () { paused = false; });
+    }
+    start();
+  }
+})();
+</script>
+
+<script is:inline>
+  (function () {
+    var box = document.querySelector('[data-rotator]');
+    if (!box) return;
+    var word = box.querySelector('.rot-word');
+    var phrases = [
+      'discover other agents',
+      'install apps built for it',
+      'get accurate live data',
+      'spin up VMs in the cloud',
+      'get its own phone number',
+      'run SQL on a real database',
+      'sandbox and run code',
+      'send an SMS',
+      'pay other agents directly',
+      'reach any peer, anywhere',
+      'tap 435+ live specialists',
+      'connect over MCP',
+      'run tools on demand'
+    ];
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Size the box to the current word so it hugs it (no dead space).
+    function fit() { box.style.width = word.offsetWidth + 'px'; }
+    // Wait for fonts, then lock the initial width.
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit); }
+    fit();
+    window.addEventListener('resize', fit);
+    if (reduce) return;
+
+    var i = 0;
+    setInterval(function () {
+      i = (i + 1) % phrases.length;
+      var next = phrases[i];
+      // slide/fade current word up and out
+      word.classList.add('is-out');
+      setTimeout(function () {
+        // swap text, drop it in from below with no transition
+        word.textContent = next;
+        word.classList.remove('is-out');
+        word.classList.add('is-in');
+        fit(); // ease width to the new word
+        // next frame: release to animate up into place
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { word.classList.remove('is-in'); });
+        });
+      }, 200);
+    }, 1500);
+  })();
+
+  // App Store callout — featured-app carousel. Shuffles L→R through every
+  // live app, dwelling a touch longer than the hero word rotator.
+  (function () {
+    var vp = document.querySelector('[data-acf-carousel]');
+    if (!vp) return;
+    var cards = [].slice.call(vp.querySelectorAll('[data-acf-card]'));
+    if (cards.length < 2) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var cur = 0;
+    setInterval(function () {
+      var next = (cur + 1) % cards.length;
+      var prev = cur;
+      cards[prev].classList.add('is-exit');
+      cards[prev].classList.remove('is-active');
+      cards[next].classList.add('is-active');
+      setTimeout(function () { cards[prev].classList.remove('is-exit'); }, 620);
+      cur = next;
+    }, 2400);
+
+    // Make the WHOLE featured panel (label, padding, gaps — not just the active
+    // card) navigate to the app currently on screen.
+    var featured = vp.closest('.ac-featured') || vp.parentNode;
+    if (featured) {
+      featured.style.cursor = 'pointer';
+      featured.addEventListener('click', function (e) {
+        if (e.target.closest('a')) return; // a real card link was clicked — let it through
+        var active = cards[cur];
+        if (active && active.href) window.location.href = active.href;
+      });
+    }
+  })();
+
+  // MCP section — realistic typewriter. Types the command char-by-char, pauses
+  // as if running, then prints the output lines. A blinking block cursor trails
+  // the text. Fires once when the terminal scrolls into view.
+  (function () {
+    var term = document.querySelector('[data-mcp-term]');
+    if (!term) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    var LINES = [
+      [{ t: '$ ', c: 'c' }, { t: 'npx', c: 'y' }, { t: ' -y pilotprotocol-mcp setup' }],
+      [{ t: '# pulls the Go daemon, starts it, and writes the', c: 'c' }],
+      [{ t: '# server entry into every MCP harness config', c: 'c' }],
+      [],
+      [{ t: '✓', c: 'g' }, { t: ' pilot · ' }, { t: 'Claude Code · Cursor · Cline · Codex CLI', c: 'p' }],
+      [{ t: '  tools → specialist directory · typed queries · A2A messaging' }]
+    ];
+
+    // One full type-out of the script; when done, wait, then replay (loop).
+    var timers = [];
+    function wait(fn, ms) { timers.push(setTimeout(fn, ms)); }
+    function typeSequence() {
+      timers.forEach(clearTimeout); timers = [];
+      term.innerHTML = '';
+      var cursor = document.createElement('span');
+      cursor.className = 'tw-cursor';
+      var li = 0;
+      function nextLine() {
+        if (li >= LINES.length) { wait(typeSequence, 3000); return; } // hold, then replay
+        var lineDiv = document.createElement('div');
+        term.appendChild(lineDiv);
+        var segs = LINES[li];
+        if (segs.length === 0) {
+          lineDiv.innerHTML = '&nbsp;';
+          lineDiv.appendChild(cursor);
+          li++; wait(nextLine, 150);
+          return;
+        }
+        lineDiv.appendChild(cursor);
+        var isCmd = (li === 0);
+        var si = 0;
+        function nextSeg() {
+          if (si >= segs.length) {
+            li++;
+            wait(nextLine, isCmd ? 520 : 120);
+            return;
+          }
+          var seg = segs[si];
+          var span = document.createElement('span');
+          if (seg.c) span.className = seg.c;
+          lineDiv.insertBefore(span, cursor);
+          var ci = 0;
+          function nextChar() {
+            if (ci >= seg.t.length) { si++; nextSeg(); return; }
+            span.textContent += seg.t.charAt(ci); ci++;
+            var d = isCmd ? (34 + Math.random() * 48) : (7 + Math.random() * 13);
+            wait(nextChar, d);
+          }
+          nextChar();
+        }
+        nextSeg();
+      }
+      nextLine();
+    }
+
+    var started = false;
+    function start() { if (started) return; started = true; typeSequence(); }
+    if ('IntersectionObserver' in window) {
+      var obs = new IntersectionObserver(function (es) {
+        es.forEach(function (e) { if (e.isIntersecting) start(); });
+      }, { threshold: 0.45 });
+      obs.observe(term);
+    } else {
+      start();
+    }
+  })();
+
+  // MOM terminal — animated planning demo. The agent types a request, MOM
+  // "compiles tools", streams a colour-coded plan mixing service agents and
+  // apps, then shows the booked result. Loops while the terminal is in view.
+  (function () {
+    var term = document.querySelector('[data-mom-term]');
+    if (!term) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    var GREEN = '#3fbf5f', BLUE = '#5b9dff', VIOLET = '#b48cff';
+    var QUERY = 'book a table for 4 at Carbone NYC, Fri 8pm';
+    // Mirrors a real pilot-mom (pilot-director) plan: a `calls` list of ready-to-run
+    // pilotctl commands, then a `handoff` list your own runtime performs locally.
+    var STEPS = [
+      { section: 'calls',   name: 'google-maps-places-new', tag: 'call',    color: GREEN,  hl: true, n: '1',
+        code: 'pilotctl send-message google-maps-places-new --data \'/data {"textQuery":"Carbone NYC"}\' --wait' },
+      { section: 'handoff', name: 'io.pilot.agentphone',    tag: 'handoff', color: BLUE,   hl: true, img: '/appicons/io.pilot.agentphone.png',
+        code: 'pilotctl appstore install io.pilot.agentphone · place_call → book 4, Fri 8pm' },
+      { section: 'handoff', name: 'io.pilot.wallet',        tag: 'handoff', color: VIOLET, img: '/appicons/io.pilot.wallet.png',
+        code: 'pilotctl appstore call io.pilot.wallet wallet.pay · deposit over x402' }
+    ];
+    var SPIN = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+
+    var timers = [], spinTimer = null;
+    function wait(fn, ms) { timers.push(setTimeout(fn, ms)); }
+    function clearAll() {
+      timers.forEach(clearTimeout); timers = [];
+      if (spinTimer) { clearInterval(spinTimer); spinTimer = null; }
+    }
+    // Astro scopes the <style> with a data-astro-cid-* attribute. JS-built
+    // elements don't inherit it, so scoped .mom-* rules wouldn't apply — stamp
+    // the same attribute onto every generated element and its descendants.
+    var CID = null;
+    for (var ai = 0; ai < term.attributes.length; ai++) {
+      if (term.attributes[ai].name.indexOf('data-astro-cid') === 0) { CID = term.attributes[ai].name; break; }
+    }
+    function stampCid(el) {
+      if (!CID) return;
+      el.setAttribute(CID, '');
+      var kids = el.querySelectorAll('*');
+      for (var k = 0; k < kids.length; k++) kids[k].setAttribute(CID, '');
+    }
+    function row(cls, html) {
+      var d = document.createElement('div');
+      d.className = 'mom-row' + (cls ? ' ' + cls : '');
+      if (html != null) d.innerHTML = html;
+      stampCid(d);
+      term.appendChild(d);
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { d.classList.add('in'); });
+      });
+      return d;
+    }
+
+    function run() {
+      clearAll();
+      term.innerHTML = '';
+
+      // Phase 1 — the agent types the real command; the plain-English task types
+      // in char by char inside the --data quotes.
+      var cmd = row('', '<span class="mom-prompt">❯</span> <span class="mom-cmd">pilotctl</span> <span class="mom-flag">send-message pilot-mom --data</span> \'<span class="mom-query"></span>');
+      var quote = cmd.querySelector('.mom-query');
+      var cursor = document.createElement('span');
+      cursor.className = 'tw-cursor';
+      cmd.appendChild(cursor);
+      var i = 0;
+      (function typeChar() {
+        if (i < QUERY.length) {
+          quote.textContent += QUERY.charAt(i++);
+          wait(typeChar, 22 + Math.random() * 40);
+        } else {
+          cursor.remove();
+          cmd.insertAdjacentHTML('beforeend', '\' <span class="mom-wait">--wait</span>');
+          stampCid(cmd);
+          wait(think, 480);
+        }
+      })();
+
+      // Phase 2 — MOM compiles tools (animated spinner), then reveals the header.
+      function think() {
+        row('mom-spacer');
+        var t = row('mom-think', '<span class="mom-spin">⠋</span> <span class="mom-cmd">MOM</span> · compiling plan…');
+        var spin = t.querySelector('.mom-spin'), s = 0;
+        spinTimer = setInterval(function () {
+          spin.textContent = SPIN[s = (s + 1) % SPIN.length];
+        }, 75);
+        wait(function () {
+          clearInterval(spinTimer); spinTimer = null;
+          t.classList.add('is-plan');
+          t.innerHTML = '<span class="mom-ok">✓</span> plan · class: <span class="mom-ach">achievable</span>';
+          stampCid(t);
+          wait(function () { emit(0); }, 360);
+        }, 1500);
+      }
+
+      // Phase 3 — stream the plan: a `calls` group then a `handoff` group, each
+      // step showing the literal pilotctl command the director returned.
+      function esc(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
+      function emit(k) {
+        if (k >= STEPS.length) { wait(done, 520); return; }
+        var st = STEPS[k];
+        if (k === 0 || st.section !== STEPS[k - 1].section) {
+          row('mom-section', st.section);
+        }
+        var badge = st.img
+          ? '<img class="mom-ico" src="' + st.img + '" alt="" width="20" height="20" />'
+          : '<span class="mom-n">' + st.n + '</span>';
+        var r = row('mom-step' + (st.hl ? ' is-hl' : ''),
+          badge +
+          '<div class="mom-main">' +
+            '<div class="mom-head">' +
+              '<span class="mom-name" style="color:' + st.color + '">' + st.name + '</span>' +
+              '<span class="mom-pill">' + st.tag + '</span>' +
+            '</div>' +
+            '<div class="mom-desc mom-code">' + esc(st.code) + '</div>' +
+          '</div>');
+        r.style.setProperty('--sc', st.color);
+        wait(function () { emit(k + 1); }, 720);
+      }
+
+      // Phase 4 — the booked result. Plays once and stays on this final state.
+      function done() {
+        row('mom-done', 'table booked · Fri 8:00pm');
+      }
+    }
+
+    var started = false;
+    function start() { if (started) return; started = true; run(); }
+    if ('IntersectionObserver' in window) {
+      var mObs = new IntersectionObserver(function (es) {
+        es.forEach(function (e) { if (e.isIntersecting) start(); });
+      }, { threshold: 0.3 });
+      mObs.observe(term);
+    } else {
+      start();
+    }
+  })();
+</script>
+
 
 </body>
 </html>
