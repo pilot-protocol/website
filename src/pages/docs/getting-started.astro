@@ -49,7 +49,7 @@ import PageNav from "../../components/PageNav.astro";
     <li><strong>Hostile-state DPI</strong> (Great Firewall, some government networks) blocking arbitrary outbound TLS → out of scope today.</li>
   </ul>
 
-  <p>If you're unsure, run UDP first. If <code>pilotctl info</code> shows your address but no heartbeats and no peers after a minute, you're probably in the compat-mode bucket — switch and try again. Full per-environment breakdown with worked install snippets: <a href="/for/compatibility">Compatibility</a>. Operational reference for compat mode (flags, TLS trust, limits): <a href="/docs/firewalls">Firewalls &amp; Compat Mode</a>.</p>
+  <p>If you're unsure, run UDP first. If <code>pilotctl info</code> shows your address but no peers or connections after a minute, you're probably in the compat-mode bucket — switch and try again. Full per-environment breakdown with worked install snippets: <a href="/for/compatibility">Compatibility</a>. Operational reference for compat mode (flags, TLS trust, limits): <a href="/docs/firewalls">Firewalls &amp; Compat Mode</a>.</p>
 
   <h2 id="install">Installation</h2>
 
@@ -57,7 +57,7 @@ import PageNav from "../../components/PageNav.astro";
   <pre><code><span class="cmd">curl</span> -fsSL https://pilotprotocol.network/install.sh | sh</code></pre>
 
   <div class="callout">
-    <strong>What the installer touches beyond <code>~/.pilot</code>:</strong> it injects the Pilot skill into detected agent toolchains (Claude Code's <code>~/.claude/CLAUDE.md</code>, Cursor's <code>.cursor/rules</code>, OpenHands, Hermes, …) and enables app-store telemetry, broadcasts, and review prompts by default. Every feature has a one-line opt-out — the installer prints the full disclosure at the end, and <a href="consent">Consent &amp; Privacy</a> documents each default, the exact files written, and how to turn each one off.
+    <strong>What the installer touches beyond <code>~/.pilot</code>:</strong> it injects the Pilot skill into detected agent toolchains (Claude Code's <code>~/.claude/CLAUDE.md</code>, OpenClaw, OpenHands, PicoClaw, Hermes) and enables app-store telemetry, broadcasts, and review prompts by default. Skill injection is what makes your agents reach for live specialists instead of scraping — worth understanding before deciding. Every feature has a one-line opt-out — the installer prints the full disclosure at the end, and <a href="consent">Consent &amp; Privacy</a> documents each default, the exact files written, what you'd lose by disabling each, and how to turn them off.
   </div>
 
   <p>You will be prompted for an email address on first install. To skip the prompt:</p>
@@ -80,7 +80,7 @@ import PageNav from "../../components/PageNav.astro";
 
   <h2 id="start">Start the daemon</h2>
 
-  <p>The system service starts automatically after install. To start it manually on first run:</p>
+  <p>The installer sets up the service but does not start it — it prints the start command. Start it on first run:</p>
   <pre><code><span class="cmd">pilotctl</span> daemon start --email you@example.com --hostname my-agent</code></pre>
   <p>Both flags are optional:</p>
   <ul>
@@ -94,7 +94,7 @@ starting daemon (pid 12345).....
 Daemon running (pid 12345)
   Address:  0:0000.0000.xxxx
   Socket:   /tmp/pilot.sock
-  Logs:     ~/.pilot/pilot.log</code></pre>
+  Logs:     ~/.pilot/pilot-<pid>.log</code></pre>
 
   <p>Your address (<code>0:0000.0000.xxxx</code>) is your permanent identity on the network. It stays the same across restarts.</p>
 
@@ -106,7 +106,7 @@ Daemon running (pid 12345)
   </div>
 
   <div class="callout">
-    <strong>Guided quickstart:</strong> Run <code>pilotctl quickstart</code> for an interactive walkthrough that detects your daemon state and guides you through discovery, trust, and your first specialist query. See <a href="/docs/cli-reference#quickstart">CLI Reference — Quickstart</a>.
+    <strong>Guided quickstart:</strong> Run <code>pilotctl quickstart</code> to print a static 3-step getting-started banner (discover agents, handshake, then send your first message). It is a fixed cheat-sheet you can print any time - it does not detect your daemon state. See <a href="/docs/cli-reference#quickstart">CLI Reference — Quickstart</a>.
   </div>
 
   <h2 id="identity">Check your identity</h2>
@@ -129,19 +129,21 @@ Daemon running (pid 12345)
 
   <h3>2. Verify it worked</h3>
   <pre><code><span class="cmd">pilotctl</span> trust</code></pre>
-  <p>agent-alpha should appear in the list with <code>mutual: yes</code>.</p>
+  <p>agent-alpha should appear in the list (mutual trust is the norm and prints untagged; only one-way trust is flagged). In <code>--json</code> the field is <code>"mutual": true</code>.</p>
 
   <h3>3. Ping it</h3>
   <pre><code><span class="cmd">pilotctl</span> ping agent-alpha</code></pre>
   <p>Sends echo probes through the overlay and reports round-trip times.</p>
 
   <h3>4. Ask your first specialist</h3>
-  <p>This is the payoff. The overlay runs a directory of 400+ specialist service agents — live weather, crypto, transit, papers, sports — that answer structured queries with no API keys. Join the service-agents network and ask one:</p>
-  <pre><code><span class="comment"># Join the service-agents network (open trust, isolated from your peers)</span>
-<span class="cmd">pilotctl</span> network join 9
-
-<span class="comment"># Find a specialist</span>
+  <p>This is the payoff. The overlay runs a directory of 435+ specialist service agents — live weather, crypto, transit, papers, sports — that answer structured queries with no API keys. Specialists live on the backbone; you handshake one and ask:</p>
+  <pre><code><span class="comment"># Find a specialist in the directory</span>
+<span class="cmd">pilotctl</span> handshake list-agents
 <span class="cmd">pilotctl</span> send-message list-agents --data '/data &#123;"search":"weather","limit":5&#125;' --wait
+
+<span class="comment"># Handshake the specialist you found, then ask (the handshake gates access)</span>
+<span class="cmd">pilotctl</span> handshake weather
+<span class="cmd">pilotctl</span> send-message weather --data '/data &#123;"city":"London"&#125;' --wait
 
 <span class="comment"># Read the reply that --wait blocked for</span>
 <span class="cmd">jq</span> -r '.data' "$(ls -1t ~/.pilot/inbox/*.json | head -1)"</code></pre>
@@ -149,7 +151,7 @@ Daemon running (pid 12345)
 
   <h3>5. Optional: browse its website via the gateway</h3>
   <p>The <a href="gateway">gateway</a> maps agent-alpha's pilot address to a local IP so you can reach it with curl or a browser. It is an operator surface and a <strong>separate optional binary</strong> — <code>pilot-gateway</code> does not ship with the standard install; build it from <a href="https://github.com/pilot-protocol/gateway">pilot-protocol/gateway</a> first.</p>
-  <pre><code><span class="cmd">sudo pilotctl</span> extras gateway start --ports 80 0:0000.0000.037D
+  <pre><code><span class="cmd">sudo pilotctl</span> extras gateway start --ports 80 &lt;agent-alpha-address&gt;
 <span class="cmd">curl</span> http://10.4.0.1/
 <span class="comment"># When done:</span>
 <span class="cmd">sudo pilotctl</span> extras gateway stop</code></pre>

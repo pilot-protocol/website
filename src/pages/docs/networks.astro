@@ -57,7 +57,7 @@ const bodyContent = `<h1>Networks</h1>
       <tr><td><strong>Discover addresses</strong></td><td>Private agents are invisible</td><td>Can resolve any member&rsquo;s endpoint</td></tr>
       <tr><td><strong>Open connections</strong></td><td>Connection attempts silently dropped</td><td>Connections accepted immediately</td></tr>
       <tr><td><strong>Send datagrams</strong></td><td>Silently dropped</td><td>Delivered</td></tr>
-      <tr><td><strong>List members</strong></td><td>Cannot enumerate the network</td><td>Full member list via <code>pilotctl network members</code></td></tr>
+      <tr><td><strong>List members</strong></td><td>Non-backbone networks are enumerable via the registry today (backbone #0 is admin-gated)</td><td>Full member list via <code>pilotctl network members</code></td></tr>
       <tr><td><strong>Handshake auto-approval</strong></td><td>Requires manual approve or mutual request</td><td>Network membership serves as a trust signal</td></tr>
     </tbody>
   </table>
@@ -71,6 +71,7 @@ const bodyContent = `<h1>Networks</h1>
 
   <h3>Enterprise networks</h3>
 
+  <p><em>Enterprise networks are in early access — the commands below work on self-hosted deployments; managed availability is onboarding via <a href="/plans">Plans</a>.</em></p>
   <p>Enterprise networks add a full suite of production controls on top of standard network membership. Enable enterprise at creation time with <code>pilotctl network create --name prod --enterprise</code>.</p>
 
   <ul>
@@ -87,7 +88,7 @@ const bodyContent = `<h1>Networks</h1>
 
   <h3>The design principle</h3>
 
-  <p>Standard network permissions are intentionally simple: you are either a member or you are not. Inside the boundary, communication is unrestricted. Outside, private agents are invisible. Enterprise networks add roles and port policies for organizations that need finer-grained control.</p>
+  <p>Standard network permissions are intentionally simple: you are either a member or you are not. Inside the boundary, communication is unrestricted. Outside, a private agent's <em>endpoint</em> (IP:port) is withheld — though the registry may still expose some directory metadata (see the privacy note below). Enterprise networks add roles and port policies for organizations that need finer-grained control.</p>
 
   <h2 id="backbone">The backbone (network 0)</h2>
 
@@ -100,7 +101,7 @@ const bodyContent = `<h1>Networks</h1>
     <li><strong>Handshake relay</strong> - trust negotiation via the registry</li>
   </ul>
 
-  <p>The backbone does <em>not</em> grant communication rights. Being on the backbone means you exist in the address space, not that anyone can connect to you. Private agents on the backbone are invisible to everyone except their trusted peers and network co-members.</p>
+  <p>The backbone does <em>not</em> grant communication rights. Being on the backbone means you exist in the address space, not that anyone can connect to you. A private agent's endpoint is withheld from everyone except its trusted peers and network co-members; other directory metadata (hostname, tags) may still be resolvable.</p>
 
   <h2 id="join-rules">Join rules</h2>
 
@@ -109,7 +110,7 @@ const bodyContent = `<h1>Networks</h1>
   <table>
     <thead><tr><th>Rule</th><th>Who can join</th><th>Use case</th></tr></thead>
     <tbody>
-      <tr><td><strong>Open</strong></td><td>Any node can join without approval</td><td>Public communities, open collaboration spaces</td></tr>
+      <tr><td><strong>Open</strong></td><td>Any node can join without approval</td><td>Internal fleets where every owned agent should join without a per-agent invite</td></tr>
       <tr><td><strong>Invite only</strong></td><td>Only when an owner or admin invites them</td><td>High-security environments where membership is tightly controlled</td></tr>
       <tr><td><strong>Token-gated</strong></td><td>Anyone with the shared secret token</td><td>Teams that can distribute a token out-of-band (Slack, email, config file)</td></tr>
     </tbody>
@@ -149,7 +150,7 @@ const bodyContent = `<h1>Networks</h1>
 
   <h3>Monitor agents</h3>
 
-  <p>List live members with <code>pilotctl network members &lt;network_id&gt;</code> - shows Pilot address, node ID, hostname, real endpoint, and online status for every agent in the network.</p>
+  <p>List live members with <code>pilotctl network members &lt;network_id&gt;</code> - shows node ID, hostname, version, and public status per member in the table (JSON mode additionally includes address, real_addr, and last_seen).</p>
 
   <h3>Remove agents</h3>
 
@@ -169,7 +170,7 @@ const bodyContent = `<h1>Networks</h1>
 
   <h3>1. Address resolution</h3>
 
-  <p>When agent A looks up agent B&rsquo;s endpoint, the registry checks: is B public? If not, does A share a network with B, or do they have mutual trust? If neither, the lookup is denied with no information leaked.</p>
+  <p>When agent A looks up agent B&rsquo;s endpoint, the registry checks: is B public? If not, does A share a network with B, or do they have mutual trust? If neither, the <em>endpoint</em> lookup is denied. Note the denial distinguishes "private" from "not found", and the directory <code>lookup</code> still returns hostname/networks/tags for a known node — endpoint privacy is enforced, directory-metadata privacy is weaker.</p>
 
   <h3>2. Connection acceptance</h3>
 
@@ -191,7 +192,7 @@ const bodyContent = `<h1>Networks</h1>
 
   <h3>Backbone isolation</h3>
 
-  <p>Backbone (network 0) membership does not grant any communication rights. Private agents on the backbone are invisible to everyone outside their trust and network boundaries.</p>
+  <p>Backbone (network 0) membership does not grant any communication rights. A private agent's endpoint is hidden from everyone outside its trust and network boundaries (endpoint-level privacy; directory metadata may still be visible).</p>
 
   <h3>Immediate revocation</h3>
 
@@ -206,7 +207,7 @@ const bodyContent = `<h1>Networks</h1>
   <p>Enterprise networks support <a href="enterprise-policies">port-level policies</a> that restrict which ports members can access. Use <code>pilotctl network policy &lt;network_id&gt; --allowed-ports 80,443,1001</code> to limit accessible ports within a network. Other settable flags: <code>--max-members &lt;n&gt;</code>, <code>--description &lt;text&gt;</code>. Without any <code>--&lt;flag&gt;</code> argument, <code>pilotctl network policy &lt;network_id&gt;</code> shows the current policy. See <a href="enterprise-policies">Network Policies</a> for details on membership caps, port whitelists, and merge-on-update semantics.</p>
 
   <div class="callout">
-    <strong>Further reading:</strong> <a href="/blog/private-networks-now-in-testing">Private Networks: Now in Testing</a> · <a href="/blog/private-agent-network-company">Building a Private Agent Network for Your Company</a> · <a href="trust">Trust & Handshakes</a>
+    <strong>Further reading:</strong> <a href="/blog/private-networks-now-in-testing">Private Networks: Now in Testing</a> · <a href="/blog/private-agent-network-company">Build a Private Agent Network for Your Company</a> · <a href="trust">Trust & Handshakes</a>
   </div>`;
 ---
 <DocLayout

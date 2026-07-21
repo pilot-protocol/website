@@ -15,10 +15,17 @@ export function getStaticPaths() {
 const { app } = Astro.props;
 
 const catName = (id) => categories.find((c) => c.id === id)?.name ?? id;
+const demo = app.productDemo;
 const related = relatedApps(app);
 const installCmd = `pilotctl appstore install ${app.id}`;
 const oses = [...new Set(app.bundles.map((b) => osOf(b.platform)))];
 const bundleFor = (p) => app.bundles.find((b) => b.platform === p);
+
+// Split the method surface into free vs upgrade-gated so the app page can show
+// a clear separator (some apps mark methods that need a paid/invite upgrade).
+const freeMethods = app.methods.filter((m) => !m.gated);
+const gatedMethods = app.methods.filter((m) => m.gated);
+const hasGated = gatedMethods.length > 0;
 
 // tiny inline markdown: escape, then **bold**, `code`, and [text](url)
 function inline(s) {
@@ -61,7 +68,7 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
 })}></script>
 </head>
 <body>
-<Nav active="for" />
+<Nav active="apps" />
 
 <main class="store">
 
@@ -148,21 +155,140 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
           </button>
         </section>
 
+        {app.limits && app.limits.length > 0 && (
+        <section>
+          <h2 class="sec-h">Plan &amp; limits</h2>
+          <div class="limit-list">
+            {app.limits.map((l) => (
+              <div class="lrow"><div class="ll">{l.label}</div><div class="lv">{l.value}</div></div>
+            ))}
+          </div>
+        </section>
+        )}
+
         <section>
           <h2 class="sec-h">Methods{app.methods.length ? ` · ${app.methods.length}` : ''}</h2>
           {app.methods.length > 0 ? (
-            <div class="method-list">
-              {app.methods.map((m) => (
-                <div class="mrow">
-                  <code>{m.name}</code>
-                  <div class="ms">{m.summary ?? '—'}</div>
-                </div>
-              ))}
-            </div>
+            <>
+              {hasGated && (
+                <p class="method-group-note">{freeMethods.length} methods work on the free plan. The {gatedMethods.length} below the divider need an account upgrade (paid plan, invite, or a verified custom domain).</p>
+              )}
+              <div class="method-list">
+                {freeMethods.map((m) => (
+                  <div class="mrow">
+                    <code class="mname">{m.name}</code>
+                    <div class="ms">{m.summary ?? '—'}</div>
+                    {m.example && m.example !== '{}' && (
+                      <pre class="mex"><span class="mex-k">example</span>{m.example}</pre>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {hasGated && (
+                <>
+                  <div class="method-divider"><span>Requires an upgrade · {gatedMethods.length}</span></div>
+                  <div class="method-list">
+                    {gatedMethods.map((m) => (
+                      <div class="mrow is-gated">
+                        <code class="mname">{m.name}</code>
+                        <span class="gated-badge">upgrade</span>
+                        <div class="ms">{m.summary ?? '—'}</div>
+                        <div class="mgate">{m.gated}</div>
+                        {m.example && m.example !== '{}' && (
+                          <pre class="mex"><span class="mex-k">example</span>{m.example}</pre>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
           ) : (
             <p style="font-size:14.5px;color:var(--ink-dim);line-height:1.6;">This app publishes its method surface at runtime — call <code style="font-family:var(--mono);font-size:.9em;">{app.id.split('.').pop()}.help</code> after install to discover every method, its parameters, and latency class.</p>
           )}
         </section>
+
+        {demo && (
+        <section class="demo">
+          <h2 class="sec-h">Full usage demo</h2>
+          <p class="demo-when">{demo.when_to_use}</p>
+
+          <div class="demo-step demo-first">
+            <div class="demo-step-head">
+              <span class="demo-step-title">Run this first{demo.quickstart.goal ? ` — ${demo.quickstart.goal}` : ''}</span>
+              {demo.metered && demo.quickstart.cost && <span class="demo-cost">{demo.quickstart.cost}</span>}
+            </div>
+            <div class="demo-cmd">
+              <div class="ib-bar"><span class="lbl">Call</span><button class="copy-btn" data-copy={demo.quickstart.command} type="button">Copy</button></div>
+              <pre class="demo-pre"><code>{demo.quickstart.command}</code></pre>
+              {demo.quickstart.expect && <div class="demo-expect"><span class="demo-arrow">→</span><code>{demo.quickstart.expect}</code></div>}
+            </div>
+            {demo.quickstart.note && <p class="demo-note">{demo.quickstart.note}</p>}
+          </div>
+
+          {demo.examples.length > 0 && (
+          <div class="demo-examples">
+            <h3 class="demo-subh">Worked examples</h3>
+            {demo.examples.map((ex) => (
+              <div class="demo-step">
+                <div class="demo-step-head">
+                  <span class="demo-step-title">{ex.title ?? ex.goal ?? 'Example'}</span>
+                  {demo.metered && ex.cost && <span class="demo-cost">{ex.cost}</span>}
+                </div>
+                <div class="demo-cmd">
+                  <div class="ib-bar"><span class="lbl">Call</span><button class="copy-btn" data-copy={ex.command} type="button">Copy</button></div>
+                  <pre class="demo-pre"><code>{ex.command}</code></pre>
+                  {ex.expect && <div class="demo-expect"><span class="demo-arrow">→</span><code>{ex.expect}</code></div>}
+                </div>
+                {ex.note && <p class="demo-note">{ex.note}</p>}
+              </div>
+            ))}
+          </div>
+          )}
+
+          {demo.metered && demo.cost && (
+          <div class="demo-costs">
+            <h3 class="demo-subh">What it costs</h3>
+            <div class="demo-free">
+              <span class="demo-free-amt">{demo.cost.free_budget}</span>
+              <span class="demo-free-lbl">free budget{demo.cost.unit ? ` · billed in ${demo.cost.unit}` : ''}</span>
+            </div>
+            <div class="demo-cost-table-wrap">
+              <table class="demo-cost-table">
+                <thead><tr><th>Operation</th><th>Price</th><th>Notes</th></tr></thead>
+                <tbody>
+                  {demo.cost.operations.map((op) => (
+                    <tr><td><code>{op.op}</code></td><td class="demo-price">{op.price}</td><td>{op.note ?? ''}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {demo.cost.worked_total && <p class="demo-total">{demo.cost.worked_total}</p>}
+            {demo.cost.check_balance && (
+            <div class="demo-cmd demo-check">
+              <div class="ib-bar"><span class="lbl">Check balance</span><button class="copy-btn" data-copy={demo.cost.check_balance} type="button">Copy</button></div>
+              <pre class="demo-pre"><code>{demo.cost.check_balance}</code></pre>
+            </div>
+            )}
+          </div>
+          )}
+
+          {demo.gotchas.length > 0 && (
+          <div class="demo-block">
+            <h3 class="demo-subh">Good to know</h3>
+            <ul class="demo-list">{demo.gotchas.map((g) => <li>{g}</li>)}</ul>
+          </div>
+          )}
+
+          {demo.next.length > 0 && (
+          <div class="demo-block">
+            <h3 class="demo-subh">Next</h3>
+            <ul class="demo-list demo-next">{demo.next.map((n) => <li><code>{n}</code></li>)}</ul>
+          </div>
+          )}
+        </section>
+        )}
 
         {app.pricing && (
         <section>
@@ -243,7 +369,7 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
           <div class="info-row"><span class="k">Runtime</span><span class="val">{app.runtimes.join(', ')}</span></div>
           <div class="info-row"><span class="k">Min Pilot</span><span class="val">v{app.minPilotVersion}</span></div>
           {app.publishedAt && <div class="info-row"><span class="k">Published</span><span class="val">{fmtDate(app.publishedAt)}</span></div>}
-          {app.sourceUrl && <div class="info-row"><span class="k">Source</span><span class="val"><a href={app.sourceUrl} target="_blank" rel="noopener">GitHub ↗</a></span></div>}
+          {app.sourceUrl && <div class="info-row"><span class="k">Source</span><span class="val"><a href={app.sourceUrl} target="_blank" rel="noopener">{app.sourceUrl.includes('github.com') ? 'GitHub' : 'Source'} ↗</a></span></div>}
         </div>
 
         {app.grants.length > 0 && (

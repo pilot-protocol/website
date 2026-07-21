@@ -39,7 +39,7 @@ const bodyContent = `<h1>Messaging</h1>
   <h2 id="prerequisites">Prerequisites</h2>
 
   <div class="callout">
-    <p><strong>Trust or shared network required.</strong> Before any messaging works, both agents must either have <a href="trust">mutual trust</a> (via handshake) or belong to the same <a href="networks">network</a>. Without this, connection attempts are silently dropped.</p>
+    <p><strong>Trust or shared network required for private nodes.</strong> To message a <strong>private</strong> node, you need <a href="trust">mutual trust</a> (via handshake) or a shared <a href="networks">network</a> — otherwise its daemon silently drops the connection. A <strong>public</strong> node accepts messages from any peer.</p>
   </div>
 
   <h2 id="connect">connect</h2>
@@ -102,7 +102,7 @@ const bodyContent = `<h1>Messaging</h1>
 
   <p>Returns: <code>target</code>, <code>type</code>, <code>bytes</code>, <code>ack</code></p>
 
-  <h3>Inbox file format</h3>
+  <h3 id="inbox-file-format">Inbox file format</h3>
 
   <p>Each message is stored as a JSON file in <code>~/.pilot/inbox/</code>:</p>
 
@@ -114,14 +114,13 @@ const bodyContent = `<h1>Messaging</h1>
   "received_at": "2026-01-15T10:30:00.123456-07:00"
 }</code></pre>
 
-  <p>The <code>data</code> field is the raw payload coerced to a JSON string — fine for text/JSON frames, but bytes &gt; 0x7F are replaced with the Unicode replacement character (U+FFFD) by Go's JSON encoder. The <code>type</code> field reflects the frame type sent (<code>TEXT</code>, <code>JSON</code>, <code>BINARY</code>, <code>FILE</code>, or <code>TRACE</code>). <code>received_at</code> is RFC3339Nano in the daemon's local timezone.</p>
+  <p>The <code>data</code> field is the raw payload coerced to a JSON string — valid UTF-8 (including multi-byte) survives losslessly; only <em>invalid</em> UTF-8 byte sequences are replaced with U+FFFD by Go's JSON encoder (use <code>-dataexchange-b64</code> for arbitrary binary). The <code>type</code> field is one of <code>TEXT</code>, <code>JSON</code>, or <code>BINARY</code> (file transfers land in <code>~/.pilot/received/</code>, not the inbox). <code>received_at</code> is RFC3339Nano in the daemon's local timezone.</p>
 
-  <p>For binary payloads (e.g. zlib-compressed envelopes) start the daemon with <code>-dataexchange-b64</code>. The inbox JSON then carries an additional <code>data_b64</code> field with the lossless base64 encoding of the same bytes:</p>
+  <p>For binary payloads (e.g. zlib-compressed envelopes) start the daemon with <code>-dataexchange-b64</code>. The inbox JSON then carries a <code>data_b64</code> field (base64 of the raw bytes) <em>instead of</em> <code>data</code>:</p>
 
   <pre><code>{
   "type": "BINARY",
   "from": "0:0000.0000.0005",
-  "data": "...mangled bytes...",
   "data_b64": "eJzLSM3JyVcozy/KSQEAGAsEAQ==",
   "bytes": 18,
   "received_at": "2026-01-15T10:30:00.123456-07:00"
@@ -136,9 +135,9 @@ const bodyContent = `<h1>Messaging</h1>
   <pre><code><span class="cmd">pilotctl</span> send-file other-agent ./report.pdf
 <span class="cmd">pilotctl</span> send-file other-agent ./data.json</code></pre>
 
-  <p>Returns: <code>filename</code>, <code>bytes</code>, <code>destination</code>, <code>ack</code></p>
+  <p>Returns (streamed default): <code>filename</code>, <code>bytes</code>, <code>destination</code>, <code>sha256</code>, <code>verified</code>, <code>transport</code>.</p>
 
-  <p>Maximum file size: 16 MB (data exchange protocol limit).</p>
+  <p>The default streamed transfer has no fixed size cap (chunked); the legacy single-frame fallback caps at the frame size (default 1&nbsp;GiB, <code>PILOT_DATAEXCHANGE_MAX_FRAME</code>).</p>
 
   <h2 id="mailbox">Inbox & received</h2>
 

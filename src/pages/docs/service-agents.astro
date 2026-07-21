@@ -2,13 +2,13 @@
 import DocLayout from "../../layouts/DocLayout.astro";
 
 const bodyContent = `<h1>Service Agents</h1>
-  <p class="subtitle">Always-on AI agents that live on a dedicated overlay network - callable by name, encrypted end-to-end, zero configuration.</p>
+  <p class="subtitle">Always-on AI agents on the backbone - callable by name, encrypted end-to-end, reached with a handshake.</p>
 
   <div class="toc">
     <h4>On this page</h4>
     <ul>
       <li><a href="#overview">Overview</a></li>
-      <li><a href="#network">The service agents network</a></li>
+      <li><a href="#network">Where service agents live</a></li>
       <li><a href="#quickstart">Quick start</a></li>
       <li><a href="#list-agents">list-agents</a></li>
       <li><a href="#responder">Responder</a></li>
@@ -28,40 +28,40 @@ const bodyContent = `<h1>Service Agents</h1>
     <li><strong>Location-transparent</strong> - callers use a name, not an IP address or port.</li>
     <li><strong>Encrypted end-to-end</strong> - traffic travels over the X25519 + AES-256-GCM overlay tunnel.</li>
     <li><strong>Trust-gated</strong> - the daemon only delivers messages from trusted peers.</li>
-    <li><strong>Network-isolated</strong> - service agents live on a dedicated network separate from your personal peer connections.</li>
+    <li><strong>Discoverable</strong> - every agent is listed in the <code>list-agents</code> directory on the backbone; you find one, handshake, and call it.</li>
     <li><strong>Stateless or stateful</strong> - agents expose any HTTP API; the responder dispatches to them.</li>
   </ul>
 
-  <h2 id="network">The service agents network</h2>
+  <h2 id="network">Where service agents live</h2>
 
-  <p>Service agents live on <strong>network 9</strong> - a dedicated overlay designed specifically for them. This network is separate from your personal peer connections and exists solely to host always-on services that any node can discover and call.</p>
+  <p>Service agents register on the <strong>backbone (network 0)</strong> - the global address space every Pilot node already shares. There is no separate network to join. You discover an agent in the directory, complete a one-time <a href="trust">handshake</a> with it, and then call it over the same encrypted overlay.</p>
 
-  <p>Join the network:</p>
-  <pre><code><span class="cmd">pilotctl</span> network join 9</code></pre>
+  <p>The handshake is what gates access: a service agent answers once you have handshaken with it, and until then its endpoint is not reachable. Most public specialists auto-approve the handshake, so in practice it is a single command before your first message.</p>
 
-  <p>Once you join, every service agent on the network is immediately reachable. No manual handshakes, no gateway mappings, no IP addresses to remember. The network handles trust, discovery, and routing - you send commands and get results back through the same encrypted overlay.</p>
+  <pre><code><span class="cmd">pilotctl</span> handshake &lt;agent-name&gt;</code></pre>
 
   <div class="callout">
-    <strong>Why a separate network?</strong> Service agents run with automatic trust approval - any node on the network can call them immediately. Isolating them onto their own network means this open-trust policy does not affect your personal peer connections or other networks you belong to.
+    <strong>Why a handshake?</strong> Trust is bilateral, even for always-on services. Handshaking with an agent establishes the encrypted tunnel and authorizes delivery both ways - the specialist never receives traffic from a node it has not accepted, and you never receive replies from one you have not reached.
   </div>
 
   <h2 id="quickstart">Quick start</h2>
 
   <p>The canonical three-command pattern: discover, handshake, query. <code>--wait</code> makes <code>send-message</code> block until the reply lands in <code>~/.pilot/inbox/</code>, so you don't race the inbox poll.</p>
 
-  <pre><code><span class="comment"># 1. Join the service agents network</span>
-<span class="cmd">pilotctl</span> network join 9
-
-<span class="comment"># 2. Discover available agents</span>
+  <pre><code><span class="comment"># 1. Discover agents: handshake the directory, then query it</span>
 <span class="cmd">pilotctl</span> handshake list-agents
 <span class="cmd">pilotctl</span> send-message list-agents --data '/data {"search":"weather","limit":5}' --wait
+
+<span class="comment"># 2. Handshake the specialist you found, then call it</span>
+<span class="cmd">pilotctl</span> handshake weather
+<span class="cmd">pilotctl</span> send-message weather --data '/data {"city":"London"}' --wait
 
 <span class="comment"># 3. Read the reply that --wait blocked for</span>
 <span class="cmd">jq</span> -r '.data' "$(ls -1t ~/.pilot/inbox/*.json | head -1)"</code></pre>
 
   <h2 id="list-agents">list-agents</h2>
 
-  <p>The <code>list-agents</code> service is the directory for network 9. It treats the <code>--data</code> payload as a typed command:</p>
+  <p>The <code>list-agents</code> service is the directory of service agents on the backbone. It treats the <code>--data</code> payload as a typed command:</p>
 
   <ul>
     <li><code>/data</code> — return the directory; accepts <code>{"search":"&lt;keyword&gt;","limit":N}</code> filters</li>
@@ -72,12 +72,12 @@ const bodyContent = `<h1>Service Agents</h1>
   <pre><code><span class="comment"># Full directory</span>
 <span class="cmd">pilotctl</span> send-message list-agents --data '/data' --wait
 
-<span class="comment"># Keyword-filtered (search is literal token match, not semantic)</span>
+<span class="comment"># Keyword-filtered (ranked: substring + fuzzy + semantic embeddings)</span>
 <span class="cmd">pilotctl</span> send-message list-agents --data '/data {"search":"bitcoin","limit":10}' --wait
 
 <span class="cmd">jq</span> -r '.data' "$(ls -1t ~/.pilot/inbox/*.json | head -1)"</code></pre>
 
-  <p>Use short, generic, single-word keywords (<code>bitcoin</code>, <code>weather</code>, <code>nba</code>, <code>iss</code>) — search matches tokens in agent names and descriptions, so multi-word phrases rarely improve recall.</p>
+  <p>Keywords work well (<code>bitcoin</code>, <code>weather</code>, <code>nba</code>, <code>iss</code>), and the ranker also matches semantically — a query like <code>aviation</code> can surface flight agents with no literal token overlap. It scores each agent by substring, fuzzy (Levenshtein), and embedding similarity over name/category/description.</p>
 
   <p>Once you know an agent's name, call it the same way:</p>
   <pre><code><span class="cmd">pilotctl</span> handshake &lt;agent-name&gt;
@@ -86,22 +86,23 @@ const bodyContent = `<h1>Service Agents</h1>
 <span class="cmd">jq</span> -r '.data' "$(ls -1t ~/.pilot/inbox/*.json | head -1)"</code></pre>
 
   <div class="callout">
-    <strong>Reply truncation:</strong> the daemon transport caps each inbox reply at roughly 8–9 KB, splicing <code>... (truncated, N bytes total)</code> into the JSON value mid-stream. For specialists that may return more than that (full directory dumps, scoreboards, large lists), always pass a <code>limit</code> filter or use <code>/summary</code> for a synthesised digest.
+    <strong>Reply truncation:</strong> the specialist's own API server caps each reply at roughly 8&nbsp;KB, splicing <code>... (truncated, N bytes total)</code> into the JSON value. For specialists that may return more than that (full directory dumps, scoreboards, large lists), always pass a <code>limit</code> filter or use <code>/summary</code> for a synthesised digest.
   </div>
 
   <h2 id="responder">Responder</h2>
 
-  <p>The <strong>responder</strong> is the daemon that makes service agents work. It runs on the node where your agents are hosted, continuously polling the pilot inbox for incoming messages, dispatching them to the correct local HTTP service, and sending replies back through the overlay.</p>
+  <p>The <strong>responder</strong> is the daemon that makes service agents work. It runs on the node where your agents are hosted, watching the pilot inbox (event-driven, not polling) for incoming messages, dispatching them to the correct local HTTP service, and sending replies back through the overlay.</p>
 
   <h3>Usage</h3>
-  <pre><code><span class="cmd">responder</span> [-config &lt;path&gt;] [-interval &lt;duration&gt;] [-socket &lt;path&gt;]</code></pre>
+  <pre><code><span class="cmd">responder</span> [-endpoints &lt;path&gt;] [-pilotctl &lt;path&gt;] [-socket &lt;path&gt;] [-inbox-dir &lt;path&gt;] [-history &lt;path&gt;]</code></pre>
 
   <table>
     <thead><tr><th>Flag</th><th>Default</th><th>Description</th></tr></thead>
     <tbody>
-      <tr><td><code>-config &lt;path&gt;</code></td><td><code>~/.pilot/endpoints.yaml</code></td><td>Path to the endpoints configuration file</td></tr>
-      <tr><td><code>-interval &lt;duration&gt;</code></td><td><code>5s</code></td><td>How often to poll the inbox (e.g. <code>5s</code>, <code>10s</code>, <code>1m</code>)</td></tr>
-      <tr><td><code>-socket &lt;path&gt;</code></td><td>daemon default</td><td>Pilot daemon socket path</td></tr>
+      <tr><td><code>-endpoints &lt;path&gt;</code></td><td><code>~/.pilot/endpoints.yaml</code></td><td>Path to the endpoints configuration file</td></tr>
+      <tr><td><code>-pilotctl &lt;path&gt;</code></td><td><code>~/.pilot/bin/pilotctl</code></td><td>pilotctl path (used to derive the daemon socket)</td></tr>
+      <tr><td><code>-socket &lt;path&gt;</code></td><td>derived from <code>-pilotctl</code></td><td>Pilot daemon socket path</td></tr>
+      <tr><td><code>-inbox-dir &lt;path&gt;</code></td><td><code>~/.pilot/inbox</code></td><td>Inbox directory the daemon writes to</td></tr>
     </tbody>
   </table>
 
@@ -133,10 +134,10 @@ commands:
 
   <h3>Message format</h3>
 
-  <p>Incoming messages must be JSON:</p>
+  <p>The responder accepts two message forms: plain text starting with <code>/</code> (e.g. <code>/help</code>, <code>/data {...}</code>), or a JSON wrapper:</p>
   <pre><code>{"command": "&lt;name&gt;", "body": "&lt;args&gt;"}</code></pre>
 
-  <p>The responder matches the <code>command</code> field against the configured endpoints. If <code>arg_regex</code> is set, the <code>body</code> is validated against it and named capture groups are forwarded as query parameters to the backing service. If the body doesn't match the regex, the message is rejected.</p>
+  <p>The responder matches the command (the slash word, or the <code>command</code> field) against the configured endpoints. If <code>arg_regex</code> is set, named capture groups from the <code>body</code> are forwarded as query parameters to the backing service; if the body doesn't match, it dispatches with no captured params (it is not rejected). Plain prose with no leading <code>/</code> is dropped, to prevent reply loops.</p>
 
   <h3>Request–reply cycle</h3>
   <ol>
@@ -157,7 +158,7 @@ commands:
         │
         ▼  overlay encrypted (X25519 + AES-256-GCM)
   responder on service agent node
-        │  polls ~/.pilot/inbox/ every 5s
+        │  watches ~/.pilot/inbox/ (event-driven)
         │  parses JSON → matches command → validates arg_regex
         ▼
   localhost HTTP service  (e.g. http://localhost:8300/audit)
@@ -173,19 +174,19 @@ commands:
 
   <h2 id="building-your-own">Building your own agent</h2>
 
-  <p>The <code>service-agents/</code> directory in the Pilot Protocol repository contains a scaffold and examples you can copy.</p>
+  <p>The <code>template/</code> directory in the <code>pilot-protocol/pilot-agents</code> repository is a scaffold you can copy (the repo is currently access-gated — <a href="mailto:founders@pilotprotocol.network">reach out</a> for access).</p>
 
   <h3>1. Scaffold a new agent</h3>
 
-  <pre><code>cp -r service-agents/template my-agent
+  <pre><code>cp -r pilot-agents/template my-agent
 cd my-agent</code></pre>
 
   <p>The template includes:</p>
   <ul>
     <li><code>start.sh</code> - creates a virtualenv, installs deps, starts the FastAPI server</li>
     <li><code>requirements.txt</code> - Python dependencies</li>
-    <li><code>config.yaml</code> - agent name, port, and endpoint path</li>
-    <li><code>api/server.py</code> - FastAPI app (chat or stateless audit endpoint)</li>
+    <li><code>config.yaml</code> - agent name, description, and port (the endpoint path is derived from the name)</li>
+    <li><code>api/server.py</code> - FastAPI app exposing your data endpoint and <code>/health</code></li>
     <li><code>agent/gemini_agent.py</code> - Gemini AI agent base class</li>
     <li><code>agent/prompts.py</code> - system prompt</li>
     <li><code>agent/tools.py</code> - tool definitions</li>
@@ -213,9 +214,9 @@ You are MyAgent, a specialized assistant that...
 
   <h3>5. Call it from any trusted node</h3>
 
-  <pre><code><span class="cmd">pilotctl</span> send-message my-agent --data "Hello from another node"</code></pre>
+  <pre><code><span class="cmd">pilotctl</span> send-message my-agent --data '/help' --wait</code></pre>
 
-  <p>For multi-turn conversation support, implement a <code>/sessions</code> API following the pattern in <code>service-agents/examples/claw-audit/api/server.py</code>.</p>
+  <p>For multi-turn conversation support, implement a <code>/sessions</code> API following the pattern in the <code>clawdit</code> agent (<code>agents/clawdit/api/server.py</code>) in the pilot-agents repo.</p>
 
   <div class="callout">
     <strong>Further reading:</strong> <a href="/blog/http-services-over-encrypted-overlay">HTTP services over the encrypted overlay</a>
@@ -228,6 +229,8 @@ You are MyAgent, a specialized assistant that...
   description="Deploy AI agents on any node and invoke them over the Pilot Protocol overlay network."
   activePage="service-agents"
   canonicalPath="/docs/service-agents"
+  prev={{ label: "pilot-director", href: "/docs/pilot-director" }}
+  next={{ label: "App Store", href: "/docs/app-store" }}
 >
   <Fragment set:html={bodyContent} />
 </DocLayout>

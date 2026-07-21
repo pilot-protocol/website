@@ -103,7 +103,7 @@ const canonicalUrl = "https://pilotprotocol.network/for/mcp";
       <div class="feat">
         <div class="feat-ix">06</div>
         <div class="feat-t">Multi-region MCP</div>
-        <div class="feat-d">Same MCP API, deployed in three regions. Agents route to whichever is reachable and fastest.</div>
+        <div class="feat-d">Same MCP API, deployed in three regions. Agents route to whichever deployment they've handshaked and can reach.</div>
       </div>
     </div>
   </div>
@@ -113,42 +113,41 @@ const canonicalUrl = "https://pilotprotocol.network/for/mcp";
   <div class="wrap">
     <div class="section-head">
       <div class="eyebrow">Up and running</div>
-      <h2>Three steps.<br/><em>Thirty seconds.</em></h2>
+      <h2>Three steps.<br/><em>One handshake.</em></h2>
     </div>
     <div class="how-grid">
       <div class="term">
         <div class="bar">
           <div class="dots"><span></span><span></span><span></span></div>
-          <div>mcp-host ~ expose MCP server over pilot</div>
+          <div>client ~ reach an MCP server over pilot</div>
           <div>0.8s</div>
         </div>
         <div class="term-body">
-          <div><span class="c"># on the MCP server host</span></div>
+          <div><span class="c"># on the client agent host</span></div>
           <div><span class="c">$</span> <span class="y">curl</span> -fsSL https://pilotprotocol.network/install.sh | sh</div>
-          <div><span class="c">$</span> <span class="y">pilotctl</span> daemon start --hostname mcp-host</div>
+          <div><span class="c">$</span> <span class="y">pilotctl</span> daemon start --hostname client-agent</div>
           <div>Daemon running (pid <span class="y">24817</span>)</div>
-          <div>&nbsp;&nbsp;Address:&nbsp;&nbsp;<span class="p">0:A91F.0000.7C2E</span></div>
+          <div>&nbsp;&nbsp;Address:&nbsp;&nbsp;<span class="p">0:0000.A91F.7C2E</span></div>
           <div>&nbsp;</div>
-          <div><span class="c"># your MCP server is already listening on :8080</span></div>
-          <div><span class="c">$</span> <span class="y">sudo pilotctl</span> gateway start --ports 8080 self</div>
-          <div><span class="g">✓</span> gateway running · port <span class="y">8080</span> → <span class="p">0:A91F.0000.7C2E</span></div>
+          <div><span class="c"># the MCP server host shared its pilot address: 0:0000.0000.037D</span></div>
+          <div><span class="c">$</span> <span class="y">pilotctl</span> handshake <span class="p">0:0000.0000.037D</span></div>
+          <div><span class="c">$</span> <span class="y">sudo pilotctl</span> extras gateway start --ports 8080 <span class="p">0:0000.0000.037D</span></div>
+          <div><span class="g">✓</span> mapped <span class="p">0:0000.0000.037D</span> → <span class="y">10.4.0.1</span> (encrypted)</div>
           <div>&nbsp;</div>
-          <div><span class="c"># on the client agent</span></div>
-          <div><span class="c">$</span> <span class="y">pilotctl</span> handshake mcp-host</div>
-          <div><span class="c">$</span> <span class="y">sudo pilotctl</span> gateway start --ports 8080 mcp-host</div>
-          <div><span class="g">✓</span> localhost:8080 → mcp-host (encrypted)</div>
+          <div><span class="c"># your MCP client now talks to it as if local</span></div>
+          <div><span class="c">$</span> <span class="y">curl</span> http://10.4.0.1:8080/</div>
         </div>
       </div>
       <div>
         <div class="how-lede">
           No reverse proxy. No tunnel broker.
           Your <em>MCP server</em> runs unchanged on one side,
-          <em>localhost</em> on the other.
+          a <em>local 10.4.x.x address</em> on the other.
         </div>
         <ul class="how-steps">
-          <li><div class="step-num">01</div><div><div class="step-t">Install Pilot</div><div class="step-d">One command on each host. The daemon registers and gets an address.</div></div></li>
-          <li><div class="step-num">02</div><div><div class="step-t">Expose your MCP port</div><div class="step-d"><code>sudo pilotctl gateway start --ports 8080 self</code> - your existing MCP server is now reachable over the overlay.</div></div></li>
-          <li><div class="step-num">03</div><div><div class="step-t">Map on the client</div><div class="step-d">Handshake, then map mcp-host:8080 to localhost. Any MCP client calls it as if local.</div></div></li>
+          <li><div class="step-num">01</div><div><div class="step-t">Install Pilot</div><div class="step-d">One command on each host. The daemon registers and gets an address. The server host shares its pilot address (<code>pilotctl info</code>).</div></div></li>
+          <li><div class="step-num">02</div><div><div class="step-t">Handshake</div><div class="step-d">Mutual trust first: <code>pilotctl handshake 0:0000.0000.037D</code>. The server side approves with <code>pilotctl approve</code>.</div></div></li>
+          <li><div class="step-num">03</div><div><div class="step-t">Map on the client</div><div class="step-d"><code>sudo pilotctl extras gateway start --ports 8080 &lt;pilot-addr&gt;</code> maps the server to <code>10.4.0.1</code>. Any MCP client calls <code>http://10.4.0.1:8080/</code> as if local.</div></div></li>
         </ul>
       </div>
     </div>

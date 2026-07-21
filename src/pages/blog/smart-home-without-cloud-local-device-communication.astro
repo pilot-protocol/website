@@ -157,37 +157,37 @@ Handshake request sent. Waiting for approval...
 <span class="cmd">$ pilotctl approve 1:0001.0000.0005</span>
 Trust established with home-automation
 
-<span class="comment"># Tag the device for discovery</span>
+<span class="comment"># Tag the device (metadata) and give it a function-named hostname</span>
 <span class="cmd">$ pilotctl extras set-tags smart-plug office power-control</span>
 Tags updated: smart-plug, office, power-control
 
-<span class="comment"># The automation engine can now discover it by capability</span>
-<span class="cmd">$ pilotctl peers --search "smart-plug"</span>
-1:0001.0000.0006  office-plug  [smart-plug, office, power-control]  online</code></pre>
+<span class="comment"># Peer search matches node ID + hostname substring, so name devices by function</span>
+<span class="cmd">$ pilotctl peers --search "plug"</span>
+1:0001.0000.0006  office-plug  online</code></pre>
 
   <p>Total time: under two minutes. No accounts created. No websites visited. No manufacturer registration. No cloud service contacted. The device has a permanent address, a cryptographic identity, and an encrypted connection to the automation engine. If the manufacturer goes bankrupt tomorrow, nothing changes.</p>
 
-  <h2 id="tags-discovery">Capability Discovery With Tags</h2>
+  <h2 id="tags-discovery">Capability Discovery With Hostnames and Tags</h2>
 
   <p>In a traditional smart home, device discovery relies on protocol-specific mechanisms: Zigbee device interviews, Matter commissioning, mDNS broadcasting. Each protocol has its own discovery format, and devices from different protocols cannot discover each other without a bridge.</p>
 
-  <p>Pilot uses a simpler approach: tags. Every device tags itself with human-readable capability descriptors. The automation engine queries tags to find devices by function rather than by protocol or manufacturer.</p>
+  <p>Pilot uses a simpler approach: give each device a function-named hostname and tag it with human-readable descriptors. <code>set-tags</code> stores the tags as metadata; <code>peers --search</code> then matches on the node ID and hostname substring, so encoding the function in the hostname lets the automation engine find devices by role rather than by protocol or manufacturer.</p>
 
-  <pre><code><span class="comment"># Tag devices by function and location</span>
+  <pre><code><span class="comment"># Tag devices (metadata) and name them by function</span>
 <span class="cmd">$ pilotctl extras set-tags temperature-sensor kitchen sensors</span>
 <span class="cmd">$ pilotctl extras set-tags smart-light living-room lights dimmable</span>
 <span class="cmd">$ pilotctl extras set-tags door-lock front-door security locks</span>
 
-<span class="comment"># Find all lights in the house</span>
-<span class="cmd">$ pilotctl peers --search "lights"</span>
-1:0001.0000.0002  living-room-light  [lights, living-room, dimmable]  online
-1:0001.0000.0007  bedroom-light      [lights, bedroom, dimmable]     online
-1:0001.0000.0008  kitchen-light      [lights, kitchen]               online
+<span class="comment"># Find all lights (hostnames contain "light")</span>
+<span class="cmd">$ pilotctl peers --search "light"</span>
+1:0001.0000.0002  living-room-light  online
+1:0001.0000.0007  bedroom-light      online
+1:0001.0000.0008  kitchen-light      online
 
-<span class="comment"># Find all security devices</span>
+<span class="comment"># Find all security devices (hostnames prefixed "security-")</span>
 <span class="cmd">$ pilotctl peers --search "security"</span>
-1:0001.0000.0004  door-lock    [security, locks, front-door]    online
-1:0001.0000.0009  camera-yard  [security, cameras, backyard]    online</code></pre>
+1:0001.0000.0004  security-door-lock  online
+1:0001.0000.0009  security-camera     online</code></pre>
 
   <p>Tags are stored in the local registry. They require no schema, no ontology, and no central authority defining what "light" means. The convention is up to you. This is less structured than a formal device model, but it is also less brittle. When a new device type appears that did not exist when the standard was written, you just invent a tag.</p>
 

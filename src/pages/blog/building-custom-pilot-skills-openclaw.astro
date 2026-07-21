@@ -60,9 +60,9 @@ const bodyContent = `<p>The OpenClaw agents that adopted Pilot Protocol did so t
     E103: Peer offline | hint: Retry in 30 seconds
 
   Implementation:
-    pilotctl data send $TO $FILE
-    pilotctl send $TO '{"description":"Review code: $FILE","params":{"language":"$LANGUAGE","focus":"$FOCUS"}}'
-    pilotctl recv --from $TO --json
+    pilotctl send-file $TO $FILE
+    pilotctl send $TO 1002 --data '{"description":"Review code: $FILE","params":{"language":"$LANGUAGE","focus":"$FOCUS"}}'
+    pilotctl --json inbox --from $TO
 
 ### recv-review
   Description: Receive and process an incoming code review request
@@ -73,8 +73,8 @@ const bodyContent = `<p>The OpenClaw agents that adopted Pilot Protocol did so t
     E201: No messages available | hint: Retry after a few seconds
 
   Implementation:
-    pilotctl data recv --output $WORKDIR
-    pilotctl recv --json
+    pilotctl recv 1001 --count 1  # received files land in ~/.pilot/received/
+    pilotctl --json recv 1002
 
 ### send-review-result
   Description: Return code review results to the requester
@@ -85,7 +85,7 @@ const bodyContent = `<p>The OpenClaw agents that adopted Pilot Protocol did so t
   Returns: JSON {"status": "sent"}
 
   Implementation:
-    pilotctl send $TO '{"review": "$RESULT", "severity": "$SEVERITY"}'
+    pilotctl send $TO 1002 --data '{"review": "$RESULT", "severity": "$SEVERITY"}'
 
 ## Workflows
 
@@ -97,7 +97,7 @@ const bodyContent = `<p>The OpenClaw agents that adopted Pilot Protocol did so t
   5. Submitter: Receives results via recv step in submit-review
 
 ### Find a Reviewer
-  1. pilotctl peers --search "code-review" --json
+  1. pilotctl --json peers --search "review"  # matches connected peers by node ID / hostname
   2. Pick an online agent and initiate trust if needed
   3. pilotctl handshake &lt;address&gt; (if not already trusted)
   4. submit-review --to &lt;address&gt; --file ./src/handler.go
@@ -105,9 +105,9 @@ const bodyContent = `<p>The OpenClaw agents that adopted Pilot Protocol did so t
 ## Heartbeat
   - Every 60s: pilotctl daemon status --json (verify daemon alive)
   - Every 300s: pilotctl lookup &lt;self-address&gt; --json (verify registry connected)
-  - On task failure: Check pilotctl events for error patterns</code></pre>
+  - On task failure: Check pilotctl subscribe output for error patterns</code></pre>
 
-  <p>This custom skill wraps Pilot Protocol's generic commands into a domain-specific interface. The agent does not need to think about <code>pilotctl data send</code>, <code>pilotctl send</code>, and <code>pilotctl recv</code> as separate concepts. It sees <code>submit-review</code> as a single operation.</p>
+  <p>This custom skill wraps Pilot Protocol's generic commands into a domain-specific interface. The agent does not need to think about <code>pilotctl send-file</code>, <code>pilotctl send</code>, and <code>pilotctl recv</code> as separate concepts. It sees <code>submit-review</code> as a single operation.</p>
   </section>
 
   <section>
@@ -162,7 +162,7 @@ const bodyContent = `<p>The OpenClaw agents that adopted Pilot Protocol did so t
   <pre><code><span class="comment"># Get a machine-readable manifest of all commands</span>
 <span class="cmd">pilotctl --json context</span></code></pre>
 
-  <p>This returns a JSON object with every command, argument, return type, and error code. The advantage over reading SKILLS.md is that the runtime context reflects the actual installed version -- if Pilot Protocol is updated with new commands, <code>--json context</code> returns the updated manifest immediately.</p>
+  <p>This returns a JSON object with every command, its arguments, a description, and its return field names. The advantage over reading SKILLS.md is that the runtime context reflects the actual installed version -- if Pilot Protocol is updated with new commands, <code>--json context</code> returns the updated manifest immediately.</p>
 
   <p>Agents can use runtime context discovery for dynamic capability negotiation. When two agents connect, they can exchange context manifests to understand what the peer supports:</p>
 

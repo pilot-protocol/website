@@ -16,7 +16,7 @@ const bodyContent = `<p>Of the OpenClaw agents that joined the Pilot Protocol ne
   <section>
   <h2 id="three-tiers">Three-Tier Traversal</h2>
 
-  <p>Pilot Protocol uses a three-tier strategy that handles every NAT type automatically. The agent does not choose a strategy -- the daemon detects the NAT type during STUN discovery and selects the appropriate approach.</p>
+  <p>Pilot Protocol uses a three-tier strategy that handles every NAT type automatically. The agent does not choose a strategy -- the daemon tries a direct connection first (using its STUN-discovered endpoint), then escalates to beacon-coordinated hole-punching, and finally to relay. It does not classify the NAT type up front; it simply retries down the ladder until one tier works.</p>
 
   <h3>Tier 1: Direct (Full Cone NAT)</h3>
 
@@ -65,30 +65,30 @@ const bodyContent = `<p>Of the OpenClaw agents that joined the Pilot Protocol ne
 
 <span class="comment"># Check status -- NAT type is detected automatically</span>
 <span class="cmd">pilotctl daemon status --json</span>
-<span class="comment"># {"address":"1:0001.0A3F.7B21","nat_type":"port_restricted",
-#  "endpoint":"203.0.113.5:45782","tunnel_port":4000,...}</span>
+<span class="comment"># {"address":"1:0001.0A3F.7B21",
+#  "endpoint":"203.0.113.5:45782","encrypted":true,...}</span>
 
 <span class="comment"># Connect to a peer (traversal strategy chosen automatically)</span>
 <span class="cmd">pilotctl send 1:0001.0B22.4E19 1002 --data "Hello from behind NAT"</span>
 <span class="comment"># Works. The agent doesn't know or care how.</span></code></pre>
 
-  <p>The <code>pilotctl status</code> output shows the detected NAT type and STUN-discovered endpoint, but the agent does not need to act on this information. It is diagnostic data for humans. The daemon handles everything internally.</p>
+  <p>The <code>pilotctl status</code> output shows the STUN-discovered endpoint, but the agent does not need to act on this information. It is diagnostic data for humans. The daemon handles everything internally.</p>
 
   <p>When the agent calls <code>pilotctl send</code> to a peer, the daemon's <code>DialConnection</code> function tries the following sequence:</p>
 
   <ol>
     <li>3 direct connection attempts (works for Full Cone NAT and public IPs)</li>
-    <li>If direct fails: request hole-punching via beacon, 3 more attempts</li>
-    <li>If hole-punching fails: switch to relay mode automatically</li>
+    <li>If direct fails: the beacon coordinates a hole-punch as part of tunnel setup</li>
+    <li>If that fails: switch to relay mode automatically (4 relay attempts; 7 total dial attempts)</li>
   </ol>
 
   <p>The agent never sees this retry logic. The <code>send</code> command either succeeds or returns an error after all strategies are exhausted. In practice, connection succeeds over 99% of the time -- relay is the universal fallback.</p>
   </section>
 
   <section>
-  <h2 id="real-world">Real-World NAT Distribution</h2>
+  <h2 id="real-world">Typical NAT Distribution</h2>
 
-  <p>The agent network provided empirical data on NAT type distribution in the wild:</p>
+  <p>The daemon does not classify NAT types itself, so it can't report a live breakdown. But published NAT research gives a representative picture of what networks in the wild look like (individual surveys vary):</p>
 
   <table>
     <tr><th>NAT Type</th><th>Percentage</th><th>Traversal Strategy</th></tr>
@@ -99,9 +99,9 @@ const bodyContent = `<p>Of the OpenClaw agents that joined the Pilot Protocol ne
     <tr><td>Symmetric</td><td>12%</td><td>Relay</td></tr>
   </table>
 
-  <p>These numbers are consistent with published NAT surveys. The takeaway: <strong>only 48% of agents can accept unsolicited inbound connections</strong> (public IP + Full Cone). The other 52% are invisible to any protocol that requires inbound connectivity -- including standard HTTP APIs, gRPC servers, and A2A Agent Cards.</p>
+  <p>By a representative distribution like this, only about half of agents can accept unsolicited inbound connections (public IP + Full Cone). The rest are invisible to any protocol that requires inbound connectivity -- including standard HTTP APIs, gRPC servers, and A2A Agent Cards.</p>
 
-  <p>This is why autonomous agents chose Pilot Protocol over alternatives. Half of them literally cannot use HTTP-based agent protocols because they cannot serve HTTP from behind their NAT.</p>
+  <p>This is a core reason autonomous agents reach for Pilot Protocol: a large share of them cannot serve HTTP from behind their NAT at all, so an HTTP-based agent protocol simply isn't an option for them.</p>
   </section>
 
   <section>

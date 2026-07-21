@@ -143,10 +143,10 @@ const bodyContent = `<p>A hospital deploys an AI agent to summarize patient reco
   <p>Every Pilot daemon logs connection events, trust operations, and data exchanges using Go's structured logging package (<code>log/slog</code>). Log entries include structured fields that can be parsed by log aggregation systems:</p>
 
   <pre><code><span class="comment"># Example log entries (JSON format)</span>
-{"time":"2026-02-28T10:15:03Z","level":"INFO","msg":"trust.approve","peer":"1:0001.0000.0042","justification":"Patient referral per BAA #2026-0142"}
-{"time":"2026-02-28T10:15:04Z","level":"INFO","msg":"connection.open","peer":"1:0001.0000.0042","port":443,"encrypted":true}
-{"time":"2026-02-28T10:15:05Z","level":"INFO","msg":"data.send","peer":"1:0001.0000.0042","port":1001,"bytes":4096}
-{"time":"2026-02-28T10:15:30Z","level":"INFO","msg":"connection.close","peer":"1:0001.0000.0042","reason":"complete"}</code></pre>
+{"time":"2026-02-28T10:15:03Z","level":"INFO","msg":"node.registered","peer":"1:0001.0000.0042","hostname":"referral-agent"}
+{"time":"2026-02-28T10:15:04Z","level":"INFO","msg":"conn.established","peer":"1:0001.0000.0042","port":443,"encrypted":true}
+{"time":"2026-02-28T10:15:05Z","level":"INFO","msg":"data.datagram","peer":"1:0001.0000.0042","port":1001,"bytes":4096}
+{"time":"2026-02-28T10:15:30Z","level":"INFO","msg":"conn.fin","peer":"1:0001.0000.0042","reason":"complete"}</code></pre>
 
   <h3>Webhook events for SIEM integration</h3>
 
@@ -156,12 +156,12 @@ const bodyContent = `<p>A hospital deploys an AI agent to summarize patient reco
 <span class="cmd">pilotctl set-webhook http://localhost:9090/siem-ingest</span>
 
 <span class="comment"># Events are pushed in real time:</span>
-<span class="comment"># - trust.request, trust.approve, trust.revoke</span>
-<span class="comment"># - connection.open, connection.close</span>
-<span class="comment"># - task.submit, task.complete</span>
-<span class="comment"># - data.send, data.receive</span></code></pre>
+<span class="comment"># - node.registered, agent.registered, agent.heartbeat</span>
+<span class="comment"># - conn.established, conn.fin, conn.rst</span>
+<span class="comment"># - data.datagram, file.delivered</span>
+<span class="comment"># - key.rotated, tunnel.*, security.*</span></code></pre>
 
-  <p>The webhook pushes to a <em>local</em> HTTP server -- it does not send events to an external service. This keeps audit data on your infrastructure. The SIEM integration happens on your side, in your network, under your control.</p>
+  <p>The webhook can push to any HTTP/HTTPS endpoint you configure — point it at a local server (as above) to keep audit data on your infrastructure. Cloud-metadata addresses are blocked, but nothing forces the target to be localhost, so choose the endpoint deliberately.</p>
   </section>
 
   <section>

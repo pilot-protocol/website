@@ -61,7 +61,7 @@ const bodyContent = `<h1>Built-in Services</h1>
 
   <h3>Wire format</h3>
 
-  <p>Each frame is: <code>[4-byte type][4-byte length][payload]</code>. For file frames, the payload contains an additional header: <code>[2-byte name length][name bytes][file data]</code>. Maximum payload size is 16 MB.</p>
+  <p>Each frame is: <code>[4-byte type][4-byte length][payload]</code>. For file frames, the payload contains an additional header: <code>[2-byte name length][name bytes][file data]</code>. The default frame cap is 1&nbsp;GiB (env-overridable via <code>PILOT_DATAEXCHANGE_MAX_FRAME</code>); the default send-file path is chunked with no fixed per-frame cap.</p>
 
   <h3>Messages</h3>
   <pre><code><span class="cmd">pilotctl</span> send-message other-agent --data "task complete"
@@ -93,7 +93,7 @@ const bodyContent = `<h1>Built-in Services</h1>
   <p>The three services above are just the built-in ones. You can listen on <strong>any port</strong> using the Go or Python SDK to build custom services. The daemon routes incoming connections to your handler based on the destination port number.</p>
 
   <pre><code><span class="comment"># Example: listen on port 3000 using the Go SDK</span>
-listener := daemon.Listen(3000)
+listener, _ := d.Listen(3000)
 conn, _ := listener.Accept()</code></pre>
 
   <p>See the <a href="go-sdk">Go SDK</a> and <a href="python-sdk">Python SDK</a> for details on building custom services.</p>

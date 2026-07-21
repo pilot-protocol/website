@@ -91,11 +91,11 @@ const bodyContent = `<p><a href="https://claude.ai" target="_blank" rel="noopene
   <p>The manager agent uses <code>pilotctl send</code> as a tool. In Claude Code's tool system, this is a command-line tool that the manager can invoke. The manager's system prompt includes the Pilot addresses of all specialists and their capabilities.</p>
 
   <pre><code><span class="comment"># Manager's tool: send a task to a specialist</span>
-<span class="cmd">pilotctl send 1:0001.0000.0002 \\
+<span class="cmd">pilotctl send 1:0001.0000.0002 1002 --data \\
   '{"description":"Implement user authentication API routes","params":{"framework":"gin","endpoints":"login,logout,register,refresh","auth_method":"jwt"}}'</span>
 
 <span class="comment"># Wait for the result message from the specialist</span>
-<span class="cmd">pilotctl recv --from 1:0001.0000.0002 --json</span>
+<span class="cmd">pilotctl --json inbox --from 1:0001.0000.0002</span>
 <span class="comment"># {"from":"1:0001.0000.0002","data":"...specialist results..."}</span></code></pre>
 
   <p>The manager's workflow becomes:</p>
@@ -130,8 +130,8 @@ QA specialist (1:0001.0000.0004):
   - Can execute full test suites and report coverage
 
 To delegate work, use:
-  pilotctl send &lt;address&gt; '{"description":"...","params":{...}}'
-  pilotctl recv --from &lt;address&gt; --json
+  pilotctl send &lt;address&gt; 1002 --data '{"description":"...","params":{...}}'
+  pilotctl --json inbox --from &lt;address&gt;
 
 The specialist will execute the task and send results back.
 Trust is already established between all agents.</span></code></pre>
@@ -173,7 +173,7 @@ def recv_and_execute():
     while True:
         <span class="comment"># Receive an incoming message</span>
         result = subprocess.run(
-            ["pilotctl", "recv", "--json"],
+            ["pilotctl", "--json", "recv", "1002"],
             capture_output=True, text=True
         )
 
@@ -206,7 +206,7 @@ def recv_and_execute():
         print(f"Task completed, sending results back to {sender}...")
 
         <span class="comment"># Return results via pilotctl</span>
-        subprocess.run(["pilotctl", "send", sender, result_text])
+        subprocess.run(["pilotctl", "send", sender, "1002", "--data", result_text])
         print(f"Results sent to {sender}")
 
 if __name__ == "__main__":
@@ -326,21 +326,21 @@ if __name__ == "__main__":
 <span class="comment"># Subtasks: backend API, frontend UI, tests, documentation</span>
 
 <span class="comment"># Step 2: Manager sends backend task</span>
-<span class="cmd">pilotctl send 1:0001.0000.0002 \\
+<span class="cmd">pilotctl send 1:0001.0000.0002 1002 --data \\
   '{"description":"Add TOTP 2FA endpoints to the auth API","params":{"endpoints":"enable-2fa,verify-2fa,disable-2fa","library":"pquerna/otp"}}'</span>
-<span class="cmd">pilotctl recv --from 1:0001.0000.0002 --json</span>
+<span class="cmd">pilotctl --json inbox --from 1:0001.0000.0002</span>
 <span class="comment"># Backend specialist implements and sends code back</span>
 
 <span class="comment"># Step 3: Manager sends test task to QA specialist</span>
-<span class="cmd">pilotctl send 1:0001.0000.0004 \\
+<span class="cmd">pilotctl send 1:0001.0000.0004 1002 --data \\
   '{"description":"Write and run tests for the 2FA API endpoints","params":{"coverage_target":"90"}}'</span>
-<span class="cmd">pilotctl recv --from 1:0001.0000.0004 --json</span>
+<span class="cmd">pilotctl --json inbox --from 1:0001.0000.0004</span>
 <span class="comment"># QA specialist writes tests, runs them, returns results</span>
 
 <span class="comment"># Step 4: Manager sends ML task (if 2FA includes risk scoring)</span>
-<span class="cmd">pilotctl send 1:0001.0000.0003 \\
+<span class="cmd">pilotctl send 1:0001.0000.0003 1002 --data \\
   '{"description":"Train a login risk scoring model on auth logs","params":{"model_type":"gradient_boosting","features":"ip,device,time,location"}}'</span>
-<span class="cmd">pilotctl recv --from 1:0001.0000.0003 --json</span>
+<span class="cmd">pilotctl --json inbox --from 1:0001.0000.0003</span>
 <span class="comment"># ML specialist trains model on GPU, sends model file back</span>
 
 <span class="comment"># Step 5: Manager synthesizes all results</span>

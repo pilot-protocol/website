@@ -31,7 +31,7 @@ const bodyContent = `<h1>Configuration</h1>
   "webhook": "http://localhost:8080/events"
 }</code></pre>
 
-  <p>CLI flags override environment variables, which override config file values. The config file is created by <code>pilotctl init</code> and can be updated with <code>pilotctl config --set</code>.</p>
+  <p>CLI flags take highest precedence. For <code>pilotctl daemon start</code>, the config file is consulted before environment variables (a value in <code>~/.pilot/config.json</code> beats the matching <code>PILOT_*</code> env var); some direct paths read env first. The config file is created by <code>pilotctl init</code> and can be updated with <code>pilotctl config --set</code>.</p>
 
   <h2 id="commands">Config commands</h2>
 
@@ -57,11 +57,11 @@ const bodyContent = `<h1>Configuration</h1>
   <h3>Enable / disable</h3>
   <pre><code><span class="cmd">pilotctl</span> update enable
 <span class="cmd">pilotctl</span> update disable</code></pre>
-  <p>The setting is stored in <code>~/.pilot/auto-update.json</code> and re-read by the updater on its next check, so it takes effect without restarting anything. When enabled, the updater installs new stable releases on its interval (default hourly) after verifying release checksums.</p>
+  <p>The setting is stored in <code>~/.pilot/auto-update.json</code> and re-read by the updater on its next check, so it takes effect without restarting anything. When enabled, the updater installs new stable releases on its periodic check after verifying release checksums.</p>
 
   <h3>Update once, manually</h3>
   <pre><code><span class="cmd">pilotctl</span> update</code></pre>
-  <p>Runs a single check-and-install right now. This always works, regardless of the automatic-update setting — so you can stay on manual control and update on your own schedule. Pin to a specific release with <code>--pin v1.12.1</code>.</p>
+  <p>Runs a single check-and-install right now. This always works, regardless of the automatic-update setting — so you can stay on manual control and update on your own schedule. Pin to a specific release with <code>--pin &lt;version&gt;</code>.</p>
 
   <h2 id="env">Environment variables</h2>
 
@@ -77,7 +77,7 @@ const bodyContent = `<h1>Configuration</h1>
       <tr><td>PILOT_ADMIN_TOKEN</td><td>(none)</td><td>Admin token for enterprise operations</td></tr>
       <tr><td>PILOT_HOME</td><td>~/.pilot</td><td>Directory where pilot stores identity, config, and received files</td></tr>
       <tr><td>PILOT_EMAIL</td><td>(none)</td><td>Email address used for first-time daemon registration (same as <code>--email</code> flag)</td></tr>
-      <tr><td>PILOT_RC</td><td>(none)</td><td>Path to a shell RC snippet sourced by the daemon on startup</td></tr>
+      <tr><td>PILOT_RC</td><td>(unset)</td><td>Set to <code>1</code> to install from the edge (release-candidate) channel — legacy alias for <code>--channel edge</code></td></tr>
     </tbody>
   </table>
 
@@ -132,14 +132,15 @@ const bodyContent = `<h1>Configuration</h1>
   <table>
     <thead><tr><th>Flag</th><th>Default</th><th>Description</th></tr></thead>
     <tbody>
-      <tr><td>-keepalive &lt;dur&gt;</td><td>30s</td><td>Keepalive probe interval</td></tr>
+      <tr><td>-keepalive &lt;dur&gt;</td><td>60s</td><td>Keepalive probe interval</td></tr>
       <tr><td>-idle-timeout &lt;dur&gt;</td><td>120s</td><td>Idle connection timeout</td></tr>
       <tr><td>-syn-rate-limit &lt;n&gt;</td><td>100</td><td>Max SYN packets per second</td></tr>
       <tr><td>-max-conns-per-port &lt;n&gt;</td><td>1024</td><td>Max connections per port</td></tr>
-      <tr><td>-max-conns-total &lt;n&gt;</td><td>4096</td><td>Max total connections</td></tr>
+      <tr><td>-max-conns-total &lt;n&gt;</td><td>65536</td><td>Max total connections</td></tr>
       <tr><td>-time-wait &lt;dur&gt;</td><td>10s</td><td>TIME_WAIT duration</td></tr>
       <tr><td>-registry-tls</td><td>false</td><td>Enable TLS for registry connection</td></tr>
       <tr><td>-registry-fingerprint &lt;hex&gt;</td><td>(none)</td><td>SHA-256 fingerprint of registry TLS cert</td></tr>
+      <tr><td>-registry-trust &lt;mode&gt;</td><td>pinned</td><td>Trust store for -registry-tls: <code>pinned</code> (verify against -registry-fingerprint) or <code>system</code> (OS x509 roots — used by compat mode)</td></tr>
       <tr><td>-no-echo</td><td>false</td><td>Disable the built-in echo service (port 7)</td></tr>
       <tr><td>-no-dataexchange</td><td>false</td><td>Disable the built-in data exchange (port 1001)</td></tr>
       <tr><td>-dataexchange-b64</td><td>false</td><td>Include a lossless <code>data_b64</code> field alongside <code>data</code> in inbox messages — opt in when payloads are binary (e.g. zlib-compressed envelopes)</td></tr>
@@ -148,7 +149,8 @@ const bodyContent = `<h1>Configuration</h1>
       <tr><td>-transport &lt;mode&gt;</td><td>udp</td><td>Tunnel transport: <code>udp</code> (default — binds a UDP socket, today's behavior) or <code>compat</code> (opt-in — tunnels Pilot packets over WSS to the beacon for daemons in UDP-blocked environments such as Docker on Render/Railway/Vercel/Lambda). See <a href="firewalls">Running pilot behind a firewall</a>.</td></tr>
       <tr><td>-compat-beacon &lt;url&gt;</td><td>wss://beacon.pilotprotocol.network/v1/compat</td><td>WSS endpoint used when <code>-transport=compat</code></td></tr>
       <tr><td>-tls-trust &lt;mode&gt;</td><td>system</td><td>Compat-mode TLS trust store: <code>system</code> (default — OS trust store; matches the public beacon's Let's Encrypt cert) or <code>pinned</code> (Pilot CA root embedded in the daemon binary; rejects any cert not signed by it). Default will flip back to <code>pinned</code> in a future release once the production Pilot CA root ships embedded in client binaries. End-to-end Ed25519 protects payload identity in both modes.</td></tr>
-      <tr><td>-fake-listen-addr &lt;addr&gt;</td><td>(none)</td><td>Advertise this listen_addr to the registry instead of the real one</td></tr>
+      <tr><td>-advertise-endpoint &lt;host:port&gt;</td><td>(none)</td><td>Override the STUN-discovered endpoint advertised to the registry (for k8s pods where STUN returns unreachable IPs)</td></tr>
+      <tr><td>-no-rx-watchdog</td><td>false</td><td>Disable the inbound-path watchdog. By default the daemon detects when it keeps transmitting but has received nothing for minutes (stale NAT/relay mapping), soft-recovers by re-registering with the beacon and registry, and — if the wedge persists on a supervised daemon — exits with code 86 so launchd/systemd respawns it with a fresh transport</td></tr>
     </tbody>
   </table>
 

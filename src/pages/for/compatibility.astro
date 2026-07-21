@@ -40,7 +40,7 @@ const groups: CategoryGroup[] = [
     category: 'Serverless / functions',
     blurb: "Three out of four can't host a persistent process. Cloud Run is the exception when min-instances=1.",
     cards: [
-      { name: 'AWS Lambda',              mode: 'wrong runtime', modeClass: 'wrong',  note: '15-min hard timeout kills the tunnel. Use the SDK in the handler, not the daemon.' },
+      { name: 'AWS Lambda',              mode: 'wrong runtime', modeClass: 'wrong',  note: '15-min hard timeout kills the tunnel; no persistent daemon. Run the daemon as a Lambda Extension only while warm.' },
       { name: 'Google Cloud Run',        mode: 'compat',        modeClass: 'compat', note: 'Set min-instances=1 to keep warm. Inbound is HTTPS-only.' },
       { name: 'Vercel / Netlify / GCP Functions', mode: 'wrong runtime', modeClass: 'wrong', note: 'Ephemeral execution — no persistent process model.' },
       { name: 'Cloudflare Workers',      mode: 'wrong runtime', modeClass: 'wrong',  note: 'No long-lived sockets, no UDP, no listen().' },
@@ -69,7 +69,7 @@ const groups: CategoryGroup[] = [
     blurb: 'A mix. Modal/E2B/Daytona/Codespaces are open; Docker-AI-Sandbox-class (Replit Agent, Devin) blocks raw TCP.',
     cards: [
       { name: 'Cursor Cloud Agents',    mode: 'allowlist',     modeClass: 'compat', note: 'Add *.pilotprotocol.network + 34.71.57.205 to the egress allowlist.' },
-      { name: 'Replit Agent',           mode: 'compat+proxy',  modeClass: 'proxy',  note: 'Docker AI Sandbox — raw TCP/UDP blocked. HTTPS_PROXY support tracked on GitHub.' },
+      { name: 'Replit Agent',           mode: 'compat+proxy',  modeClass: 'proxy',  note: 'Docker AI Sandbox — raw TCP/UDP blocked. HTTPS_PROXY is not supported yet.' },
       { name: 'Devin (Cognition)',      mode: 'compat+proxy',  modeClass: 'proxy',  note: 'Same Docker AI Sandbox model.' },
       { name: 'Modal Sandboxes',        mode: 'udp',           modeClass: 'udp',    note: 'Default-allow. Long timeout for persistent run.' },
       { name: 'E2B Sandboxes',          mode: 'udp',           modeClass: 'udp',    note: 'IP/CIDR rules only; Pilot endpoints allowed by default.' },
@@ -85,17 +85,17 @@ const groups: CategoryGroup[] = [
     category: 'Desktop / local',
     blurb: 'install.sh wires up the right supervisor for each OS.',
     cards: [
-      { name: 'macOS (LaunchAgent)',    mode: 'udp', modeClass: 'udp', note: '~/Library/LaunchAgents/network.pilotprotocol.daemon.plist auto-loaded.' },
-      { name: 'Linux (systemd)',        mode: 'udp', modeClass: 'udp', note: 'sudo install enables the system unit + auto-updater.' },
+      { name: 'macOS (LaunchAgent)',    mode: 'udp', modeClass: 'udp', note: '~/Library/LaunchAgents/network.pilotprotocol.pilot-daemon.plist written; load it with launchctl.' },
+      { name: 'Linux (systemd)',        mode: 'udp', modeClass: 'udp', note: 'sudo install writes the pilot-daemon + updater units; enable/start them with systemctl.' },
       { name: 'tmux / screen',          mode: 'udp', modeClass: 'udp', note: 'Ad-hoc dev only — no auto-restart.' },
-      { name: 'Windows',                mode: 'not shipped', modeClass: 'wrong', note: 'No Windows binary in v1.10.3.' },
+      { name: 'Windows',                mode: 'not shipped', modeClass: 'wrong', note: 'No Windows binary yet — use WSL2 (Linux mode).' },
     ],
   },
   {
     category: 'Browser / WASM',
-    blurb: 'Use the JS/Python SDK from your app; the daemon needs a POSIX runtime.',
+    blurb: 'The daemon needs a POSIX runtime; the SDKs need a local daemon over a Unix socket, so neither runs in a browser tab or WASM.',
     cards: [
-      { name: 'Browser tab',  mode: 'wrong runtime', modeClass: 'wrong', note: 'No raw sockets — use the JS SDK over WSS instead.' },
+      { name: 'Browser tab',  mode: 'wrong runtime', modeClass: 'wrong', note: 'No raw sockets, and the JS SDK is Node-only (Unix-socket client of a local daemon) — neither works here.' },
       { name: 'WASM runtime', mode: 'wrong runtime', modeClass: 'wrong', note: 'Same model — daemon needs POSIX.' },
     ],
   },
@@ -104,9 +104,9 @@ const groups: CategoryGroup[] = [
 const egress = [
   { model: 'Open egress',                  examples: 'home wifi, most cloud VMs, default Docker',     today: '✓ UDP works — use default',                                                                  needed: 'nothing' },
   { model: 'Default-deny, TCP/443 only',   examples: 'hotel / airport / locked corp wifi',            today: '✓ Compat works as-is — single TCP/443 outbound',                                              needed: '-transport=compat' },
-  { model: 'HTTP CONNECT proxy',           examples: 'corp networks with explicit proxy URL',         today: '~ WSS dial honors HTTPS_PROXY; registry TLS dial does not',                                   needed: 'tracked on GitHub — registry over HTTPS_PROXY' },
-  { model: 'Transparent TLS interception', examples: 'Zscaler, Fortinet, Palo Alto, BlueCoat, Netskope', today: '✓ Works with -tls-trust=system (corp CA in OS store — v1.10.3 default)',                  needed: 'already supported' },
-  { model: 'HTTP-proxy-only sandbox',      examples: 'Replit Agent, Devin, Docker AI Sandbox',        today: '✗ Blocked — daemon needs raw TCP to :443',                                                    needed: 'tracked on GitHub — HTTPS_PROXY via CONNECT' },
+  { model: 'HTTP CONNECT proxy',           examples: 'corp networks with explicit proxy URL',         today: '✗ Neither the WSS dial nor the registry TLS dial honors HTTPS_PROXY today',                   needed: 'not yet supported' },
+  { model: 'Transparent TLS interception', examples: 'Zscaler, Fortinet, Palo Alto, BlueCoat, Netskope', today: '✓ Works with -tls-trust=system (corp CA in OS store — current default)',                  needed: 'already supported' },
+  { model: 'HTTP-proxy-only sandbox',      examples: 'Replit Agent, Devin, Docker AI Sandbox',        today: '✗ Blocked — daemon needs raw TCP to :443',                                                    needed: 'not yet supported' },
   { model: 'Domain-name allowlist',        examples: 'Cursor Cloud Agents, Zscaler PAC',              today: '✓ Works after adding *.pilotprotocol.network + 34.71.57.205',                                 needed: 'doc-only' },
   { model: 'DPI / protocol allowlist',     examples: 'Great Firewall, Iran-style filters',            today: '✗ Blocked — no domain fronting / ECH today',                                                  needed: 'out of scope' },
 ];
@@ -289,7 +289,7 @@ const egress = [
 </head>
 <body>
 
-<Nav active="for" />
+<Nav active="tech" />
 
 <section class="page-head">
   <div class="wrap">
@@ -324,7 +324,7 @@ const egress = [
           The daemon binds a public UDP socket; peers reach you directly or via beacon hole-punch. Lowest latency. Needs outbound UDP/4000 (and inbound on it for a public node).
         </div>
         <div class="zoo-stats">
-          <div class="zoo-stat"><div class="v">~10–30 ms</div><div class="l">one-way</div></div>
+          <div class="zoo-stat"><div class="v">RTT-bound</div><div class="l">direct path</div></div>
           <div class="zoo-stat"><div class="v">UDP/4000</div><div class="l">required</div></div>
         </div>
         <div class="zoo-arr">Getting started →</div>
@@ -333,15 +333,15 @@ const egress = [
       <a class="zoo-card" href="/docs/firewalls">
         <div class="zoo-top">
           <div class="zoo-id">-transport=compat</div>
-          <div class="zoo-badge">v1.10.3</div>
+          <div class="zoo-badge">Since v1.10.3</div>
         </div>
         <div class="zoo-name">Compat mode</div>
         <div class="zoo-desc">
-          Long-lived TCP/443 connections only — WebSocket Secure to the beacon for the data plane, TLS to the registry for control. Zero UDP. Same overlay; same Ed25519 trust; ~1.5–2× latency.
+          Long-lived TCP/443 connections only — WebSocket Secure to the beacon for the data plane, TLS to the registry for control. Zero UDP. Same overlay; same Ed25519 trust; higher latency than a direct path (traffic relays through the beacon).
         </div>
         <div class="zoo-stats">
           <div class="zoo-stat"><div class="v">TCP/443</div><div class="l">single port</div></div>
-          <div class="zoo-stat"><div class="v">~50–200 ms</div><div class="l">one-way</div></div>
+          <div class="zoo-stat"><div class="v">+1 hop</div><div class="l">via beacon</div></div>
         </div>
         <div class="zoo-arr">Firewall docs →</div>
       </a>
@@ -358,9 +358,10 @@ const egress = [
     <div class="compat-legend">
       <span><span class="sw" style="background: oklch(0.88 0.22 125);"></span><b>udp</b> — default UDP transport</span>
       <span><span class="sw" style="background: oklch(0.85 0.16 230);"></span><b>compat</b> — <code>-transport=compat</code></span>
-      <span><span class="sw" style="background: oklch(0.80 0.16 75);"></span><b>compat+proxy</b> — needs HTTPS_PROXY (<a href="https://github.com/pilot-protocol/pilotprotocol/issues" style="color: inherit; text-decoration: underline; text-decoration-color: var(--ink-faint);">tracked on GitHub</a>)</span>
+      <span><span class="sw" style="background: oklch(0.80 0.16 75);"></span><b>compat+proxy</b> — would need HTTPS_PROXY support (not yet available)</span>
       <span><span class="sw" style="background: var(--ink-faint);"></span><b>wrong runtime</b> — no daemon</span>
     </div>
+    <p style="color: var(--ink-faint); font-size: 12px; margin: -16px 0 24px;">These per-platform notes are our best-effort understanding of each vendor's network policy, not continuously tested guarantees — vendors change their rules, so verify against your platform's current docs and <a href="https://github.com/pilot-protocol/pilotprotocol/issues" style="color: inherit;">tell us</a> if a cell is wrong.</p>
 
     {groups.map((g) => (
       <div class="compat-cat">
@@ -418,7 +419,7 @@ const egress = [
 <section class="section">
   <div class="wrap">
     <div class="section-head">
-      <div class="eyebrow">v1.10.3</div>
+      <div class="eyebrow">Single-port 443</div>
       <h2>How <em>single-port-443</em> works.</h2>
     </div>
     <div class="compat-prose">
@@ -444,7 +445,7 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 RUN curl -fsSL https://pilotprotocol.network/install.sh | \
-    sh -s -- --email you@example.com
+    PILOT_EMAIL=you@example.com PILOT_ALLOW_ROOT=1 sh
 ENTRYPOINT ["/root/.pilot/bin/pilot-daemon", "-transport=compat"]</pre>
       </div>
       <p>No port exposed. Render allows arbitrary outbound TCP/443. <b>Zero UDP, zero TCP/9000.</b></p>
@@ -452,7 +453,7 @@ ENTRYPOINT ["/root/.pilot/bin/pilot-daemon", "-transport=compat"]</pre>
 
     <div class="compat-example">
       <h3>AWS Lambda — <em>don't</em></h3>
-      <p>Lambda has a 15-minute hard timeout and freezes the execution environment between invocations. A Lambda Extension can host a sidecar process but only while the function is warm. <b>Wrong runtime</b> for <code>pilot-daemon</code>. If you want Pilot-from-Lambda, call the registry directly via the JS or Python SDK over HTTPS during the handler invocation; don't try to run the daemon.</p>
+      <p>Lambda has a 15-minute hard timeout and freezes the execution environment between invocations. A Lambda Extension can host a sidecar process but only while the function is warm. <b>Wrong runtime</b> for <code>pilot-daemon</code>. The JS and Python SDKs are not a way around this — both are clients of a local <code>pilot-daemon</code> over a Unix socket, so they still need the daemon running. A Lambda Extension can host the daemon while the function is warm; there is no daemon-less SDK path.</p>
     </div>
 
     <div class="compat-example">
@@ -470,7 +471,7 @@ spec:
       command: ["/bin/sh", "-c"]
       args:
         - curl -fsSL https://pilotprotocol.network/install.sh | \
-          sh -s -- --email pilot@example.com &&
+          PILOT_EMAIL=pilot@example.com PILOT_ALLOW_ROOT=1 sh &&
           exec /root/.pilot/bin/pilot-daemon -transport=compat \
             -socket /shared/pilot.sock
       volumeMounts: [{`{ name: pilot-sock, mountPath: /shared }`}]
@@ -483,16 +484,16 @@ spec:
       <h3>macOS laptop — <em>LaunchAgent</em></h3>
       <div class="compat-codeblock">
 <pre>curl -fsSL https://pilotprotocol.network/install.sh | \
-  sh -s -- --email you@example.com</pre>
+  PILOT_EMAIL=you@example.com sh</pre>
       </div>
-      <p>Installer writes <code>~/Library/LaunchAgents/network.pilotprotocol.daemon.plist</code> and loads it. Defaults to <code>-transport=udp</code>; flip to compat only if your network blocks UDP/4000.</p>
+      <p>Installer writes <code>~/Library/LaunchAgents/network.pilotprotocol.pilot-daemon.plist</code> and prints the <code>launchctl load</code> command to start it. Defaults to <code>-transport=udp</code>; flip to compat only if your network blocks UDP/4000.</p>
     </div>
 
     <div class="compat-example">
       <h3>Forced-compat systemd unit — <em>locked-down corp Linux</em></h3>
       <div class="compat-codeblock">
-<pre>sudo curl -fsSL https://pilotprotocol.network/install.sh | \
-  sudo PILOT_ALLOW_ROOT=1 sh -s -- --email you@example.com
+<pre>curl -fsSL https://pilotprotocol.network/install.sh | \
+  sudo PILOT_EMAIL=you@example.com PILOT_ALLOW_ROOT=1 sh
 sudo systemctl edit pilot-daemon   <span class="cmt"># add ExecStart override with -transport=compat</span>
 sudo systemctl restart pilot-daemon</pre>
       </div>

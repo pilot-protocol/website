@@ -92,14 +92,14 @@ alice  0:0000.0000.0003  public  203.0.113.42:4000</code></pre>
   <ul>
     <li>Agent A's <strong>virtual address</strong> and <strong>public key</strong></li>
     <li>A <strong>justification</strong> message explaining why A wants to connect</li>
-    <li>An <strong>Ed25519 signature</strong> over the entire request, proving A controls the claimed identity</li>
+    <li>An <strong>Ed25519 signature</strong> binding the two identities (<code>handshake:&lt;node_id&gt;:&lt;peer_id&gt;</code>), proving A controls the claimed identity</li>
   </ul>
 
   <pre><code><span class="cmd">$ pilotctl handshake bob "Need access to Q1 analytics data for the board report"</span>
 Handshake request sent to bob (0:0000.0000.0004)
 Waiting for approval...</code></pre>
 
-  <p>The justification field is not just a comment -- it is a signed, auditable statement of intent. When Agent B reviews pending handshake requests, they can see exactly why each agent wants to connect, verified by the requester's cryptographic signature.</p>
+  <p>The justification field is a plaintext statement of intent carried alongside the request. When Agent B reviews pending handshake requests, they can see exactly why each agent wants to connect. Note: the Ed25519 signature covers the identity pair, not the justification text -- so treat the justification as a human-readable label, not a cryptographically signed claim. (Signing the justification is on the roadmap.)</p>
 
   <h3>Step 3: Relay via Registry</h3>
 
@@ -128,7 +128,7 @@ Trust established with alice (0:0000.0000.0003)</code></pre>
 
   <ul>
     <li>Auto-approve any agent on the same network (same 16-bit network ID)</li>
-    <li>Auto-approve agents whose justification matches a specific pattern</li>
+    <li>Auto-approve every incoming request via the daemon's <code>-trust-auto-approve</code> flag (open-door mode for trusted environments)</li>
     <li>Auto-approve when both sides request a handshake simultaneously (mutual interest signal)</li>
   </ul>
 
@@ -141,15 +141,16 @@ Trust established with alice (0:0000.0000.0003)</code></pre>
   <pre><code><span class="cmd">$ pilotctl untrust 0:0000.0000.0004</span>
 Trust revoked for bob (0:0000.0000.0004)
 Active tunnel torn down
-Peer notified</code></pre>
+Peer not notified — it will see connection failures on its next attempt</code></pre>
 
-  <p>When an agent runs <code>pilotctl untrust</code>, three things happen atomically:</p>
+  <p>When an agent runs <code>pilotctl untrust</code>, two things happen locally:</p>
 
   <ol>
     <li><strong>Trust pair removed</strong> -- the peer's public key is deleted from local storage. The agent will no longer accept connections from this peer.</li>
     <li><strong>Active tunnel torn down</strong> -- if there is an active encrypted tunnel to the peer, it is closed immediately. All in-flight connections are terminated.</li>
-    <li><strong>Peer notified</strong> -- the revoked peer receives a notification that the trust relationship has been terminated. It can clean up its own state and stop attempting reconnection.</li>
   </ol>
+
+  <p>Revocation is a purely local action: the revoked peer is <strong>not</strong> notified. It simply sees its connections fail on the next attempt and must re-handshake if trust is ever re-established.</p>
 
   <p>There is no expiration window, no token refresh delay, no cache invalidation propagation. The instant the command runs, the peer is locked out. The next packet it sends will be rejected.</p>
 
@@ -178,7 +179,7 @@ Peer notified</code></pre>
 
   <ul>
     <li><strong>Access control</strong> -- only mutually trusted agents can communicate. Trust relationships are cryptographically verifiable.</li>
-    <li><strong>Audit trail</strong> -- every handshake includes a signed justification. Who requested access, why, and when is all recorded.</li>
+    <li><strong>Audit trail</strong> -- every handshake includes a justification message. Who requested access, why, and when is all recorded.</li>
     <li><strong>Data boundaries</strong> -- agents can only see peers they have been explicitly trusted with. There is no risk of accidental data exposure to agents in other parts of the organization.</li>
     <li><strong>Instant revocation</strong> -- access can be terminated immediately, with proof that it was terminated.</li>
   </ul>

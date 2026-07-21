@@ -17,7 +17,7 @@ const bodyContent = `<p>"We are building Multi-Agent Systems like it's 1995 -- w
 
   <p>When Agent A sends a request to Agent B, how does Agent B know it is really Agent A? In most frameworks, the answer is: it does not. The request contains a token that proves the caller has <em>a</em> credential, not that the caller <em>is</em> who it claims to be. Any agent that obtains the token can impersonate any other agent.</p>
 
-  <p>Google's <a href="https://google.github.io/A2A" target="_blank" rel="noopener">A2A protocol</a> introduced <a href="https://google.github.io/A2A/#/documentation/agent_card" target="_blank" rel="noopener">Agent Cards</a> -- JSON documents published at <code>/.well-known/agent.json</code> -- that describe an agent's capabilities and endpoint. A2A supports but does not enforce Agent Card signing. An unsigned Agent Card can be spoofed by anyone who controls the DNS or the hosting infrastructure. The specification explicitly leaves identity verification as an implementation detail.</p>
+  <p>Google's <a href="https://a2a-protocol.org/" target="_blank" rel="noopener">A2A protocol</a> introduced <a href="https://a2a-protocol.org/" target="_blank" rel="noopener">Agent Cards</a> -- JSON documents published at <code>/.well-known/agent-card.json</code> -- that describe an agent's capabilities and endpoint. A2A supports but does not enforce Agent Card signing. An unsigned Agent Card can be spoofed by anyone who controls the DNS or the hosting infrastructure. The specification explicitly leaves identity verification as an implementation detail.</p>
 
   <h3>No Least Privilege</h3>
 
@@ -55,10 +55,13 @@ const bodyContent = `<p>"We are building Multi-Agent Systems like it's 1995 -- w
 
   <h3>Ed25519 Identity: One Agent, One Key Pair</h3>
 
-  <p>When you initialize a Pilot agent, the first thing that happens is key generation. The daemon creates an Ed25519 key pair and stores the private key at <code>~/.pilot/identity.json</code>. The public key is registered with the rendezvous server alongside the agent's 48-bit virtual address.</p>
+  <p>When you first start a Pilot daemon, it generates an Ed25519 key pair and stores the private key at <code>~/.pilot/identity.json</code> (<code>pilotctl init</code> only writes local config; the daemon creates the identity on start). The public key is registered with the rendezvous server alongside the agent's 48-bit virtual address.</p>
 
-  <pre><code><span class="comment"># Initialize an agent -- generates Ed25519 key pair</span>
+  <pre><code><span class="comment"># Write local config (registry/beacon/hostname)</span>
 <span class="cmd">$ pilotctl init</span>
+
+<span class="comment"># Starting the daemon generates the Ed25519 identity + registers</span>
+<span class="cmd">$ pilotctl daemon start</span>
 Identity created: ~/.pilot/identity.json
 Public key: 3b7f...a91c (Ed25519, 32 bytes)
 Virtual address: 1:0001.0000.0003
@@ -83,7 +86,7 @@ Visibility: private</code></pre>
   <ul>
     <li><strong>Lookup</strong> -- searching for an agent by hostname returns nothing for private agents. The querying agent cannot distinguish between a private agent and one that does not exist.</li>
     <li><strong>Resolve</strong> -- getting an agent's network endpoint (IP:port) requires a mutual trust relationship. Even if you know the agent's virtual address, you cannot learn where it is on the physical network.</li>
-    <li><strong>Enumeration</strong> -- listing all agents on the network is blocked entirely. There is no API that returns a roster of registered agents. An agent can only see peers it has been explicitly introduced to.</li>
+    <li><strong>Enumeration</strong> -- private agents are not enumerable: there is no API that returns a roster of them, and an agent only sees private peers it has been introduced to. (Public agents opt in to the <code>list-agents</code> directory and are searchable there by design.)</li>
   </ul>
 
   <p>This means a compromised agent has a <strong>limited blast radius</strong>. It can only see and connect to the specific peers it was trusted with. It cannot scan the network, discover new targets, or map the organization's agent topology. Compare this to a typical REST-based setup where any agent with a valid API key can call any endpoint in the service mesh.</p>
@@ -109,13 +112,13 @@ PENDING HANDSHAKES:
 Trust established with agent-alpha (1:0001.0000.0003)
 Encrypted tunnel active</code></pre>
 
-  <p>The handshake includes a <strong>justification</strong> -- a signed, auditable statement of why Agent Alpha wants to connect. This is not a comment field. It is part of the signed payload: the justification is covered by the Ed25519 signature, so it cannot be tampered with after submission. When Agent Beta's operator reviews the request, they see exactly who is asking and why, with cryptographic proof.</p>
+  <p>The handshake includes a <strong>justification</strong> -- a signed, auditable statement of why Agent Alpha wants to connect. This is not a comment field. It travels with the signed handshake so the reviewing operator sees who is asking and why. (Note: the Ed25519 signature covers the handshake challenge — <code>handshake:&lt;node_id&gt;:&lt;peer_id&gt;</code> — binding the request to the sender's identity; the justification text itself is an attached field, not part of the signed bytes.)</p>
 
   <p>After approval, both agents store the peer's public key locally. Every subsequent packet between them is signed and verified. The trust relationship is mutual -- both sides agreed, and either side can revoke at any time.</p>
 
   <h3>Encryption: X25519 + AES-256-GCM Per Connection</h3>
 
-  <p>Once trust is established, the agents perform an <a href="https://datatracker.ietf.org/doc/html/rfc7748" target="_blank" rel="noopener">X25519</a> Diffie-Hellman key exchange to derive a shared secret, then use <a href="https://datatracker.ietf.org/doc/html/rfc5288" target="_blank" rel="noopener">AES-256-GCM</a> for per-packet encryption. This is not optional -- every packet is encrypted, even on local networks, even between agents on the same machine.</p>
+  <p>Once trust is established, the agents perform an <a href="https://datatracker.ietf.org/doc/html/rfc7748" target="_blank" rel="noopener">X25519</a> Diffie-Hellman key exchange to derive a shared secret, then use <a href="https://datatracker.ietf.org/doc/html/rfc5288" target="_blank" rel="noopener">AES-256-GCM</a> for per-packet encryption. Encryption is on by default -- every packet is encrypted, even on local networks and between agents on the same machine (it can be disabled with <code>daemon start --no-encrypt</code>, but the default is on).</p>
 
   <p>The encryption is <strong>end-to-end</strong>. If the connection is relayed through a beacon (because both agents are behind NAT), the beacon sees only encrypted bytes. It forwards opaque payloads without any ability to read, modify, or replay them. For a detailed breakdown of the cryptographic implementation, see <a href="zero-dependency-encryption-x25519-aes-gcm">Zero-Dependency Agent Encryption</a>.</p>
 
@@ -155,8 +158,8 @@ Agent alpha online at 1:0001.0000.0003 (private)
 
 <span class="comment"># Machine 2: Install and initialize Agent Beta</span>
 <span class="cmd">$ curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
-<span class="cmd">$ pilotctl init --hostname agent-beta --public</span>
-<span class="cmd">$ pilotctl daemon start --email beta@example.com</span>
+<span class="cmd">$ pilotctl init --hostname agent-beta</span>
+<span class="cmd">$ pilotctl daemon start --email beta@example.com --public</span>
 Agent beta online at 1:0001.0000.0007 (public)
 
 <span class="comment"># Machine 1: Agent Alpha initiates handshake</span>

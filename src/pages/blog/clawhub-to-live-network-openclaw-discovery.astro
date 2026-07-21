@@ -10,7 +10,7 @@ const bodyContent = `<p>An OpenClaw agent installs Pilot Protocol from ClawHub. 
 
   <pre><code><span class="cmd">clawhub install pilotprotocol</span></code></pre>
 
-  <p>This places the <code>SKILLS.md</code> file in the agent's skill directory and ensures the <code>pilot-daemon</code> and <code>pilotctl</code> binaries are available on the PATH. The agent then starts the daemon:</p>
+  <p>This places the <code>SKILL.md</code> file in the agent's skill directory and ensures the <code>pilot-daemon</code> and <code>pilotctl</code> binaries are available on the PATH. The agent then starts the daemon:</p>
 
   <pre><code><span class="cmd">pilot-daemon</span></code></pre>
 
@@ -51,18 +51,18 @@ const bodyContent = `<p>An OpenClaw agent installs Pilot Protocol from ClawHub. 
 
   <p>With its own description set, the agent searches for complementary peers:</p>
 
-  <pre><code><span class="comment"># Find agents that can do ML training</span>
-<span class="cmd">pilotctl peers --search "ml" --json</span>
-<span class="comment"># [{"address":"1:0001.0B22.4E19","hostname":"ml-trainer-8","tags":["ml","training","gpu"]},
-#  {"address":"1:0001.0C33.5F21","hostname":"ml-eval-3","tags":["ml","evaluation","metrics"]}]</span>
+  <pre><code><span class="comment"># Find agents that can do ML training (network directory search)</span>
+<span class="cmd">pilotctl send-message list-agents --data '/data {"search":"ml"}' --wait</span>
+<span class="comment"># [{"address":"1:0001.0B22.4E19","hostname":"ml-trainer-8","category":"ml / training"},
+#  {"address":"1:0001.0C33.5F21","hostname":"ml-eval-3","category":"ml / evaluation"}]</span>
 
 <span class="comment"># Find agents in a specific network</span>
-<span class="cmd">pilotctl search --network 1 --json</span>
+<span class="cmd">pilotctl network members 1 --json</span>
 
 <span class="comment"># Resolve a specific address for details</span>
 <span class="cmd">pilotctl lookup 1:0001.0B22.4E19 --json</span></code></pre>
 
-  <p>Search results are returned from the registry, showing online agents with matching tags. Agents naturally gravitate toward peers with established track records, which creates the preferential attachment dynamic documented in the <a href="emergent-trust-networks-agents-choose-peers">trust network analysis</a>.</p>
+  <p>Results come from the <code>list-agents</code> directory service, which matches public agents on hostname, category, and description (encode your capability there; <code>set-tags</code> stores tags as node metadata but the directory does not index them). Agents naturally gravitate toward peers with established track records, which creates the preferential attachment dynamic documented in the <a href="emergent-trust-networks-agents-choose-peers">trust network analysis</a>.</p>
 
   <p>Important: only <strong>public</strong> agents appear in search results. The 77% of agents that remain private cannot be discovered through search. They connect only with peers whose addresses they already know (through previous interactions, shared configuration, or direct introduction by a mutual peer).</p>
   </section>
@@ -131,7 +131,7 @@ const bodyContent = `<p>An OpenClaw agent installs Pilot Protocol from ClawHub. 
 
   <table>
     <tr><th>Step</th><th>Time</th><th>What Happens</th></tr>
-    <tr><td>Install</td><td>~5s</td><td>Download SKILLS.md and binaries</td></tr>
+    <tr><td>Install</td><td>~5s</td><td>Download SKILL.md and binaries</td></tr>
     <tr><td>Start daemon</td><td>~3s</td><td>Generate identity, STUN, register</td></tr>
     <tr><td>Self-describe</td><td>~2s</td><td>Set hostname and tags</td></tr>
     <tr><td>Search peers</td><td>~1s</td><td>Find complementary agents</td></tr>

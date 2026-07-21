@@ -16,6 +16,10 @@ const HERE = path.dirname(new URL(import.meta.url).pathname);
 const DATA = path.join(HERE, '..', 'src', 'data');
 const overrides = JSON.parse(fs.readFileSync(path.join(DATA, 'app-overrides.json'), 'utf8'));
 const methodsMap = JSON.parse(fs.readFileSync(path.join(DATA, 'app-methods.json'), 'utf8'));
+// Optional example-driven usage guides, keyed by app id. Apps without an entry
+// carry productDemo: null and render exactly as before. See src/data/app-demos.json.
+const demosPath = path.join(DATA, 'app-demos.json');
+const demosMap = fs.existsSync(demosPath) ? JSON.parse(fs.readFileSync(demosPath, 'utf8')) : {};
 
 function hash(str) { let h = 2166136261 >>> 0; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; }
 
@@ -27,7 +31,7 @@ const CATEGORIES = [
   { id: 'infra',    name: 'Infrastructure',     blurb: 'Containers, microVMs, and deploys — the compute layer for agents.',     hue: 30  },
   { id: 'security', name: 'Security',           blurb: 'Guardrails and firewalls for agents and their inputs.',                 hue: 5   },
   { id: 'finance',  name: 'Finance & Payments', blurb: 'Settle value on-overlay and read the markets.',                        hue: 155 },
-  { id: 'comms',    name: 'Communications',     blurb: 'Give an agent its own phone number — voice, SMS/iMessage, and threaded conversations.', hue: 315 },
+  { id: 'comms',    name: 'Communications',     blurb: 'Give an agent its own phone number or email inbox — voice, SMS/iMessage, email, and threaded conversations.', hue: 315 },
 ];
 const CAT_HUE = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.hue]));
 
@@ -36,9 +40,9 @@ const CATMAP = {
   'io.pilot.cosift': 'ai', 'io.telepat.ideon-free': 'ai',
   'io.pilot.plainweb': 'web', 'io.pilot.otto': 'web', 'io.pilot.bowmark': 'web',
   'io.pilot.smol': 'infra', 'io.pilot.miren': 'infra', 'io.pilot.docker': 'infra', 'io.pilot.tldr': 'infra',
-  'io.pilot.aegis': 'security',
+  'io.pilot.aegis': 'security', 'io.pilot.didit': 'security',
   'io.pilot.slipstream': 'finance', 'io.pilot.wallet': 'finance',
-  'io.pilot.agentphone': 'comms',
+  'io.pilot.agentphone': 'comms', 'io.pilot.primitive': 'comms',
 };
 
 // ---------- icons: brand mark (Simple Icons), line glyph (Lucide), or real logo image ----------
@@ -51,6 +55,8 @@ const ICON_MAP = {
   'io.pilot.docker': { brand: 'docker', hex: '#2496ED' },
   'io.pilot.cosift': { image: 'png', fit: 'contain', bg: '#ffffff' },
   'io.pilot.smol': { image: 'png', fit: 'cover', bg: '#ffffff' },
+  'io.pilot.didit': { image: 'png', fit: 'contain', bg: '#ffffff' },
+  'io.pilot.tldr': { image: 'png', fit: 'cover', bg: '#203050' },
   'io.pilot.sixtyfour': { image: 'png', fit: 'cover', bg: '#0b0b0a' },
   'io.pilot.plainweb': { image: 'png', fit: 'contain', bg: '#ffffff' },
   'io.pilot.slipstream': { lucide: 'trending-up' },
@@ -62,7 +68,7 @@ const ICON_MAP = {
   'io.pilot.bowmark': { image: 'png', fit: 'cover', bg: '#0b0b0a' },
   'io.pilot.orthogonal': { image: 'png', fit: 'cover', bg: '#e3e6df' },
   'io.pilot.agentphone': { image: 'png', fit: 'contain', bg: '#26B65A' },
-  'io.pilot.tldr': { image: 'png', fit: 'cover', bg: '#203050' },
+  'io.pilot.primitive': { image: 'png', fit: 'cover', bg: '#111110' },
 };
 
 function relLum(hex) {
@@ -88,12 +94,11 @@ function iconFor(id, hue) {
 
 // ---------- presentation config ----------
 const APP_IDS = [
-  'io.pilot.agentphone',
+  'io.pilot.primitive', 'io.pilot.agentphone',
   'io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.sqlite', 'io.pilot.mysql', 'io.pilot.redis', 'io.pilot.sixtyfour',
   'io.pilot.cosift', 'io.telepat.ideon-free', 'io.pilot.plainweb', 'io.pilot.otto',
   'io.pilot.smol', 'io.pilot.miren', 'io.pilot.docker', 'io.pilot.aegis',
-  'io.pilot.slipstream', 'io.pilot.wallet', 'io.pilot.bowmark', 'io.pilot.orthogonal',
-  'io.pilot.tldr',
+  'io.pilot.slipstream', 'io.pilot.wallet', 'io.pilot.bowmark', 'io.pilot.orthogonal', 'io.pilot.didit', 'io.pilot.tldr',
 ];
 const FEATURED = ['io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.docker'];
 const LINUX_ONLY = new Set(['io.pilot.docker']);
@@ -101,7 +106,7 @@ const PROTECTION_FALLBACK = {
   'io.pilot.postgres': 'guarded', 'io.pilot.duckdb': 'guarded', 'io.pilot.sqlite': 'guarded', 'io.pilot.mysql': 'guarded', 'io.pilot.redis': 'guarded',
   'io.pilot.docker': 'guarded', 'io.pilot.miren': 'shareable', 'io.pilot.otto': 'guarded',
   'io.pilot.wallet': 'guarded', 'io.pilot.slipstream': 'shareable', 'io.telepat.ideon-free': 'guarded',
-  'io.pilot.aegis': 'guarded', 'io.pilot.tldr': 'guarded',
+  'io.pilot.aegis': 'guarded',
 };
 const ALL_PLATFORMS = ['darwin-arm64', 'darwin-amd64', 'linux-arm64', 'linux-amd64'];
 
@@ -113,7 +118,7 @@ function build(id) {
   const o = overrides[id] || {};
   const cat = CATMAP[id];
   const platforms = o.platforms || (LINUX_ONLY.has(id) ? ['linux-arm64', 'linux-amd64'] : ALL_PLATFORMS);
-  const methods = (methodsMap[id] || []).map((m) => ({ name: m.name, summary: m.summary || null }));
+  const methods = (methodsMap[id] || []).map((m) => ({ name: m.name, summary: m.summary || null, example: m.example || null, gated: m.gated || null }));
   return {
     id,
     name: o.name || id,
@@ -143,6 +148,8 @@ function build(id) {
     runtimes: o.runtimes || ['go'],
     publishedAt: o.publishedAt ? String(o.publishedAt).slice(0, 10) : null,
     updatedAt: o.publishedAt ? String(o.publishedAt).slice(0, 10) : null,
+    productDemo: demosMap[id] || null,
+    limits: o.limits || null,
   };
 }
 
@@ -150,11 +157,20 @@ const apps = APP_IDS.map(build);
 
 const banner = `// AUTO-GENERATED by scripts/gen-apps.mjs from authoritative catalogue snapshots\n// (src/data/app-overrides.json + app-methods.json). Do not edit by hand.\n// No ratings or install counts — those are not published by the catalogue.\n`;
 const body = `${banner}
-export interface AppMethod { name: string; summary: string | null; }
+export interface AppMethod { name: string; summary: string | null; example: string | null; gated: string | null; }
+export interface AppLimit { label: string; value: string; }
 export interface AppChangelog { version: string; date?: string | null; notes: string[]; }
 export interface AppBundle { platform: string; bytes: number | null; }
 export interface AppDependency { id: string; reason: string; optional?: boolean; }
 export interface AppIcon { mode: 'mask' | 'image'; img: string | null; fit: string | null; pos: string | null; color: string; ink: boolean; file: string | null; hue: number; }
+export interface DemoStep { title?: string | null; goal?: string | null; command: string; expect?: string | null; cost?: string | null; note?: string | null; }
+export interface DemoCostOp { op: string; price: string; note?: string | null; }
+export interface DemoCost { unit: string; free_budget: string; hard_cap_usd: number | null; operations: DemoCostOp[]; worked_total?: string | null; check_balance?: string | null; }
+export interface ProductDemo {
+  skill: string; title: string; when_to_use: string; metered: boolean;
+  quickstart: DemoStep; examples: DemoStep[]; cost: DemoCost | null;
+  gotchas: string[]; next: string[];
+}
 export interface App {
   id: string; name: string; tagline: string; description: string;
   categories: string[]; primaryCategory: string; keywords: string[];
@@ -166,6 +182,8 @@ export interface App {
   featured: boolean; real: boolean; inCatalogue: boolean;
   icon: AppIcon; minPilotVersion: string; runtimes: string[];
   publishedAt: string | null; updatedAt: string | null;
+  productDemo: ProductDemo | null;
+  limits: AppLimit[] | null;
 }
 export interface Category { id: string; name: string; blurb: string; hue: number; }
 

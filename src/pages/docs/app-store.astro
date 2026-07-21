@@ -10,7 +10,10 @@ const bodyContent = `<h1>App Store</h1>
       <li><a href="#overview">Overview</a></li>
       <li><a href="#using">Using apps</a></li>
       <li><a href="#discovery">Discovery &amp; the help convention</a></li>
+      <li><a href="#dynamic-context">Dynamic context on every call</a></li>
       <li><a href="#lifecycle">Lifecycle</a></li>
+      <li><a href="#updating">Keeping apps current</a></li>
+      <li><a href="#app-update-opt-out">Opting out of app auto-updates</a></li>
       <li><a href="#building">Building an app</a></li>
       <li><a href="#publishing">Publishing an app</a></li>
       <li><a href="#install-models">Catalogue vs sideload</a></li>
@@ -21,14 +24,14 @@ const bodyContent = `<h1>App Store</h1>
 
   <h2 id="overview">Overview</h2>
 
-  <p>Where <code>list-agents</code> is the phonebook for live <em>data</em> on the overlay, the App Store is for installable <em>capability apps</em>. An app is a small binary plus a signed <code>manifest.json</code>. The daemon fetches it from the catalogue, verifies it, and supervises it: it spawns the binary, hands it a unix socket, and brokers IPC calls to it. Each app method is a typed call - JSON in, JSON out.</p>
+  <p>Where <code>list-agents</code> is the phonebook for live <em>data</em> on the overlay, the App Store is for installable <em>capability apps</em>. An app is a small binary plus a signed <code>manifest.json</code>. <code>pilotctl</code> fetches the bundle from the catalogue, sha-checks and extracts it, and validates its signed manifest; the daemon then supervises it — spawning the binary, handing it a unix socket, and brokering IPC calls. Each app method is a typed call - JSON in, JSON out.</p>
 
   <p>Apps are:</p>
   <ul>
     <li><strong>Local</strong> - they run on your own daemon, one process per host. The heavy lifting (an index, a chain, an LLM) lives wherever the app's backend is; the installed binary is a thin, stateless adapter.</li>
     <li><strong>Typed</strong> - every method maps to a JSON request/response. No browser, no REST plumbing.</li>
-    <li><strong>Signature-verified</strong> - the manifest pins the binary's sha256 and carries an ed25519 signature; the daemon re-checks both on every spawn.</li>
-    <li><strong>Grant-scoped</strong> - the manifest declares exactly what the app may do (network, file I/O); the user accepts at install time. No ambient authority.</li>
+    <li><strong>Signature-verified</strong> - the manifest pins the binary's sha256 and carries an ed25519 signature. The daemon verifies the signature when it scans installed apps, and re-checks the binary's sha256 immediately before every spawn.</li>
+    <li><strong>Grant-scoped</strong> - the manifest declares exactly what the app may do (network, file I/O), and the daemon's broker enforces those grants at runtime. Installing an app accepts its declared grants. No ambient authority.</li>
     <li><strong>Auto-spawned</strong> - once installed, the daemon's supervisor keeps the app running. No manual start.</li>
   </ul>
 
@@ -74,7 +77,34 @@ const bodyContent = `<h1>App Store</h1>
     <li><strong>slow</strong> - ~5-30s: multi-step work (e.g. research that plans, retrieves, and synthesizes).</li>
   </ul>
 
-  <p>Each method entry also carries a measured, warm round-trip estimate, so an agent can budget a call end-to-end (agent &rarr; daemon &rarr; app &rarr; backend &rarr; back).</p>
+  <p>Each method entry also carries a warm round-trip estimate the app publishes, so an agent can budget a call end-to-end (agent &rarr; daemon &rarr; app &rarr; backend &rarr; back).</p>
+
+  <h2 id="dynamic-context">Dynamic context on every call</h2>
+
+  <p>Two surfaces put the right next command in front of an agent at the two moments it is most likely to stall — right after install, and after every call. Both are authored once by the publisher and need no runtime code (see <a href="#authoring-context">Authoring dynamic context</a>).</p>
+
+  <h3 id="product-demo">Product demo at install</h3>
+
+  <p>When <code>pilotctl appstore install io.pilot.&lt;app&gt;</code> finishes, its last step is a compact, example-first <strong>&ldquo;Full usage demo&rdquo;</strong>: when to reach for the app, the one call to run first, and a handful of worked examples (with per-call cost for metered apps). It turns a bare install into a correct first call. The same demo renders as the <strong>Full usage demo</strong> section on the app's store page.</p>
+
+  <h3 id="next-steps">Next-steps after every call</h3>
+
+  <p>After every <code>pilotctl appstore call</code>, <code>pilotctl</code> prints a short <strong>next-steps</strong> block to <strong>stderr</strong> — the recommended commands for where the agent now stands, on success <em>and</em> on failure. <strong>stdout stays pure JSON</strong>, so an agent can still pipe the result into <code>jq</code>; the hints never touch it.</p>
+
+  <p>A missing param renders a corrected, runnable call; a needs-signup state names the signup command; a <code>402</code> points at the balance check. For example, a <code>sqlite.query</code> with no <code>database</code>:</p>
+
+  <pre><code><span class="comment"># stdout is the pure JSON result (here an error envelope) — the hints go to stderr:</span>
+<span class="cmd">pilotctl</span> appstore call io.pilot.sqlite sqlite.query '{"sql":"SELECT 42"}'
+<span class="comment">error: ipc: server error: backend: missing required param(s): database
+next:  sqlite needs an explicit database — there is no default
+  1. pilotctl appstore call io.pilot.sqlite sqlite.query '{"database":":memory:","sql":"SELECT 42 AS a"}'
+     why: pass database (:memory: for a scratch db) — fixes the error above</span></code></pre>
+
+  <p>Turn it off with <code>PILOT_NEXT_STEPS=off</code>. With <code>--json</code>, the hint arrives as a structured <code>next_steps</code> object instead of prose. A hint is never load-bearing: an absent, malformed, or unmatched graph prints nothing and leaves the call itself unchanged — no hint bug can ever turn a working call into a failed one.</p>
+
+  <h3 id="graph-refresh">Hints reach installed apps automatically</h3>
+
+  <p>The hints are driven by a small graph the app ships in the catalogue. Agents do <strong>not</strong> reinstall to get them: <code>pilotctl</code> lazily refreshes each app's cached graph from the catalogue in the background — a bounded check, at most about every 12 hours per app. So an app installed before its graph shipped starts showing hints on its next call, and a republished graph propagates within the day. No user action.</p>
 
   <h2 id="lifecycle">Lifecycle</h2>
 
@@ -89,6 +119,46 @@ const bodyContent = `<h1>App Store</h1>
 
   <div class="callout">
     <p><strong>Upgrades key on the version.</strong> The supervisor respawns an app when its <code>app_version</code> changes. Bump the version for every new build, or a re-release of the same version won't roll running nodes onto the new binary.</p>
+  </div>
+
+  <h2 id="updating">Keeping apps current</h2>
+
+  <p>Apps are versioned in the catalogue. Two commands find and apply new versions:</p>
+
+  <pre><code><span class="cmd">pilotctl</span> appstore outdated                    <span class="comment"># installed apps with a newer — or rebuilt — catalogue version</span>
+<span class="cmd">pilotctl</span> appstore upgrade io.pilot.cosift      <span class="comment"># re-install one app: verified, then respawned</span>
+<span class="cmd">pilotctl</span> appstore upgrade --all               <span class="comment"># bring every installed app up to date</span></code></pre>
+
+  <p><code>upgrade</code> re-runs the same verified install (catalogue signature &rarr; tarball sha256 &rarr; manifest signature &rarr; publisher trust anchor), then the supervisor applies the version change and restarts the app, refusing any downgrade. <code>outdated</code> flags an app not only on a version bump but also as <strong>rebuilt</strong> when a same-version bundle was republished — so a fix shipped without a version change is still surfaced.</p>
+
+  <div class="callout">
+    <p><strong>Auto-update.</strong> <code>pilotctl</code>'s own updater — <code>pilotctl update status|enable|disable</code> — keeps the CLI and daemon current (automatic updates are off by default). With auto-update enabled, the updater also keeps installed app adapters current automatically, so you won't need to run <code>upgrade</code> by hand. To keep apps pinned instead, see <a href="#app-update-opt-out">Opting out of app auto-updates</a> below.</p>
+  </div>
+
+  <h2 id="app-update-opt-out">Opting out of app auto-updates</h2>
+
+  <p>App auto-update is on by default: while <code>pilotctl update</code> is enabled, the <code>pilot-updater</code> service periodically runs <code>appstore upgrade --all</code> so installed apps stay current. To keep your apps pinned at the versions you installed — for example on a locked-down or reproducible host — opt out with the <code>PILOT_APP_UPDATE_OPT_OUT</code> environment variable. It is <code>false</code> by default (app updates on).</p>
+
+  <p>Set it in the updater's service environment, then restart the updater so it takes effect:</p>
+
+  <pre><code><span class="comment"># Linux (systemd): set the env var on the pilot-updater service</span>
+<span class="cmd">sudo</span> systemctl edit pilot-updater
+<span class="comment">#   [Service]</span>
+<span class="comment">#   Environment=PILOT_APP_UPDATE_OPT_OUT=true</span>
+<span class="cmd">sudo</span> systemctl restart pilot-updater
+
+<span class="comment"># macOS (launchd): add PILOT_APP_UPDATE_OPT_OUT to the plist's EnvironmentVariables, then reload</span>
+<span class="cmd">launchctl</span> unload ~/Library/LaunchAgents/network.pilotprotocol.pilot-updater.plist
+<span class="cmd">launchctl</span> load   ~/Library/LaunchAgents/network.pilotprotocol.pilot-updater.plist</code></pre>
+
+  <p>With <code>PILOT_APP_UPDATE_OPT_OUT=true</code> the updater no longer checks for or installs app updates — your installed apps stay exactly where they are. Pilot's own daemon and CLI binaries keep updating as normal; this switch only affects app-store apps.</p>
+
+  <h3 id="app-update-opt-in">Switching app updates back on</h3>
+
+  <p>Opting back in is the reverse: remove <code>PILOT_APP_UPDATE_OPT_OUT</code> from the updater's environment (or set it to <code>false</code>, the default) and restart the updater. The next cycle resumes <code>appstore upgrade --all</code> and brings your apps current. You can always upgrade by hand with <code>pilotctl appstore upgrade &lt;id&gt;</code> or <code>upgrade --all</code>, regardless of the setting.</p>
+
+  <div class="callout">
+    <p><strong>Truthy values.</strong> <code>PILOT_APP_UPDATE_OPT_OUT</code> reads <code>1</code>, <code>true</code>, <code>yes</code>, or <code>on</code> (case-insensitive) as opted-out; anything else — including unset — means opted-in. The value is read when the updater starts, so restart it after a change. (The legacy <code>PILOT_UPDATER_NO_APP_UPGRADE</code> variable still works as an alias.)</p>
   </div>
 
   <h2 id="building">Building an app</h2>
@@ -141,7 +211,7 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
   "id": "io.pilot.cosift",
   "version": "0.1.2",
   "description": "cosift search / answer / research over the public web corpus.",
-  "bundle_url": "https://github.com/.../releases/download/cosift-v0.1.2/io.pilot.cosift-0.1.2.tar.gz",
+  "bundle_url": "https://github.com/&lt;org&gt;/&lt;repo&gt;/releases/download/cosift-v0.1.2/io.pilot.cosift-0.1.2.tar.gz",
   "bundle_sha256": "&lt;sha256 of the tarball&gt;"
 }</code></pre>
 
@@ -151,7 +221,58 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
 
   <p>This writes a detached <code>catalogue.json.sig</code> (commit both). <code>pilotctl</code> verifies it against the embedded catalogue key before trusting any entry - see <a href="#security">Security model</a>.</p>
 
-  <p>Three integrity layers protect every install: the <em>catalogue</em> carries a detached ed25519 signature (a substituted app list fails), the catalogue pins each <em>tarball</em> sha256 (a swapped CDN byte fails), and the manifest pins the <em>binary</em> sha256 under an ed25519 signature - the last two re-checked at every spawn.</p>
+  <p>Three integrity layers protect every install: the <em>catalogue</em> carries a detached ed25519 signature (a substituted app list fails), the catalogue pins each <em>tarball</em> sha256 (a swapped CDN byte fails), and the manifest pins the <em>binary</em> sha256 under an ed25519 signature (verified at scan time). The binary sha256 is re-checked immediately before every spawn.</p>
+
+  <h3 id="authoring-context">Authoring dynamic context</h3>
+
+  <p>The two runtime surfaces from <a href="#dynamic-context">Dynamic context on every call</a> are authored once in your app's submission and validated at submit time — no runtime code, and both are carried verbatim into the catalogue.</p>
+
+  <p><strong>Product demo.</strong> A <code>product_demo</code> block is the example-first usage guide that renders both at install and as the store page's <em>Full usage demo</em>: a one-sentence <code>when_to_use</code>, a <code>quickstart</code> call, 2–6 worked <code>examples</code>, and — for metered apps — a cost table. It is what turns an install into a first successful call.</p>
+
+  <p><strong>Next-steps graph.</strong> A <code>next_steps</code> graph is a flat list of edges. Each edge answers one question — <em>the agent just ran <code>from</code> and it went <code>on</code>; what now?</em> — and names 1–3 <strong>recommended</strong> commands:</p>
+
+  <pre><code>{
+  "schema": 1,
+  "app": "io.pilot.example",
+  "edges": [
+    {
+      "from": "*",
+      "on": "err",
+      "code": 402,
+      "why": "budget exhausted",
+      "then": [
+        { "cmd": "pilotctl appstore call io.pilot.example example.balance '{}'",
+          "why": "check what's left before spending again",
+          "kind": "recovery" }
+      ]
+    }
+  ]
+}</code></pre>
+
+  <table>
+    <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>from</code></td><td>the method just called, or <code>"*"</code> for any</td></tr>
+      <tr><td><code>on</code></td><td><code>"ok"</code> (exit 0) or <code>"err"</code> (exit 1)</td></tr>
+      <tr><td><code>match</code></td><td>regex over the outcome payload — the error text on <code>err</code>, the JSON result body on <code>ok</code></td></tr>
+      <tr><td><code>code</code></td><td>exact backend HTTP status; <code>err</code> edges only</td></tr>
+      <tr><td><code>why</code></td><td>one line of framing, printed above the steps</td></tr>
+      <tr><td><code>then</code></td><td>1–3 steps, each a full <code>pilotctl</code> command with its own <code>why</code> and an optional <code>kind</code> (<code>gateway</code> / <code>flow</code> / <code>recovery</code>)</td></tr>
+    </tbody>
+  </table>
+
+  <p>The most important case is often <em>not</em> an error: an app with a mandatory signup soft-fails with exit 0 and a <code>"needs_signup": true</code> body, so its gateway edge matches on <code>on:"ok"</code>. The best-matching edge wins on specificity, not file order, and there is no session state — a recommendation is a pure function of <code>(method, outcome, payload)</code>, so the app's own response is the only signal.</p>
+
+  <p>The authoring rules keep a graph small and trustworthy:</p>
+  <ul>
+    <li><strong>Recommended, not exhaustive.</strong> A graph is not <code>&lt;app&gt;.help</code> — name the few commands that move an agent toward value, not every method.</li>
+    <li><strong>Every step needs a <code>why</code></strong> — it is what turns a bare command into a decision.</li>
+    <li><strong>Cover the failures that end sessions</strong> — needs-signup, <code>402</code> budget, <code>429</code> quota, missing/invalid param, server-not-started — each with a corrected, runnable command.</li>
+    <li><strong>Commands must actually run.</strong> Every <code>cmd</code> is copy-pasteable and complete; a recovery step that still fails is worse than silence.</li>
+    <li>If your app has a mandatory first method, a <code>from:"*"</code> edge must route a cold agent to it.</li>
+  </ul>
+
+  <p>Because the graph lives in the catalogue metadata rather than the bundle, rewording or extending it is a metadata republish — no app rebuild — and existing installs pick it up automatically (see <a href="#graph-refresh">above</a>).</p>
 
   <h2 id="install-models">Catalogue vs sideload</h2>
 
@@ -166,11 +287,11 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
     <p>To stage a release locally before publishing, point <code>$PILOT_APPSTORE_CATALOG_URL</code> at a <code>file://</code> catalogue and install by id - the same code path as production, with your own tarball.</p>
   </div>
 
-  <p>To check a bundle without installing it, <code>pilotctl appstore verify &lt;bundle-dir&gt;</code> sha256-checks every file in a pre-install bundle against its manifest and reports any mismatch — a tampered or wrongly-built bundle fails here before it ever reaches the install root.</p>
+  <p>To check a bundle without installing it, <code>pilotctl appstore verify &lt;bundle-dir&gt;</code> validates the manifest and sha256-checks the manifest-pinned binary against it, reporting any mismatch — a tampered or wrongly-built bundle fails here before it ever reaches the install root.</p>
 
   <h2 id="security">Security model &amp; hardening</h2>
 
-  <p>The app store is deny-by-default at every layer. Trust flows from a signed catalogue, through a signed manifest, to a sandboxed and continuously-verified child process.</p>
+  <p>The app store is deny-by-default at every layer. Trust flows from a signed catalogue, through a signed manifest, to a manifest-gated, resource-limited child process (rlimits + a syscall/IPC broker; OS-level sandboxing such as landlock/seccomp is not yet wired).</p>
 
   <h3>Signed catalogue (fail-closed)</h3>
 
@@ -204,7 +325,7 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
 
   <h2 id="example">Worked example: io.pilot.cosift</h2>
 
-  <p>The cosift app is a stateless adapter to a search / answer / research API over a multi-million-document web corpus. It exposes three utility methods and several status/discovery ones:</p>
+  <p>The cosift app is a stateless adapter to a search / answer / research API over a multi-million-document web corpus. It exposes several utility methods (search, answer, research, and more) plus status/discovery ones:</p>
 
   <pre><code><span class="comment"># Discover the surface + latencies</span>
 <span class="cmd">pilotctl</span> appstore call io.pilot.cosift cosift.help '{}'
@@ -218,15 +339,17 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
 <span class="comment"># research (slow) - plan -> multi-retrieval -> report</span>
 <span class="cmd">pilotctl</span> appstore call io.pilot.cosift cosift.research '{"q":"compare raft and paxos"}'</code></pre>
 
-  <p>Its source is a public reference for app authors: a tiny adapter, a manifest, and the publish flow above.</p>
+  <p>The cosift backend is open source (<a href="https://github.com/pilot-protocol/cosift">pilot-protocol/cosift</a>); the app follows the same tiny-adapter + signed-manifest + publish flow shown above.</p>
 `;
 ---
 
 <DocLayout
   title="App Store"
-  description="Install and build agent apps for Pilot Protocol - typed IPC capabilities, one command to install, one PR to publish."
+  description="Install and build agent apps for Pilot Protocol - typed IPC capabilities, one command to install, guided submission to publish."
   activePage="app-store"
   canonicalPath="/docs/app-store"
+  prev={{ label: "Service Agents", href: "/docs/service-agents" }}
+  next={{ label: "MCP Setup", href: "/docs/mcp-setup" }}
 >
   <Fragment set:html={bodyContent} />
 </DocLayout>

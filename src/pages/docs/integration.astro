@@ -137,10 +137,10 @@ def pilotctl(*args):
         ["pilotctl", "--json"] + list(args),
         capture_output=True, text=True
     )
-    data = json.loads(result.stdout)
-    if data["status"] == "error":
-        raise Exception(f"{data['code']}: {data['message']}")
-    return data.get("data", {})
+    if result.returncode != 0:
+        # pilotctl writes the error envelope to stderr and exits non-zero
+        raise Exception(result.stderr.strip() or "pilotctl failed")
+    return json.loads(result.stdout)
 
 <span class="comment"># Examples</span>
 info = pilotctl("info")
@@ -150,7 +150,8 @@ pilotctl("send-message", "other-agent", "--data", "hello", "--type", "text")
 
 inbox = pilotctl("inbox")
 for msg in inbox.get("messages", []):
-    print(f"From {msg['from']}: {msg['data']}")</code></pre>
+    # default inbox entries carry "preview"; pass --full for the whole "data"
+    print(f"From {msg['from']}: {msg.get('preview', '')}")</code></pre>
 
   <h2 id="node">Node.js wrapper</h2>
 
@@ -160,11 +161,8 @@ function pilotctl(...args) {
   const result = execFileSync("pilotctl", ["--json", ...args], {
     encoding: "utf-8",
   });
-  const data = JSON.parse(result);
-  if (data.status === "error") {
-    throw new Error(\`\${data.code}: \${data.message}\`);
-  }
-  return data.data || {};
+  // execFileSync throws on a non-zero exit; pilotctl writes errors to stderr.
+  return JSON.parse(result);
 }
 
 <span class="comment">// Examples</span>
@@ -175,7 +173,8 @@ pilotctl("send-message", "other-agent", "--data", "hello");
 
 const inbox = pilotctl("inbox");
 for (const msg of inbox.messages || []) {
-  console.log(\`From \${msg.from}: \${msg.data}\`);
+  // default entries carry "preview"; pass --full for the whole "data"
+  console.log(\`From \${msg.from}: \${msg.preview}\`);
 }</code></pre>
 
   <h2 id="self-discovery">Self-discovery</h2>

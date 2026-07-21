@@ -27,13 +27,10 @@ const bodyContent = `<h1>Diagnostics</h1>
   <p>Returns: <code>status</code>, <code>uptime_seconds</code>, <code>connections</code>, <code>peers</code>, <code>bytes_sent</code>, <code>bytes_recv</code></p>
 
   <pre><code><span class="comment"># Example output</span>
-Daemon Health
-  Status:      ok
-  Uptime:      01:23:45
-  Connections: 3
-  Peers:       5
-  Bytes Sent:  1.2 MB
-  Bytes Recv:  842 KB</code></pre>
+● pilot-daemon ok
+  uptime 01:23:45 · 3 connection(s)
+  peers 5 (4 encrypted, 1 via relay)
+  traffic ↑ 1.2 MB  ↓ 842 KB</code></pre>
 
   <h2 id="ping">ping</h2>
 
@@ -48,11 +45,10 @@ Daemon Health
   <p>Returns: <code>target</code>, <code>results</code> [{<code>seq</code>, <code>bytes</code>, <code>rtt_ms</code>, <code>error</code>}], <code>timeout</code> (bool)</p>
 
   <pre><code><span class="comment"># Example output</span>
-PING 0:0000.0000.037D
-  seq=0 bytes=6 time=513.952ms
-  seq=1 bytes=6 time=552.655ms
-  seq=2 bytes=6 time=856.036ms
-  seq=3 bytes=6 time=601.204ms</code></pre>
+PING 0:0000.0000.4008
+seq=0 bytes=6 time=42.1ms  [dial=8.3ms echo=33.8ms]
+seq=1 bytes=6 time=39.7ms  [dial=7.9ms echo=31.8ms]
+seq=2 bytes=6 time=41.0ms  [dial=8.1ms echo=32.9ms]</code></pre>
 
   <h2 id="traceroute">traceroute</h2>
 
@@ -82,9 +78,9 @@ BENCH 0:0000.0000.037D - sending 1.0 MB via echo port
   <p>List connected peers:</p>
 
   <pre><code><span class="cmd">pilotctl</span> peers
-<span class="cmd">pilotctl</span> peers --search "web-server"  <span class="comment"># Filter by tag or query</span></code></pre>
+<span class="cmd">pilotctl</span> peers --search 4008  <span class="comment"># filter connected peers by node-ID substring</span></code></pre>
 
-  <p>Returns: <code>peers</code> [{<code>node_id</code>, <code>encrypted</code>, <code>authenticated</code>, <code>path</code> (<code>direct</code> | <code>relay</code>)}], <code>total</code>, plus the <code>encrypted_peers</code> / <code>authenticated_peers</code> / <code>relay_peer_count</code> aggregates. Real endpoints are always redacted by the daemon before they reach any client.</p>
+  <p>Returns: <code>peers</code> [{<code>node_id</code>, <code>encrypted</code>, <code>authenticated</code>, <code>relay</code> (bool)}], <code>total</code>, <code>encrypted</code> (count). Real endpoints are stripped by the pilotctl client before display.</p>
 
   <h2 id="connections">connections</h2>
 
@@ -119,7 +115,7 @@ BENCH 0:0000.0000.037D - sending 1.0 MB via echo port
   description="Ping, traceroute, bench, connections, and peer inspection for Pilot Protocol."
   activePage="diagnostics"
   canonicalPath="/docs/diagnostics"
-  prev={{ label: "Blueprints", href: "/docs/enterprise-blueprints" }}
+  prev={{ label: "Firewalls & Compat Mode", href: "/docs/firewalls" }}
   next={{ label: "Configuration", href: "/docs/configuration" }}
 >
   <Fragment set:html={bodyContent} />
