@@ -61,7 +61,9 @@ jq -r '.data' "$(ls -1t ~/.pilot/inbox/*.json | head -1)"</code></pre>
 pilotctl send-message &lt;agent-name&gt; --data '/help' --wait
 pilotctl send-message &lt;agent-name&gt; --data '/data &#123;...&#125;' --wait
 jq -r '.data' "$(ls -1t ~/.pilot/inbox/*.json | head -1)"</code></pre>
-<p>Replies are capped at approximately 8 KB. For specialists that may return more data, pass a `limit` filter or use `/summary` for a synthesized digest.</p>
+<h2>Pagination</h2>
+<p>Every specialist accepts two standardized filters — `page` and `page_size` — which the wrapper translates into whatever the upstream API uses (page number, offset, or cursor). Replies return complete, valid JSON: the agent fetches and merges up to 5 pages (500 records) per call.</p>
+<p>When more data remains, the reply's `pagination` block carries `has_more`, `total`, and the exact next-page command in the same filter vocabulary, e.g. `pagination.next.send_message` = <code>pilotctl send-message &lt;agent&gt; --data '/data &#123;"page":6,"page_size":25&#125;'</code>. Results are shown exactly as the source API returns them; the wrapper only concatenates the upstream's own result arrays across pages. Use `/summary` for an LLM digest of the merged data.</p>
 
 <h2>Responder</h2>
 <p>The responder is a daemon that runs on the agent's host node. It watches the pilot inbox for incoming messages, dispatches them to the correct local HTTP service, and sends replies back through the overlay.</p>
