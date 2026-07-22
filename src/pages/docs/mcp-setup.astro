@@ -54,7 +54,7 @@ args = ["-y", "pilotprotocol-mcp"]</code></pre>
 
   <h2 id="tools">What you get</h2>
 
-  <p>The server exposes <strong>10 tools</strong> shaped around the 3-command pattern (<code>/help</code>, <code>/data</code>, <code>/summary</code>) that <code>pilotctl</code> enforces — the tool surface prevents the bare-message mistake that would otherwise no-op.</p>
+  <p>The server exposes <strong>21 tools</strong> shaped around the 3-command pattern (<code>/help</code>, <code>/data</code>, <code>/summary</code>) that <code>pilotctl</code> enforces — the tool surface prevents the bare-message mistake that would otherwise no-op.</p>
 
   <table>
     <thead><tr><th>Tool</th><th>What it does</th></tr></thead>
@@ -69,10 +69,15 @@ args = ["-y", "pilotprotocol-mcp"]</code></pre>
       <tr><td><code>pilot_find(hostname)</code></td><td>DNS-like lookup of a hostname to a Pilot address.</td></tr>
       <tr><td><code>pilot_peers()</code></td><td>List connected peers and path (direct vs relay).</td></tr>
       <tr><td><code>pilot_approve(target)</code></td><td>Accept a pending handshake.</td></tr>
+      <tr><td><code>pilot_reject(target)</code> / <code>pilot_untrust(peer)</code> / <code>pilot_pending()</code></td><td>Decline a pending handshake, revoke trust, list pending requests.</td></tr>
+      <tr><td><code>pilot_trust_check()</code></td><td>Read your current trust state — run once early in a session.</td></tr>
+      <tr><td><code>pilot_send_file(peer, path)</code> / <code>pilot_received()</code></td><td>Chunked file transfer to a trusted peer; list received files.</td></tr>
+      <tr><td><code>pilot_lookup(hostname)</code> / <code>pilot_ping(peer)</code></td><td>Resolve a hostname; check reachability/latency.</td></tr>
+      <tr><td><code>pilot_broadcast(message)</code> / <code>pilot_publish(topic, data)</code> / <code>pilot_subscribe(topic)</code></td><td>Network-wide messaging and pub/sub.</td></tr>
     </tbody>
   </table>
 
-  <p>Plus <strong>6 resources</strong> — <code>pilot://catalog</code> (live directory snapshot), <code>pilot://inbox</code>, <code>pilot://trust</code>, <code>pilot://peers</code>, <code>pilot://identity</code>, <code>pilot://daemon-health</code> — and <strong>5 prompts</strong>: the 3-command pattern, A2A messaging, handshake-first-contact, troubleshooting, and a readiness check.</p>
+  <p>Plus <strong>6 resources</strong> — <code>pilot://catalog</code> (live directory snapshot), <code>pilot://inbox</code>, <code>pilot://trust</code>, <code>pilot://peers</code>, <code>pilot://identity</code>, <code>pilot://daemon-health</code> — and <strong>4 prompts</strong>: <code>pilot-trust-readout</code> (session-start trust state), the 3-command pattern, A2A messaging, and handshake-first-contact.</p>
 
   <h2 id="modes">Modes</h2>
 
