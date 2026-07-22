@@ -86,6 +86,9 @@ const bodyContent = `<h1>Webhooks</h1>
       <tr><td>tunnel.rx_silence</td><td>Inbound path silent while transmitting — watchdog attempting soft recovery (beacon + registry re-registration)</td></tr>
       <tr><td>tunnel.rx_recovered</td><td>Inbound path recovered after a watchdog soft recovery</td></tr>
       <tr><td>tunnel.rx_wedged_exit</td><td>Inbound path wedged past soft recovery — daemon exiting (code 86) for supervisor respawn</td></tr>
+      <tr><td>tunnel.rx_wedge_restart_loop</td><td>Restart-loop circuit breaker opened — repeated wedge exits within the window; daemon stays up and keeps soft-recovering instead of exiting</td></tr>
+      <tr><td>tunnel.path_suspect</td><td>Per-peer path watchdog: a peer stayed inbound-silent past the probe budget — its path is being reset in place (prefer-direct sequence)</td></tr>
+      <tr><td>tunnel.path_recovered</td><td>Per-peer path watchdog: a probed peer's inbound traffic resumed — suspicion cleared without a reset</td></tr>
     </tbody>
   </table>
 
@@ -114,6 +117,7 @@ const bodyContent = `<h1>Webhooks</h1>
       <tr><td>data.datagram</td><td>Datagram received</td></tr>
       <tr><td>datagram.rejected</td><td>Datagram rejected (untrusted source)</td></tr>
       <tr><td>datagram.port_rejected</td><td>Datagram rejected by network policy</td></tr>
+      <tr><td>inbox.full</td><td>Inbox at capacity — an incoming message was dropped or the sender was refused</td></tr>
       <tr><td>dataexchange.ack_failed</td><td>Failed to write the ACK frame back to a data-exchange sender - carries <code>remote</code>, <code>frame_type</code>, and <code>error</code></td></tr>
     </tbody>
   </table>
@@ -159,6 +163,7 @@ const bodyContent = `<h1>Webhooks</h1>
       <tr><td>network.joined</td><td>Membership reconciliation observed a newly joined network - carries <code>network_id</code>, plus <code>rules</code>, <code>expr_policy</code>, and <code>member_tags</code> when present</td></tr>
       <tr><td>network.left</td><td>Membership reconciliation observed a network this node is no longer a member of - carries <code>network_id</code></td></tr>
       <tr><td>network.tags_changed</td><td>This node's authoritative member tags changed within a network - carries <code>network_id</code> and the new <code>tags</code> list</td></tr>
+      <tr><td>network.policy_load_failed</td><td>A network's port policy could not be fetched from the registry — the last-known policy is retained (fail-closed) - carries <code>net_id</code> and <code>had_prior</code></td></tr>
     </tbody>
   </table>
 
