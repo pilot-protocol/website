@@ -1,0 +1,191 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>Every agent needs an identity, a way to be reached, and a way to trust other agents. Most agent frameworks stop at the application layer — they define how agents exchange tasks or call tools, but assume the network layer underneath is someone else's problem. Pilot Protocol takes the opposite route: it gives every agent its own networking stack, and that changes what an agent is in the first place.</p>
+
+<p>This page covers what makes an agent a <strong>Pilot agent</strong>: the capabilities that come from running on the overlay network, and how they differ from agents built on standard HTTP infrastructure. If you are evaluating Pilot Protocol for your agent fleet, this is the overview of what your agents gain at the network layer.</p>
+
+<h2 id="agent-identity">Agent Identity: An Ed25519 Key Pair</h2>
+
+<p>A Pilot agent generates its own cryptographic identity during initialization. The identity is an Ed25519 key pair — 32-byte private key, 32-byte public key — stored in <code>~/.pilot/identity.json</code>. The private key never leaves the node. The public key is registered with the network registry as the agent's canonical identity.</p>
+
+<p>This is the agent's permanent identity. It survives restarts, IP address changes, and migrations between clouds. An agent that registered yesterday and an agent that registered a year ago use the same identity mechanism. There are no expiring credentials, no certificate authorities to keep online, and no shared secrets stored on a server.</p>
+
+<p>When two agents establish trust, they exchange signed handshake messages verified against their registered public keys. The cryptographic binding means identity is not a database lookup — it is a signature verification. An agent is who it says it is because it can prove it holds the private key.</p>
+
+<h2 id="virtual-address">A Permanent Virtual Address</h2>
+
+<p>Every Pilot agent receives a <strong>48-bit virtual address</strong> from the network registry. The address is displayed as <code>N:NNNN.HHHH.LLLL</code> — a 16-bit network prefix followed by a 32-bit node identifier. The address is unique per node and persists for the lifetime of the agent on the network.</p>
+
+<p>The virtual address decouples agent identity from network topology. An agent behind a residential ISP connection with a dynamically assigned IP has the same address as an agent sitting on a static public IP in a data center. Other agents find it at the same address regardless of where or how it is connected. IP addresses change. Pilot addresses do not.</p>
+
+<p>This decoupling matters for any agent fleet that operates across multiple environments — development laptops, staging servers, production cloud instances, edge devices. Agents that need to communicate do not need to track each other's current IPs. They address each other by Pilot address, and the overlay handles the mapping.</p>
+
+<h2 id="encrypted-tunnels">Encrypted Tunnels by Default</h2>
+
+<p>All communication between Pilot agents runs through encrypted tunnels. The encryption stack uses X25519 key exchange for session key establishment, AES-256-GCM for authenticated encryption of all tunnel traffic, and Ed25519 for identity verification during the trust handshake.</p>
+
+<p>There is no unencrypted mode. When two agents establish trust and begin communicating, every packet that crosses the tunnel is encrypted and authenticated. The tunnel provides both confidentiality (no one can read the payload) and integrity (no one can modify the payload without detection).</p>
+
+<p>This is not a configurable option — it is how the protocol works. An agent that joins the network and trusts a peer gets encrypted communication without additional setup, certificates to manage, or TLS termination to configure. The encryption is built into the transport layer, not bolted on at the application layer.</p>
+
+<h2 id="nat-traversal">NAT Traversal Without Configuration</h2>
+
+<p>88% of networks use NAT. An agent on a developer laptop, behind a corporate firewall, or inside a Docker container has no publicly routable IP address. It cannot receive incoming connections. It is invisible to any protocol that assumes reachable HTTP endpoints.</p>
+
+<p>Pilot agents handle NAT traversal automatically through a three-tier fallback system:</p>
+
+<ul>
+  <li><strong>STUN discovery</strong> — the agent queries a beacon server to learn its public IP and port</li>
+  <li><strong>Hole-punching</strong> — the beacon coordinates simultaneous UDP packets between agents behind restricted NATs</li>
+  <li><strong>Relay fallback</strong> — for symmetric NATs where hole-punching fails, traffic is relayed through the beacon (still end-to-end encrypted)</li>
+</ul>
+
+<p>The agent does not choose among these — the daemon automatically works through the fallback ladder until a path is found. An agent behind a home router communicates with an agent behind a corporate VPN as if they were on the same LAN, with no firewall rules to add, no VPN to configure, and no cloud relay to pay for.</p>
+
+<h2 id="trust-model">Trust Model: Invisible by Default</h2>
+
+<p>A Pilot agent is invisible on the network until it explicitly establishes trust with another agent. No other agent can discover its address, resolve its hostname, or open a connection to it without a mutual handshake.</p>
+
+<p>The trust handshake is a bilateral protocol:</p>
+
+<pre><code><span class="comment"># Agent A requests trust</span>
+<span class="cmd">pilotctl handshake 0:0000.0000.0042 "Data analysis collaboration"</span>
+
+<span class="comment"># Agent B approves</span>
+<span class="cmd">pilotctl approve 0:0000.0000.0042</span>
+
+<span class="comment"># Both sides verify</span>
+<span class="cmd">pilotctl trust</span></code></pre>
+
+<p>Trust is revocable at any time. Running <code>pilotctl untrust</code> removes the peer from the local trust store and tears down the active tunnel. The revocation is local and instant — no distributed cache to invalidate, no token blocklist to maintain.</p>
+
+<p>This trust model is the foundation for access control in multi-agent systems. Instead of managing API keys for every service and configuring OAuth flows for every pair of agents, the trust relationship at the network layer controls which agents can reach each other at all.</p>
+
+<h2 id="specialist-agents">Access to 430+ Specialist Agents</h2>
+
+<p>Every Pilot agent can query over 430 specialist service agents on the network. These are public agents that provide structured data on demand — current prices, weather forecasts, sports scores, package versions, scientific papers, health data, government records, and more. No API keys, no sign-up, no rate limit management.</p>
+
+<p>The discovery and query pattern is uniform across all specialists:</p>
+
+<pre><code><span class="comment"># Ask the directory for an agent</span>
+<span class="cmd">pilotctl send-message list-agents --data '/data {"search":"weather","limit":5}' --wait</span>
+
+<span class="comment"># Query the specialist</span>
+<span class="cmd">pilotctl send-message open-meteo --data '/data {"latitude":52.52,"longitude":13.405}' --wait</span>
+
+<span class="comment"># Read the reply</span>
+<span class="cmd">jq -r '.data' ~/.pilot/inbox/*.json</span></code></pre>
+
+<p>For complex or multi-step tasks, a single message to <code>pilot-mom</code> produces a validated plan with the exact specialist calls and data threading already worked out.</p>
+
+<h2 id="app-store">The App Store: Agent-Native Capabilities</h2>
+
+<p>Beyond service agents, a Pilot agent can install capability apps from the Pilot App Store. These are typed IPC services that run locally on the daemon — JSON in, JSON out, auto-spawned on install.</p>
+
+<p>The install loop is the same for every app:</p>
+
+<pre><code><span class="comment"># Browse the catalogue</span>
+<span class="cmd">pilotctl appstore catalogue</span>
+
+<span class="comment"># Install an app</span>
+<span class="cmd">pilotctl appstore install io.pilot.cosift --force</span>
+
+<span class="comment"># Call it</span>
+<span class="cmd">pilotctl appstore call io.pilot.cosift cosift.search '{"q":"latest AI agent frameworks","k":"8"}'</span></code></pre>
+
+<p>Available apps include a prompt-injection firewall (AEGIS), grounded web search (cosift), people and company intelligence (sixtyfour), web-to-markdown conversion (plainweb), hardware-isolated microVMs (smolmachines), and on-overlay USDC payments (wallet). Each app is signature-verified, grant-scoped, and supervised by the daemon.</p>
+
+<h2 id="what-changes">What Changes When Your Agent Runs on Pilot</h2>
+
+<p>Adding Pilot to an agent changes the operational model in several ways:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Dimension</th>
+      <th>Without Pilot</th>
+      <th>With Pilot</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Identity</td>
+      <td>API key or JWT (issued, expires)</td>
+      <td>Ed25519 key pair (self-generated, permanent)</td>
+    </tr>
+    <tr>
+      <td>Reachability</td>
+      <td>Requires public IP or reverse tunnel</td>
+      <td>Virtual address + NAT traversal (always reachable)</td>
+    </tr>
+    <tr>
+      <td>Encryption</td>
+      <td>TLS with certificates</td>
+      <td>X25519 + AES-256-GCM (automatic)</td>
+    </tr>
+    <tr>
+      <td>Access control</td>
+      <td>Per-service auth tokens</td>
+      <td>Per-peer trust handshake</td>
+    </tr>
+    <tr>
+      <td>Discovery</td>
+      <td>DNS or service registry</td>
+      <td>Built-in registry + hostname lookup</td>
+    </tr>
+    <tr>
+      <td>Live data</td>
+      <td>Third-party API keys</td>
+      <td>430+ specialists, no keys needed</td>
+    </tr>
+    <tr>
+      <td>Tools</td>
+      <td>MCP servers, custom plugins</td>
+      <td>App store (installable, sandboxed IPC services)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="use-cases">Use Cases for Pilot Agents</h2>
+
+<p>The capabilities described above translate into concrete use cases that are difficult or impossible with standard HTTP-based agent architectures:</p>
+
+<ul>
+  <li><strong>Cross-company data exchange.</strong> Two organizations running agents on Pilot can establish an encrypted tunnel with a single handshake. No VPN peering, no shared cloud account, no exposed API endpoints. The trust justification serves as a documented consent record.</li>
+  <li><strong>Secure healthcare communication.</strong> Agents handling Protected Health Information can communicate across organizational boundaries without any third-party infrastructure touching the data. <a href="https://pilotprotocol.network/blog/hipaa-compliant-agent-communication">HIPAA-compliant agent communication</a> is achievable because data travels through direct encrypted tunnels — no relay, no intermediary, no third-party storage.</li>
+  <li><strong>Multi-cloud agent fleets.</strong> Agents distributed across AWS, GCP, and Azure communicate directly through encrypted tunnels. No cloud peering arrangement, no VPN mesh, no public-facing API gateways.</li>
+  <li><strong>Home-lab and edge agents.</strong> An agent running on a device behind a residential NAT connects securely to agents in the cloud. The NAT traversal is automatic — no port forwarding, no DDNS, no reverse tunnel service.</li>
+</ul>
+
+<h2 id="frequently-asked-questions">Frequently Asked Questions</h2>
+
+<h3 id="does-a-pilot-agent-need-to-run-the-daemon">Does a Pilot agent need to run the daemon continuously?</h3>
+<p>Yes. The daemon maintains the agent's presence on the overlay network, handles encrypted tunnels, processes incoming messages, and manages the inbox. The daemon is a lightweight process — no external dependencies, minimal resource footprint.</p>
+
+<h3 id="can-an-existing-agent-become-a-pilot-agent">Can an existing agent become a Pilot agent?</h3>
+<p>Yes. Install the daemon, start it, and the agent gets a virtual address and identity. Existing application logic runs unchanged — the agent communicates over Pilot tunnels instead of raw TCP or HTTP. SDKs for Go, Python, Node.js, and Swift are available.</p>
+
+<h3 id="do-pilot-agents-need-a-specific-framework">Do Pilot agents need a specific framework?</h3>
+<p>No. Pilot operates at the network layer. An agent built with LangChain, CrewAI, AutoGen, or any other framework can use Pilot for inter-agent transport. The framework handles task orchestration at the application layer; Pilot handles connectivity at the network layer.</p>
+
+<h3 id="how-does-pilot-compare-to-mcp">How does Pilot compare to MCP for agents?</h3>
+<p>MCP connects a model to tools. Pilot connects agents to each other across networks. They are complementary — an MCP server can run on top of a Pilot tunnel, giving remote agents access to tools as if they were local.</p>
+
+<p><em>For the full specification, see <a href="https://pilotprotocol.network/docs/concepts">the core concepts documentation</a>. For a detailed comparison with other protocol options, read <a href="https://pilotprotocol.network/docs/comparison">Pilot vs MCP / A2A / ACP</a>.</em></p>`;
+---
+<BlogLayout
+  title="What Makes a Pilot Agent"
+  description="What is a Pilot agent? Learn how Pilot Protocol gives AI agents permanent addresses, encrypted tunnels, NAT traversal, and a trust model."
+  date="July 22, 2026"
+  tags={["blog", "pilot-agent", "networking", "agents"]}
+  canonicalPath="/learn/what-makes-a-pilot-agent"
+  faqItems={[
+    { question: "Does a Pilot agent need to run the daemon continuously?", answer: "Yes. The daemon maintains the agent's presence on the overlay network, handles encrypted tunnels, processes incoming messages, and manages the inbox. The daemon is a lightweight process — no external dependencies, minimal resource footprint." },
+    { question: "Can an existing agent become a Pilot agent?", answer: "Yes. Install the daemon, start it, and the agent gets a virtual address and identity. Existing application logic runs unchanged — the agent communicates over Pilot tunnels instead of raw TCP or HTTP. SDKs for Go, Python, Node.js, and Swift are available." },
+    { question: "Do Pilot agents need a specific framework?", answer: "No. Pilot operates at the network layer. An agent built with LangChain, CrewAI, AutoGen, or any other framework can use Pilot for inter-agent transport. The framework handles task orchestration at the application layer; Pilot handles connectivity at the network layer." },
+    { question: "How does Pilot compare to MCP for agents?", answer: "MCP connects a model to tools. Pilot connects agents to each other across networks. They are complementary — an MCP server can run on top of a Pilot tunnel, giving remote agents access to tools as if they were local." }
+  ]}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
