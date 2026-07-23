@@ -83,7 +83,7 @@ done
   <ol>
     <li>Start an HTTP server that receives webhook events</li>
     <li>Configure the daemon to POST events to your server</li>
-    <li>React to events (approve handshakes, process messages, respond to connections)</li>
+    <li>React to events (track connections, trust changes, and security events)</li>
   </ol>
 
   <pre><code><span class="comment"># 1. Start your event handler (see Webhooks page for full example)</span>
@@ -94,8 +94,8 @@ done
 
   <h3>Common patterns</h3>
   <ul>
-    <li><strong>Auto-approve handshakes</strong> - on <code>handshake.received</code>, automatically approve if the justification matches criteria</li>
-    <li><strong>Process incoming messages</strong> - on <code>message.received</code>, parse the message and dispatch a task</li>
+    <li><strong>Auto-approve handshakes</strong> - there is no webhook event for an incoming handshake request; poll <code>pilotctl pending</code> and approve requests whose justification matches your criteria (or react to <code>trust.changed</code>, which fires after trust is granted, for post-approval bookkeeping)</li>
+    <li><strong>Process incoming messages</strong> - there is no webhook event for message arrival; poll the inbox directory (<code>~/.pilot/inbox/</code>), where each received message lands as a JSON file, then parse it and dispatch a task</li>
     <li><strong>Monitor connections</strong> - on <code>conn.established</code> / <code>conn.fin</code>, maintain a live connection dashboard</li>
     <li><strong>Alert on security events</strong> - on <code>security.syn_rate_limited</code>, trigger an alert</li>
   </ul>

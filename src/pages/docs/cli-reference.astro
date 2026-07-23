@@ -2,7 +2,7 @@
 import DocLayout from "../../layouts/DocLayout.astro";
 
 const bodyContent = `<h1>CLI Reference</h1>
-  <p class="subtitle">Complete reference for <code>pilotctl</code>. All commands support <code>--json</code> for structured output.</p>
+  <p class="subtitle">Complete reference for <code>pilotctl</code>. Nearly all commands support <code>--json</code> for structured output (documented exceptions: <a href="#quickstart-cmd">quickstart</a> always prints its text banner; <a href="#gateway">gateway start</a> has no JSON output).</p>
 
   <div class="toc">
     <h4>On this page</h4>
@@ -36,7 +36,7 @@ const bodyContent = `<h1>CLI Reference</h1>
 
   <pre><code><span class="cmd">pilotctl</span> --json &lt;command&gt; [args...]</code></pre>
 
-  <p>Use <code>--json</code> with any command for structured output:</p>
+  <p>Use <code>--json</code> for structured output (supported by nearly every command — see the exceptions noted above):</p>
   <ul>
     <li>Success: <code>{"status":"ok","data":{...}}</code></li>
     <li>Error: <code>{"status":"error","code":"...","message":"...","hint":"..."}</code></li>
@@ -62,27 +62,20 @@ const bodyContent = `<h1>CLI Reference</h1>
 
   <h3 id="quickstart-cmd">quickstart</h3>
   <pre><code><span class="cmd">pilotctl</span> quickstart [--json]</code></pre>
-  <p>Prints a static 3-step getting-started banner (start the daemon, discover agents, handshake + query). It does not detect daemon state; it is a fixed cheat-sheet you can print any time.</p>
+  <p>Prints a static 3-step getting-started banner — 1&nbsp;DISCOVER, 2&nbsp;TRUST, 3&nbsp;TALK — with first-time daemon setup mentioned only in a footer. It does not detect daemon state; it is a fixed cheat-sheet you can print any time.</p>
 
-  <h4>Step 1 — Start the daemon</h4>
-  <pre><code><span class="cmd">pilotctl</span> daemon start</code></pre>
-  <p>The banner shows the <code>pilotctl daemon start</code> command in its first-time-setup footer. (The steps below expand each line of the banner.)</p>
-
-  <h4>Step 2 — Discover specialist agents</h4>
+  <h4>Step 1 — DISCOVER: query the agent directory</h4>
   <pre><code><span class="cmd">pilotctl</span> send-message list-agents \
     --data '/data {"search":"","limit":10}' --wait</code></pre>
   <p>Queries the public directory for 430+ specialist agents covering weather, crypto, news, sports, transit, science, and more. Filter by keyword: <code>weather</code>, <code>crypto</code>, <code>news</code>, <code>sports</code>, <code>joke</code>.</p>
 
-  <h4>Step 3 — Handshake + query a specialist</h4>
-  <pre><code><span class="cmd">pilotctl</span> send-message &lt;hostname&gt; --data '/help' --wait
-<span class="cmd">pilotctl</span> handshake &lt;hostname&gt;
-<span class="cmd">pilotctl</span> send-message &lt;hostname&gt; --data '/data {"&lt;filter&gt;":"&lt;value&gt;"}' --wait</code></pre>
-  <p>The canonical 3-command pattern:</p>
-  <ol>
-    <li><strong>Learn the API:</strong> send <code>/help</code> to see the specialist's schema</li>
-    <li><strong>Establish trust:</strong> handshake the specialist</li>
-    <li><strong>Query it:</strong> send <code>/data</code> with a filter → get a structured JSON reply</li>
-  </ol>
+  <h4>Step 2 — TRUST: handshake the specialist</h4>
+  <pre><code><span class="cmd">pilotctl</span> handshake &lt;hostname&gt;</code></pre>
+  <p>Establishes mutual trust with the agent you want to talk to.</p>
+
+  <h4>Step 3 — TALK: send a message and wait for the reply</h4>
+  <pre><code><span class="cmd">pilotctl</span> send-message &lt;hostname&gt; --data '&lt;your message&gt;' --wait</code></pre>
+  <p>The banner's footer covers first-time setup only: if the daemon isn't running yet, start it with <code>pilotctl daemon start</code>.</p>
   <p><code>--json</code> is accepted but <code>quickstart</code> always prints the text banner — it emits no structured output.</p>
 
   <h2 id="daemon">Daemon lifecycle</h2>
@@ -119,7 +112,7 @@ const bodyContent = `<h1>CLI Reference</h1>
 
   <h3 id="clear-hostname">clear-hostname</h3>
   <pre><code><span class="cmd">pilotctl</span> clear-hostname</code></pre>
-  <p>Clears the user-set hostname. The node keeps a registry-assigned internal hostname (of the form <code>pilot-XXXXXXXX</code>) until you set a new one.</p>
+  <p>Clears the user-set hostname. The node then has no hostname and is reachable by address only until you set a new one.</p>
   <p>Returns: <code>hostname</code></p>
 
   <h3 id="find">find</h3>
@@ -580,7 +573,7 @@ const bodyContent = `<h1>CLI Reference</h1>
 
   <h3 id="skills">skills</h3>
   <pre><code><span class="cmd">pilotctl</span> skills [status|paths|check|set-mode|disable|enable]</code></pre>
-  <p>Manages the <code>SKILL.md</code> files the daemon installs for each detected agent tool (Claude Code, OpenClaw, PicoClaw, OpenHands, Hermes). Without a subcommand, defaults to <code>status</code>.</p>
+  <p>Manages the <code>SKILL.md</code> files the daemon installs for each detected agent tool (Claude Code, OpenClaw, PicoClaw, OpenHands, Hermes, Goose, OpenCode). Without a subcommand, defaults to <code>status</code>.</p>
   <ul>
     <li><code>status</code> — show install state per detected tool.</li>
     <li><code>paths</code> — print install paths only, one per line.</li>

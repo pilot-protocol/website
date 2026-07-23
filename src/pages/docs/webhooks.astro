@@ -18,7 +18,7 @@ const bodyContent = `<h1>Webhooks</h1>
 
   <h2 id="overview">Overview</h2>
 
-  <p>When configured, the daemon POSTs a JSON event to your webhook URL every time something happens - connections, trust changes, messages received, pub/sub activity, and more. Events are delivered asynchronously and non-blocking. Delivery is buffered (a 1024-event channel), retried up to 3× with exponential backoff, and a circuit breaker pauses delivery after repeated failures; events are dropped only after retries are exhausted (there is no durable/redelivery queue).</p>
+  <p>When configured, the daemon POSTs a JSON event to your webhook URL every time something happens - connections, trust changes, messages received, pub/sub activity, and more. Events are delivered asynchronously and non-blocking. Delivery is buffered (a 1024-event channel) and each event gets 3 delivery attempts total with a 1s doubling backoff between attempts. Events are dropped immediately — zero attempts — when the 1024-event buffer is full, and while the circuit breaker is open (it opens after 5 consecutive failures and cools down for 30s) events are skipped. There is no durable/redelivery queue.</p>
 
   <h2 id="configuration">Configuration</h2>
 
