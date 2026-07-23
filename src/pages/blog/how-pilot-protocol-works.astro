@@ -1,13 +1,15 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>Every modern agent framework makes the same assumption: your agent has a reachable HTTP endpoint. Google's A2A protocol publishes Agent Cards with URLs. Anthropic's MCP connects to servers over stdio or HTTP. LangChain agents call APIs. The entire ecosystem is built on the premise that agents can reach each other via IP addresses and domain names.</p>
+const bodyContent = `<p><strong>How Pilot Protocol works:</strong> it is a UDP overlay network that gives every AI agent a permanent virtual address, encrypted tunnels through NAT, and a cryptographic trust model — all from a single binary with zero external dependencies. This technical deep dive walks through the full architecture: addressing, packet design, NAT traversal, encryption, and trust.</p>
+
+  <p>Every modern agent framework makes the same assumption: your agent has a reachable HTTP endpoint. Google's A2A protocol publishes Agent Cards with URLs. Anthropic's MCP connects to servers over stdio or HTTP. LangChain agents call APIs. The entire ecosystem is built on the premise that agents can reach each other via IP addresses and domain names.</p>
 
   <p>The problem is that most of them cannot.</p>
 
   <p><strong>88% of networks involve NAT.</strong> An agent running on a developer's laptop, behind a corporate firewall, inside a Docker container, or on a mobile device has no publicly routable address. It cannot receive incoming connections. It cannot be listed in a service registry. It is invisible to every other agent in the world.</p>
 
-  <p>Pilot Protocol is the layer that fixes this. It is a <strong><a href="https://datatracker.ietf.org/doc/html/rfc768" target="_blank" rel="noopener">UDP</a> overlay network</strong> that gives every AI agent a permanent virtual address, encrypted tunnels through NAT, and a cryptographic trust model -- all in a single binary with no external dependencies.</p>
+  <p>Pilot Protocol is the layer that fixes this. It is a UDP overlay network that gives every AI agent a permanent virtual address, encrypted tunnels through NAT, and a cryptographic trust model -- all in a single binary with no external dependencies.</p>
 
   <p>This post walks through the full architecture: how addresses work, what packets look like on the wire, how NAT traversal happens across three tiers, how encryption is negotiated, how trust is established, and what services run on top of the network.</p>
 
@@ -168,7 +170,7 @@ const bodyContent = `<p>Every modern agent framework makes the same assumption: 
 
   <p>Relay mode is detected automatically. When an agent sends a <code>DialConnection</code>, it first attempts <strong>3 direct retries</strong>. If those fail, it automatically switches to relay mode and attempts <strong>4 relay retries</strong> through the beacon (7 total dial attempts). The application layer never knows the difference -- it gets the same <code>net.Conn</code> interface either way.</p>
 
-  <p>The tradeoff is latency: relay adds one extra hop through the beacon. But it guarantees connectivity for agents behind the most restrictive NATs, including carriers that use CGNAT (Carrier-Grade NAT) for mobile networks.</p>
+  <p>The tradeoff is latency: relay adds one extra hop through the beacon. But it guarantees connectivity for agents behind the most restrictive NATs, including carriers that use CGNAT (Carrier-Grade NAT) for mobile networks. For a deeper treatment of the NAT traversal mechanics, see <a href="/blog/nat-traversal-ai-agents-deep-dive">NAT Traversal for AI Agents: A Technical Deep Dive</a>.</p>
 
   <h2 id="tunnel">The Tunnel Layer</h2>
 
@@ -211,7 +213,7 @@ const bodyContent = `<p>Every modern agent framework makes the same assumption: 
 <span class="cmd">[12 bytes]</span>     <span class="comment"># Nonce (random prefix + counter)</span>
 <span class="cmd">[N bytes]</span>      <span class="comment"># AES-256-GCM ciphertext + 16-byte auth tag</span></code></pre>
 
-  <p>AES-256-GCM provides both <strong>confidentiality</strong> (encryption) and <strong>integrity</strong> (authentication). If a single bit is modified in transit, the GCM authentication tag will fail and the packet is discarded.</p>
+  <p>AES-256-GCM provides both <strong>confidentiality</strong> (encryption) and <strong>integrity</strong> (authentication). If a single bit is modified in transit, the GCM authentication tag will fail and the packet is discarded. For a detailed walkthrough of the implementation, see <a href="/blog/zero-dependency-encryption-x25519-aes-gcm">Zero-Dependency Encryption: X25519 + AES-GCM</a>.</p>
 
   <h3>Replay Prevention</h3>
 
@@ -325,12 +327,30 @@ http.Serve(listener, myHandler)</code></pre>
   </div>`;
 ---
 <BlogLayout
-  title="How Pilot Protocol Works - Under the Hood"
-  description="A technical deep dive into Pilot Protocol's overlay network: addressing, encryption, NAT traversal, and reliable transport."
+  title="How Pilot Protocol Works: P2P Overlay Networking Architecture for AI Agents"
+  description="Learn how Pilot Protocol's P2P overlay network gives AI agents virtual addresses, encrypted tunnels through NAT, and a cryptographic trust model — in one binary."
   date="February 19, 2026"
   tags={["architecture", "deep-dive", "networking"]}
   canonicalPath="/blog/how-pilot-protocol-works"
   bannerImage="/blog/banners/how-pilot-protocol-works.webp"
+  faqItems={[
+    {
+      question: "How does Pilot Protocol's addressing system work?",
+      answer: "Every agent receives a 48-bit virtual address (16-bit network ID + 32-bit node ID) in the format N:NNNN.HHHH.LLLL. This address is permanent and does not change when the agent moves between networks, changes IP addresses, or reconnects after going offline. Agents can also register human-readable hostnames that resolve through the protocol's built-in nameserver."
+    },
+    {
+      question: "How does Pilot Protocol handle NAT traversal for AI agents?",
+      answer: "Pilot uses a three-tier approach: STUN discovery (agent learns its public endpoint), beacon-coordinated hole-punching (both sides send simultaneously to punch through restricted NATs), and relay fallback through the beacon for symmetric NATs where hole-punching fails. The application layer receives the same net.Conn interface regardless of which tier was used."
+    },
+    {
+      question: "What encryption does Pilot Protocol use for agent communication?",
+      answer: "Pilot encrypts all traffic by default using X25519 Diffie-Hellman key exchange (ephemeral keys for forward secrecy) and AES-256-GCM authenticated encryption. The entire stack is implemented in Go's standard library — zero external dependencies. Encrypted frames use PILS framing with a random nonce prefix per connection for replay prevention."
+    },
+    {
+      question: "How does Pilot Protocol's trust model work?",
+      answer: "Agents are invisible by default — they cannot be discovered or resolved unless they explicitly trust another agent. Trust is established through a mutual Ed25519-signed handshake, where each side must approve the connection request. Either side can revoke trust instantly, which tears down active tunnels and prevents reconnection."
+    }
+  ]}
 >
   <Fragment set:html={bodyContent} />
 </BlogLayout>
