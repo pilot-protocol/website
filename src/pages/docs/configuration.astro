@@ -27,7 +27,7 @@ const bodyContent = `<h1>Configuration</h1>
   "beacon": "34.71.57.205:9001",
   "hostname": "my-agent",
   "email": "user@example.com",
-  "socket": "$XDG_RUNTIME_DIR/pilot.sock (when set), else /tmp/pilot.sock",
+  "socket": "$XDG_RUNTIME_DIR/pilot.sock (Linux, when set), else /tmp/pilot.sock",
   "webhook": "http://localhost:8080/events"
 }</code></pre>
 
@@ -68,16 +68,16 @@ const bodyContent = `<h1>Configuration</h1>
   <table>
     <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
     <tbody>
-      <tr><td>PILOT_SOCKET</td><td>/tmp/pilot.sock</td><td>Path to the daemon IPC socket</td></tr>
+      <tr><td>PILOT_SOCKET</td><td><code>$XDG_RUNTIME_DIR/pilot.sock</code> on Linux when set, else <code>/tmp/pilot.sock</code></td><td>Path to the daemon IPC socket (macOS always defaults to <code>/tmp/pilot.sock</code>)</td></tr>
       <tr><td>PILOT_REGISTRY</td><td>34.71.57.205:9000</td><td>Registry server address</td></tr>
       <tr><td>PILOT_BEACON</td><td>34.71.57.205:9001</td><td>Beacon server address (used for STUN, NAT punch, and relay)</td></tr>
       <tr><td>PILOT_DAEMON_BIN</td><td>(auto-discovered)</td><td>Override path to the <code>pilot-daemon</code> binary (otherwise pilotctl looks next to itself, then in <code>$PATH</code>)</td></tr>
       <tr><td>PILOT_GATEWAY_BIN</td><td>(auto-discovered)</td><td>Override path to the <code>pilot-gateway</code> binary</td></tr>
-      <tr><td>PILOT_HOSTNAME</td><td>(none)</td><td>Hostname to set during install. If unset, the node is assigned an internal hostname of the form <code>pilot-XXXXXXXX</code> (8 hex chars = first 4 bytes of <code>SHA-256(public_key)</code>)</td></tr>
+      <tr><td>PILOT_HOSTNAME</td><td>(none)</td><td>Hostname to set during install. If unset, the node has no hostname and is reachable by address only</td></tr>
       <tr><td>PILOT_ADMIN_TOKEN</td><td>(none)</td><td>Admin token for enterprise operations</td></tr>
       <tr><td>PILOT_HOME</td><td>~/.pilot</td><td>Directory where pilot stores identity, config, and received files</td></tr>
       <tr><td>PILOT_EMAIL</td><td>(none)</td><td>Email address used for first-time daemon registration (same as <code>--email</code> flag)</td></tr>
-      <tr><td>PILOT_RC</td><td>(unset)</td><td>Set to <code>1</code> to install from the edge (release-candidate) channel — legacy alias for <code>--channel edge</code></td></tr>
+      <tr><td>PILOT_RC</td><td>(unset)</td><td>Set to <code>1</code> to install the latest pre-release (RC build)</td></tr>
     </tbody>
   </table>
 
@@ -87,13 +87,16 @@ const bodyContent = `<h1>Configuration</h1>
   bin/                <span class="comment"># Installed binaries (pilot-daemon, pilotctl, pilot-updater; pilot-gateway if installed separately)</span>
   bin/.pilot-version  <span class="comment"># Current version (used by auto-updater)</span>
   config.json         <span class="comment"># Configuration file</span>
+  account.json        <span class="comment"># Account identity (email supplied via --email / PILOT_EMAIL)</span>
+  auto-update.json    <span class="comment"># Automatic-update opt-in state (pilotctl update enable/disable)</span>
   identity.json       <span class="comment"># Ed25519 keypair (persistent identity)</span>
   trust.json          <span class="comment"># Trust state (trusted peers, pending requests)</span>
   setups/             <span class="comment"># Setup manifests (role identity files)</span>
   received/           <span class="comment"># Files received via data exchange</span>
   inbox/              <span class="comment"># Messages received via data exchange</span>
   pilot.pid           <span class="comment"># Daemon PID file</span>
-  pilot.log           <span class="comment"># Daemon log file</span>
+  pilot-&lt;pid&gt;.log     <span class="comment"># Per-run daemon log files (one per daemon start)</span>
+  pilot.log           <span class="comment"># Symlink to the current run's log file</span>
   updater.log         <span class="comment"># Auto-updater log file</span></code></pre>
 
   <h2 id="daemon-flags">Daemon flags</h2>
@@ -116,7 +119,7 @@ const bodyContent = `<h1>Configuration</h1>
       <tr><td>--trust-auto-approve</td><td>Auto-approve every incoming trust handshake</td></tr>
       <tr><td>--log-level &lt;level&gt;</td><td>Log level: debug, info, warn, error</td></tr>
       <tr><td>--log-format &lt;fmt&gt;</td><td>Log format: text or json</td></tr>
-      <tr><td>--socket &lt;path&gt;</td><td>IPC socket path (default <code>/tmp/pilot.sock</code>)</td></tr>
+      <tr><td>--socket &lt;path&gt;</td><td>IPC socket path (default: <code>$XDG_RUNTIME_DIR/pilot.sock</code> on Linux when set, else <code>/tmp/pilot.sock</code>; macOS always uses <code>/tmp/pilot.sock</code>)</td></tr>
       <tr><td>--config &lt;path&gt;</td><td>Config file path</td></tr>
       <tr><td>--webhook &lt;url&gt;</td><td>Webhook URL for event notifications</td></tr>
       <tr><td>--admin-token &lt;token&gt;</td><td>Admin token for network create/admin operations</td></tr>
@@ -157,7 +160,7 @@ const bodyContent = `<h1>Configuration</h1>
 
   <h2 id="logging">Logging</h2>
 
-  <p>The daemon uses structured logging via Go's <code>slog</code> package. Logs are written to <code>~/.pilot/pilot.log</code>.</p>
+  <p>The daemon uses structured logging via Go's <code>slog</code> package. Each run writes to a per-run log file <code>~/.pilot/pilot-&lt;pid&gt;.log</code>; <code>~/.pilot/pilot.log</code> is a symlink to the current run's log.</p>
 
   <pre><code><span class="comment"># Debug logging</span>
 <span class="cmd">pilotctl</span> daemon start --log-level debug

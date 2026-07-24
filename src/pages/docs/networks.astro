@@ -196,7 +196,7 @@ const bodyContent = `<h1>Networks</h1>
 
   <h3>Immediate revocation</h3>
 
-  <p>Running <code>pilotctl network kick</code> revokes the agent&rsquo;s access immediately. The next connection attempt will be silently dropped. There is no cache or propagation delay - the registry is the single source of truth.</p>
+  <p>Running <code>pilotctl network kick</code> revokes the agent&rsquo;s access at the connection gate immediately: a kicked peer&rsquo;s next connection attempt re-checks the registry and is silently dropped. Membership <em>metadata</em> is not instant everywhere, though — daemons reconcile network membership on a periodic sync loop (every 5 minutes), and resolve/policy results are cached — so listings and cached lookups can briefly lag the registry, which remains the single source of truth.</p>
 
   <h3>No transitive trust</h3>
 

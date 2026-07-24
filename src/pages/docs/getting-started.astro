@@ -62,7 +62,7 @@ import PageNav from "../../components/PageNav.astro";
 
   <ul>
     <li><strong>UDP (default).</strong> The daemon binds a public UDP socket and reaches peers directly when NAT allows, otherwise via the beacon. Best latency and throughput. Works on home / office networks, cloud VMs (AWS EC2, GCP GCE, Azure VM), and most container PaaS that expose UDP.</li>
-    <li><strong>Compat (<code>-transport=compat</code>).</strong> The daemon opens one outbound TCP/443 connection to the beacon (HTTPS / WSS). Every Pilot frame rides that one socket. Slightly higher latency, but works in environments that block UDP or hide your daemon behind symmetric NAT.</li>
+    <li><strong>Compat (<code>-transport=compat</code>).</strong> The daemon makes outbound connections on TCP/443 only: one long-lived WSS connection to the beacon plus a small TLS connection pool to the registry. Slightly higher latency, but works in environments that block UDP or hide your daemon behind symmetric NAT.</li>
   </ul>
 
   <p>Pick by environment:</p>
@@ -80,11 +80,11 @@ import PageNav from "../../components/PageNav.astro";
 
   <h2 id="install">Installation</h2>
 
-  <p>Run the one-line installer. It detects your platform, downloads pre-built binaries, writes <code>~/.pilot/config.json</code>, adds <code>~/.pilot/bin</code> to your PATH, and sets up system services (systemd on Linux, launchd on macOS) for the daemon and auto-updater. Future releases are applied automatically in the background.</p>
+  <p>Run the one-line installer. It detects your platform, downloads pre-built binaries, writes <code>~/.pilot/config.json</code>, adds <code>~/.pilot/bin</code> to your PATH, and sets up system services (systemd on Linux, launchd on macOS) for the daemon and auto-updater. The installer sets up the updater service, but automatic updates are OFF by default — enable them with <code>pilotctl update enable</code>.</p>
   <pre><code><span class="cmd">curl</span> -fsSL https://pilotprotocol.network/install.sh | sh</code></pre>
 
   <div class="callout">
-    <strong>What the installer touches beyond <code>~/.pilot</code>:</strong> it injects the Pilot skill into detected agent toolchains (Claude Code's <code>~/.claude/CLAUDE.md</code>, OpenClaw, OpenHands, PicoClaw, Hermes) and enables app-store telemetry, broadcasts, and review prompts by default. Skill injection is what makes your agents reach for live specialists instead of scraping — worth understanding before deciding. Every feature has a one-line opt-out — the installer prints the full disclosure at the end, and <a href="consent">Consent &amp; Privacy</a> documents each default, the exact files written, what you'd lose by disabling each, and how to turn them off.
+    <strong>What the installer touches beyond <code>~/.pilot</code>:</strong> it injects the Pilot skill into detected agent toolchains (Claude Code's <code>~/.claude/CLAUDE.md</code>, OpenClaw, OpenHands, PicoClaw, Hermes, Goose, OpenCode) and enables app-store telemetry, broadcasts, and review prompts by default. Skill injection is what makes your agents reach for live specialists instead of scraping — worth understanding before deciding. Every feature has a one-line opt-out — the installer prints the full disclosure at the end, and <a href="consent">Consent &amp; Privacy</a> documents each default, the exact files written, what you'd lose by disabling each, and how to turn them off.
   </div>
 
   <p>You will be prompted for an email address on first install. To skip the prompt:</p>
@@ -111,10 +111,10 @@ import PageNav from "../../components/PageNav.astro";
   <pre><code><span class="cmd">pilotctl</span> daemon start --email you@example.com --hostname my-agent</code></pre>
   <p>Both flags are optional:</p>
   <ul>
-    <li>If you omit <code>--hostname</code>, the node is assigned an internal hostname of the form <code>pilot-XXXXXXXX</code> — the suffix is the first 4 hex bytes of <code>SHA-256(public_key)</code>.</li>
+    <li>If you omit <code>--hostname</code>, the node has no hostname and is reachable by address only.</li>
     <li>If you omit <code>--email</code>, the daemon synthesises one from the public-key fingerprint (<code>&lt;fingerprint&gt;@nodes.pilotprotocol.network</code>). You can replace it with a real address later by setting <code>email</code> in <code>~/.pilot/config.json</code> and restarting.</li>
   </ul>
-  <p>Once supplied, <code>--email</code> is persisted to config and not needed on subsequent starts.</p>
+  <p>Once supplied, <code>--email</code> is persisted to <code>~/.pilot/account.json</code> and not needed on subsequent starts.</p>
 
   <pre><code><span class="comment"># Output:</span>
 starting daemon (pid 12345).....
@@ -125,11 +125,11 @@ Daemon running (pid 12345)
 
   <p>Your address (<code>0:0000.0000.xxxx</code>) is your permanent identity on the network. It stays the same across restarts.</p>
 
-  <p>Subsequent starts (email already in config):</p>
+  <p>Subsequent starts (email already saved):</p>
   <pre><code><span class="cmd">pilotctl</span> daemon start</code></pre>
 
   <div class="callout">
-    <strong>Behind a firewall?</strong> If the daemon can't reach peers, your network may be blocking UDP. Start it with <code>-transport=compat</code> to route everything over a single outbound TCP/443 connection. See <a href="/docs/firewalls">Firewalls &amp; Compat Mode</a> for the full flag set, supported environments (Render, Replit Agent, locked-down corp wifi, etc.), and how the WSS bridge works.
+    <strong>Behind a firewall?</strong> If the daemon can't reach peers, your network may be blocking UDP. Compat mode routes all traffic over outbound TCP/443 instead. Note that <code>pilotctl daemon start</code> does not accept or forward a transport flag — enable compat mode by starting the standalone <code>pilot-daemon</code> binary with <code>-transport=compat</code>, or by setting <code>"transport": "compat"</code> in the daemon config JSON. See <a href="/docs/firewalls">Firewalls &amp; Compat Mode</a> for the full flag set, supported environments (Render, Replit Agent, locked-down corp wifi, etc.), and how the WSS bridge works.
   </div>
 
   <div class="callout">

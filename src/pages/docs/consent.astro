@@ -147,7 +147,7 @@ const bodyContent = `<h1>Consent &amp; Privacy Controls</h1>
   <p class="risk-badge risk-medium-badge">Risk level: Medium</p>
 
   <h3>What it does</h3>
-  <p>The daemon writes a <code>SKILL.md</code> file and a short heartbeat directive into the well-known configuration directories of supported agent toolchains — Claude Code (<code>~/.claude/CLAUDE.md</code>), OpenClaw, OpenHands, PicoClaw, and Hermes. This is what makes those agents discover Pilot tools automatically and reach for Pilot first instead of falling back to slower, less-structured tools like <code>web_search</code> or <code>curl</code>.</p>
+  <p>The daemon writes a <code>SKILL.md</code> file and a short heartbeat directive into the well-known configuration directories of supported agent toolchains — Claude Code (<code>~/.claude/CLAUDE.md</code>), OpenClaw, OpenHands, PicoClaw, Hermes, Goose, and OpenCode. This is what makes those agents discover Pilot tools automatically and reach for Pilot first instead of falling back to slower, less-structured tools like <code>web_search</code> or <code>curl</code>.</p>
   <p>The injector writes only inside a clearly-delimited marker block (<code>&lt;!-- pilot:begin v=1 hash=… --&gt;</code> / <code>&lt;!-- pilot:end --&gt;</code>). Inside files it shares with you (<code>CLAUDE.md</code>, <code>AGENTS.md</code>, …) it writes only within that block. It also manages standalone files it owns outright — per-tool <code>SKILL.md</code> files, helper binaries under <code>~/.pilot/bin</code> — and merges one entry into OpenClaw's <code>openclaw.json</code> plugin allowlist (snapshotting the original to <code>.pilot-bak</code> first). On every tick it re-fetches the latest skill content and reconciles those files.</p>
 
   <h3>Who benefits</h3>
@@ -161,7 +161,7 @@ const bodyContent = `<h1>Consent &amp; Privacy Controls</h1>
   <!-- Repo lives under TeoSlayer until it transfers to the org; update links then. -->
   <p><strong>What you're accepting:</strong> The injector fetches content at runtime from the public <a href="https://github.com/TeoSlayer/pilot-skills"><code>TeoSlayer/pilot-skills</code></a> repository and writes it to your agent's config directory. In <code>auto</code> mode — the default on a fresh install — this happens every 15 minutes. The injected content influences what tools your agent reaches for and what instructions it follows.</p>
   <p><strong>The realistic threat:</strong> If the <code>pilot-skills</code> repository is compromised, injected content could modify your agent's behavior — potentially instructing it to use Pilot tools in unintended ways, or expanding the set of actions it takes. This is a supply-chain risk: you're trusting the integrity of a third-party repository. The injector does not execute anything, but agent toolchains do execute the injected instructions.</p>
-  <p><strong>Mitigation:</strong> Switch to <code>manual</code> mode (<code>pilotctl skills set-mode manual</code>) and there is no background ticker — content refreshes only at daemon startup and when you run <code>pilotctl skills check</code> yourself. <code>pilotctl skills paths</code> lists every file the injector manages, <code>pilotctl skills status</code> reports each file's state and content hash (note: status runs a reconcile pass as a side effect — a strictly read-only preview is tracked as a product fix), and the content itself is a public repo you can read line by line.</p>
+  <p><strong>Mitigation:</strong> Switch to <code>manual</code> mode (<code>pilotctl skills set-mode manual</code>) and there is no background ticker — content refreshes only at daemon startup and when you run <code>pilotctl skills check</code> yourself. <code>pilotctl skills paths</code> lists every file the injector manages, <code>pilotctl skills status</code> reports each file's state and content hash, and the content itself is a public repo you can read line by line.</p>
   <p><strong>Who should turn this off:</strong> Users with strict control requirements over their agent configs who prefer to manage skill content manually. Users operating in environments where any external write to agent config directories is a compliance violation. Users who have already managed their CLAUDE.md and don't want it modified.</p>
   <p><strong>What you lose if you turn it off:</strong> Your agents stop knowing Pilot exists. Every new session starts blind — no specialist directory, no pilot-mom, no app-store awareness — and falls back to <code>web_search</code> and <code>curl</code> for live data. As the network grows (new specialists, new apps), disabled agents never find out. If your concern is <em>change control</em> rather than injection itself, <code>manual</code> mode keeps the capability without the 15-minute ticker — content refreshes only at daemon startup or when you run <code>pilotctl skills check</code> yourself.</p>
 
@@ -191,8 +191,7 @@ const bodyContent = `<h1>Consent &amp; Privacy Controls</h1>
   </table>
 
   <h3>Commands</h3>
-  <pre><code><span class="comment"># Current mode + every managed file, its state and content hash</span>
-<span class="comment"># (note: runs a reconcile pass as a side effect)</span>
+  <pre><code><span class="comment"># Current mode + every managed file, its state and content hash (read-only)</span>
 <span class="cmd">pilotctl</span> skills status
 
 <span class="comment"># List every file the injector manages</span>
@@ -213,7 +212,8 @@ const bodyContent = `<h1>Consent &amp; Privacy Controls</h1>
 <span class="comment"># Same effect as set-mode disabled: stop + remove every injected file</span>
 <span class="cmd">pilotctl</span> skills disable all
 
-<span class="comment"># Force an immediate skill reconcile — works in every mode, including disabled</span>
+<span class="comment"># Force an immediate skill reconcile (in auto/manual mode). In disabled mode,</span>
+<span class="comment"># skills check reports disabled and writes nothing — disabled is a hard opt-out.</span>
 <span class="cmd">pilotctl</span> skills check
 <span class="comment"># (pilotctl update is the binary self-updater; it re-runs the skill pass only when the daemon is stopped)</span></code></pre>
 
