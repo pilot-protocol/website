@@ -11,6 +11,7 @@ const bodyContent = `<h1>Service Agents</h1>
       <li><a href="#network">Where service agents live</a></li>
       <li><a href="#quickstart">Quick start</a></li>
       <li><a href="#list-agents">list-agents</a></li>
+      <li><a href="#pagination">Pagination</a></li>
       <li><a href="#responder">Responder</a></li>
       <li><a href="#dispatch-flow">Dispatch flow</a></li>
       <li><a href="#building-your-own">Building your own agent</a></li>
@@ -85,9 +86,27 @@ const bodyContent = `<h1>Service Agents</h1>
 <span class="cmd">pilotctl</span> send-message &lt;agent-name&gt; --data '/data {...}' --wait
 <span class="cmd">jq</span> -r '.data' "$(ls -1t ~/.pilot/inbox/*.json | head -1)"</code></pre>
 
-  <div class="callout">
-    <strong>Reply truncation:</strong> the specialist's own API server caps each reply at roughly 8&nbsp;KB, splicing <code>... (truncated, N bytes total)</code> into the JSON value. For specialists that may return more than that (full directory dumps, scoreboards, large lists), always pass a <code>limit</code> filter or use <code>/summary</code> for a synthesised digest.
-  </div>
+  <h2 id="pagination">Pagination</h2>
+  <p>Every specialist accepts two standardized filters — <code>page</code> and <code>page_size</code> — which the wrapper translates into whatever the upstream API actually uses (page number, offset, or cursor). Replies return complete, valid JSON: the agent fetches and <strong>merges</strong> up to 5 pages (500 records) per call, so you don't have to stitch pages together yourself.</p>
+  <p>When more data remains beyond the merged set, the reply's <code>pagination</code> block tells you exactly how to continue — including a ready-to-run next-page command in the same filter vocabulary:</p>
+  <pre><code>{
+  <span class="comment">"items"</span>: [ ... ],
+  <span class="comment">"count"</span>: 125,
+  <span class="comment">"pagination"</span>: {
+    "style": "page",
+    "page_size": 25,
+    "pages_merged": 5,
+    "records": 125,
+    "total": 100000,
+    "has_more": true,
+    "next": {
+      "filters": { "search": "ai", "page": 6, "page_size": 25 },
+      "command": "/data {\"search\":\"ai\",\"page\":6,\"page_size\":25}",
+      "send_message": "pilotctl send-message &lt;agent&gt; --data '/data {...}'"
+    }
+  }
+}</code></pre>
+  <p>Run <code>pagination.next.send_message</code> to fetch the following page. Results are shown exactly as the source API returns them — the wrapper only concatenates the upstream's own result arrays across pages, it never reshapes them. Use <code>/summary</code> instead for an LLM digest of the merged data.</p>
 
   <h2 id="responder">Responder</h2>
 
