@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>Most multi-agent systems have an orchestrator. One central process decides who does what. That works until the orchestrator goes down, gets overloaded, or becomes the trust bottleneck. In this tutorial, we build something different: <strong>10 agents that discover each other, establish trust, exchange messages, and self-organize based on capability matching</strong>. No orchestrator. No central scheduler. The swarm figures it out.</p>
+const bodyContent = `<p>This tutorial shows you how to build a self-organizing agent swarm that coordinates work without an orchestrator. Most multi-agent systems have one central process that decides who does what — but that fails when the orchestrator goes down, gets overloaded, or becomes a trust bottleneck. Here, we build something different: <strong>10 agents that discover each other, establish trust, exchange messages, and self-organize based on capability matching</strong>. No orchestrator. No central scheduler. The swarm figures it out.</p>
 
   <p>By the end, you will have a working Python codebase that spawns agents, lets them find peers via Pilot Protocol's registry, exchange data through encrypted tunnels, and route work to the right agents by role.</p>
 
@@ -549,11 +549,11 @@ if __name__ == "__main__":
   <section>
   <h2>What You Have Built</h2>
 
-  <p>This is not a toy demo. The patterns here -- discovery, trust, data exchange, role-based routing, fault tolerance -- are the building blocks of production multi-agent systems. The difference from conventional architectures is what is <em>missing</em>: no orchestrator, no message queue, no service mesh, no load balancer, no health check infrastructure.</p>
+  <p>This is not a toy demo. The patterns here -- discovery, trust, data exchange, role-based routing, fault tolerance -- are the building blocks of production multi-agent systems. The difference from conventional architectures is what is <em>missing</em>: no orchestrator, no message queue, no service mesh, no load balancer, no health check infrastructure. For a simpler introduction to the same concepts, see <a href="/blog/build-multi-agent-network-five-minutes">Build a Multi-Agent Network in Five Minutes</a>.</p>
 
   <p>The swarm self-organizes because role-based discovery replaces central scheduling. Agents know which peers have the capabilities they need. Tunnel health replaces health checks. If a peer disappears, its tunnel drops and the agent routes to the next available match.</p>
 
-  <p>To extend this pattern into a marketplace with capability advertising, see <a href="/blog/build-ai-agent-marketplace-discovery-reputation">Build an AI Agent Marketplace With Discovery and Reputation</a>. For the network fundamentals, see <a href="how-pilot-protocol-works">How Pilot Protocol Works</a>.</p>
+  <p>To extend this pattern into a marketplace with capability advertising and reputation-based routing, see <a href="/blog/build-ai-agent-marketplace-discovery-reputation">Build an AI Agent Marketplace With Discovery and Reputation</a>. For chaining specialized models across agent roles, see <a href="/blog/chain-ai-models-across-machines">Chain AI Models Across Machines With Pilot Protocol</a>. For the network fundamentals, see <a href="how-pilot-protocol-works">How Pilot Protocol Works</a>.</p>
   </section>
 
   <div class="cta">
@@ -561,14 +561,38 @@ if __name__ == "__main__":
     <p>Everything in this tutorial runs on the open-source Pilot Protocol. Clone the repo and start swarming.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
+
+const faqItems = [
+  {
+    question: "What is a self-organizing agent swarm?",
+    answer: "A self-organizing agent swarm is a group of AI agents that discover each other, establish trust, and coordinate work without a central orchestrator. Each agent runs the same code and makes independent decisions about which peer to route work to based on capability matching and tunnel health."
+  },
+  {
+    question: "How do agents discover each other without an orchestrator?",
+    answer: "Agents discover each other through Pilot Protocol's registry using tag-based lookups. Each agent registers with capability tags (e.g., role=summarizer, swarm=demo) and queries <code>list-agents</code> by tag to find peers. No hardcoded addresses, no configuration files, no service mesh required."
+  },
+  {
+    question: "How is trust established between agents in the swarm?",
+    answer: "Trust is established through mutual Ed25519 handshakes. Each agent initiates a handshake with discovered peers, and both sides sign a challenge with their identity key. If either side rejects, the connection fails. This means agents can refuse trust from unknown peers and compromised agents can be revoked from the network."
+  },
+  {
+    question: "What happens when an agent in the swarm goes offline?",
+    answer: "When an agent goes offline, its Pilot tunnel drops. Peers detect the lost connection, mark the agent as temporarily untrusted, and route work to the next available peer with matching capabilities. No failover logic or health check infrastructure is needed — the swarm self-corrects automatically."
+  },
+  {
+    question: "Can a self-organizing agent swarm scale beyond 10 agents?",
+    answer: "Yes. Each Pilot daemon uses roughly 10 MB of memory, so a single VM can run 200+ agents comfortably. At scale, agents use selective trust — only handshaking peers in roles they actually interact with — which naturally converges on a sparse trust graph rather than a full mesh."
+  }
+];
 ---
 <BlogLayout
-  title="Build an Agent Swarm That Self-Organizes"
-  description="How to create a group of AI agents that autonomously discover peers, establish trust, and coordinate without central orchestration."
+  title="Build a Self-Organizing Agent Swarm: Multi-Agent System Without an Orchestrator"
+  description="Build 10 AI agents that discover each other, establish trust, and route work by capability - no orchestrator, no central scheduler, no single point of failure."
   date="February 16, 2026"
   tags={["tutorial", "swarm"]}
   canonicalPath="/blog/build-agent-swarm-self-organizes"
   bannerImage="/blog/banners/build-agent-swarm-self-organizes.webp"
+  faqItems={faqItems}
 >
   <Fragment set:html={bodyContent} />
 </BlogLayout>
