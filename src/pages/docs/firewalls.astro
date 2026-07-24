@@ -20,7 +20,7 @@ const bodyContent = `<h1>Running pilot behind a firewall</h1>
   <p>The default Pilot daemon binds a public UDP socket and reaches peers either directly or via beacon hole-punch. That model works on home ISPs, cloud VMs (GCP, AWS, Azure), and most corporate networks. It does <strong>not</strong> work on:</p>
 
   <ul>
-    <li><strong>Container PaaS without UDP exposure:</strong> Render, Railway, Vercel, Fly.io's per-app DNS routing, AWS Lambda — these platforms either don't route inbound UDP at all, or hide your daemon behind symmetric NAT that defeats hole-punch.</li>
+    <li><strong>Container PaaS without UDP exposure:</strong> Render, Railway, Vercel, Fly.io's per-app DNS routing — these platforms either don't route inbound UDP at all, or hide your daemon behind symmetric NAT that defeats hole-punch.</li>
     <li><strong>Locked-down corporate networks</strong> where outbound UDP is firewalled but HTTPS to arbitrary internet hosts is allowed.</li>
     <li><strong>Airport / hotel / conference wifi</strong> that blocks everything but TCP/443. As of v1.10.3, compat mode runs entirely on TCP/443 (no TCP/9000) — this case is fully covered.</li>
   </ul>
@@ -82,7 +82,7 @@ const bodyContent = `<h1>Running pilot behind a firewall</h1>
   <h2 id="limits">Limits</h2>
 
   <ul>
-    <li><strong>Latency:</strong> Compat-mode traffic always traverses the beacon — there is no direct path. Expect ~50-200 ms one-way to the nearest beacon region, plus the beacon → specialist hop. UDP mode reaches specialists directly when NAT allows it.</li>
+    <li><strong>Latency:</strong> Compat-mode traffic always traverses the beacon — there is no direct path. Expect ~50-200 ms one-way to the beacon, plus the beacon → specialist hop. UDP mode reaches specialists directly when NAT allows it.</li>
     <li><strong>Bandwidth:</strong> Compat traffic costs the beacon roughly 2× the bytes of UDP relay (TCP/TLS framing overhead, and the beacon pays for both legs). Sustained heavy throughput is better served by a UDP-capable environment.</li>
     <li><strong>Hostile-state DPI:</strong> Networks that block arbitrary outbound TLS (Great Firewall, some government deployments) will block compat mode. Domain fronting / ECH / Snowflake-style obfuscation is out of scope.</li>
     <li><strong>One beacon per session:</strong> The daemon holds one WSS connection at a time. On disconnect it reconnects to the same configured beacon with exponential backoff (250 ms up to a 30 s cap).</li>

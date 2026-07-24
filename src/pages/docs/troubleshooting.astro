@@ -56,7 +56,7 @@ const bodyContent = `<h1>Troubleshooting</h1>
     <li>Check for mutual trust or shared network: <code>pilotctl trust</code></li>
   </ol>
 
-  <p>If <code>ping</code> works but connections fail, the target may be dropping SYN packets because trust is not established. Run <code>pilotctl handshake &lt;hostname&gt;</code> or add both agents to the same network with <code>pilotctl network invite</code>.</p>
+  <p>If <code>ping</code> works, trust and the network path are already established — the SYN trust gate applies to every port, including the echo port ping uses. A connection failure on another port means the target service isn't listening there, or a port policy blocks it.</p>
 
   <h2 id="nat-traversal">NAT traversal failures</h2>
 
@@ -98,12 +98,13 @@ const bodyContent = `<h1>Troubleshooting</h1>
 
   <h2 id="network-membership">Network membership issues</h2>
 
-  <h3>Symptom: &ldquo;free networks are limited to 3 agents&rdquo;</h3>
-  <p>The free tier allows up to 3 agents per network. Options:</p>
+  <h3>Symptom: &ldquo;network membership limit reached&rdquo;</h3>
+  <p>The network reached its configured member cap. Options:</p>
   <ul>
+    <li>Raise the network policy&rsquo;s member limit: <code>pilotctl network policy &lt;network_id&gt; --max-members &lt;n&gt;</code></li>
     <li>Remove an existing agent with <code>pilotctl network kick</code></li>
-    <li>Upgrade to a Private Network plan (<a href="/plans">see plans</a>)</li>
   </ul>
+  <p>See <a href="error-codes">Error codes</a> for the full entry.</p>
 
   <h3>Symptom: agents can&rsquo;t communicate despite being in the same network</h3>
   <ol>

@@ -47,8 +47,6 @@ const bodyContent = `<h1>SDK Parity</h1>
   </table>
 
   <h2 id="summary">Summary by feature category</h2>
-  <p>Updated against <code>sdk-node@d02bd00</code>, <code>sdk-python@93584ea</code>, <code>sdk-swift@0d49f87</code> (audited 2026-05-28).</p>
-
   <table>
     <thead>
       <tr>
@@ -65,13 +63,14 @@ const bodyContent = `<h1>SDK Parity</h1>
       <tr><td>Daemon admin — <code>rotateKey</code></td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
       <tr><td>Trust — initiate handshake, list trusted peers</td><td>✅</td><td>✅</td><td>✅</td><td></td></tr>
       <tr><td>Trust admin — approve/reject/pending/revoke</td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
-      <tr><td>Trust convenience — <code>waitForTrust</code></td><td>—</td><td>—</td><td>✅</td><td>Planned for Node and Python. Currently Swift-only.</td></tr>
+      <tr><td>Trust convenience — <code>waitForTrust</code></td><td>—</td><td>✅</td><td>✅</td><td>Shipped in Swift and Python (<code>wait_for_trust</code>). Planned for Node.</td></tr>
       <tr><td>Datagrams — <code>sendTo</code>, <code>recvFrom</code></td><td>✅</td><td>✅</td><td>✅</td><td>Swift uses <code>send(to:port:data:)</code> and returns a typed <code>Datagram</code>.</td></tr>
       <tr><td>Datagrams — <code>broadcast</code></td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
       <tr><td>Streams — <code>dial</code>, <code>listen</code>, <code>Conn</code>, <code>Listener</code></td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
       <tr><td>Registry admin — hostname / visibility / deregister / tags / webhook</td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
       <tr><td>Networks — list/join/leave/members/invite/respond</td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
-      <tr><td>Managed networks — score/status/rankings/cycle/reconcile</td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
+      <tr><td>Managed networks — status/forceCycle/reconcile</td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
+      <tr><td>Managed networks — score/rankings</td><td>—</td><td>—</td><td>—</td><td>Removed in v1.10 — the symbols are no longer present in shipped <code>libpilot</code> builds.</td></tr>
       <tr><td>Policy — get/set</td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
       <tr><td>Member tags — get/set</td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
       <tr><td>High-level services — <code>sendMessage</code>, <code>sendFile</code>, <code>publishEvent</code>, <code>subscribeEvent</code></td><td>✅</td><td>✅</td><td>—</td><td>Planned for Swift.</td></tr>
@@ -97,7 +96,7 @@ const bodyContent = `<h1>SDK Parity</h1>
   <p>End-state target: <strong>full parity</strong> across all three SDKs, except for the two intentional rows above (the FFI loader and Swift's typed response structs).</p>
   <ul>
     <li><strong>Swift:</strong> the gap-fill work is tracked as a single follow-up ticket covering streams, networks, managed networks, policy, member tags, registry admin, trust admin, and high-level services. Wire protocol support already exists — what's missing is the Swift surface that exposes it.</li>
-    <li><strong>Node and Python:</strong> add <code>waitForTrust(peerId, timeoutMs)</code> — Swift's blocking convenience. Today, Node and Python users have to poll <code>pendingHandshakes</code>.</li>
+    <li><strong>Node:</strong> add <code>waitForTrust(peerId, timeoutMs)</code> — the blocking convenience Swift ships and Python now exposes as <code>wait_for_trust</code>. Today, Node users have to poll <code>pendingHandshakes</code>.</li>
   </ul>
   <p>Cross-SDK versioning is documented in the <a href="https://github.com/pilot-protocol/pilotprotocol/blob/main/GOVERNANCE.md">GOVERNANCE</a> file in the main protocol repo: all three SDKs share the same <code>MAJOR.MINOR</code> line, with coordinated releases when the wire protocol changes.</p>
 `;

@@ -1,0 +1,187 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>Every AI agent on a network needs a way to prove who it is. The standard answer for the last decade has been a <strong>token</strong>: an API key in an HTTP header, a JWT in an Authorization field, an OAuth bearer token. These work well enough for human-driven applications where a user logs in, gets a token, and calls an API. But the assumptions baked into traditional tokens break down when autonomous agents are the ones authenticating.</p>
+
+<p>This post compares traditional network tokens with the approach Pilot Protocol takes for agent identity. The difference is not incremental. It is a distinct design choice with concrete implications for agent autonomy, operational complexity, and security posture.</p>
+
+<h2 id="what-traditional-tokens-do">What Traditional Tokens Do</h2>
+
+<p>Traditional tokens solve an identity problem by indirection. An API key is a shared secret string that a server looks up in a database to determine who the caller is. A JWT is a signed JSON object that carries claims about the caller — their user ID, role, expiration time. An OAuth token delegates authorization from an identity provider to a resource server.</p>
+
+<p>All three share the same fundamental pattern: the token is <strong>issued by a central authority</strong>, stored by the client, and presented to prove identity. The server validates the token against its own records or a cryptographic signature. This works because there is always a server, and the server trusts the issuer.</p>
+
+<p>But the pattern imposes constraints that matter for autonomous agents:</p>
+
+<ul>
+  <li><strong>Central issuance.</strong> Every agent that needs a token must request one from a server. That server is a dependency and a bottleneck.</li>
+  <li><strong>Shared secrets.</strong> API keys are symmetric — the same string that authenticates the caller is stored on the server. A database leak exposes every key.</li>
+  <li><strong>Ephemeral validity.</strong> JWTs expire. OAuth tokens expire. Refresh tokens can expire. An agent that needs to operate unattended must handle token rotation, retry on 401s, and manage credential lifecycle.</li>
+  <li><strong>Single-subject authentication.</strong> A traditional token authenticates one side of a connection. The server never authenticates itself to the client using the same token mechanism — that is delegated to TLS.</li>
+</ul>
+
+<p>These constraints are manageable when a human operator provisions credentials and handles failures. For a fleet of autonomous agents running unattended across clouds, they become operational debt that compounds.</p>
+
+<h2 id="agent-identity-in-pilot-protocol">Agent Identity in Pilot Protocol</h2>
+
+<p>Pilot Protocol does not use tokens in the traditional sense. Instead, every agent generates its own <strong>Ed25519 key pair</strong> during initialization. The private key stays in <code>~/.pilot/identity.json</code> and never leaves the node. The public key is registered with the network registry as the agent's identity.</p>
+
+<p>When two agents establish trust, they exchange public keys and sign handshake messages with their private keys. The receiving agent verifies the signature against the registered public key. No shared secrets. No central issuer. No token to leak or expire.</p>
+
+<p>This is not a minor implementation detail. It changes what identity means at the protocol level:</p>
+
+<ul>
+  <li><strong>Self-generated.</strong> The agent creates its own identity. No external service needs to be available at provisioning time beyond the minimal registration step.</li>
+  <li><strong>Permanent.</strong> The key pair persists across restarts, IP changes, and cloud migrations. The agent does not need to re-authenticate.</li>
+  <li><strong>Cryptographically bound.</strong> The identity is the public key. There is no indirection layer. Verifying identity means verifying a signature, not looking up a database row.</li>
+  <li><strong>Mutual.</strong> Both sides of a connection authenticate to each other using the same mechanism. Trust is bilateral or it does not exist.</li>
+</ul>
+
+<h2 id="seven-differences-that-matter">Seven Differences That Matter</h2>
+
+<p>The divergence between traditional tokens and Pilot's cryptographic identity shows up in tangible, operational ways. These are not theoretical distinctions — they affect how you build, deploy, and secure an agent network.</p>
+
+<h3 id="1-self-sovereign-vs-issued">1. Self-Sovereign vs. Issued</h3>
+
+<p>A traditional token is granted by an authority. An agent that needs credentials must authenticate to that authority first, which requires either another credential (bootstrap problem) or human intervention. This model requires an always-available identity provider and introduces a single point of failure for the entire agent fleet.</p>
+
+<p>Pilot identity is self-sovereign. The agent generates its key pair locally during <code>pilotctl init</code>. The registry learns the public key after generation, but the generation itself does not depend on the registry. An agent that has never contacted the network still has a valid identity. This matters for air-gapped deployments, edge devices with intermittent connectivity, and agents that must bootstrap autonomously.</p>
+
+<h3 id="2-permanent-vs-ephemeral">2. Permanent vs. Ephemeral</h3>
+
+<p>Traditional tokens expire. This is by design — expiring limits the blast radius of a leaked token and forces regular re-validation of the holder's authorization. But expiration imposes lifecycle management on every agent: monitor expiry, refresh before it hits, handle the race condition where a token expires between check and use, queue requests that fail with 401, retry with the new token.</p>
+
+<p>Pilot's Ed25519 identity does not expire. The key pair is valid until the operator explicitly rotates it or the node is decommissioned. An agent that has established trust with a peer can communicate indefinitely without credential maintenance. The equivalent of token refresh — re-verifying trust — is a cryptographic signature check on each connection, not a token exchange.</p>
+
+<h3 id="3-no-shared-secrets">3. No Shared Secrets</h3>
+
+<p>API keys are shared secrets. The same string that authenticates the caller is stored in the server's database. A database breach exposes every API key — the attacker authenticates as any agent whose key was leaked. Industry surveys indicate that a substantial portion of organizations still use shared API keys for agent-to-agent communication, meaning a single database compromise can compromise the entire agent fleet.</p>
+
+<p>Pilot uses asymmetric cryptography. The private key never leaves the agent node. The public key is registered with the network but reveals nothing that can be used to impersonate the agent. A registry breach exposes public keys, not credentials. The only way to impersonate an agent is to compromise its specific node and extract its private key — a much higher bar than a database dump.</p>
+
+<h3 id="4-bilateral-vs-unilateral">4. Bilateral vs. Unilateral</h3>
+
+<p>Traditional tokens authenticate one direction. The caller presents a token to prove its identity to the server. The server authenticates itself to the caller via TLS, using a certificate issued by a public CA. These are two different mechanisms with two different trust chains.</p>
+
+<p>Pilot uses a single mechanism for both directions. The handshake protocol exchanges Ed25519 signatures. Both sides verify. If trust is not mutual, no connection exists. This eliminates the asymmetry where a client authenticates to a server but trusts any server that presents a valid TLS certificate from a CA it may not even recognize.</p>
+
+<h3 id="5-instant-local-revocation">5. Instant, Local Revocation</h3>
+
+<p>Revoking a traditional token is a distributed systems problem. The token may be cached by the authorization server, by the resource server, by CDN edge caches, or by the client itself. JWT revocation is particularly problematic because the whole point of JWTs is stateless verification — the resource server validates the signature without contacting the issuer. Revoking a JWT before its natural expiry requires maintaining a blocklist, which undermines the statelessness that made JWTs attractive in the first place.</p>
+
+<p>Pilot revocation is local and instant. Running <code>pilotctl untrust</code> removes the peer from the local trust store and tears down the active encrypted tunnel. The revoked peer learns about the revocation when its next connection attempt fails — no cache propagation, no blocklist synchronization, no distributed state to manage. This is possible because trust is tracked per-peer, not per-token, and the trust store is local to each agent.</p>
+
+<h3 id="6-stolen-token-vs-key-compromise">6. Stolen Token vs. Key Compromise</h3>
+
+<p>A stolen API key or JWT is usable from anywhere. An attacker who intercepts an HTTP request and extracts the Authorization header can replay that token from their own machine, for as long as the token is valid. The token carries no binding to the specific agent that originally presented it.</p>
+
+<p>Pilot's identity is bound to the node that holds the private key. Extracting the virtual address from a network packet reveals only a 48-bit identifier — not a credential. An attacker who intercepts traffic on the wire sees encrypted payloads and an address, but cannot authenticate as that agent without the private key. The cost of compromise is higher, and the blast radius of a network-level interception is zero.</p>
+
+<h3 id="7-identity-binds-to-agent-not-account">7. Identity Binds to Agent, Not Account</h3>
+
+<p>A traditional API key or JWT identifies an account, a project, or a user — a many-to-one mapping. Multiple agents can use the same API key because the key identifies the subscriber, not the specific agent instance. When something goes wrong, there is no way to trace an incident to the specific agent that caused it.</p>
+
+<p>Pilot's address is assigned to exactly one agent. The 48-bit virtual address (displayed as <code>N:NNNN.HHHH.LLLL</code>) is unique per node. Every message carries source and destination addresses in the packet header. Every encrypted tunnel is scoped to a specific pair of agents. If an incident occurs, the responsible agent is identified by its address — no ambiguity, no shared credentials obscuring the trail.</p>
+
+<h2 id="what-this-means-in-practice">What This Means in Practice</h2>
+
+<p>The concrete difference between traditional tokens and Pilot's agent identity shows up in everyday operational scenarios:</p>
+
+<ul>
+  <li><strong>Agent goes offline for a week.</strong> With JWTs, the token likely expires. The agent must re-authenticate on wake-up. With Pilot, the Ed25519 key is still valid. The agent reconnects and continues communicating with its trusted peers.</li>
+  <li><strong>Security incident.</strong> With shared API keys, you rotate every key, update every agent, and hope the database leak did not already expose them. With Pilot, you revoke trust for the compromised peer only. No key rotation. No fleet-wide update.</li>
+  <li><strong>Cross-company collaboration.</strong> With traditional tokens, you exchange credentials with the partner, configure your identity provider to issue tokens for their agents, and establish an OAuth flow. With Pilot, one handshake command with a justification message starts the relationship. The other side approves. Encrypted communication follows without additional configuration.</li>
+  <li><strong>Audit trail.</strong> With shared keys, you see which account accessed what, but not which specific agent instance. With Pilot, every packet carries the source address. You can attribute actions to a specific node.</li>
+</ul>
+
+<h2 id="where-traditional-tokens-still-fit">Where Traditional Tokens Still Fit</h2>
+
+<p>None of this means traditional tokens are obsolete. For human-facing APIs, web applications, and cloud services that authenticate users, JWTs and API keys remain the right tool. The comparison is specific to <strong>agent-to-agent identity on a network layer</strong> — not application-layer authentication.</p>
+
+<p>Pilot agents can still use API keys and JWTs for the application protocols they run over the overlay. A pilotctl handshake replaces the transport-layer credential. The Tunnel carries HTTP, gRPC, or any other protocol unchanged — those protocols can use whatever authentication they need at the application layer.</p>
+
+<h2 id="summary">Summary</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Dimension</th>
+      <th>Traditional Tokens</th>
+      <th>Pilot Protocol Identity</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Generation</td>
+      <td>Issued by central authority</td>
+      <td>Self-generated (Ed25519 key pair)</td>
+    </tr>
+    <tr>
+      <td>Lifetime</td>
+      <td>Ephemeral (minutes to months)</td>
+      <td>Permanent (until rotated)</td>
+    </tr>
+    <tr>
+      <td>Secrecy model</td>
+      <td>Symmetric (shared secret)</td>
+      <td>Asymmetric (private key never leaves node)</td>
+    </tr>
+    <tr>
+      <td>Authentication</td>
+      <td>Unilateral (client→server)</td>
+      <td>Bilateral (mutual handshake)</td>
+    </tr>
+    <tr>
+      <td>Revocation</td>
+      <td>Distributed cache invalidation</td>
+      <td>Local and instant</td>
+    </tr>
+    <tr>
+      <td>Compromise response</td>
+      <td>Rotate all keys in scope</td>
+      <td>Untrust the single peer</td>
+    </tr>
+    <tr>
+      <td>Identity granularity</td>
+      <td>Account or role</td>
+      <td>Individual agent (unique address)</td>
+    </tr>
+    <tr>
+      <td>Token theft</td>
+      <td>Reusable from any location</td>
+      <td>Packet does not carry reusable credential</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="frequently-asked-questions">Frequently Asked Questions</h2>
+
+<h3 id="can-pilot-agents-still-use-api-keys">Can Pilot agents still use API keys for application-level auth?</h3>
+<p>Yes. Pilot Protocol replaces the transport-layer credential — how agents prove their identity to establish a tunnel. Application protocols running over that tunnel (HTTP, gRPC, database connections) can use whatever authentication they need, including API keys and JWTs.</p>
+
+<h3 id="what-happens-if-an-agents-private-key-is-compromised">What happens if an agent's private key is compromised?</h3>
+<p>The operator rotates the key pair using <code>pilotctl rotate-key</code>, re-registers the new public key, and re-establishes trust with its peers. The compromised private key is replaced. Unlike a shared API key leak, the private key only authenticates that specific agent — no other agent or service is affected.</p>
+
+<h3 id="how-does-pilot-handle-token-less-authentication-for-public-services">How does Pilot handle token-less authentication for public services?</h3>
+<p>Public service agents (like the 430+ specialist agents in the Pilot directory) use a different trust model: they are in a trusted-agent allowlist and require no handshake or token. Any agent can query them directly. This is the exception, not the default — the default is that agents are invisible and must be handshaked.</p>
+
+<h3 id="do-i-need-to-manage-certificate-authorities">Do I need to manage certificate authorities?</h3>
+<p>No. Pilot Protocol uses Ed25519 signatures for identity verification. There is no certificate authority, no chain of trust to maintain, and no CA to keep online. Trust is established peer-to-peer through the handshake protocol — the registry relays signed messages but does not act as a CA.</p>
+
+<p><em>Learn more about <a href="https://pilotprotocol.network/docs/trust">Pilot Protocol's trust model and handshake mechanism</a>. For a deeper technical comparison, see <a href="https://pilotprotocol.network/docs/concepts">the core concepts documentation</a> covering addressing, encryption, and transport.</em></p>`;
+---
+<BlogLayout
+  title="How Are Network Agent Tokens Different?"
+  description="Network agent tokens explained: how Pilot Protocol's cryptographic identity differs from traditional API keys, JWTs, and OAuth tokens for AI agents."
+  date="July 22, 2026"
+  tags={["blog", "security", "identity", "authentication"]}
+  canonicalPath="/learn/how-are-network-agent-tokens-different"
+  faqItems={[
+    { question: "Can Pilot agents still use API keys for application-level auth?", answer: "Yes. Pilot Protocol replaces the transport-layer credential — how agents prove their identity to establish a tunnel. Application protocols running over that tunnel (HTTP, gRPC, database connections) can use whatever authentication they need, including API keys and JWTs." },
+    { question: "What happens if an agent's private key is compromised?", answer: "The operator rotates the key pair using pilotctl rotate-key, re-registers the new public key, and re-establishes trust with its peers. The compromised private key is replaced. Unlike a shared API key leak, the private key only authenticates that specific agent — no other agent or service is affected." },
+    { question: "How does Pilot handle token-less authentication for public services?", answer: "Public service agents (like the 430+ specialist agents in the Pilot directory) use a different trust model: they are in a trusted-agent allowlist and require no handshake or token. Any agent can query them directly. This is the exception, not the default — the default is that agents are invisible and must be handshaked." },
+    { question: "Do I need to manage certificate authorities?", answer: "No. Pilot Protocol uses Ed25519 signatures for identity verification. There is no certificate authority, no chain of trust to maintain, and no CA to keep online. Trust is established peer-to-peer through the handshake protocol — the registry relays signed messages but does not act as a CA." }
+  ]}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
