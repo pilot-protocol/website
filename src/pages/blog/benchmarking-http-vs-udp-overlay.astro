@@ -1,7 +1,9 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>Every agent communication benchmark you have seen compares HTTP/2 to gRPC, or REST to WebSocket. They all assume both endpoints are directly reachable. In the real world, agents sit behind NAT, corporate firewalls, and cloud VPCs. This post puts <strong>hard numbers</strong> on what actually happens when two AI agents need to talk across the internet, using both HTTP/2 and Pilot Protocol's UDP overlay.</p>
+const bodyContent = `<p>This benchmark compares <strong>HTTP/2 versus UDP overlay networks for AI agent communication</strong> across real-world conditions: direct connections, NAT traversal, and varying payload sizes. We measure latency, throughput, connection setup time, and memory usage at scale — and the results show that reachability matters more than raw speed for agent workloads.</p>
+
+  <p>Every agent communication benchmark you have seen compares HTTP/2 to gRPC, or REST to WebSocket. They all assume both endpoints are directly reachable. In the real world, agents sit behind NAT, corporate firewalls, and cloud VPCs. This post puts <strong>hard numbers</strong> on what actually happens when two AI agents need to talk across the internet, using both HTTP/2 and Pilot Protocol's UDP overlay.</p>
 
   <p>We measure four things: <strong>connection establishment time</strong>, <strong>message latency at varying payload sizes</strong>, <strong>sustained throughput</strong>, and <strong>behavior when NAT is involved</strong>. The results tell a story that raw speed alone cannot capture.</p>
 
@@ -342,14 +344,37 @@ const bodyContent = `<p>Every agent communication benchmark you have seen compar
     <p>Clone the repo, start two agents, and see the numbers yourself. The built-in bench command makes it easy.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
+const faqItems = [
+  {
+    question: "Is UDP faster than HTTP for AI agent communication?",
+    answer: "For typical agent message sizes (1–100 KB), HTTP/2 and UDP overlays deliver virtually identical latency — both are dominated by network round-trip time, not protocol overhead. UDP overlay connections are faster to establish (~15ms vs ~175ms) because the encrypted tunnel persists at the daemon level, but raw data transfer speeds are comparable."
+  },
+  {
+    question: "How does NAT affect agent-to-agent communication performance?",
+    answer: "NAT adds significant overhead to HTTP-based agent communication. Behind a port-restricted NAT, HTTP/2 requires a relay proxy that adds 30ms+ to every message and drops throughput by ~30%. A UDP overlay with hole-punching handles NAT transparently, establishing a direct peer-to-peer tunnel with only ~7ms of additional setup overhead — no relay in the data path."
+  },
+  {
+    question: "What is the memory cost of maintaining many agent connections?",
+    answer: "Each HTTP/2 peer connection requires a separate TCP socket and TLS session, growing RSS from 45 MB (1 peer) to 240 MB (100 peers). A UDP overlay shares a single tunnel across all peers, growing from 10 MB to just 24 MB at 100 peers — because only per-connection state (sequence numbers, window size, encryption keys) is added per peer, not a new socket."
+  },
+  {
+    question: "Can HTTP services run over a UDP overlay network?",
+    answer: "Yes. Pilot Protocol's driver implements Go's <code>net.Conn</code> interface, so standard HTTP servers and clients work over the UDP tunnel without modification. A gateway also exposes Pilot ports as local TCP sockets, meaning <code>curl</code> and <code>fetch()</code> calls work normally. See <a href=\"/blog/http-services-over-encrypted-overlay\">HTTP Services Over an Encrypted Overlay</a> for a full tutorial."
+  },
+  {
+    question: "How do you benchmark AI agent communication protocols?",
+    answer: "Key metrics for benchmarking agent communication protocols are: connection establishment time, message latency (RTT) at varying payload sizes, sustained throughput, memory and CPU usage at scale, and behavior behind NAT. The <code>pilotctl bench</code> command runs sustained echo-server transfers for UDP overlay testing; HTTP/2 benchmarks use equivalent streaming tools against public endpoints with TLS."
+  }
+];
 ---
 <BlogLayout
-  title="Benchmarking HTTP vs UDP Overlay for Agent Communication"
-  description="Performance comparison: latency, throughput, and connection overhead between traditional HTTP and Pilot Protocol's UDP overlay."
+  title="HTTP vs UDP Overlay Networks for AI Agents: Benchmarks for Latency, Throughput &amp; NAT"
+  description="Compare HTTP/2 vs UDP overlay networks for AI agent communication: real-world benchmarks for latency, throughput, memory, and NAT traversal performance."
   date="February 16, 2026"
   tags={["benchmark", "performance", "data"]}
   canonicalPath="/blog/benchmarking-http-vs-udp-overlay"
   bannerImage="/blog/banners/benchmarking-http-vs-udp-overlay.webp"
+  faqItems={faqItems}
 >
   <Fragment set:html={bodyContent} />
 </BlogLayout>
