@@ -1,7 +1,9 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p><a href="https://en.wikipedia.org/wiki/REST" target="_blank" rel="noopener">REST</a> APIs are fundamentally unidirectional. The client asks, the server responds. If the server has new information for the client, it cannot push it. The client must ask again. And again. Studies on real-world polling systems show that <strong>only 1.5% of HTTP polls find new data</strong>. The other 98.5% are wasted requests -- burning bandwidth, CPU cycles, and money to learn that nothing changed.</p>
+const bodyContent = `<p><strong>Persistent connections for AI agents</strong> eliminate the waste of REST polling and the complexity of WebSocket scaling. This article compares REST, WebSocket, gRPC streaming, MQTT, and persistent encrypted UDP tunnels — with code examples and a migration path that runs alongside your existing APIs.</p>
+
+  <p><a href="https://en.wikipedia.org/wiki/REST" target="_blank" rel="noopener">REST</a> APIs are fundamentally unidirectional. The client asks, the server responds. If the server has new information for the client, it cannot push it. The client must ask again. And again. Studies on real-world polling systems show that <strong>only 1.5% of HTTP polls find new data</strong>. The other 98.5% are wasted requests -- burning bandwidth, CPU cycles, and money to learn that nothing changed.</p>
 
   <p>For agents that need real-time coordination, REST polling is architectural debt. <a href="https://datatracker.ietf.org/doc/html/rfc6455" target="_blank" rel="noopener">WebSocket</a> is the common upgrade path, but it brings its own scaling nightmares. MQTT and <a href="https://grpc.io" target="_blank" rel="noopener">gRPC</a> streaming help in specific contexts but carry trade-offs that do not fit agent-to-agent communication. This article examines what agents actually need from a connection model, why existing options fall short, and how persistent overlay connections solve the problems without the operational pain.</p>
 
@@ -21,7 +23,7 @@ while True:
 
   <p>You can reduce polling frequency, but that increases latency. Poll every 10 seconds and you save 90% of requests but add up to 10 seconds of delay before Agent B notices a new task. For real-time agent coordination -- where agents negotiate, delegate, and react in sub-second timeframes -- this is unacceptable.</p>
 
-  <p>The fundamental problem: REST is a request-response protocol. Agent communication is a conversation. Conversations require both parties to speak when they have something to say, not only when asked.</p>
+  <p>The fundamental problem: REST is a request-response protocol. Agent communication is a conversation. Conversations require both parties to speak when they have something to say, not only when asked. See <a href="/blog/replace-webhooks-with-persistent-agent-tunnels">Replace Webhooks With Persistent Agent Tunnels</a> for how this model eliminates silent failures and public-URL dependencies.</p>
   </section>
 
   <section>
@@ -173,7 +175,7 @@ while True:
     </tr>
   </table>
 
-  <p>The key differentiator is the combination. Many protocols are bidirectional (WebSocket, gRPC). Some are persistent (MQTT). None of the standard options traverse NAT without additional infrastructure. Pilot combines all five properties -- bidirectional, persistent, NAT-traversing, encrypted, and lightweight -- in a single connection primitive.</p>
+  <p>The key differentiator is the combination. Many protocols are bidirectional (WebSocket, gRPC). Some are persistent (MQTT). None of the standard options traverse NAT without additional infrastructure. Pilot combines all five properties -- bidirectional, persistent, NAT-traversing, encrypted, and lightweight -- in a single connection primitive. For a broader comparison across five agent communication protocols, see our <a href="/blog/direct-communication-protocols-ai-agents-guide">AI agent communication protocols guide</a>.</p>
   </section>
 
   <section>
@@ -321,14 +323,37 @@ func runAgentB() {
     <p>Replace polling loops with persistent bidirectional connections. No broker, no WebSocket server, no reconnection logic to maintain.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
+const faqItems = [
+  {
+    question: "Why is REST polling bad for AI agents?",
+    answer: "REST polling wastes resources: only 1.5% of HTTP polls return new data, meaning 98.5% are wasted requests that burn bandwidth and CPU. Polling also introduces latency — poll every second to catch updates quickly and you make thousands of wasteful requests; poll every 10 seconds and you add up to 10 seconds of delay. For agent coordination where sub-second response times matter, polling is architectural debt."
+  },
+  {
+    question: "What are the alternatives to WebSocket for AI agent communication?",
+    answer: "The main alternatives are: gRPC streaming (bidirectional but requires public endpoints and TLS), MQTT (good pub/sub but needs a broker), and persistent encrypted UDP tunnels like Pilot Protocol (bidirectional, NAT-traversing, auto-reconnecting, no broker). Each trades off complexity, infrastructure requirements, and NAT traversal. See our <a href=\"/blog/direct-communication-protocols-ai-agents-guide\">direct communication protocols guide</a> for a full comparison."
+  },
+  {
+    question: "Does Pilot Protocol support bidirectional agent communication?",
+    answer: "Yes. Pilot connections are peer-to-peer and bidirectional by default. Once a tunnel is established, either side can send messages at any time — there is no client or server role. Messages flow over a single encrypted UDP tunnel that handles persistence, reconnection, and NAT traversal automatically."
+  },
+  {
+    question: "How do you migrate from REST polling to persistent tunnels?",
+    answer: "The migration runs alongside your existing REST API. Install the Pilot daemon on your agents, keep your HTTP servers running, and selectively replace polling loops with event subscriptions. Start with one polling loop, replace it with a persistent subscription, measure improvement, then migrate the next pattern. No all-or-nothing cutover is needed."
+  },
+  {
+    question: "What are the memory costs of persistent agent connections at scale?",
+    answer: "Each TCP-based connection (WebSocket, gRPC) requires a separate socket and TLS session, consuming roughly 8 KB per connection plus server-side overhead. A UDP overlay like Pilot shares a single encrypted tunnel across all peers, adding only ~2 KB per peer for connection state. At 100 peers, that difference matters — see our <a href=\"/blog/benchmarking-http-vs-udp-overlay\">full benchmarking comparison</a>."
+  }
+];
 ---
 <BlogLayout
-  title="Beyond REST: Persistent Connections for AI Agents"
-  description="REST is stateless and request/response; agents aren't. How persistent, bidirectional, encrypted channels replace polling and webhooks for AI agent communication — with examples."
+  title="Persistent Connections for AI Agents: REST Polling vs WebSocket vs Encrypted UDP Tunnels"
+  description="REST polling wastes 98% of requests. Compare REST, WebSocket, gRPC, and persistent UDP tunnels for AI agent communication — with code examples and a migration path."
   date="February 26, 2026"
   tags={["architecture", "real-time", "networking"]}
   canonicalPath="/blog/move-beyond-rest-persistent-connections-for-agents"
   bannerImage="/blog/banners/move-beyond-rest-persistent-connections-for-agents.webp"
+  faqItems={faqItems}
 >
   <Fragment set:html={bodyContent} />
 </BlogLayout>
