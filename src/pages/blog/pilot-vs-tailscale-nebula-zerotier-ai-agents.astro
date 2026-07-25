@@ -1,9 +1,9 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>If you are trying to connect a fleet of programs across machines, clouds, and home networks, you will quickly land on the same shortlist: <a href="https://tailscale.com" target="_blank" rel="noopener">Tailscale</a>, <a href="https://github.com/slackhq/nebula" target="_blank" rel="noopener">Nebula</a>, and <a href="https://www.zerotier.com" target="_blank" rel="noopener">ZeroTier</a>. They are the three most popular overlay networks, and all three are genuinely good at what they were built for: giving machines a flat, encrypted network regardless of where they physically sit.</p>
+const bodyContent = `<p>Trying to decide between Nebula and Tailscale for your infrastructure?</p>
 
-  <p>But "machines on a flat network" and "AI agents that find and trust each other" are different problems. This article compares the architecture of Tailscale, Nebula, and ZeroTier head to head, then explains where an agent-native overlay like Pilot Protocol fits — and, just as importantly, where it does not. The goal is an honest decision guide, not a teardown.</p>
+  <p><a href="https://tailscale.com" target="_blank" rel="noopener">Tailscale</a>, <a href="https://github.com/slackhq/nebula" target="_blank" rel="noopener">Nebula</a>, and <a href="https://www.zerotier.com" target="_blank" rel="noopener">ZeroTier</a> are the three most popular overlay networks, and all three are genuinely good at what they were built for: giving machines a flat, encrypted network regardless of where they physically sit. But "machines on a flat network" and "AI agents that find and trust each other" are different problems. This article compares the architecture of Tailscale, Nebula, and ZeroTier head to head, then explains where an agent-native overlay like Pilot Protocol fits — and, just as importantly, where it does not. The goal is an honest decision guide, not a teardown.</p>
 
   <section>
   <h2>The short answer</h2>
@@ -27,7 +27,7 @@ const bodyContent = `<p>If you are trying to connect a fleet of programs across 
       <tr><td>License</td><td>BSD client; SaaS control</td><td>MIT</td><td>BSL</td><td>AGPL-3.0, static Go binary</td></tr>
     </tbody>
   </table>
-  <p>Two things stand out. First, the crypto is broadly similar across all four — modern elliptic-curve key exchange with authenticated encryption — so "which is most secure" is rarely the deciding factor. Second, the real differences are in <em>identity, discovery, and what an endpoint represents</em>. That is where agent workloads diverge from device workloads.</p>
+  <p>Two things stand out. First, the crypto is broadly similar across all four — modern elliptic-curve key exchange with authenticated encryption — so "which is most secure" is rarely the deciding factor. Second, the real differences are in <em>identity, discovery, and what an endpoint represents</em>. That is where agent workloads diverge from device workloads. (If NAT is the bottleneck, read our guide to <a href="/blog/connect-ai-agents-behind-nat-without-vpn">connecting AI agents behind NAT without a VPN</a>.)</p>
   </section>
 
   <section>
@@ -69,7 +69,7 @@ const bodyContent = `<p>If you are trying to connect a fleet of programs across 
 
   <section>
   <h2>Where Pilot Protocol is different</h2>
-  <p>Pilot does not try to be a better VPN. It operates one layer up. The questions an agent actually asks are: <em>"What is my durable address? How do I discover an agent that can do X? How do I prove who I am and decide whether to trust this peer — per connection, not per network?"</em> A VPN answers none of these; it just delivers packets once you already know the IP.</p>
+  <p>Pilot does not try to be a better VPN. It operates one layer up. The questions an agent actually asks are: <em>"What is my durable address? How do I discover an agent that can do X? How do I prove who I am and decide whether to trust this peer — per connection, not per network?"</em> A VPN answers none of these; it just delivers packets once you already know the IP. (For a broader look at why agents need their own networking layer, see <a href="/blog/why-ai-agents-need-network-stack">why AI agents need their own network stack</a>.)</p>
   <ul>
     <li><strong>Agents, not hosts, are addressable.</strong> Every agent gets a permanent 48-bit virtual address that survives restarts, IP changes, and moving between clouds. You message an agent, not a machine.</li>
     <li><strong>Trust is per-peer, not per-network.</strong> Joining a Tailscale tailnet or a ZeroTier network ID means you are "in." Pilot uses an explicit handshake: two agents mutually approve a trust link before they exchange data, so membership and trust are decoupled.</li>
@@ -129,11 +129,19 @@ const faqItems = [
     question: "What is the best overlay network for agent-to-agent communication?",
     answer: "For machine-to-machine connectivity, Tailscale, Nebula, and ZeroTier are all strong choices. For agent-to-agent communication specifically — where agents discover, address, and trust each other directly — Pilot Protocol works at the application layer: permanent per-agent virtual addresses, a mutual trust handshake, and a discovery directory, over encrypted UDP with NAT traversal.",
   },
+  {
+    question: "How do MCP tunnels compare to VPNs for AI agents?",
+    answer: "MCP servers over VPN tunnels is a common pattern, but the tunnel only connects two machines at the IP layer — the MCP client still needs to know the server's address ahead of time. An agent-native overlay like Pilot Protocol gives each MCP server a permanent reachable address that survives restarts and network moves, and the rendezvous directory makes discovery automatic rather than requiring static configuration.",
+  },
+  {
+    question: "What is the difference between an overlay network and a VPN?",
+    answer: "A VPN (virtual private network) extends a private network across a public one — it gives a machine an IP on a LAN that isn't physically local. An overlay network is the broader category: any network built on top of another network. VPNs are one type of overlay, but overlays also include application-layer mesh networks, P2P tunnels, and agent-native fabrics. Tailscale, Nebula, and ZeroTier are all VPN-class overlays (they move IP/Ethernet packets). Pilot Protocol is a higher-level overlay: it gives agents addresses and trust relationships instead of machines and IPs.",
+  },
 ];
 ---
 <BlogLayout
-  title="Pilot vs Tailscale vs Nebula vs ZeroTier for AI Agents"
-  description="Nebula vs Tailscale compared, plus where Pilot Protocol fits for AI agents: architecture, identity, discovery, and trust."
+  title="Nebula vs Tailscale vs ZeroTier: Overlay Network for AI Agents"
+  description="Compare Nebula, Tailscale, and ZeroTier head to head on architecture, identity, and trust — plus why agent-native networking changes the equation."
   date="June 28, 2026"
   tags={["comparison", "overlay-network", "vpn", "networking"]}
   canonicalPath="/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents"
