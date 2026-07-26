@@ -72,8 +72,32 @@ function escapeTemplateLiteral(html: string): string {
   return html.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
 }
 
-function escapeDoubleQuotes(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+/**
+ * Escape a plain-text value for use inside a double-quoted HTML attribute.
+ * Backslash escapes are not meaningful in attribute values, so character
+ * references are used instead. The Astro compiler decodes these back to the
+ * original text when it parses the attribute, so the value round-trips.
+ */
+function escapeHtmlAttribute(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Escape a value for use inside a double-quoted JavaScript string literal.
+ * Line terminators are escaped too, since an unescaped one would end the
+ * literal and produce an unparseable file.
+ */
+function escapeJsString(s: string): string {
+  return s
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n');
 }
 
 /**
@@ -90,9 +114,9 @@ import BlogLayout from "../../layouts/BlogLayout.astro";
 const bodyContent = \`${escaped}\`;
 ---
 <BlogLayout
-  title="${escapeDoubleQuotes(post.title)}"
-  description="${escapeDoubleQuotes(post.description)}"
-  date="${escapeDoubleQuotes(post.date_full)}"
+  title="${escapeHtmlAttribute(post.title)}"
+  description="${escapeHtmlAttribute(post.description)}"
+  date="${escapeHtmlAttribute(post.date_full)}"
   tags={${JSON.stringify(post.tags)}}
   canonicalPath="/blog/${post.slug}"
   bannerImage="${banner}"
@@ -110,11 +134,11 @@ const bodyContent = \`${escaped}\`;
  */
 export function generateBlogPostEntry(post: PublishPayload, bannerExt = 'webp'): string {
   return `  {
-    slug: "${escapeDoubleQuotes(post.slug)}",
-    title: "${escapeDoubleQuotes(post.title)}",
-    description: "${escapeDoubleQuotes(post.description)}",
-    date: "${escapeDoubleQuotes(post.date)}",
-    category: "${escapeDoubleQuotes(post.category)}",
+    slug: "${escapeJsString(post.slug)}",
+    title: "${escapeJsString(post.title)}",
+    description: "${escapeJsString(post.description)}",
+    date: "${escapeJsString(post.date)}",
+    category: "${escapeJsString(post.category)}",
     tags: ${JSON.stringify(post.tags)},
     banner: "banners/${post.slug}.${bannerExt}",
   },`;
