@@ -145,10 +145,38 @@ describe('generateAstroFile', () => {
     expect(output).toContain('value: \\${injected}');
   });
 
-  it('escapes double quotes in title', () => {
+  it('escapes double quotes in title as character references', () => {
     const post = { ...validPayload, title: 'Post "With Quotes"' };
     const output = generateAstroFile(post);
-    expect(output).toContain('title="Post \\"With Quotes\\""');
+    expect(output).toContain('title="Post &quot;With Quotes&quot;"');
+    // No backslash escaping, which an HTML attribute would not decode
+    expect(output).not.toContain('\\"With Quotes');
+  });
+
+  it('escapes markup characters in title and description', () => {
+    const post = {
+      ...validPayload,
+      title: 'A & B <script> "q" \'a\'',
+      description: '5 > 3 & 2 < 4',
+    };
+    const output = generateAstroFile(post);
+    expect(output).toContain('title="A &amp; B &lt;script&gt; &quot;q&quot; &#39;a&#39;"');
+    expect(output).toContain('description="5 &gt; 3 &amp; 2 &lt; 4"');
+  });
+
+  it('leaves the attribute delimiters balanced for a quoted title', () => {
+    const post = { ...validPayload, title: 'Quote " then more' };
+    const output = generateAstroFile(post);
+    const line = output.split('\n').find((l) => l.trim().startsWith('title='))!;
+    // Exactly the opening and closing delimiter, no stray quote in between
+    expect(line.match(/"/g)).toHaveLength(2);
+  });
+
+  it('escapes the ampersand of an existing character reference', () => {
+    // Plain text in, so the value round-trips through the Astro parser
+    const post = { ...validPayload, title: 'AT&amp;T' };
+    const output = generateAstroFile(post);
+    expect(output).toContain('title="AT&amp;amp;T"');
   });
 });
 
@@ -161,6 +189,25 @@ describe('generateBlogPostEntry', () => {
     expect(entry).toContain('category: "Tutorial"');
     expect(entry).toContain('tags: ["test","demo"]');
     expect(entry).toContain('banner: "banners/my-test-post.webp"');
+  });
+
+  it('escapes double quotes for the JS string context', () => {
+    const post = { ...validPayload, title: 'Post "With Quotes"' };
+    const entry = generateBlogPostEntry(post);
+    expect(entry).toContain('title: "Post \\"With Quotes\\""');
+  });
+
+  it('escapes newlines so the literal stays on one line', () => {
+    const post = { ...validPayload, description: 'line one\nline two' };
+    const entry = generateBlogPostEntry(post);
+    expect(entry).toContain('description: "line one\\nline two"');
+  });
+
+  it('produces a literal that parses back to the original text', () => {
+    const post = { ...validPayload, title: 'Back\\slash and "quote"' };
+    const entry = generateBlogPostEntry(post);
+    const literal = entry.match(/title: (".*?[^\\]"),/)![1];
+    expect(JSON.parse(literal)).toBe(post.title);
   });
 });
 
