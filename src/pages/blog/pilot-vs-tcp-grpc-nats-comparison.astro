@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>You are building an agent network. Your agents need to discover each other, exchange structured data, stream events, and do all of this across NAT boundaries and corporate firewalls. The question is not whether you need a networking stack -- you do. The question is <strong>which one</strong>.</p>
+const bodyContent = `<p>Which protocol should you use for agent-to-agent messaging -- NATS, gRPC, raw TCP, or Pilot Protocol? Each solves a different part of the networking problem, and the wrong choice adds infrastructure you do not need or leaves you without NAT traversal when you need it most. This post compares all four on latency, throughput, features, and real-world connectivity so you can pick the right one for your agent architecture.</p>
 
   <p>There are four serious contenders: raw TCP sockets, gRPC, NATS, and Pilot Protocol. Each was designed for a different era and a different set of constraints. This post puts them side by side with honest numbers, honest tradeoffs, and a clear recommendation for when each one is the right tool.</p>
 
@@ -289,7 +289,7 @@ conn, err := grpc.Dial("agent-b.example.com:443",
 client := pb.NewAgentServiceClient(conn)
 resp, err := client.SubmitTask(ctx, &pb.TaskRequest{...})</code></pre>
 
-  <p><strong>Best for:</strong> Structured microservice architectures where agents expose well-defined APIs, schema evolution matters, and you have control over the deployment environment. Kubernetes-native agent platforms, cloud-hosted agent fleets with load balancers.</p>
+  <p><strong>Best for:</strong> Structured microservice architectures where agents expose well-defined APIs, schema evolution matters, and you have control over the deployment environment. Kubernetes-native agent platforms, cloud-hosted agent fleets with load balancers. For agents using MCP servers over gRPC, see <a href=\"/blog/mcp-plus-pilot-tools-and-network\">MCP + Pilot: Tools and a Network</a>.</p>
   </section>
 
   <section>
@@ -375,6 +375,8 @@ conn.Write(taskPayload)</code></pre>
     <li><strong>Pilot Protocol</strong> gives you P2P connectivity, encryption, and NAT traversal at the cost of lower raw throughput and a younger ecosystem.</li>
   </ul>
 
+  <p>For a deeper look at how persistent tunnels differ from request-response patterns for agent messaging, see <a href="/blog/move-beyond-rest-persistent-connections-for-agents">Beyond REST: Persistent Connections for AI Agents</a>.</p>
+
   <p>For agent networks that span organizational boundaries, cross NAT barriers, and require cryptographic trust -- the use case Pilot was designed for -- no other protocol in this comparison provides a complete solution without additional infrastructure.</p>
   </section>
 
@@ -385,12 +387,19 @@ conn.Write(taskPayload)</code></pre>
   </div>`;
 ---
 <BlogLayout
-  title="Pilot Protocol vs TCP vs gRPC vs NATS"
-  description="Technical comparison: when to use Pilot Protocol over traditional networking. Latency, features, and use case fit."
+  title="NATS vs gRPC vs TCP vs Pilot Protocol: Agent Messaging Compared"
+  description="Comparing NATS, gRPC, TCP, and Pilot Protocol for agent messaging. See real benchmarks on latency, throughput, and which protocol fits your architecture."
   date="February 11, 2026"
   tags={["comparison", "grpc", "nats"]}
   canonicalPath="/blog/pilot-vs-tcp-grpc-nats-comparison"
   bannerImage="/blog/banners/pilot-vs-tcp-grpc-nats-comparison.webp"
+  faqItems={[
+    {question: "Is NATS or gRPC better for agent communication?", answer: "NATS excels at publish/subscribe patterns where agents produce and consume event streams through a centralized broker. gRPC is better for structured request/reply APIs with schema enforcement via Protocol Buffers. Neither handles NAT traversal natively — agents must reach the NATS broker or gRPC server from addressable endpoints."},
+    {question: "Does gRPC work over UDP?", answer: "gRPC runs over HTTP/2, which runs over TCP. gRPC does not natively support UDP transport. Alternatives for UDP-based agent communication include Pilot Protocol's overlay network or raw UDP sockets with your own reliability layer built on top."},
+    {question: "What is the best protocol for agent-to-agent messaging behind NAT?", answer: "Pilot Protocol and NATS are the only protocols in this comparison that work behind NAT without additional infrastructure. NATS requires agents to connect outbound to a central broker. Pilot Protocol uses UDP hole-punching to establish direct peer-to-peer connections, with relay fallback for symmetric NATs where hole-punching is not possible."},
+    {question: "Can you use gRPC and NATS together?", answer: "Yes. Some architectures use NATS for event streaming and gRPC for request/reply RPCs. Both can run alongside each other, though each requires its own infrastructure cluster and neither provides built-in NAT traversal between agents on different networks."},
+    {question: "How does Pilot Protocol compare to TCP for agent networking?", answer: "TCP provides higher raw throughput thanks to kernel-level optimizations, but lacks encryption, NAT traversal, and peer discovery out of the box. Pilot Protocol provides end-to-end encryption, NAT traversal, virtual addressing, and a cryptographic trust model. For typical agent payloads, both are dominated by network round-trip time rather than protocol overhead."}
+  ]}
 >
   <Fragment set:html={bodyContent} />
 </BlogLayout>
