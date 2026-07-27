@@ -31,9 +31,9 @@ function fmtCompact(n: number): string {
 
 export async function getLiveStats(): Promise<LiveStats> {
   const stats: LiveStats = {
-    liveAgents: '~35,000',
-    liveAgentsExact: '34,812',
-    liveAgentsOnline: '~200',
+    liveAgents: '~240,000',
+    liveAgentsExact: '240,000',
+    liveAgentsOnline: '~430',
     liveRequests: '~5B',
     liveRps: '20,000',
     liveRequestsPerHour: fmtCompact(20_000 * 3600),
