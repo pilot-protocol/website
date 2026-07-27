@@ -52,12 +52,6 @@ jobs:
             fi
           fi
 
-      - name: Warn when the Pages fallback copy has drifted
-        run: |
-          if ! diff -q canonical-install.sh public/install.sh >/dev/null; then
-            echo "::warning::public/install.sh differs from pilot-protocol/release:install.sh — the live copy (R2) follows the release repo; update public/install.sh to match"
-          fi
-
       - name: Upload to R2 (served by the pilot-release Worker)
         env:
           # CLOUDFLARE_API_TOKEN (Pages-scoped) returned 403 code 10000 on the
@@ -78,3 +72,21 @@ jobs:
           curl -fsSL -H 'Cache-Control: no-cache' "https://pilotprotocol.network/install.sh" -o live-install.sh
           diff canonical-install.sh live-install.sh
           echo "live install.sh matches canonical"
+
+      # Runs LAST, and only after R2 already has the canonical script, so a
+      # drifted fallback can never block the fast path that pushes a security
+      # fix to the live URL. Previously this was a `::warning::` that nobody
+      # read: public/install.sh sat 3 days / 12KB behind the canonical script
+      # and still shipped the `pilotctl gateway` bug plus the two defects fixed
+      # in release@c8fcaa9 (PATH invisible to non-interactive shells, and a
+      # post-install guide telling users to run `jq`, which is not installed).
+      # The Pages copy is the documented fallback served if the Worker/R2 path
+      # fails, so stale here means broken installs on exactly the day the
+      # primary path is already having a bad time. Fail loudly instead.
+      - name: Fail when the Pages fallback copy has drifted
+        run: |
+          if ! diff -u canonical-install.sh public/install.sh; then
+            echo "::error::public/install.sh has drifted from pilot-protocol/release:install.sh. R2 (the live path) was already updated above, so users are fine — but the Pages fallback is stale. Fix: cp the canonical script over public/install.sh and open a PR."
+            exit 1
+          fi
+          echo "Pages fallback copy is byte-identical to canonical"
