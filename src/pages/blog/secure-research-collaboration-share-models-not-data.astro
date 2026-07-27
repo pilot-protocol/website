@@ -1,7 +1,9 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>A medical researcher at University A has a model that detects early-stage lung cancer from CT scans. The model is good, but it was trained on 5,000 images from a single hospital. University B, across the country, has 8,000 additional scans that could significantly improve the model's accuracy. The researcher at University A cannot access University B's data. HIPAA prohibits it. The institutional review board at University B would not approve it. The IT security team at University A cannot whitelist another institution's network. And even if all of those barriers were overcome, the data transfer itself would need to be encrypted, logged, and auditable.</p>
+const bodyContent = `<p><strong>Secure research collaboration across institutions</strong> means sharing ML models — not raw data — while meeting HIPAA, GDPR, and institutional compliance requirements. Pilot Protocol makes this possible by establishing encrypted tunnels between research labs in minutes, with no VPN approval process.</p>
+
+  <p>A medical researcher at University A has a model that detects early-stage lung cancer from CT scans. The model is good, but it was trained on 5,000 images from a single hospital. University B, across the country, has 8,000 additional scans that could significantly improve the model's accuracy. The researcher at University A cannot access University B's data. HIPAA prohibits it. The institutional review board at University B would not approve it. The IT security team at University A cannot whitelist another institution's network. And even if all of those barriers were overcome, the data transfer itself would need to be encrypted, logged, and auditable.</p>
 
   <p>This is the research collaboration paradox: the most valuable scientific progress requires combining data across institutions, and the regulations designed to protect patients, subjects, and institutions make that combination extraordinarily difficult. The researchers know exactly how to improve the model. The legal, compliance, and technical barriers prevent them from doing it.</p>
 
@@ -295,13 +297,21 @@ const faqItems = [
   },
   {
     question: "Does Pilot Protocol support unsupervised, many-to-many agent collaboration, not just pre-arranged institutional pairs?",
-    answer: "The trust model scales to any number of agents: each pair establishes its own explicit, mutually-approved handshake, independent of every other relationship on the network. The published social-structures research examines exactly this scenario -- agents joining and forming trust relationships without a researcher directing who connects to whom -- at the level of trust-graph metadata.",
+    answer: "The trust model scales to any number of agents: each pair establishes its own explicit, mutually-approved handshake, independent of every other relationship on the network. The published social-structures research examines exactly this scenario — agents joining and forming trust relationships without a researcher directing who connects to whom — at the level of trust-graph metadata.",
+  },
+  {
+    question: "How can researchers share ML models across institutions without sharing the underlying data?",
+    answer: "Pilot Protocol provides the encrypted transport layer for model weight and gradient exchange, while the data stays at each institution. Each lab runs a Pilot daemon, establishes a mutual trust handshake with partner nodes, and exchanges model weight files over AES-256-GCM encrypted tunnels. The network infrastructure never sees the model weights — only encrypted bytes. This makes it possible to use federated learning frameworks (Flower, PySyft, NVIDIA FLARE) across institutions without moving raw data.",
+  },
+  {
+    question: "Does Pilot Protocol satisfy HIPAA and GDPR requirements for cross-institutional research?",
+    answer: "Pilot provides end-to-end encryption (X25519 + AES-256-GCM), mutual authentication via Ed25519 signatures, purpose-limited trust handshakes with signed justifications, instant trust revocation, and zero third-party data processing — all technical controls that support HIPAA Security Rule and GDPR compliance. However, full compliance requires institutional review, data governance policies, and a risk assessment. Pilot handles the transport layer; your institution handles the compliance process.",
   },
 ];
 ---
 <BlogLayout
-  title="Secure Research Collaboration: Share Models, Not Data"
-  description="Collaborate on AI research without sharing raw data. Exchange model weights and gradients over encrypted Pilot tunnels."
+  title="Secure Research Collaboration: Share AI Models Across Institutions Without Sharing Data"
+  description="Share ML models across institutions without moving data. Encrypted tunnels connect research labs behind any firewall in minutes — no VPN approval needed."
   date="February 23, 2026"
   tags={["research", "privacy", "federated-learning"]}
   canonicalPath="/blog/secure-research-collaboration-share-models-not-data"
