@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>The AI agent ecosystem is building application-layer protocols on top of a network layer that was never designed for agent communication. Google's <a href="https://a2a-protocol.org/" target="_blank" rel="noopener">A2A</a> defines how agents exchange tasks over HTTP. Anthropic's <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">MCP</a> defines how agents access tools via <a href="https://www.jsonrpc.org" target="_blank" rel="noopener">JSON-RPC</a>. LangChain, <a href="https://www.crewai.com" target="_blank" rel="noopener">CrewAI</a>, AutoGen -- they all assume the network problem is already solved.</p>
+const bodyContent = `<p>AI agents need their own network stack because HTTP was designed for browsers and servers, not for autonomous agents that communicate peer-to-peer. The current ecosystem builds application-layer protocols on top of a network layer that was never designed for agent communication. Google's <a href="https://a2a-protocol.org/" target="_blank" rel="noopener">A2A</a> defines how agents exchange tasks over HTTP. Anthropic's <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">MCP</a> defines how agents access tools via <a href="https://www.jsonrpc.org" target="_blank" rel="noopener">JSON-RPC</a>. LangChain, <a href="https://www.crewai.com" target="_blank" rel="noopener">CrewAI</a>, AutoGen -- they all assume the network problem is already solved.</p>
 
   <p>It is not.</p>
 
@@ -143,12 +143,19 @@ const bodyContent = `<p>The AI agent ecosystem is building application-layer pro
   </div>`;
 ---
 <BlogLayout
-  title="Why AI Agents Need Their Own Network Stack"
-  description="HTTP was built for browsers, not agents. Why AI agents need permanent addresses, peer-to-peer tunnels, and built-in trust instead of request/response APIs — explained with examples."
+  title="AI Agents Need a Network Stack: Why HTTP Isn't Enough for Agent Communication"
+  description="AI agents need more than HTTP. Learn why permanent addresses, encrypted tunnels, and built-in trust replace request/response APIs for real multi-agent systems."
   date="February 17, 2026"
   tags={["analysis", "opinion", "ai-agents"]}
   canonicalPath="/blog/why-ai-agents-need-network-stack"
   bannerImage="/blog/banners/why-ai-agents-need-network-stack.webp"
+  faqItems={[
+    { question: "What is an agent network stack?", answer: "An agent network stack is a dedicated networking layer that handles addressing, reachability, encryption, and trust for AI agents. Unlike HTTP, which was designed for browser-server communication, an agent network stack gives each agent a permanent virtual address, automatic NAT traversal, encrypted peer-to-peer tunnels, and built-in cryptographic identity — so agents can communicate directly regardless of where they are deployed." },
+    { question: "Why can't AI agents just use HTTP for communication?", answer: "HTTP assumes publicly reachable servers. But 88% of networks involve NAT, making agents behind home routers or corporate firewalls invisible to HTTP-based protocols like A2A and MCP. HTTP also requires one TCP+TLS connection per agent pair, which grows quadratically — 100 agents need 4,950 connections. And HTTP's request-response model forces agents to re-transmit context on every call, creating a token tax that can reach 15x overhead." },
+    { question: "How does NAT affect AI agent communication?", answer: "NAT (Network Address Translation) makes agents behind firewalls and routers invisible to incoming connections. An agent behind a home router cannot receive A2A task delegations or MCP tool requests because there is no publicly reachable HTTP endpoint. Standard workarounds like reverse proxies, ngrok, or Cloudflare Tunnels add complexity and cost. A network stack with built-in NAT traversal solves this automatically through STUN, hole-punching, and relay fallback." },
+    { question: "What problems does a network stack solve for multi-agent systems?", answer: "A network stack solves five problems simultaneously: <strong>permanent addresses</strong> that survive IP changes, <strong>NAT traversal</strong> so agents behind firewalls are reachable, <strong>tunnel encryption</strong> without certificate management, <strong>cryptographic trust</strong> where agents are invisible by default and require mutual approval, and <strong>port-based services</strong> that replace custom message-passing code with well-known service ports." },
+    { question: "How do permanent addresses help AI agents?", answer: "Every agent gets a 48-bit virtual address that never changes — even when the agent moves between machines, changes cloud providers, or reconnects after a restart. Other agents always reach it at the same address. This makes long-running multi-agent systems practical because agents can cache addresses, maintain persistent connections, and route messages without re-discovery on every interaction." }
+  ]}
 >
   <Fragment set:html={bodyContent} />
 </BlogLayout>
