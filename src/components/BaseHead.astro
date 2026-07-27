@@ -16,6 +16,12 @@ const {
   ogImage = 'https://pilotprotocol.network/img/pilot.png',
   ogType = 'website',
 } = Astro.props;
+
+// X (Twitter) Ads universal website tag. Overridable at build time via
+// PUBLIC_TWITTER_PIXEL_ID; set to an empty string to ship without the pixel.
+const TWITTER_PIXEL_ID =
+  (import.meta as { env?: Record<string, string | undefined> }).env
+    ?.PUBLIC_TWITTER_PIXEL_ID ?? 're3tv';
 ---
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -223,6 +229,36 @@ const {
       });
     }
     // If consent === 'rejected', never load GA4.
+  })();
+</script>
+
+<!-- X (Twitter) Ads universal website tag — conversion tracking for our X ad
+     campaigns. Same consent gate as GA4 above: loads only after the visitor
+     accepts cookies, never on reject. Disclosed in /cookies and /privacy. -->
+<script is:inline define:vars={{ twitterPixelId: TWITTER_PIXEL_ID }}>
+  (function() {
+    var KEY = 'pilot_consent';
+    function getConsent() {
+      try { return localStorage.getItem(KEY); } catch { return null; }
+    }
+    function loadTwitterPixel() {
+      if (!twitterPixelId || window.twq) return;
+      !function(e,t,n,s,u,a){e.twq||(s=e.twq=function(){s.exe?s.exe.apply(s,arguments):s.queue.push(arguments);
+      },s.version='1.1',s.queue=[],u=t.createElement(n),u.async=!0,u.src='https://static.ads-twitter.com/uwt.js',
+      a=t.getElementsByTagName(n)[0],a.parentNode.insertBefore(u,a))}(window,document,'script');
+      window.twq('config', twitterPixelId);
+    }
+
+    var consent = getConsent();
+    if (consent === 'accepted') {
+      loadTwitterPixel();
+    } else if (!consent) {
+      // No choice made yet — listen for the consent event
+      window.addEventListener('pilot-consent-change', function(e) {
+        if (e.detail === 'accepted') loadTwitterPixel();
+      });
+    }
+    // If consent === 'rejected', never load the X pixel.
   })();
 </script>
 <script>

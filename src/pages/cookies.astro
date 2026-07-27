@@ -5,7 +5,7 @@ import Footer from '../components/Footer.astro';
 import '../styles/system.css';
 
 const title = "Cookie Policy — Pilot Protocol";
-const description = "How Pilot Protocol uses cookies and similar technologies. Transparent inventory of the cookies, localStorage entries, and analytics tools we use.";
+const description = "How Pilot Protocol uses cookies and similar technologies. Transparent inventory of the cookies, localStorage entries, and the analytics and advertising tools we use.";
 const canonicalUrl = "https://pilotprotocol.network/cookies";
 ---
 <!DOCTYPE html>
@@ -100,8 +100,23 @@ const canonicalUrl = "https://pilotprotocol.network/cookies";
         <td>Persistent (until cleared)</td>
         <td>Analytics</td>
       </tr>
+      <tr>
+        <td><code>_twclid</code></td>
+        <td>X Corp. (first-party, set by the X pixel)</td>
+        <td>Stores the X click identifier (<code>twclid</code>) so a later action on our site can be attributed to the X ad you clicked. Set only after you accept cookies, and only if you arrived from an X ad carrying that parameter.</td>
+        <td>Up to 30 days</td>
+        <td>Advertising</td>
+      </tr>
+      <tr>
+        <td><code>personalization_id</code>, <code>muc_ads</code>, <code>guest_id</code></td>
+        <td>X Corp. (third-party, on <code>.x.com</code> / <code>.twitter.com</code> / <code>.t.co</code>)</td>
+        <td>Set by X itself when the pixel loads, to recognise your browser for ad measurement and ad personalisation — including across other sites that run X's tag. Set only after you accept cookies. Browsers that block third-party cookies may prevent some or all of these.</td>
+        <td>Up to 2 years</td>
+        <td>Advertising</td>
+      </tr>
     </tbody>
   </table>
+  <p style="font-size:14px;color:var(--ink-dim);">The X cookies above are set by X Corp., not by us, and the exact names and lifetimes are X's to change. We list what X currently documents; treat it as indicative rather than exhaustive.</p>
 
   <h2>Cookieless Analytics</h2>
   <p>In addition to the cookies above, we use <strong>Cloudflare Web Analytics</strong>, which is entirely cookieless. It sets no cookies or localStorage and does no client-side fingerprinting or persistent tracking; it reports only aggregated page-view and performance metrics. (As with any web request, the analytics beacon transmits your IP and user-agent to Cloudflare; see Cloudflare's privacy documentation for how they handle it.)</p>
@@ -109,10 +124,10 @@ const canonicalUrl = "https://pilotprotocol.network/cookies";
   <h2>Consent Model</h2>
   <p>When you first visit pilotprotocol.network, a consent banner appears offering two options:</p>
   <ul>
-    <li><strong>Accept</strong> — Enables Google Analytics 4 cookies (<code>_ga</code>, <code>_ga_EEWEKT0GW5</code>) and PostHog product analytics (heatmaps and session replay, inputs masked — see below). Your preference is stored in the <code>pilot_consent</code> localStorage entry.</li>
-    <li><strong>Reject</strong> — No analytics cookies are set and PostHog is never loaded. If Cloudflare bot management is active, its strictly-necessary <code>__cf_bm</code> cookie may still be set. Your preference is stored in <code>pilot_consent</code>.</li>
+    <li><strong>Accept</strong> — Enables Google Analytics 4 cookies (<code>_ga</code>, <code>_ga_EEWEKT0GW5</code>), PostHog product analytics (heatmaps and session replay, inputs masked — see below), and the X (Twitter) advertising pixel (see below). Your preference is stored in the <code>pilot_consent</code> localStorage entry.</li>
+    <li><strong>Reject</strong> — No analytics or advertising cookies are set; PostHog and the X pixel are never loaded. If Cloudflare bot management is active, its strictly-necessary <code>__cf_bm</code> cookie may still be set. Your preference is stored in <code>pilot_consent</code>.</li>
   </ul>
-  <p>The banner does not use a "nag wall" — you can browse the site without interacting with it. If you do not make a choice, no analytics cookies are set (implied rejection).</p>
+  <p>The banner does not use a "nag wall" — you can browse the site without interacting with it. If you do not make a choice, no analytics or advertising cookies are set (implied rejection).</p>
 
   <h2>How to Change Your Preference</h2>
   <p>You can change your consent at any time:</p>
@@ -130,6 +145,18 @@ const canonicalUrl = "https://pilotprotocol.network/cookies";
     <li><strong>Inputs masked in session replay.</strong> Every form input is masked before it leaves your browser, so typed values (including anything you enter on the Publish page) are never recorded. Elements marked <code>data-private</code> have their text masked as well.</li>
     <li><strong>localStorage, not cookies.</strong> PostHog stores its device identifier in localStorage (see the inventory above), not in a cookie.</li>
     <li><strong>Withdrawable.</strong> Reopening the banner via "Cookie Preferences" and choosing Reject stops further collection; clearing your browser's localStorage for this site removes the identifier.</li>
+  </ul>
+
+  <h2>Advertising &amp; Conversion Tracking (X / Twitter)</h2>
+  <p>We advertise Pilot Protocol on <strong>X</strong> (formerly Twitter). To measure whether those ads work, we run X's <strong>universal website tag</strong> (pixel ID <code>re3tv</code>), a script loaded from <code>static.ads-twitter.com/uwt.js</code> and operated by <strong>X Corp.</strong>, a third party. This is the first <em>advertising</em> technology on the site — the other tools listed above are analytics only, and this one is different in kind, so it is worth stating plainly.</p>
+  <p>What it does and what X receives:</p>
+  <ul>
+    <li><strong>Consent-gated.</strong> The tag is loaded <strong>only after you accept cookies</strong>. If you reject, or never answer the banner, it is never loaded, it contacts X not at all, and none of the X cookies above are set.</li>
+    <li><strong>What it sends.</strong> Once loaded, it reports page views to X together with the data any web request carries — your IP address, user-agent, the page URL, the referring URL, and a timestamp — plus the cookie identifiers in the inventory above.</li>
+    <li><strong>What it's for.</strong> Attributing sign-ups and other actions on our site back to an X ad campaign, and letting us build audiences on X (for example, retargeting people who visited this site). X may also use the data for its own ad measurement and personalisation under its own terms.</li>
+    <li><strong>What we do not send.</strong> We do not pass X your name, email address, phone number, or any hashed identifier you have given us. We run only the base tag; we have not enabled X's server-side conversion API.</li>
+    <li><strong>Third-party control.</strong> Unlike our analytics, this data sits with X Corp. under X's own retention and processing rules — see the <a href="https://x.com/en/privacy" rel="noopener nofollow" target="_blank">X Privacy Policy</a>. X's own ad-personalisation controls are at <a href="https://x.com/settings/ads_preferences" rel="noopener nofollow" target="_blank">x.com/settings/ads_preferences</a>.</li>
+    <li><strong>Withdrawable.</strong> Reopening the banner via "Cookie Preferences" and choosing Reject stops the tag from loading on subsequent page views. Cookies X has already set are removed by clearing cookies in your browser, or blocked outright by browser settings and tracking protection.</li>
   </ul>
 
   <h2>Changes to This Policy</h2>
