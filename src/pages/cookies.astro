@@ -22,7 +22,7 @@ const canonicalUrl = "https://pilotprotocol.network/cookies";
 
   <h1>Cookie <em>Policy</em></h1>
   <p class="article-meta" style="display:flex;gap:14px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim);padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 0 36px;">
-    Effective: May 28, 2026 · Last updated: May 28, 2026
+    Effective: May 28, 2026 · Last updated: July 27, 2026
   </p>
 
   <p>This Cookie Policy explains what cookies and similar technologies Pilot Protocol ("we", "us") uses on <strong>pilotprotocol.network</strong>, why we use them, and how you can control them. It supplements our <a href="/privacy">Privacy Policy</a>.</p>
@@ -93,6 +93,13 @@ const canonicalUrl = "https://pilotprotocol.network/cookies";
         <td>2 years</td>
         <td>Analytics</td>
       </tr>
+      <tr>
+        <td><code>ph_&lt;project-key&gt;_posthog</code></td>
+        <td>PostHog (localStorage)</td>
+        <td>Product analytics: page views, clicks, heatmaps, and session replay. Written only after you accept cookies. Holds a randomly generated device identifier and session state. We run PostHog with person profiles disabled, so events are not tied to an identified user account.</td>
+        <td>Persistent (until cleared)</td>
+        <td>Analytics</td>
+      </tr>
     </tbody>
   </table>
 
@@ -102,8 +109,8 @@ const canonicalUrl = "https://pilotprotocol.network/cookies";
   <h2>Consent Model</h2>
   <p>When you first visit pilotprotocol.network, a consent banner appears offering two options:</p>
   <ul>
-    <li><strong>Accept</strong> — Enables Google Analytics 4 cookies (<code>_ga</code>, <code>_ga_EEWEKT0GW5</code>). Your preference is stored in the <code>pilot_consent</code> localStorage entry.</li>
-    <li><strong>Reject</strong> — No analytics cookies are set. If Cloudflare bot management is active, its strictly-necessary <code>__cf_bm</code> cookie may still be set. Your preference is stored in <code>pilot_consent</code>.</li>
+    <li><strong>Accept</strong> — Enables Google Analytics 4 cookies (<code>_ga</code>, <code>_ga_EEWEKT0GW5</code>) and PostHog product analytics (heatmaps and session replay, inputs masked — see below). Your preference is stored in the <code>pilot_consent</code> localStorage entry.</li>
+    <li><strong>Reject</strong> — No analytics cookies are set and PostHog is never loaded. If Cloudflare bot management is active, its strictly-necessary <code>__cf_bm</code> cookie may still be set. Your preference is stored in <code>pilot_consent</code>.</li>
   </ul>
   <p>The banner does not use a "nag wall" — you can browse the site without interacting with it. If you do not make a choice, no analytics cookies are set (implied rejection).</p>
 
@@ -115,8 +122,15 @@ const canonicalUrl = "https://pilotprotocol.network/cookies";
     <li><strong>Browser settings</strong> — Most browsers allow you to block or delete cookies globally. See your browser's help documentation for instructions.</li>
   </ol>
 
-  <h2>Third-Party Tools We've Disabled</h2>
-  <p>For transparency: our site includes a PostHog integration in the codebase, but it is <strong>currently disabled</strong>. No PostHog cookies, events, or analytics are active. If we enable PostHog in the future, we will update this policy, add it to the cookie inventory, and require fresh consent.</p>
+  <h2>Product Analytics (PostHog)</h2>
+  <p>We use <strong>PostHog</strong> for product analytics — page views, click and scroll behaviour, heatmaps, and session replay — so we can see which parts of the site are and aren't working. PostHog is loaded <strong>only after you accept cookies</strong>; if you reject or never answer the banner, it is never initialised and writes nothing to your browser.</p>
+  <p>How we've configured it:</p>
+  <ul>
+    <li><strong>No person profiles.</strong> Events are not attached to an identified user; we do not build a profile of you across visits.</li>
+    <li><strong>Inputs masked in session replay.</strong> Every form input is masked before it leaves your browser, so typed values (including anything you enter on the Publish page) are never recorded. Elements marked <code>data-private</code> have their text masked as well.</li>
+    <li><strong>localStorage, not cookies.</strong> PostHog stores its device identifier in localStorage (see the inventory above), not in a cookie.</li>
+    <li><strong>Withdrawable.</strong> Reopening the banner via "Cookie Preferences" and choosing Reject stops further collection; clearing your browser's localStorage for this site removes the identifier.</li>
+  </ul>
 
   <h2>Changes to This Policy</h2>
   <p>We will post changes to this page and update the "Last updated" date. If we add new cookies or substantially change how we use existing ones, we will re-prompt for consent where required by law.</p>

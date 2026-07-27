@@ -30,7 +30,27 @@ jobs:
         run: npm run check:plain
 
       - name: Build site
+        # PostHog (heatmaps + session recordings) is initialised in
+        # src/scripts/analytics.ts, but it early-returns unless
+        # PUBLIC_POSTHOG_KEY is present *at build time* — Astro inlines
+        # import.meta.env.PUBLIC_* into the client bundle. Without these the
+        # site ships GA4 only and PostHog is silently dead in production.
+        # Both are public-by-design project values (safe in the bundle); they
+        # live in repo secrets only so they are easy to rotate.
+        env:
+          PUBLIC_POSTHOG_KEY: ${{ secrets.PUBLIC_POSTHOG_KEY }}
+          PUBLIC_POSTHOG_HOST: ${{ secrets.PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com' }}
         run: npm run build
+
+      - name: Warn when PostHog is not configured
+        env:
+          PUBLIC_POSTHOG_KEY: ${{ secrets.PUBLIC_POSTHOG_KEY }}
+        run: |
+          if [ -z "$PUBLIC_POSTHOG_KEY" ]; then
+            echo "::warning::PUBLIC_POSTHOG_KEY is not set — this build ships GA4 only; PostHog heatmaps/session recordings are disabled."
+          else
+            echo "PostHog configured for this build."
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
