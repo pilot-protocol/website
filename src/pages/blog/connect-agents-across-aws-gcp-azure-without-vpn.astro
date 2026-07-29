@@ -1,7 +1,9 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>You have agents on <a href="https://aws.amazon.com" target="_blank" rel="noopener">AWS</a>. Your team in Europe runs agents on <a href="https://cloud.google.com" target="_blank" rel="noopener">GCP</a>. A partner organization uses <a href="https://azure.microsoft.com" target="_blank" rel="noopener">Azure</a>. You need them to communicate. The traditional answer is VPN: set up site-to-site tunnels between each cloud provider, configure routing tables, manage firewall rules, and hope the whole thing does not fall over when someone changes a security group.</p>
+const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to communicate with each other without setting up VPN tunnels between every cloud pair. The traditional approach — site-to-site VPNs between each provider — does not scale: the number of tunnels grows quadratically with the number of clouds, and each one requires per-provider networking expertise. Pilot Protocol solves this with an overlay network that gives every agent a permanent virtual address, automatic NAT traversal, and end-to-end encryption — all with no VPN configuration.</p>
+
+  <p>You have agents on <a href="https://aws.amazon.com" target="_blank" rel="noopener">AWS</a>. Your team in Europe runs agents on <a href="https://cloud.google.com" target="_blank" rel="noopener">GCP</a>. A partner organization uses <a href="https://azure.microsoft.com" target="_blank" rel="noopener">Azure</a>. You need them to communicate. The traditional answer is VPN: set up site-to-site tunnels between each cloud provider, configure routing tables, manage firewall rules, and hope the whole thing does not fall over when someone changes a security group.</p>
 
   <p>Multi-cloud networking is a hard problem. It is hard because each cloud provider designed its networking for a single-provider world. AWS VPCs, GCP VPC networks, and Azure VNets are all incompatible. Connecting them requires either cloud-provider interconnect products (AWS Transit Gateway, GCP Cloud Interconnect, Azure ExpressRoute) or VPN tunnels between gateways. Both options are expensive, complex, and scale poorly.</p>
 
@@ -175,7 +177,7 @@ const bodyContent = `<p>You have agents on <a href="https://aws.amazon.com" targ
     </tr>
   </table>
 
-  <p>Cloud NAT services (AWS NAT Gateway, GCP Cloud NAT, Azure NAT Gateway) typically implement Port-Restricted Cone or Symmetric NAT. Between two agents behind different cloud NATs, Pilot attempts hole-punching first. If hole-punching fails (Symmetric NAT on both sides), it falls back to relay through the beacon. The fallback is automatic -- your application code does not change.</p>
+  <p>Cloud NAT services (AWS NAT Gateway, GCP Cloud NAT, Azure NAT Gateway) typically implement Port-Restricted Cone or Symmetric NAT. Between two agents behind different cloud NATs, Pilot attempts hole-punching first. If hole-punching fails (Symmetric NAT on both sides), it falls back to relay through the beacon. The fallback is automatic -- your application code does not change. For a deeper look at how NAT traversal works across different network configurations, see <a href=\"https://pilotprotocol.network/blog/nat-traversal-ai-agents-deep-dive\">NAT traversal for AI agents: a technical deep dive</a>.</p>
 
   <pre><code><span class="comment"># Agent behind AWS NAT Gateway (no public IP)</span>
 <span class="cmd">pilotctl daemon start --email agent@company.com</span>
@@ -242,7 +244,7 @@ const bodyContent = `<p>You have agents on <a href="https://aws.amazon.com" targ
     </tr>
   </table>
 
-  <p>The key performance advantage is not per-packet overhead (which is similar across all three). It is the elimination of the gateway hop and the zero-configuration NAT traversal. With VPN, traffic routes through gateway VMs that become bottlenecks. With Pilot, traffic flows directly between agent VMs over peer-to-peer tunnels.</p>
+  <p>The key performance advantage is not per-packet overhead (which is similar across all three). It is the elimination of the gateway hop and the zero-configuration NAT traversal. With VPN, traffic routes through gateway VMs that become bottlenecks. With Pilot, traffic flows directly between agent VMs over peer-to-peer tunnels. See <a href=\"https://pilotprotocol.network/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents\">a detailed comparison of Pilot vs Tailscale vs Nebula vs ZeroTier</a> for more context on how these approaches differ for agent workloads.</p>
   </section>
 
   <section>
@@ -402,7 +404,7 @@ const bodyContent = `<p>You have agents on <a href="https://aws.amazon.com" targ
 
   <p>There are no VPN tunnels to add. No routing tables to update. No firewall rules to modify. No cloud-specific configuration. The agent joins the network, discovers peers, and establishes direct encrypted tunnels. Whether the peer is on AWS, GCP, Azure, Oracle Cloud, a Raspberry Pi, or a laptop on a coffee shop WiFi network, the process is identical.</p>
 
-  <p>This is what "cloud-agnostic" actually means for agent networking. Not "works on multiple clouds with per-cloud configuration" but "works on any network with the same two commands."</p>
+  <p>This is what "cloud-agnostic" actually means for agent networking. Not "works on multiple clouds with per-cloud configuration" but "works on any network with the same two commands." For scenarios that span not just clouds but organizations — such as <a href="https://pilotprotocol.network/blog/cross-company-agent-collaboration-without-shared-infrastructure">cross-company agent collaboration without shared infrastructure</a> — the same overlay model eliminates months of legal and security review cycles.</p>
   </section>
 
   <section>
@@ -428,14 +430,38 @@ const bodyContent = `<p>You have agents on <a href="https://aws.amazon.com" targ
     <p>Connect agents across any cloud with two commands per agent. No VPN tunnels, no cloud interconnect, no networking expertise required.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
+
+const faqItems = [
+  {
+    question: "How do I connect AI agents across AWS, GCP, and Azure without a VPN?",
+    answer: "Install Pilot Protocol on each agent with <code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code>, start the daemon with <code>pilotctl daemon start</code>, and agents discover each other automatically. No VPN tunnels, no cloud interconnect products, and no per-cloud networking configuration are needed. The overlay network handles addressing, NAT traversal, and encryption."
+  },
+  {
+    question: "What is NAT traversal and how does it work for multi-cloud agents?",
+    answer: "NAT traversal allows agents behind cloud NAT gateways (AWS NAT Gateway, GCP Cloud NAT, Azure NAT Gateway) to establish direct connections even though they lack public IPs. Pilot uses STUN discovery to determine each agent's NAT type, then selects the best strategy: direct connection, hole-punching, or relay fallback — all automatically."
+  },
+  {
+    question: "How does Pilot Protocol compare to VPNs for multi-cloud agent communication?",
+    answer: "VPNs require one tunnel per cloud pair (N*(N-1)/2 tunnels), static configuration, and network-level access control. Pilot uses permanent virtual addresses, per-agent Ed25519 identities, and explicit peer-to-peer trust handshakes — eliminating VPN gateway costs, configuration overhead, and all-or-nothing network access."
+  },
+  {
+    question: "Can I connect agents behind AWS NAT Gateway, GCP Cloud NAT, or Azure NAT Gateway?",
+    answer: "Yes. Pilot's NAT traversal handles all major cloud NAT implementations automatically. Agents behind cloud NAT services that use Port-Restricted Cone or Symmetric NAT get hole-punching or relay fallback with no configuration changes. The daemon determines the strategy automatically at connection time."
+  },
+  {
+    question: "How much does multi-cloud agent networking cost without VPN?",
+    answer: "Pilot Protocol is free and open source (AGPL-3.0). There are no VPN gateway hourly costs, no per-tunnel charges, and no per-user licensing fees. Your only infrastructure cost is the cloud egress for agent-to-agent traffic, which you pay regardless of the connectivity method."
+  }
+];
 ---
 <BlogLayout
-  title="Connect AI Agents Across AWS, GCP & Azure — No VPN"
-  description="One overlay network spanning every cloud. Connect AI agents across AWS, GCP, and Azure regardless of VPC, region, or provider — no VPN, no peering. A step-by-step guide."
+  title="Connect AI Agents Across AWS, GCP & Azure Without a VPN"
+  description="Deploy AI agents across AWS, GCP, and Azure without VPN tunnels. A step-by-step guide to multi-cloud agent networking with automatic NAT traversal."
   date="February 19, 2026"
   tags={["multi-cloud", "networking", "deployment"]}
   canonicalPath="/blog/connect-agents-across-aws-gcp-azure-without-vpn"
   bannerImage="/blog/banners/connect-agents-across-aws-gcp-azure-without-vpn.webp"
+  faqItems={faqItems}
 >
   <Fragment set:html={bodyContent} />
 </BlogLayout>
