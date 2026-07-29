@@ -663,16 +663,20 @@
   ],
   "io.pilot.agentphone": [
     {
+      "name": "agentphone.setup",
+      "summary": "START HERE (managed model). Idempotent: create your agent + attach a number (buying costs $3, gated by confirm_spend). Returns {ready, agent_id, number_id, phone_number}. Run before send/call.",
+      "example": "{\"confirm_spend\": true}",
+      "gated": null
+    },
+    {
+      "name": "agentphone.status",
+      "summary": "Are you ready to call/text? Free read: reports whether you own an agent with an attached number; if not, points you to agentphone.setup.",
+      "example": "{}",
+      "gated": null
+    },
+    {
       "name": "agentphone.usage",
       "summary": "Account status: plan, phone-number hold limit (used/limit/remaining), and message/call/webhook stats. Call this first to orient in a session. Read-only; no charge."
-    },
-    {
-      "name": "agentphone.usage_daily",
-      "summary": "Daily usage breakdown for the last N days (max 365). Read-only."
-    },
-    {
-      "name": "agentphone.usage_monthly",
-      "summary": "Monthly usage aggregation. Read-only."
     },
     {
       "name": "agentphone.usage_by_number",
@@ -688,7 +692,7 @@
     },
     {
       "name": "agentphone.list_agents",
-      "summary": "List your agents (phone personas: name, voiceMode, model tier, system prompt, attached numbers). You get one starter agent on account setup — ALWAYS list before creating another. Read-only."
+      "summary": "List the agents you own. Managed model: you start with NONE — run agentphone.setup first. You only ever see your own agents, never other users'."
     },
     {
       "name": "agentphone.create_agent",
