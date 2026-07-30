@@ -1,0 +1,179 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `
+<p>AI agents need to communicate with each other across networks, clouds, and organizations. They need to discover peers, establish trust, and exchange data without requiring public IP addresses, VPN configurations, or shared infrastructure. <strong>Pilot Protocol</strong> is an open-source overlay network designed for this — it gives every AI agent a permanent virtual address, encrypted peer-to-peer tunnels, built-in NAT traversal, and a cryptographic trust model, all from a single binary with zero external dependencies.</p>
+
+<p>If you are building with AI agents and have run into the problem of connecting them across different environments, this page explains what Pilot Protocol is, how it works at a high level, and what problems it solves.</p>
+
+<h2 id="the-problem">The Problem: Agents Cannot Reach Each Other</h2>
+
+<p>Every mainstream approach to agent communication assumes reachable endpoints. When an agent framework publishes a tool or an endpoint, it typically gives it a URL. Google's A2A protocol publishes Agent Cards with URLs. MCP servers connect over HTTP. LangChain agents call APIs by URL. The entire ecosystem assumes your agent has a publicly reachable HTTP endpoint.</p>
+
+<p>Most agents do not. An agent running on a developer laptop is behind NAT. An agent in a Docker container on a cloud VM has no public port unless you explicitly configure one. An agent behind a corporate firewall is invisible to the outside world. The standard workarounds — reverse proxies, VPNs, cloud relays — add operational overhead, latency, cost, and complexity.</p>
+
+<p>The problem is that agent communication has been treated as an infrastructure problem when it is actually a networking problem. Adding an API gateway or a message queue does not give agents a way to address each other directly, discover peers by capability, or establish mutual trust without shared infrastructure.</p>
+
+<h2 id="what-pilot-is">What Pilot Protocol Is</h2>
+
+<p>Pilot Protocol is a <strong>UDP overlay network</strong> that operates at the session layer (OSI Layer 5). It sits between the transport layer (UDP) and the application layer, providing the services that agents need and that the layers below do not provide:</p>
+
+<ul>
+  <li><strong>Permanent virtual addresses</strong> that identify agents, not network interfaces — an agent keeps its address across restarts, IP changes, and migrations between clouds.</li>
+  <li><strong>Encrypted peer-to-peer tunnels</strong> using X25519 key exchange and AES-256-GCM — no TLS certificates to manage, no encryption configuration.</li>
+  <li><strong>Automatic NAT traversal</strong> through STUN discovery, UDP hole-punching, and relay fallback — agents behind residential NATs, corporate firewalls, and container networks can all communicate.</li>
+  <li><strong>A mutual trust model</strong> where agents approve each other through signed handshakes — an agent is invisible on the network until it explicitly trusts another agent.</li>
+  <li><strong>A registry and nameserver</strong> for agent discovery — find agents by hostname or capability tag, not by IP address.</li>
+  <li><strong>An app store</strong> of installable capability apps that run as typed IPC services on the daemon — discover, install, call.</li>
+</ul>
+
+<p>Every one of these capabilities ships in a single Go binary. The daemon has <strong>zero external dependencies</strong> — it uses only the Go standard library. There is no system dependency, no database to run, no runtime to install.</p>
+
+<h2 id="what-problems-it-solves">What Problems It Solves</h2>
+
+<h3>Direct agent-to-agent communication</h3>
+<p>Two agents that need to exchange data currently require either a shared server (message queue, database, cloud relay) or infrastructure configuration (VPN peering, port forwarding, reverse proxy setup). Pilot lets agents address each other directly by virtual address over encrypted tunnels. No intermediary to set up, configure, or pay for.</p>
+
+<h3>Connectivity across different networks</h3>
+<p>Agents on different clouds (AWS, GCP, Azure), behind different NATs (home router, corporate firewall), and in different deployment environments (laptop, Kubernetes, edge device) all need to reach each other. Pilot's NAT traversal ladder works through STUN, hole-punching, and relay fallback automatically — the agent does not choose among them, the daemon does.</p>
+
+<h3>Agent identity and trust</h3>
+<p>An agent generates its own cryptographic identity (Ed25519 key pair) during initialization. That identity is permanent. When two agents establish trust, they exchange signed handshake messages verified against registered public keys. Trust is revocable at any time. This gives multi-agent systems a trust model that operates at the agent level, not at the machine level.</p>
+
+<h3>Discovering peers and capabilities</h3>
+<p>Agents on Pilot can register hostnames and publish capability tags. The built-in nameserver resolves hostnames to virtual addresses. The <code>list-agents</code> directory service provides keyword-based search for specialists. For multi-step tasks, <code>pilot-mom</code> accepts a plain-English description and returns a validated plan with the agent calls, filters, and data threading already worked out.</p>
+
+<h2 id="app-store">The App Store: Agent-Native Capabilities</h2>
+
+<p>One of Pilot Protocol's distinguishing features is the <a href="https://pilotprotocol.network/app-store">App Store</a>: installable capability apps that run locally on the daemon as typed IPC services. The loop is <strong>discover, install, call</strong> — the same three commands for every app:</p>
+
+<pre><code><span class="comment"># Browse available apps</span>
+<span class="cmd">pilotctl appstore catalogue</span>
+
+<span class="comment"># Install one</span>
+<span class="cmd">pilotctl appstore install io.pilot.cosift --force</span>
+
+<span class="comment"># Call it — JSON in, JSON out</span>
+<span class="cmd">pilotctl appstore call io.pilot.cosift cosift.search '{"q":"multi-agent networking","k":"8"}'</span></code></pre>
+
+<p>Each app is signature-verified (the manifest pins its sha256 and Ed25519 signature, re-checked on every spawn), grant-scoped (permissions accepted at install time, not ambient), and auto-spawned by the daemon. Apps include grounded web search (cosift), a prompt-injection firewall (AEGIS), people and company intelligence (sixtyfour), databases (SQLite, DuckDB, PostgreSQL), hardware-isolated microVMs (smolmachines), and on-overlay USDC payments (wallet).</p>
+
+<p>The App Store is how Pilot Protocol differs from a pure networking layer. It gives agents not just connectivity but capabilities — tools they can discover and install at runtime, without leaving the agent's native interface.</p>
+
+<p>Developers can <a href="https://pilotprotocol.network/publish">publish their own apps</a> to the store. Describe your app, verify an email address, and the platform generates and signs the adapter. Published apps become discoverable by every agent on the network.</p>
+
+<h2 id="how-it-works-at-a-high-level">How It Works at a High Level</h2>
+
+<p>An agent joins Pilot by installing the daemon and starting it. The daemon generates an Ed25519 key pair, registers the agent's public key with the network registry, and receives a 48-bit virtual address displayed as <code>N:NNNN.HHHH.LLLL</code> (e.g., <code>0:0000.0000.0042</code>). From that point, the agent has a permanent address on the overlay network.</p>
+
+<p>When Agent A wants to communicate with Agent B, it sends a handshake request. Agent B approves. The daemons negotiate encrypted tunnel parameters using X25519, and the two agents begin exchanging messages through the tunnel. All tunnel traffic is encrypted and authenticated — there is no unencrypted mode.</p>
+
+<p>Pilot runs entirely in userspace. It sends and receives raw UDP datagrams, with reliability, ordering, and congestion control implemented at the application layer (sliding window, AIMD, SACK). Because it is a userspace implementation, it works on any operating system that supports UDP — no kernel modules, no system configuration, no elevated privileges required.</p>
+
+<p>The full network stack is a single Go binary, open source under AGPL-3.0 at <a href="https://github.com/pilot-protocol">github.com/pilot-protocol</a>.</p>
+
+<h2 id="how-it-compares">How It Compares to Other Approaches</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Approach</th>
+      <th>What It Provides</th>
+      <th>What It Does Not Provide</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>MCP tunnels</td>
+      <td>Standardized tool access for agents (client-server, agent-to-tool)</td>
+      <td>Peer-to-peer agent communication, agent discovery, agent-level trust</td>
+    </tr>
+    <tr>
+      <td>VPN (WireGuard, Tailscale, ZeroTier)</td>
+      <td>IP-layer connectivity between machines</td>
+      <td>Per-agent identity, capability discovery, per-peer trust</td>
+    </tr>
+    <tr>
+      <td>Message queues / cloud relays</td>
+      <td>Asynchronous message delivery through a broker</td>
+      <td>Direct peer-to-peer addressing, agent-native trust</td>
+    </tr>
+    <tr>
+      <td>Pilot Protocol</td>
+      <td>Agent-native networking: virtual addresses, encrypted P2P tunnels, NAT traversal, trust model, app store</td>
+      <td>Tool execution (handled by MCP), application logic (handled by agent frameworks)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Pilot Protocol does not replace MCP tunnels or VPNs. It operates alongside them. An agent can use MCP for tool access, be connected to a VPN for machine-level infrastructure, and use Pilot for peer-to-peer agent communication. Each layer solves a different connectivity problem.</p>
+
+<h2 id="who-its-for">Who It Is For</h2>
+
+<p>Pilot Protocol is for developers and teams building multi-agent systems who have hit the connectivity wall — agents that need to communicate but cannot because of NAT, cloud boundaries, or lack of shared infrastructure. Specific use cases include:</p>
+
+<ul>
+  <li><strong>Multi-cloud agent fleets.</strong> Agents distributed across AWS, GCP, and Azure communicate directly through encrypted tunnels — no cloud peering, no VPN mesh, no public endpoints.</li>
+  <li><strong>Cross-company agent collaboration.</strong> Two organizations running agents on Pilot establish an encrypted tunnel with a single handshake — no shared cloud account, no exposed API endpoints.</li>
+  <li><strong>Secure data exchange.</strong> Agents handling sensitive data communicate through direct encrypted tunnels — no relay, no intermediary, no third-party storage.</li>
+  <li><strong>Edge and remote agents.</strong> An agent on a device behind residential NAT connects securely to cloud agents — automatic NAT traversal, no port forwarding.</li>
+  <li><strong>Research and experimentation.</strong> A fleet of research agents on developer laptops and cloud VMs that need to share findings without setting up shared infrastructure.</li>
+</ul>
+
+<h2 id="getting-started">Getting Started</h2>
+
+<p>Installing Pilot Protocol is a single command:</p>
+
+<pre><code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></pre>
+
+<p>After installation, the daemon generates an identity, registers with the network, and the agent is online. From there, you can discover specialists, install apps, and connect with peers:</p>
+
+<pre><code><span class="comment"># Check your address</span>
+<span class="cmd">pilotctl info</span>
+
+<span class="comment"># Browse the app store</span>
+<span class="cmd">pilotctl appstore catalogue</span>
+
+<span class="comment"># Ask the network assistant for a plan</span>
+<span class="cmd">pilotctl send-message pilot-mom --data 'connect to my research agents and share findings' --wait</span></code></pre>
+
+<p>For more detailed walkthroughs, see <a href="https://pilotprotocol.network/learn/how-pilot-protocol-works">how Pilot Protocol works</a> and the <a href="https://pilotprotocol.network/learn/what-makes-a-pilot-agent">what makes a Pilot agent</a> guide.</p>
+`;
+
+const faqItems = [
+  {
+    question: "What is Pilot Protocol in simple terms?",
+    answer: "Pilot Protocol is a networking layer for AI agents. It gives every agent a permanent address, handles NAT traversal so agents behind firewalls can communicate, encrypts all traffic automatically, and provides an app store of installable capabilities. It runs as a single binary with no external dependencies."
+  },
+  {
+    question: "Does Pilot Protocol replace MCP?",
+    answer: "No. MCP connects an agent to its tools (databases, APIs, file systems) through a client-server protocol. Pilot connects agents to each other across networks through peer-to-peer tunnels. They are complementary — an MCP server can run on top of a Pilot tunnel, giving remote agents access to tools as if they were local."
+  },
+  {
+    question: "Do I need a VPN to use Pilot Protocol?",
+    answer: "No. Pilot Protocol replaces the need for a VPN for agent-to-agent communication. It handles NAT traversal, encrypted tunnels, and agent discovery natively. You can use Pilot without any VPN, or alongside an existing VPN for machine-level connectivity."
+  },
+  {
+    question: "How is Pilot Protocol different from Tailscale or ZeroTier?",
+    answer: "Tailscale and ZeroTier are mesh VPNs that provide IP-layer connectivity between machines. Pilot Protocol is an agent-native overlay that operates above the IP layer — it provides per-agent virtual addresses (not per-machine IPs), capability-based discovery, a mutual trust handshake between agents, and an app store of installable agent capabilities. See the detailed comparison for more."
+  },
+  {
+    question: "Does my agent need a public IP address?",
+    answer: "No. Pilot Protocol includes automatic NAT traversal through STUN discovery, UDP hole-punching, and relay fallback. An agent behind a home router, corporate firewall, or container network can communicate with any other agent on the overlay."
+  },
+  {
+    question: "Is Pilot Protocol open source?",
+    answer: "Yes. The entire implementation is open source under AGPL-3.0. The source code is at github.com/pilot-protocol. The daemon is written in Go with zero external dependencies."
+  }
+];
+---
+<BlogLayout
+  title="What Is Pilot Protocol"
+  description="What is Pilot Protocol? Learn how this open-source overlay network gives AI agents permanent addresses, encrypted P2P tunnels, NAT traversal, and an app store."
+  date="July 30, 2026"
+  tags={["pilot-protocol", "what-is", "overlay-network", "ai-agents", "agent-networking", "agent-communication"]}
+  canonicalPath="/learn/what-is-pilot-protocol"
+  faqItems={faqItems}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
