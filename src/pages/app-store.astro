@@ -75,8 +75,8 @@ const publishHref = '/publish';
         </div>
         <div class="store-search" id="search">
           <div class="field">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-            <input type="search" id="store-q" placeholder="Search apps, capabilities, vendors…" autocomplete="off" aria-label="Search apps" />
+            <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="search" id="store-q" placeholder="Search apps, capabilities, vendors…" autocomplete="off" aria-label="Search apps" aria-controls="results-view" />
             <kbd id="kbd-hint">⌘K</kbd>
           </div>
         </div>
@@ -87,10 +87,11 @@ const publishHref = '/publish';
   <!-- ================= STICKY CATEGORY BAR ================= -->
   <nav class="catbar" aria-label="Categories">
     <div class="wrap" id="catbar">
-      <button class="chip is-active" data-cat="all" type="button" aria-pressed="true">All</button>
-      {categories.map((c) => <button class="chip" data-cat={c.id} type="button" aria-pressed="false">{c.name}</button>)}
+      <button class="chip is-active" data-cat="all" type="button" aria-controls="results-view" aria-pressed="true">All</button>
+      {categories.map((c) => <button class="chip" data-cat={c.id} type="button" aria-controls="results-view" aria-pressed="false">{c.name}</button>)}
     </div>
   </nav>
+  <p class="sr-only" id="store-results-status" aria-live="polite"></p>
 
   <!-- ================= BROWSE VIEW (featured + shelves) ================= -->
   <div id="browse-view">
@@ -215,6 +216,7 @@ const publishHref = '/publish';
   const resultsView = $('#results-view');
   const cards = $$('#results-grid [data-app-card]');
   const chips = $$('#catbar .chip');
+  const resultsStatus = $('#store-results-status');
   let activeCat = 'all';
 
   const catNames = {};
@@ -226,7 +228,10 @@ const publishHref = '/publish';
 
     browseView.classList.toggle('is-hidden', filtering);
     resultsView.classList.toggle('is-hidden', !filtering);
-    if (!filtering) return;
+    if (!filtering) {
+      if (resultsStatus) resultsStatus.textContent = 'Showing featured apps and category shelves';
+      return;
+    }
 
     let shown = 0;
     cards.forEach((card) => {
@@ -244,6 +249,7 @@ const publishHref = '/publish';
 
     $('#results-count').textContent = shown + (shown === 1 ? ' app' : ' apps');
     $('#results-empty').classList.toggle('is-hidden', shown > 0);
+    if (resultsStatus) resultsStatus.textContent = shown + (shown === 1 ? ' app shown' : ' apps shown');
   }
 
   q.addEventListener('input', applyFilter);

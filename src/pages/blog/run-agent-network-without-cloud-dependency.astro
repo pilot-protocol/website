@@ -52,7 +52,7 @@ const bodyContent = `<p>"What happens to my devices if the cloud service shuts d
   <h3>Step 1: Install</h3>
 
   <pre><code><span class="comment"># Install Pilot Protocol</span>
-<span class="cmd">$ curl -fsSL https://pilotprotocol.network/install.sh | sh</span></code></pre>
+<span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span></code></pre>
 
   <p>That is the entire install. One command. No Docker, Kubernetes, or Terraform. Prebuilt packages currently target supported Linux and macOS environments; see <a href="/for/compatibility">Compatibility</a> for the current matrix.</p>
 
@@ -107,12 +107,12 @@ done</code></pre>
 
   <p>In a cloud-dependent system, the answer is "everything." Devices cannot authenticate, cannot discover peers, cannot send commands, and cannot receive updates. The entire deployment is dead.</p>
 
-  <p>In Pilot Protocol, the answer is "new discovery stops, but everything else keeps working."</p>
+  <p>In Pilot Protocol, established direct paths can continue, while new discovery, new NAT coordination, and relayed paths depend on the configured registry and beacon.</p>
 
   <ul>
-    <li><strong>Active connections continue</strong> -- agents that have already discovered each other and established tunnels continue communicating. The tunnel is a direct UDP connection between agents. The network is not in the data path.</li>
-    <li><strong>Trusted relationships persist</strong> -- trust state is stored locally on each agent in <code>~/.pilot/</code>. It does not depend on the network. If discovery is down, agents can still communicate with all of their previously trusted peers.</li>
-    <li><strong>New discovery fails</strong> -- agents cannot look up new peers by hostname. This is the only thing that breaks.</li>
+    <li><strong>Established direct paths can continue</strong> -- agents with a working direct UDP path can keep communicating while the coordination service is unavailable. Relayed connections do not have this independence.</li>
+    <li><strong>Trusted relationships persist</strong> -- trust state is stored locally on each agent in <code>~/.pilot/</code>. That relationship survives an outage, although reconnecting may still require endpoint resolution or NAT coordination.</li>
+    <li><strong>New discovery fails</strong> -- agents cannot look up new peers by hostname until the configured registry recovers.</li>
     <li><strong>NAT traversal degrades</strong> -- new connections behind NAT may not be established until the network recovers. Existing connections continue working because the NAT mappings are maintained by keepalive probes.</li>
     <li><strong>Recovery is automatic</strong> -- when the network recovers, agents reconnect and re-register automatically. No manual intervention required.</li>
   </ul>
@@ -120,7 +120,7 @@ done</code></pre>
   <p>Compare this to what happened when Insteon's cloud went down: devices could not execute local automation rules, could not be controlled via the app, and could not even be reset to work with a different platform. The cloud was not just the discovery layer -- it was the control plane, the data plane, and the authentication layer, all in one.</p>
 
   <div class="callout">
-    <p><strong>Design principle:</strong> The discovery layer is the phonebook, not the phone network. If the phonebook is unavailable, you cannot look up new numbers, but you can still call anyone whose number you already have. This is a fundamentally more resilient architecture than routing all traffic through a central service.</p>
+    <p><strong>Design principle:</strong> The control and data paths are separated where network conditions allow it. A coordination outage does not necessarily interrupt an established direct tunnel, but it can affect discovery, new NAT traversal, and relay-backed connections.</p>
   </div>
 
   <h2 id="comparison">Comparison: Pilot vs. MQTT Broker vs. Cloud IoT Platforms</h2>
@@ -132,20 +132,20 @@ done</code></pre>
     <tbody>
       <tr><td>Open source</td><td>Yes (AGPL-3.0)</td><td>Yes (Mosquitto, etc.)</td><td>No</td></tr>
       <tr><td>Cloud account required</td><td>No</td><td>No</td><td>Yes</td></tr>
-      <tr><td>Central server in data path</td><td>No (discovery only)</td><td>Yes (all messages)</td><td>Yes (all messages)</td></tr>
-      <tr><td>P2P communication</td><td>Yes (after discovery)</td><td>No (always via broker)</td><td>No (always via cloud)</td></tr>
+      <tr><td>Central server in data path</td><td>Only when relay fallback is used</td><td>Yes (all messages)</td><td>Yes (all messages)</td></tr>
+      <tr><td>P2P communication</td><td>Preferred, with relay fallback</td><td>No (always via broker)</td><td>No (always via cloud)</td></tr>
       <tr><td>NAT traversal</td><td>Automatic (STUN/punch/relay)</td><td>Not supported</td><td>Not supported</td></tr>
       <tr><td>Encryption</td><td>End-to-end (X25519 + AES-256-GCM)</td><td>TLS to broker only</td><td>TLS to cloud only</td></tr>
-      <tr><td>Survives server outage</td><td>Yes (existing connections continue)</td><td>No (all messages stop)</td><td>No (all messages stop)</td></tr>
+      <tr><td>Survives server outage</td><td>Established direct paths can continue</td><td>No (all messages stop)</td><td>No (all messages stop)</td></tr>
       <tr><td>Per-device identity</td><td>Ed25519 key pair (auto-generated)</td><td>Username/password or certificate</td><td>Cloud-managed certificate</td></tr>
-      <tr><td>Vendor lock-in</td><td>None (open source, AGPL-3.0)</td><td>Low (MQTT is a standard)</td><td>High (proprietary SDKs)</td></tr>
-      <tr><td>Monthly cost at 1K devices</td><td>$0 (open source)</td><td>$0 (open source)</td><td>$50-500/month</td></tr>
+      <tr><td>Vendor lock-in</td><td>Reduced through open source and self-hosting</td><td>Low</td><td>Varies by platform</td></tr>
+      <tr><td>Infrastructure cost</td><td>Software is open source; hosting and operations vary</td><td>Software can be open source; hosting and operations vary</td><td>Usage-priced; varies by provider</td></tr>
     </tbody>
   </table>
 
-  <p>MQTT is a strong alternative for IoT deployments. Mosquitto is excellent, battle-tested, and widely used. But MQTT brokers are always in the data path -- every message flows through the broker, making it a bottleneck and a single point of failure. Pilot's network handles only discovery; actual communication is peer-to-peer.</p>
+  <p>MQTT is a strong alternative for IoT deployments. Mosquitto is mature and widely used, but MQTT brokers remain in the data path for every message. Pilot separates coordination from direct traffic where possible and uses its beacon as a ciphertext relay when a direct path cannot be established.</p>
 
-  <p>MQTT also does not provide NAT traversal. If your devices are behind different NATs, you need a publicly reachable broker (which reintroduces cloud dependency) or a VPN (which reintroduces configuration complexity). Pilot's automatic NAT traversal works behind any NAT type without additional infrastructure. For the technical details, see <a href="connect-ai-agents-behind-nat-without-vpn">Connect AI Agents Behind NAT Without a VPN</a>.</p>
+  <p>MQTT also does not provide peer-to-peer NAT traversal. If devices are behind different NATs, you typically use a reachable broker or a separate network layer. Pilot attempts STUN-assisted hole-punching and falls back to its relay when a direct path is unavailable. For the technical details, see <a href="connect-ai-agents-behind-nat-without-vpn">Connect AI Agents Behind NAT Without a VPN</a>.</p>
 
   <h2 id="migration">Migration Guide: Cloud-Dependent to Cloud-Independent</h2>
 
@@ -180,13 +180,13 @@ done</code></pre>
 
   <h3>Step 4: Decommission the Cloud Service</h3>
 
-  <p>Once all devices are communicating over Pilot, disable the cloud service. The communication is peer-to-peer and encrypted end-to-end. A rendezvous server is still needed for new device discovery and NAT traversal coordination, but you can self-host it -- no vendor dependency, no risk of third-party service shutdown.</p>
+  <p>Once all devices are communicating over Pilot, you can retire the previous cloud path after validating direct, relay, and recovery behavior. Pilot encrypts tunnel traffic end to end and prefers direct paths. A registry and beacon are still needed for discovery, NAT coordination, and relay fallback; self-host those services when third-party independence is a requirement.</p>
 
   <h2 id="ownership">The Ownership Principle</h2>
 
   <p>The devices you buy should work for as long as the hardware functions. Not for as long as the vendor stays in business. Not for as long as the vendor's cloud service runs. Not for as long as the vendor's terms of service allow.</p>
 
-  <p>Running your agent network on Pilot Protocol means you own your data and your connections. The software is open source (AGPL-3.0). The communication is peer-to-peer. There is no vendor that can shut down your deployment by shutting down their servers.</p>
+  <p>Running Pilot Protocol with a self-hosted registry and beacon reduces reliance on a third-party service. The software is open source (AGPL-3.0), direct paths are preferred, and encrypted relay fallback remains available when network conditions require it.</p>
 
   <p>Insteon's customers learned this lesson the hard way. Wemo's customers are learning it now. The next cloud shutdown -- and there will be a next one -- does not have to affect you.</p>
 
@@ -194,7 +194,7 @@ done</code></pre>
 
   <div class="cta">
     <h3>Try Pilot Protocol</h3>
-    <p>One binary, five minutes, no vendor lock-in. Own your agent network - self-host the rendezvous server, keep your data peer-to-peer, and never worry about a cloud shutdown.</p>
+    <p>Use the single-command installer, evaluate the direct and relay paths, and self-host the coordination layer when deployment independence is a requirement.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 ---

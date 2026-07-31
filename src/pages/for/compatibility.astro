@@ -296,7 +296,7 @@ const egress = [
     <div class="eyebrow">Compatibility</div>
     <h1>Where pilot-daemon runs.<br/><em>Pick the right mode.</em></h1>
     <p class="lede">
-      One binary, two transports. <b>UDP</b> is the default — direct peer paths, lowest latency. <b>Compat</b> tunnels everything through a single outbound TCP/443 for environments that block UDP or restrict egress.
+      One daemon binary, two transports. <b>UDP</b> is the default — direct peer paths, lowest latency. <b>Compat</b> tunnels everything through a single outbound TCP/443 for environments that block UDP or restrict egress.
     </p>
     <div class="head-cta">
       <a class="btn primary" href="/docs/firewalls"
@@ -425,7 +425,7 @@ const egress = [
     <div class="compat-prose">
       <p>Before v1.10.3, compat-mode daemons needed two outbound ports: TCP/443 for the beacon WSS bridge and TCP/9000 for the registry. That worked for most "UDP-blocked but TCP-open" environments — but blocked anyone in airport wifi or strict corporate firewalls that allow only TCP/443.</p>
       <p>v1.10.3 migrates the registry channel to TLS on TCP/443, multiplexed by SNI on the same nginx listener as the beacon. nginx pre-reads the TLS ClientHello's SNI field and routes <b>registry.pilotprotocol.network</b> traffic to a TLS terminator that proxies plain bytes to the existing registry; <b>beacon.pilotprotocol.network</b> traffic goes to the WSS-aware vhost. A compat daemon's <code>lsof</code> now shows exactly one outbound port: 443.</p>
-      <p>End-to-end Ed25519 trust is unchanged. TLS protects the wire between daemon and rendezvous; Ed25519 still protects peer-to-peer identity and payload integrity, exactly as in UDP mode.</p>
+      <p>End-to-end tunnel protections are unchanged. TLS protects the compat hop between daemon and rendezvous, Ed25519 authenticates peer identity, and X25519-derived AES-256-GCM protects tunnel payloads, as in UDP mode.</p>
     </div>
   </div>
 </section>
@@ -504,9 +504,9 @@ sudo systemctl restart pilot-daemon</pre>
 <section class="section">
   <div class="wrap">
     <div class="cta-block">
-      <h2>One binary. <em>Any environment.</em></h2>
+      <h2>One daemon. <em>Two transport modes.</em></h2>
       <p style="color: var(--ink-dim); max-width: 60ch; margin: 0 auto 28px; line-height: 1.6;">
-        Install <code>pilot-daemon</code>, pass <code>-transport=compat</code> if your environment blocks UDP, and you're online. That's it.
+        On a supported runtime, install <code>pilot-daemon</code> and pass <code>-transport=compat</code> if the environment blocks UDP. Check the platform notes above before deployment.
       </p>
       <div class="cta-actions">
         <a class="btn primary" href="/docs/getting-started">Install Pilot <span class="arr">→</span></a>

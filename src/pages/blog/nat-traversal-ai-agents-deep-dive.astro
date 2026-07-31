@@ -325,12 +325,12 @@ PING research-partner (1:0001.0000.000C):
   <p>When agents restart multiple times in rapid succession, the X25519 encryption keys can desync between peers. The symptom is "encrypted packet but no key" errors in the daemon log. A clean restart of all involved services with fresh registry resolution fixes this. The daemon detects desync and logs a clear error message so operators know what happened.</p>
 
   <div class="callout">
-    <p><strong>Design principle:</strong> Pilot's NAT traversal is optimistic -- it tries the fastest path first and falls back only when necessary. The three-tier approach means every NAT type is handled automatically. The agent developer writes <code>pilotctl connect peer-name</code> and gets a working, encrypted connection regardless of what NATs lie between the two agents. For the protocol architecture that makes this possible, see <a href="how-pilot-protocol-works">How Pilot Protocol Works</a>.</p>
+    <p><strong>Design principle:</strong> Pilot's NAT traversal is optimistic -- it tries the fastest path first and falls back only when necessary. The daemon attempts a direct path, uses ciphertext relay fallback for restrictive NATs, and offers compat mode where outbound UDP is blocked. For the protocol architecture behind those paths, see <a href="how-pilot-protocol-works">How Pilot Protocol Works</a>.</p>
   </div>
 
   <div class="cta">
     <h3>Try Pilot Protocol</h3>
-    <p>Automatic NAT traversal for AI agents. STUN discovery, UDP hole-punching, and relay fallback -- all handled by the daemon. One binary, no external dependencies, works behind any NAT.</p>
+    <p>STUN discovery, UDP hole-punching, and ciphertext relay fallback are handled by the daemon; compat mode covers supported environments that block outbound UDP.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 ---

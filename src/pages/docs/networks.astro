@@ -22,7 +22,7 @@ const bodyContent = `<h1>Networks</h1>
 
   <p>Networks are the group-level access control primitive in Pilot Protocol. Where <a href="trust">bilateral trust</a> requires every pair of agents to independently negotiate a handshake, a network grants connectivity to all members at once.</p>
 
-  <p>Add 10 agents to the same network and they can all discover and connect to each other immediately - no handshake ceremony, no approval queues, no N&sup2; trust pairs. The network boundary <em>is</em> the trust boundary.</p>
+  <p>Add 10 agents to the same network and they can discover and connect to each other without creating N&sup2; bilateral trust pairs. Membership is a group-level network grant; enterprise port policy and application authorization can further narrow the resulting access.</p>
 
   <p>Networks are managed through the <code>pilotctl network</code> commands - create networks, add agents, monitor status, and control membership from the CLI. Private Network is in <a href="/plans">early access</a>; the team onboards deployments directly.</p>
 
@@ -45,7 +45,7 @@ const bodyContent = `<h1>Networks</h1>
 
   <p>Bilateral trust is designed for relationships between agents that don&rsquo;t share an organizational boundary - two companies collaborating, an agent reaching out to an unknown peer, or any scenario where explicit mutual consent matters.</p>
 
-  <p>Networks are designed for agents that <em>should</em> be able to talk to each other by default - a fleet of workers, a team&rsquo;s agents, a research cluster. Membership in the same network implies the authorization to communicate.</p>
+  <p>Networks are designed for agents that <em>should</em> be able to establish network connections by default - a fleet of workers, a team&rsquo;s agents, or a research cluster. Membership grants connectivity; it does not independently authorize a task, tool call, data disclosure, payment, or other business action.</p>
 
   <h2 id="permissions">What network membership grants</h2>
 
@@ -88,7 +88,7 @@ const bodyContent = `<h1>Networks</h1>
 
   <h3>The design principle</h3>
 
-  <p>Standard network permissions are intentionally simple: you are either a member or you are not. Inside the boundary, communication is unrestricted. Outside, a private agent's <em>endpoint</em> (IP:port) is withheld — though the registry may still expose some directory metadata (see the privacy note below). Enterprise networks add roles and port policies for organizations that need finer-grained control.</p>
+  <p>Standard network permissions are intentionally simple: you are either a member or you are not, and membership grants network connectivity to available ports. Outside the boundary, a private agent's <em>endpoint</em> (IP:port) is withheld — though the registry may still expose some directory metadata (see the privacy note below). Enterprise networks add roles and port policies; applications retain responsibility for method, data, spend, approval, and other business authority.</p>
 
   <h2 id="backbone">The backbone (network 0)</h2>
 
@@ -184,7 +184,7 @@ const bodyContent = `<h1>Networks</h1>
 
   <h3>Membership is the boundary</h3>
 
-  <p>The network security model is deliberately simple: membership equals access. Standard networks have no traffic inspection - list the members with <code>pilotctl network members</code>, and you know exactly who can communicate with whom. Enterprise networks layer on RBAC (owner/admin/member roles) and port-level policies for finer-grained control.</p>
+  <p>The standard network model is deliberately simple: membership grants connectivity. Standard networks do not inspect application payloads; list the members with <code>pilotctl network members</code> to review the group-level connectivity boundary. Enterprise networks layer on RBAC (owner/admin/member roles) and port-level policies. Application authorization remains separate.</p>
 
   <h3>Silent rejection</h3>
 

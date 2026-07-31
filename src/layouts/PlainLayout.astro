@@ -2,9 +2,39 @@
 interface Props {
   title: string;
   description?: string;
+  // Retained for existing callers. Canonical ownership lives here so a plain
+  // page cannot accidentally declare itself as the preferred search result.
   canonical?: string;
 }
-const { title, description, canonical } = Astro.props;
+const { title, description } = Astro.props;
+
+function styledRoute(pathname: string): string {
+  const plainRoute = pathname.replace(/\/+$/, '') || '/';
+  const directRoutes: Record<string, string> = {
+    '/plain': '/',
+    '/plain/app-store': '/app-store',
+    '/plain/docs': '/docs/',
+    '/plain/mcp': '/for/mcp',
+    '/plain/networks': '/for/networks',
+    '/plain/p2p': '/for/p2p',
+    '/plain/plans': '/plans',
+    '/plain/publish': '/publish',
+    '/plain/setups': '/for/setups',
+    '/plain/skills': '/for/skills',
+    '/plain/trust': '/trust',
+  };
+
+  if (directRoutes[plainRoute]) return directRoutes[plainRoute];
+  if (plainRoute.startsWith('/plain/setups/')) return `/for${plainRoute.slice('/plain'.length)}`;
+  if (plainRoute.startsWith('/plain/')) return plainRoute.slice('/plain'.length) || '/';
+  return '/';
+}
+
+const styledHref = styledRoute(Astro.url.pathname);
+const styledCanonical = new URL(
+  styledHref,
+  Astro.site ?? 'https://pilotprotocol.network',
+).toString();
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -13,14 +43,14 @@ const { title, description, canonical } = Astro.props;
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{title}</title>
   {description && <meta name="description" content={description}>}
-  {canonical && <link rel="canonical" href={canonical}>}
+  <link rel="canonical" href={styledCanonical}>
   <meta name="robots" content="noindex,follow">
   <meta name="pilot-variant" content="plain">
   <!-- No analytics on the plain variant: it is a JS-stripped surface for agents
        and screen readers, so no GA4 / cookies are loaded (nothing to consent to). -->
 </head>
 <body>
-<p style="text-align:right"><a href="/">[ Switch to styled version &rarr; ]</a></p>
+<p style="text-align:right"><a href={styledHref}>[ Switch to styled version &rarr; ]</a></p>
 <nav>
   <a href="/plain/">home</a> ·
   <a href="/plain/skills/">skills</a> ·
@@ -28,13 +58,16 @@ const { title, description, canonical } = Astro.props;
   <a href="/plain/mcp/">mcp</a> ·
   <a href="/plain/plans/">plans</a> ·
   <a href="/plain/trust/">trust</a> ·
+  <a href="/plain/governance/">governance</a> ·
+  <a href="/plain/roadmap/">roadmap</a> ·
+  <a href="/plain/news/">news</a> ·
   <a href="/plain/docs/">docs</a>
 </nav>
 <hr>
 <slot />
 <hr>
 <footer>
-  <p>Pilot Protocol - plain text variant for AI agents and screen readers. <a href="/">Switch to styled version</a>.</p>
+  <p>Pilot Protocol - plain text variant for AI agents and screen readers. <a href={styledHref}>Switch to styled version</a>.</p>
   <p><small>We actually made a page for agents. &ldquo;Plain text&rdquo; here doesn't just mean no images - this is the styled marketing site with CSS and JavaScript stripped out. What you see is what your parser gets: semantic HTML, nothing else. No layout shifts, no hydration, no JS frameworks mediating between you and the content.</small></p>
   <p><small>We make every effort to keep this plain variant in sync with the styled site, but it may lag. Treat live numbers (agent counts, network stats, pricing) with a grain of salt and verify against the canonical sources when precision matters: <a href="https://raw.githubusercontent.com/TeoSlayer/pilot-skills/main/skills.json">skills.json</a>.</small></p>
 </footer>

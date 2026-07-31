@@ -2,7 +2,7 @@
 import BaseHead from '../components/BaseHead.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
-import { blogPosts } from '../data/blogPosts';
+import { blogPosts, companyNews } from '../data/blogPosts';
 import '../styles/global.css';
 import '../styles/system.css';
 
@@ -14,9 +14,14 @@ interface Props {
   canonicalPath?: string;
   bannerImage?: string;
   faqItems?: { question: string; answer: string }[];
+  section?: 'blog' | 'news';
 }
 
-const { title, description, date, tags, canonicalPath, bannerImage, faqItems = [] } = Astro.props;
+const { title, description, date, tags, canonicalPath, bannerImage, faqItems = [], section = 'blog' } = Astro.props;
+const isNews = section === 'news';
+const collectionLabel = isNews ? 'Newsroom' : 'Blog';
+const collectionPath = isNews ? '/news/' : '/blog/';
+const collectionPosts = isNews ? companyNews : blogPosts;
 const cleanPath = canonicalPath ? canonicalPath.replace(/\.html$/, '') : undefined;
 const canonicalUrl = cleanPath ? `https://pilotprotocol.network${cleanPath}` : undefined;
 const ogImage = bannerImage
@@ -25,13 +30,13 @@ const ogImage = bannerImage
 
 const pathParts = Astro.url.pathname.replace(/\/$/, '').split('/');
 const currentSlug = pathParts[pathParts.length - 1].replace('.html', '');
-const currentIndex = blogPosts.findIndex(p => p.slug === currentSlug);
+const currentIndex = collectionPosts.findIndex(p => p.slug === currentSlug);
 
-const prevPost = currentIndex > 0 ? blogPosts[currentIndex - 1] : null;
-const nextPost = currentIndex < blogPosts.length - 1 ? blogPosts[currentIndex + 1] : null;
+const prevPost = currentIndex > 0 ? collectionPosts[currentIndex - 1] : null;
+const nextPost = currentIndex >= 0 && currentIndex < collectionPosts.length - 1 ? collectionPosts[currentIndex + 1] : null;
 
 const currentTags = new Set(tags.map(t => t.toLowerCase()));
-const related = blogPosts
+const related = collectionPosts
   .filter(p => p.slug !== currentSlug)
   .map(p => ({
     ...p,
@@ -114,7 +119,7 @@ const faqSectionId = headingIds.has('frequently-asked-questions')
     "@type": "BreadcrumbList",
     "itemListElement": [
       {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://pilotprotocol.network/"},
-      {"@type": "ListItem", "position": 2, "name": "Blog", "item": "https://pilotprotocol.network/blog/"},
+      {"@type": "ListItem", "position": 2, "name": collectionLabel, "item": `https://pilotprotocol.network${collectionPath}`},
       {"@type": "ListItem", "position": 3, "name": title, "item": canonicalUrl}
     ]
   })}></script>
@@ -132,10 +137,10 @@ const faqSectionId = headingIds.has('frequently-asked-questions')
 </head>
 <body>
   <div class="progress-bar" id="progress-bar"></div>
-  <Nav active="blog" />
+  <Nav active={isNews ? 'news' : 'blog'} />
   <main class="article-layout">
     <article class="article" data-track-read={currentSlug}>
-      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a> <span class="sep">/</span> <a href="/blog/">Blog</a> <span class="sep">/</span> <span>{title}</span></nav>
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a> <span class="sep">/</span> <a href={collectionPath}>{collectionLabel}</a> <span class="sep">/</span> <span>{title}</span></nav>
       {bannerImage && <img class="article-banner" src={bannerImage} alt={title} loading="lazy" />}
       <h1>{title}</h1>
       <div class="article-meta">
@@ -173,7 +178,7 @@ const faqSectionId = headingIds.has('frequently-asked-questions')
         <h2>Related Posts</h2>
         <div class="related-grid">
           {related.map(post => (
-            <a class="related-card" href={`/blog/${post.slug}`}>
+            <a class="related-card" href={`${collectionPath}${post.slug}`}>
               <img src={`/blog/${post.banner}`} alt={post.title} loading="lazy" />
               <div class="related-body">
                 <h3>{post.title}</h3>
@@ -190,13 +195,13 @@ const faqSectionId = headingIds.has('frequently-asked-questions')
     <nav class="blog-nav">
       <div class="blog-nav-inner">
         {prevPost ? (
-          <a class="blog-nav-link blog-nav-prev" href={`/blog/${prevPost.slug}`}>
+          <a class="blog-nav-link blog-nav-prev" href={`${collectionPath}${prevPost.slug}`}>
             <span class="blog-nav-label">&larr; Previous</span>
             <span class="blog-nav-title">{prevPost.title}</span>
           </a>
         ) : <div />}
         {nextPost ? (
-          <a class="blog-nav-link blog-nav-next" href={`/blog/${nextPost.slug}`}>
+          <a class="blog-nav-link blog-nav-next" href={`${collectionPath}${nextPost.slug}`}>
             <span class="blog-nav-label">Next &rarr;</span>
             <span class="blog-nav-title">{nextPost.title}</span>
           </a>

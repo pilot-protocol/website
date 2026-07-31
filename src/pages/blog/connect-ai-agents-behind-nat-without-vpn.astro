@@ -183,7 +183,7 @@ Registered with fixed endpoint (STUN skipped)</code></pre>
 
   <h3>IoT Device Fleets</h3>
 
-  <p>Sensors, cameras, and edge devices behind residential or industrial NATs can form peer-to-peer networks without cloud relay. A sensor in a factory can stream data directly to a processing agent in the same building, or to an analytics agent in a different city. The NAT type does not matter -- Pilot handles it. No port forwarding, no VPN, no cloud dependency.</p>
+  <p>Sensors, cameras, and edge devices behind residential or industrial NATs can prefer direct peer paths without port forwarding or a VPN. A sensor in a factory can stream data to a local processing agent or a remote analytics agent; when hole-punching is unavailable, Pilot uses ciphertext relay fallback through the configured beacon.</p>
 
   <h3>Federated Learning Nodes</h3>
 
@@ -202,14 +202,14 @@ Registered with fixed endpoint (STUN skipped)</code></pre>
   <p>Here is the complete workflow for connecting two agents on different home networks, each behind a consumer-grade NAT router.</p>
 
   <pre><code><span class="comment"># Home network 1 (Port-Restricted Cone NAT)</span>
-<span class="cmd">$ curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
+<span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
 <span class="cmd">$ pilotctl init --hostname home-agent-1</span>
 <span class="cmd">$ pilotctl daemon start --email home-agent-1@example.com</span>
 STUN: public endpoint 73.162.88.14:4000 (port_restricted_cone)
 Registered as home-agent-1 (1:0001.0000.0008)
 
 <span class="comment"># Home network 2 (Restricted Cone NAT)</span>
-<span class="cmd">$ curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
+<span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
 <span class="cmd">$ pilotctl init --hostname home-agent-2</span>
 <span class="cmd">$ pilotctl daemon start --email home-agent-2@example.com --public</span>
 STUN: public endpoint 98.45.211.33:4000 (restricted_cone)
