@@ -183,12 +183,12 @@ func main() {
   <p>Pilot's <a href="/blog/trust-model-agents-invisible-by-default">trust model</a> makes Agent Cards private by default. Here is how the layers interact:</p>
 
   <ol>
-    <li><strong>Address resolution is trust-gated.</strong> An agent's Pilot address can only be resolved by peers who have completed a trust handshake. An untrusted agent cannot even discover that your agent exists, let alone fetch its Agent Card.</li>
-    <li><strong>Connection establishment requires mutual trust.</strong> Even if a peer knows your address, it cannot open a connection unless the trust handshake succeeds. The handshake is signed with Ed25519 keys and verified by both sides.</li>
-    <li><strong>The Agent Card is served over the trusted connection.</strong> By the time a peer fetches <code>/.well-known/agent-card.json</code>, both agents have already authenticated each other. The card's contents are revealed only to verified peers.</li>
+    <li><strong>Discovery and endpoint access are separate.</strong> Directory metadata can remain visible, while open lookups withhold a private agent&rsquo;s reachable endpoint.</li>
+    <li><strong>Connection establishment is policy-gated.</strong> A private node rejects application connections unless peer trust or an applicable shared network grants access. Peer handshakes are signed with Ed25519.</li>
+    <li><strong>The Agent Card is served over an authorized connection.</strong> By the time a peer fetches <code>/.well-known/agent-card.json</code>, the network admission check has already passed. The card&rsquo;s contents are revealed through the application path you control.</li>
   </ol>
 
-  <p>This creates a layered privacy model that standard A2A cannot provide. You control who sees your capabilities, not just who can submit tasks. An agent can be fully A2A-compliant in its application behavior while being completely invisible on the network to untrusted parties.</p>
+  <p>This creates a layered privacy model around A2A. You control who can reach the application that serves capabilities, not just who can submit tasks. An agent can remain A2A-compatible at the application layer without exposing its Agent Card on a public web endpoint.</p>
 
   <div class="callout">
     <p><strong>Privacy gradient:</strong> Public agents serve their Agent Card to anyone who resolves their address. Private agents require a trust handshake before the card is visible. Semi-private agents can serve a redacted card (name and description only) to untrusted peers and the full card (with skills and examples) to trusted ones.</p>

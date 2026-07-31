@@ -42,9 +42,9 @@ const bodyContent = `<p>"We are building Multi-Agent Systems like it's 1995 -- w
   <ul>
     <li><strong>Every agent has a cryptographic identity</strong> -- not a username, not an API key, but a public/private key pair that is unique, unforgeable, and permanent. The identity is the agent, not a credential attached to it.</li>
     <li><strong>Every connection is mutually authenticated</strong> -- both sides prove their identity before any data flows. There is no "anonymous client" mode.</li>
-    <li><strong>No implicit trust</strong> -- two agents on the same network, in the same organization, or even on the same machine cannot communicate until they have completed a trust establishment ceremony.</li>
-    <li><strong>Trust is granular and revocable</strong> -- trust is between specific agent pairs, not broad groups. It can be revoked instantly, without waiting for expiration.</li>
-    <li><strong>Visibility is earned, not given</strong> -- a new agent on the network is invisible. It cannot be discovered, enumerated, or connected to until it has been explicitly introduced.</li>
+    <li><strong>No implicit trust from location alone</strong> -- connectivity comes from an explicit peer relationship or a network membership policy, not merely from sharing a machine or subnet.</li>
+    <li><strong>Trust is scoped and revocable</strong> -- access can be granted to a peer or through a network, then removed without waiting for a credential to expire.</li>
+    <li><strong>Connectivity is private by default</strong> -- directory metadata may be visible, but a new agent does not expose a reachable endpoint to arbitrary peers.</li>
   </ul>
 
   <p>This is not about layering security on top of an existing protocol. It is about building a protocol where security is the default state and openness is a deliberate, auditable action.</p>
@@ -77,19 +77,19 @@ Visibility: private</code></pre>
 
   <p>The identity is <strong>persistent</strong>. If the agent restarts, moves to a different machine, or changes its network address, it retains the same cryptographic identity. Peers recognize it by its public key, not by its IP address or hostname.</p>
 
-  <h3>Private by Default: Invisible Until Introduced</h3>
+  <h3>Private by Default at the Connectivity Layer</h3>
 
-  <p>A freshly initialized agent is invisible. It does not appear in any directory, it does not respond to discovery queries, and it cannot be connected to by unknown peers. This is not a configuration option that someone might forget to enable -- it is the default state.</p>
+  <p>A freshly initialized agent is private at the connectivity layer. Registry or network configuration may expose directory metadata, but unknown peers do not receive its reachable endpoint and cannot connect without an applicable trust or membership policy.</p>
 
   <p>Privacy operates at three levels:</p>
 
   <ul>
-    <li><strong>Lookup</strong> -- searching for an agent by hostname returns nothing for private agents. The querying agent cannot distinguish between a private agent and one that does not exist.</li>
-    <li><strong>Resolve</strong> -- getting an agent's network endpoint (IP:port) requires a mutual trust relationship. Even if you know the agent's virtual address, you cannot learn where it is on the physical network.</li>
-    <li><strong>Enumeration</strong> -- private agents are not enumerable: there is no API that returns a roster of them, and an agent only sees private peers it has been introduced to. (Public agents opt in to the <code>list-agents</code> directory and are searchable there by design.)</li>
+    <li><strong>Lookup</strong> -- metadata such as hostname, tags, or network membership may be returned according to registry configuration; it is not a connectivity grant.</li>
+    <li><strong>Resolve</strong> -- a reachable network endpoint (IP:port) is withheld unless mutual trust or shared-network membership authorizes connectivity.</li>
+    <li><strong>Directory scope</strong> -- public agents opt in to broad search, while private-agent metadata is limited by the registry and network context.</li>
   </ul>
 
-  <p>This means a compromised agent has a <strong>limited blast radius</strong>. It can only see and connect to the specific peers it was trusted with. It cannot scan the network, discover new targets, or map the organization's agent topology. Compare this to a typical REST-based setup where any agent with a valid API key can call any endpoint in the service mesh.</p>
+  <p>This supports a <strong>bounded blast radius</strong>: a compromised agent can connect only where its peer trust and network memberships permit. Directory metadata should still be treated as visible control-plane information and protected accordingly.</p>
 
   <h3>The Handshake: Mutual Trust With Justification</h3>
 
@@ -114,11 +114,11 @@ Encrypted tunnel active</code></pre>
 
   <p>The handshake includes a <strong>justification</strong> -- a signed, auditable statement of why Agent Alpha wants to connect. This is not a comment field. It travels with the signed handshake so the reviewing operator sees who is asking and why. (Note: the Ed25519 signature covers the handshake challenge — <code>handshake:&lt;node_id&gt;:&lt;peer_id&gt;</code> — binding the request to the sender's identity; the justification text itself is an attached field, not part of the signed bytes.)</p>
 
-  <p>After approval, both agents store the peer's public key locally. Every subsequent packet between them is signed and verified. The trust relationship is mutual -- both sides agreed, and either side can revoke at any time.</p>
+  <p>After approval, both agents store the peer's public key locally. Ed25519 signatures authenticate identity and trust operations; subsequent tunnel packets are authenticated by AES-256-GCM rather than individually signed. The trust relationship is mutual -- both sides agreed, and either side can revoke at any time.</p>
 
   <h3>Encryption: X25519 + AES-256-GCM Per Connection</h3>
 
-  <p>Once trust is established, the agents perform an <a href="https://datatracker.ietf.org/doc/html/rfc7748" target="_blank" rel="noopener">X25519</a> Diffie-Hellman key exchange to derive a shared secret, then use <a href="https://datatracker.ietf.org/doc/html/rfc5288" target="_blank" rel="noopener">AES-256-GCM</a> for per-packet encryption. Encryption is on by default -- every packet is encrypted, even on local networks and between agents on the same machine (it can be disabled with <code>daemon start --no-encrypt</code>, but the default is on).</p>
+  <p>Once trust is established, the agents perform an <a href="https://www.rfc-editor.org/rfc/rfc7748.html" target="_blank" rel="noopener">X25519</a> Diffie-Hellman key exchange to derive a shared secret, then use <a href="https://www.rfc-editor.org/rfc/rfc5288.html" target="_blank" rel="noopener">AES-256-GCM</a> for per-packet encryption. Encryption is on by default -- every packet is encrypted, even on local networks and between agents on the same machine (it can be disabled with <code>daemon start --no-encrypt</code>, but the default is on).</p>
 
   <p>The encryption is <strong>end-to-end</strong>. If the connection is relayed through a beacon (because both agents are behind NAT), the beacon sees only encrypted bytes. It forwards opaque payloads without any ability to read, modify, or replay them. For a detailed breakdown of the cryptographic implementation, see <a href="zero-dependency-encryption-x25519-aes-gcm">Zero-Dependency Agent Encryption</a>.</p>
 
@@ -133,7 +133,7 @@ Encrypted tunnel active</code></pre>
     <tbody>
       <tr><td>Identity</td><td>Ed25519 key pair per agent</td><td>URL-based (Agent Card)</td><td>Server identity</td><td>API key / token</td></tr>
       <tr><td>Authentication</td><td>Mutual Ed25519 signatures</td><td>HTTP auth (optional)</td><td>OAuth / API key</td><td>Bearer token</td></tr>
-      <tr><td>Default visibility</td><td>Private (invisible)</td><td>Public (Agent Card)</td><td>Configured by client</td><td>Public endpoint</td></tr>
+      <tr><td>Default visibility</td><td>Private endpoint; metadata may be visible</td><td>Public (Agent Card)</td><td>Configured by client</td><td>Public endpoint</td></tr>
       <tr><td>Trust establishment</td><td>Mutual handshake + justification</td><td>Fetch Agent Card</td><td>Client configuration</td><td>Shared credential</td></tr>
       <tr><td>Trust granularity</td><td>Per agent pair</td><td>Per endpoint</td><td>Per server</td><td>Per API key scope</td></tr>
       <tr><td>Encryption</td><td>X25519 + AES-256-GCM (mandatory)</td><td>TLS (optional)</td><td>TLS (optional)</td><td>TLS (optional)</td></tr>
@@ -180,7 +180,7 @@ Encrypted tunnel active (X25519 + AES-256-GCM)
 <span class="cmd">$ pilotctl send agent-beta 1002 --data "Begin Q1 data extraction"</span>
 Message delivered (encrypted, 34 bytes, 2ms RTT)</code></pre>
 
-  <p>Notice that Agent Alpha is private while Agent Beta is public. Alpha can find Beta through a lookup because Beta opted into visibility. But Beta cannot find Alpha -- Alpha is invisible until the handshake is approved, at which point Beta receives Alpha's address as part of the mutual trust exchange. After the handshake, both agents can communicate freely over an encrypted tunnel, regardless of their visibility settings.</p>
+  <p>Notice that Agent Alpha is private while Agent Beta is public. Alpha can find Beta through a lookup because Beta opted into visibility. Beta may see Alpha's directory metadata, but it does not receive Alpha's reachable endpoint until the handshake is approved or a shared-network policy grants connectivity. After authorization, both agents can communicate over an encrypted tunnel.</p>
 
   <h2 id="revocation">Revoking Trust Instantly</h2>
 
@@ -218,7 +218,7 @@ Peer notified</code></pre>
     <li><strong>Prompt injection defense</strong> -- Pilot encrypts and authenticates the transport, but it does not inspect message content. A trusted agent can still send a malicious prompt. Content-level guardrails are a separate concern.</li>
     <li><strong>Tool authorization</strong> -- Pilot controls which agents can talk to each other, not what actions they can perform once connected. If Agent A is trusted to talk to Agent B, Pilot does not restrict which API calls A makes. Use MCP or similar tool-level authorization for this. See <a href="mcp-plus-pilot-tools-and-network">MCP + Pilot</a> for how the two protocols complement each other.</li>
     <li><strong>Data classification</strong> -- Pilot does not understand the sensitivity of the data flowing through its tunnels. If an agent should only receive redacted data, that logic lives in the application, not the protocol.</li>
-    <li><strong>Audit logging</strong> -- Pilot logs trust events (handshakes, approvals, revocations) locally. If you need centralized audit logging for compliance, you will need to aggregate these logs into your SIEM. For healthcare environments that require end-to-end compliance, see <a href="/blog/hipaa-compliant-agent-communication">HIPAA-Compliant Agent Communication for Healthcare AI</a>.</li>
+    <li><strong>Audit logging</strong> -- Pilot logs trust events (handshakes, approvals, revocations) locally. If you need centralized audit logging for compliance, aggregate these logs into your SIEM. For healthcare environments, see the <a href="/blog/hipaa-compliant-agent-communication">technical controls and operator-responsibility guide</a>.</li>
   </ul>
 
   <p>The right architecture is layered: Pilot Protocol for transport-level zero trust, MCP or equivalent for tool-level authorization, and application-level guardrails for content safety. Each layer handles the security domain it understands best. When agents need to collaborate across organizational boundaries, this zero trust model becomes the foundation for <a href="/blog/cross-company-agent-collaboration-without-shared-infrastructure">cross-company agent collaboration without shared infrastructure</a> -- scoped trust handshakes replace the fragile shared-credential model.</p>

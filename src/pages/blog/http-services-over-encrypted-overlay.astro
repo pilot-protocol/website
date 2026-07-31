@@ -425,17 +425,17 @@ func enrichOrder(d *driver.Driver, order Order) map[string]any {
   </section>
 
   <section>
-  <h2>Port 443: Double Encryption</h2>
+  <h2>Port 443: Current Behavior and Secure-Layer Roadmap</h2>
 
-  <p>Pilot port 80 uses the tunnel's AES-256-GCM encryption. The protocol spec also defines a secure port 443 that adds a second layer: a per-connection <a href="https://datatracker.ietf.org/doc/html/rfc7748" target="_blank" rel="noopener">X25519</a> key exchange followed by <a href="https://datatracker.ietf.org/doc/html/rfc5288" target="_blank" rel="noopener">AES-256-GCM</a> encryption on the connection itself. This is <strong>double encryption</strong> -- the tunnel encrypts the outer packet, and the connection encrypts the inner payload.</p>
+  <p>Today, Pilot ports 80 and 443 both ride the same AES-256-GCM encrypted tunnel. Port 443 is the secure-service convention; it does not yet add a second per-connection encryption layer in the shipping SDK.</p>
 
   <div class="callout">
-    <p><strong>Roadmap note.</strong> The per-connection secure layer ("pilot-secure-v1") is specified in the <a href="/docs/research">IETF Internet-Draft</a> (§11.4) but is <strong>not yet exposed as a distinct driver API</strong> — there is no <code>ListenSecure</code>/<code>DialSecure</code> in the current Go SDK. Today, listening on port 443 rides the same tunnel encryption as port 80. The code below shows the intended shape using the shipping <code>Listen</code>/<code>Dial</code> calls; the second encryption layer lands when the secure-port API ships.</p>
+    <p><strong>Roadmap note.</strong> The per-connection secure layer ("pilot-secure-v1") is specified in the <a href="/docs/research">wire specification</a> (§11.4) but is <strong>not yet exposed as a distinct driver API</strong> — there is no <code>ListenSecure</code>/<code>DialSecure</code> in the current Go SDK. Today, listening on port 443 rides the same tunnel encryption as port 80. The code below shows the intended shape using the shipping <code>Listen</code>/<code>Dial</code> calls; the second encryption layer lands when the secure-port API ships.</p>
   </div>
 
-  <h3>Why Double Encryption?</h3>
+  <h3>Why a Future Second Layer?</h3>
 
-  <p>The tunnel encryption key is shared across all connections between two daemons. If an attacker compromises the tunnel key, they can read all connections. A per-connection key derived from a fresh X25519 exchange means compromising one connection does not affect others.</p>
+  <p>The proposed secure-port API would derive a separate key for each logical connection, adding isolation beyond the current peer-specific tunnel secret. That is a roadmap property, not a claim about the current driver.</p>
 
   <p>This is the same defense-in-depth approach as running TLS inside a VPN tunnel. It protects against key compromise at any single layer.</p>
 
@@ -492,7 +492,7 @@ if err != nil {
 }
 defer conn.Close()
 
-<span class="comment">// Standard HTTP over the double-encrypted connection</span>
+<span class="comment">// Standard HTTP over the encrypted Pilot tunnel</span>
 req, _ := http.NewRequest("GET", "http://agent/api/secrets", nil)
 req.Write(conn)
 resp, _ := http.ReadResponse(bufio.NewReader(conn), req)</code></pre>
@@ -505,7 +505,7 @@ resp, _ := http.ReadResponse(bufio.NewReader(conn), req)</code></pre>
 <span class="comment"># Access via curl (still plain HTTP on the local side)</span>
 <span class="cmd">curl http://10.4.0.1:443/api/secrets</span></code></pre>
 
-  <p>Note that the gateway terminates the Pilot encryption and serves plain HTTP locally. The double encryption protects the data in transit between agents. The local loopback segment is unencrypted, which is standard practice (your local loopback is trusted).</p>
+  <p>The gateway terminates the Pilot tunnel encryption and serves plain HTTP locally. Data in transit between agents is protected by the tunnel layer today; operators should still assess the local segment and host boundary for their environment.</p>
   </section>
 
   <section>

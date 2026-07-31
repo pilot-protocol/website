@@ -54,7 +54,7 @@ const bodyContent = `<h1>Networks</h1>
   <table>
     <thead><tr><th>Permission</th><th>Without network</th><th>With shared network</th></tr></thead>
     <tbody>
-      <tr><td><strong>Discover addresses</strong></td><td>Private agents are invisible</td><td>Can resolve any member&rsquo;s endpoint</td></tr>
+      <tr><td><strong>Resolve endpoints</strong></td><td>Reachable endpoint is withheld; some directory metadata may remain visible</td><td>Can resolve any member&rsquo;s endpoint</td></tr>
       <tr><td><strong>Open connections</strong></td><td>Connection attempts silently dropped</td><td>Connections accepted immediately</td></tr>
       <tr><td><strong>Send datagrams</strong></td><td>Silently dropped</td><td>Delivered</td></tr>
       <tr><td><strong>List members</strong></td><td>Non-backbone networks are enumerable via the registry today (backbone #0 is admin-gated)</td><td>Full member list via <code>pilotctl network members</code></td></tr>
@@ -77,8 +77,8 @@ const bodyContent = `<h1>Networks</h1>
   <ul>
     <li><strong><a href="enterprise-rbac">RBAC</a></strong> - three-tier roles (owner, admin, member) with a permissions matrix. Promote, demote, kick, and transfer ownership.</li>
     <li><strong><a href="enterprise-rbac#invites">Invites</a></strong> - consent-based invite flow with 30-day TTL and inbox cap.</li>
-    <li><strong><a href="enterprise-identity">Identity &amp; SSO</a></strong> - OIDC, SAML, Entra ID, LDAP, and webhook identity providers with built-in JWT validation.</li>
-    <li><strong><a href="enterprise-identity#directory-sync">Directory sync</a></strong> - push AD/Entra ID/LDAP entries to auto-provision members and roles.</li>
+    <li><strong><a href="enterprise-identity">Identity &amp; SSO</a></strong> - OIDC/JWT validation plus external identity mapping and webhook-based bridges.</li>
+    <li><strong><a href="enterprise-identity#directory-sync">Directory sync</a></strong> - map external directory entries and roles to existing agents; sync does not create agents or add members.</li>
     <li><strong><a href="enterprise-policies">Policies</a></strong> - membership caps, port whitelists, and network descriptions with merge-on-update semantics.</li>
     <li><strong><a href="enterprise-audit">Audit &amp; compliance</a></strong> - structured audit events, SIEM export (Splunk HEC, CEF, JSON), webhooks with DLQ.</li>
     <li><strong><a href="enterprise-blueprints">Blueprints</a></strong> - declarative JSON provisioning: one document, one command, full network setup.</li>
@@ -188,7 +188,7 @@ const bodyContent = `<h1>Networks</h1>
 
   <h3>Silent rejection</h3>
 
-  <p>When a non-member tries to connect to a private network agent, nothing happens. No error, no response, no indication the target exists. This prevents scanning and enumeration.</p>
+  <p>When a non-member tries to connect to a private network agent, the connection gate returns no response and exposes no endpoint-level signal. Directory listings or metadata can still be enumerable under some registry configurations, so this limits connectivity probing rather than promising total metadata invisibility.</p>
 
   <h3>Backbone isolation</h3>
 

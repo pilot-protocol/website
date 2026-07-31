@@ -121,7 +121,7 @@ const bodyContent = `<p><strong>How Pilot Protocol works:</strong> it is a UDP o
 
   <p>NAT traversal is the hardest part of any peer-to-peer system. Pilot Protocol solves it with a <strong>three-tier approach</strong> that handles every NAT type, from simple full-cone NATs to the most restrictive symmetric NATs.</p>
 
-  <p>The key component is the <strong>beacon</strong> -- a lightweight server that runs alongside the rendezvous registry on a public IP. The beacon serves three functions: <a href="https://datatracker.ietf.org/doc/html/rfc5389" target="_blank" rel="noopener">STUN</a> discovery, hole-punch coordination, and relay fallback.</p>
+  <p>The key component is the <strong>beacon</strong> -- a lightweight server that runs alongside the rendezvous registry on a public IP. The beacon serves three functions: <a href="https://www.rfc-editor.org/rfc/rfc5389.html" target="_blank" rel="noopener">STUN</a> discovery, hole-punch coordination, and relay fallback.</p>
 
   <h3>Tier 1: STUN Discovery</h3>
 
@@ -187,14 +187,14 @@ const bodyContent = `<p><strong>How Pilot Protocol works:</strong> it is a UDP o
 
   <h2 id="encryption">Encryption: X25519 + AES-256-GCM</h2>
 
-  <p>Pilot Protocol encrypts all traffic by default. There is no unencrypted mode for production use. The encryption system uses <strong><a href="https://datatracker.ietf.org/doc/html/rfc7748" target="_blank" rel="noopener">X25519</a> for key exchange</strong> and <strong><a href="https://datatracker.ietf.org/doc/html/rfc5288" target="_blank" rel="noopener">AES-256-GCM</a> for packet encryption</strong>, implemented entirely with Go's standard library -- zero external dependencies.</p>
+  <p>Pilot Protocol encrypts all traffic by default. There is no unencrypted mode for production use. The encryption system uses <strong><a href="https://www.rfc-editor.org/rfc/rfc7748.html" target="_blank" rel="noopener">X25519</a> for key exchange</strong> and <strong><a href="https://www.rfc-editor.org/rfc/rfc5288.html" target="_blank" rel="noopener">AES-256-GCM</a> for packet encryption</strong>, implemented entirely with Go's standard library -- zero external dependencies.</p>
 
   <h3>Key Exchange</h3>
 
   <p>When two agents establish a tunnel, they perform an X25519 Diffie-Hellman key exchange:</p>
 
   <ol>
-    <li>Each side generates an ephemeral X25519 key pair</li>
+    <li>Each daemon uses its startup X25519 key pair to derive a peer-specific tunnel secret</li>
     <li>Public keys are exchanged using <code>PILK</code> frames (magic bytes <code>0x50494C4B</code>)</li>
     <li>Both sides compute the shared secret using their private key and the peer's public key</li>
     <li>The shared secret is used to derive the AES-256-GCM encryption key</li>
@@ -223,18 +223,18 @@ const bodyContent = `<p><strong>How Pilot Protocol works:</strong> it is a UDP o
 
   <p>The fourth magic byte variant is <code>PILA</code> (<code>0x50494C41</code> -- "Pilot Authentication"), used during the initial handshake to verify agent identity using Ed25519 signatures before the encrypted channel is established.</p>
 
-  <h2 id="trust">Trust Model: Invisible by Default</h2>
+  <h2 id="trust">Trust Model: Private by Default</h2>
 
   <p>Most agent frameworks treat discovery as a solved problem. A2A publishes Agent Cards to well-known URLs. MCP servers are configured by the client. The assumption is that agents <strong>want</strong> to be found.</p>
 
-  <p>Pilot Protocol takes the opposite approach: <strong>agents are invisible by default</strong>.</p>
+  <p>Pilot Protocol takes a more private approach: <strong>reachable endpoints are gated by default</strong>.</p>
 
   <p>When a new agent joins the network, it is registered with the rendezvous server but marked as <strong>private</strong>. This means:</p>
 
   <ul>
-    <li><strong>Lookup</strong> (finding an agent by hostname) only returns public agents</li>
-    <li><strong>Resolve</strong> (getting an agent's endpoint for connection) requires a mutual trust relationship</li>
-    <li><strong>Enumeration</strong> of the backbone network is blocked -- you cannot list all agents</li>
+    <li><strong>Lookup</strong> may return directory metadata according to registry and network configuration</li>
+    <li><strong>Resolve</strong> withholds the reachable endpoint unless mutual trust or shared-network membership grants connectivity</li>
+    <li><strong>Directory discovery</strong> is separate from endpoint access, so metadata visibility does not grant a connection</li>
   </ul>
 
   <h3>The Handshake</h3>
@@ -276,7 +276,7 @@ const bodyContent = `<p><strong>How Pilot Protocol works:</strong> it is a UDP o
       <tr><td>7</td><td>Echo</td><td>Ping/pong for connectivity testing and latency measurement</td></tr>
       <tr><td>53</td><td>DNS</td><td>Hostname resolution within the overlay network</td></tr>
       <tr><td>80</td><td>HTTP</td><td>Standard HTTP services over Pilot tunnels</td></tr>
-      <tr><td>443</td><td>Secure</td><td>Encrypted services (X25519 + AES-256-GCM per connection)</td></tr>
+      <tr><td>443</td><td>Secure service convention</td><td>Protected by the same X25519 + AES-256-GCM tunnel encryption as other ports today</td></tr>
       <tr><td>1000</td><td>Stdio</td><td>Interactive terminal sessions between agents</td></tr>
       <tr><td>1001</td><td>Data Exchange</td><td>Structured data and file transfer</td></tr>
       <tr><td>1002</td><td>Event Stream</td><td>Pub/sub event distribution with topic routing</td></tr>
@@ -344,11 +344,11 @@ http.Serve(listener, myHandler)</code></pre>
     },
     {
       question: "What encryption does Pilot Protocol use for agent communication?",
-      answer: "Pilot encrypts all traffic by default using X25519 Diffie-Hellman key exchange (ephemeral keys for forward secrecy) and AES-256-GCM authenticated encryption. The entire stack is implemented in Go's standard library — zero external dependencies. Encrypted frames use PILS framing with a random nonce prefix per connection for replay prevention."
+      answer: "Pilot encrypts tunnel traffic by default using peer-specific secrets derived from daemon-lifetime X25519 keys and AES-256-GCM authenticated encryption. The current design provides peer isolation, not per-session forward secrecy. Encrypted frames use a random nonce prefix and counter for replay protection."
     },
     {
       question: "How does Pilot Protocol's trust model work?",
-      answer: "Agents are invisible by default — they cannot be discovered or resolved unless they explicitly trust another agent. Trust is established through a mutual Ed25519-signed handshake, where each side must approve the connection request. Either side can revoke trust instantly, which tears down active tunnels and prevents reconnection."
+      answer: "Agents are private by default at the application connectivity layer. Directory metadata may be visible, but open lookups withhold private endpoints and private nodes reject application traffic unless peer trust or shared-network membership authorizes it. Peer trust can be revoked to tear down the associated tunnel and prevent reconnection under that grant."
     }
   ]}
 >

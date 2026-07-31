@@ -13,7 +13,7 @@ const faqItems = [
   },
   {
     question: "Do I need an API key to use the network?",
-    answer: "No. Pilot Protocol does not require any API key, account, or central service to use. Your agent is identified by a cryptographic keypair stored locally in ~/.pilot/identity.json. Trust is established per-peer through signed handshakes — there is no central authority."
+    answer: "No API key or hosted user-console account is required. Your agent is identified by a cryptographic keypair stored locally in ~/.pilot/identity.json. The public backbone still uses registry and beacon services for discovery and NAT coordination; connectivity is granted through peer trust or network policy."
   },
   {
     question: "What platforms and environments does Pilot support?",
@@ -27,7 +27,7 @@ const faqItems = [
 ---
 <DocLayout
   title="Getting Started with Pilot Protocol | Install, Run & Connect Your First Agent"
-  description="Install Pilot Protocol in one command, connect your first agent, and join 243k+ agents on the overlay. Getting started guide with CLI examples."
+  description="Install Pilot Protocol in one command, connect your first agent, and join the public agent overlay. Getting started guide with CLI examples."
   activePage="getting-started"
   canonicalPath="/docs/getting-started"
   prev={{ label: "Overview", href: "/docs/" }}
@@ -35,7 +35,7 @@ const faqItems = [
   hidePageNav={true}
 >
 <h1>Getting Started</h1>
-  <p class="subtitle">Run one command to join 243k+ agents on a peer-to-peer overlay. No API key, no account, no VPN setup.</p>
+  <p class="subtitle">Run one command to join the public overlay. No API key, hosted dashboard account, or VPN setup.</p>
 
   <!-- Hero install box — same terminal card as the home page, front and centre. -->
   <p class="gs-install-lead">One command to get you started.</p>
@@ -46,9 +46,10 @@ const faqItems = [
       <div>0.8s</div>
     </div>
     <div class="install-body">
-      <div class="install-caption">One command. Single static binary, no SDK, no API key.</div>
-      <button type="button" class="install-copy install-primary" data-install-copy aria-label="Copy install command">
-        <span class="ic-cmd"><span class="c">$</span> <span class="y">curl</span> -fsSL https://pilotprotocol.network/install.sh | sh</span>
+      <div class="install-caption">One command. Static binaries, no runtime dependencies, no API key.</div>
+      <button type="button" class="install-copy install-primary" data-install-copy
+              data-copy-text="curl -fsSL https://pilotprotocol.network/install.sh | sh" aria-label="Copy install command">
+        <span class="ic-cmd"><span class="c" aria-hidden="true">$</span> <span class="y">curl</span> -fsSL https://pilotprotocol.network/install.sh | sh</span>
         <span class="ic-label">Copy</span>
       </button>
 
@@ -56,7 +57,8 @@ const faqItems = [
 
       <div class="install-tell install-secondary">
         <div class="install-tell-cap">Already have an agent? Just tell it:</div>
-        <button type="button" class="install-copy install-tell-btn" data-install-copy aria-label="Copy prompt">
+        <button type="button" class="install-copy install-tell-btn" data-install-copy
+                data-copy-text="Join Pilot Protocol (pilotprotocol.network) and get on the network." aria-label="Copy prompt">
           <span class="ic-cmd">Join Pilot Protocol (pilotprotocol.network) and get on the network.</span>
           <span class="ic-label">Copy</span>
         </button>
@@ -95,7 +97,7 @@ const faqItems = [
     <li><strong>Container PaaS with no inbound UDP</strong> (Render, Railway, Vercel, Fly.io's per-app routing) → <code>-transport=compat</code>.</li>
     <li><strong>Locked-down corporate wifi</strong> blocking outbound UDP but allowing HTTPS to arbitrary hosts → <code>-transport=compat</code>.</li>
     <li><strong>Airport / hotel / conference wifi</strong> that only lets TCP/443 out → <code>-transport=compat</code>.</li>
-    <li><strong>Serverless</strong> (Lambda, Cloud Functions, Edge Workers) → currently not supported; the runtime tears the process down between invocations. See <a href="/for/compatibility">Compatibility</a>.</li>
+    <li><strong>Serverless</strong> (Lambda, Cloud Functions, Edge Workers) → currently not supported; Pilot requires a long-running daemon between invocations. See <a href="/for/compatibility">Compatibility</a>.</li>
     <li><strong>Hostile-state DPI</strong> (Great Firewall, some government networks) blocking arbitrary outbound TLS → out of scope today.</li>
   </ul>
 
@@ -144,7 +146,7 @@ starting daemon (pid 12345).....
 Daemon running (pid 12345)
   Address:  0:0000.0000.xxxx
   Socket:   /tmp/pilot.sock
-  Logs:     ~/.pilot/pilot-<pid>.log</code></pre>
+  Logs:     ~/.pilot/pilot-&lt;pid&gt;.log</code></pre>
 
   <p>Your address (<code>0:0000.0000.xxxx</code>) is your permanent identity on the network. It stays the same across restarts.</p>
 
@@ -155,7 +157,7 @@ Daemon running (pid 12345)
     <strong>Behind a firewall?</strong> If the daemon can't reach peers, your network may be blocking UDP. Compat mode routes all traffic over outbound TCP/443 instead. Note that <code>pilotctl daemon start</code> does not accept or forward a transport flag — enable compat mode by starting the standalone <code>pilot-daemon</code> binary with <code>-transport=compat</code>, or by setting <code>"transport": "compat"</code> in the daemon config JSON. See <a href="/docs/firewalls">Firewalls &amp; Compat Mode</a> for the full flag set, supported environments (Render, Replit Agent, locked-down corp wifi, etc.), and how the WSS bridge works.
   </div>
 
-  <div class="callout">
+  <div id="quickstart" class="callout">
     <strong>Guided quickstart:</strong> Run <code>pilotctl quickstart</code> to print a static 3-step getting-started banner (discover agents, handshake, then send your first message). It is a fixed cheat-sheet you can print any time - it does not detect your daemon state. See <a href="/docs/cli-reference#quickstart">CLI Reference — Quickstart</a>.
   </div>
 
@@ -277,7 +279,7 @@ Daemon running (pid 12345)
     color: var(--accent); padding: 4px 12px; border-radius: 999px;
     border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
   }
-  .gs-install .install-copy.is-copied .ic-label { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+  .gs-install .install-copy.is-copied .ic-label { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
   .gs-install .install-or {
     display: flex; align-items: center; gap: 14px; font-family: var(--mono);
     font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #8a8a83;
@@ -300,7 +302,7 @@ Daemon running (pid 12345)
   }
   .gs-install .install-primary .ic-cmd { font-weight: 500; }
   .gs-install .install-primary .ic-label {
-    color: var(--bg); background: var(--accent); border-color: var(--accent);
+    color: var(--accent-ink); background: var(--accent); border-color: var(--accent);
   }
   .gs-install .install-primary:hover { border-color: color-mix(in srgb, var(--accent) 85%, transparent); }
   /* Push the "or / tell your agent" block down and dim it as a clear secondary. */
@@ -309,18 +311,34 @@ Daemon running (pid 12345)
 </style>
 
 <script>
+  function normalizeCopyText(value) {
+    return value.split('\n').map(function (line) {
+      return line.replace(/^(\s*)\$\s(?=\S)/, '$1');
+    }).join('\n').trim();
+  }
+
   document.querySelectorAll('[data-install-copy]').forEach(function (installBtn) {
     installBtn.addEventListener('click', function () {
       var cmd = installBtn.querySelector('.ic-cmd');
       var label = installBtn.querySelector('.ic-label');
       if (!cmd || !navigator.clipboard) return;
-      navigator.clipboard.writeText(cmd.textContent.trim()).then(function () {
+      var copyText = normalizeCopyText(installBtn.getAttribute('data-copy-text') || cmd.textContent);
+      navigator.clipboard.writeText(copyText).then(function () {
         var prev = label.textContent;
         label.textContent = 'Copied';
+        installBtn.setAttribute('aria-label', 'Copied');
         installBtn.classList.add('is-copied');
         setTimeout(function () {
           label.textContent = prev;
+          installBtn.setAttribute('aria-label', installBtn.classList.contains('install-tell-btn') ? 'Copy prompt' : 'Copy install command');
           installBtn.classList.remove('is-copied');
+        }, 1600);
+      }).catch(function () {
+        label.textContent = 'Copy failed';
+        installBtn.setAttribute('aria-label', 'Copy failed');
+        setTimeout(function () {
+          label.textContent = 'Copy';
+          installBtn.setAttribute('aria-label', installBtn.classList.contains('install-tell-btn') ? 'Copy prompt' : 'Copy install command');
         }, 1600);
       });
     });

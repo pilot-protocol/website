@@ -21,7 +21,8 @@ const canonicalUrl = 'https://pilotprotocol.network/publish';
 <body>
 <Nav />
 
-<main id="intro">
+<main>
+  <div id="intro">
   <section class="page-head">
     <div class="wrap">
       <div class="eyebrow">Publish</div>
@@ -42,7 +43,7 @@ const canonicalUrl = 'https://pilotprotocol.network/publish';
       <button id="start" class="cta" type="button">Publish your app now →</button>
     </div>
   </section>
-</main>
+  </div>
 
 <section id="form-view" class="pub-section" hidden>
   <div class="pub-wrap">
@@ -53,39 +54,13 @@ const canonicalUrl = 'https://pilotprotocol.network/publish';
     </div>
   </div>
 </section>
-
-<section id="mobile-gate">
-  <div class="wrap">
-    <div class="mg-card">
-      <div class="mg-icon">🖥️</div>
-      <h1>Publishing needs a desktop</h1>
-      <p>Open <b>pilotprotocol.network/publish</b> on a desktop browser to submit your app.</p>
-      <a class="mg-link" href="/app-store">← Back to the App Store</a>
-    </div>
-  </div>
-</section>
+</main>
 
 <Footer />
 
 <style is:global>
   /* GLOBAL (the wizard DOM is JS-injected, so Astro-scoped styles can't reach it),
      namespaced under #publish, and forced LIGHT + large regardless of the site theme. */
-
-  /* ── mobile gate: the multi-step form needs a desktop; on small screens swap
-     the whole publish experience for a "open on desktop" message. ── */
-  #mobile-gate { display: none; }
-  @media (max-width: 768px) {
-    #intro, #form-view { display: none !important; }
-    #mobile-gate { display: block; }
-  }
-  #mobile-gate .wrap { padding: 0 22px; }
-  #mobile-gate .mg-card { max-width: 460px; margin: 0 auto; padding: 80px 0 96px; text-align: center; }
-  #mobile-gate .mg-icon { font-size: 46px; line-height: 1; margin-bottom: 18px; }
-  #mobile-gate h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 14px; }
-  #mobile-gate p { color: var(--ink-dim); font-size: 16px; line-height: 1.55; margin: 0 0 24px; }
-  #mobile-gate p b { color: var(--ink); }
-  #mobile-gate .mg-link { color: var(--accent); font-size: 15px; text-decoration: none; }
-  #mobile-gate .mg-link:hover { text-decoration: underline; }
 
   /* ── intro / presentation (site-themed hero) ── */
   #intro .req-list { list-style:none; padding:0; margin:26px 0 0; display:grid; gap:11px; max-width:660px; }
@@ -105,19 +80,20 @@ const canonicalUrl = 'https://pilotprotocol.network/publish';
 
   #publish {
     --c-card:#ffffff; --c-field:#f3f2ec; --c-ink:#15150f; --c-dim:#5d5d54; --c-faint:#b6b5aa;
+    --c-acc-text:oklch(.47 .12 142);
     --c-line:#e6e5dd; --c-line2:#d6d5cb; --c-acc:oklch(0.66 0.17 142); --c-accink:#ffffff;
     color:var(--c-ink); font-size:16.5px; line-height:1.5;
   }
 
   #publish .stepper { display:flex; list-style:none; padding:0; margin:0 0 40px; gap:4px; }
-  #publish .stepper li { display:flex; align-items:center; gap:9px; flex:1 1 0; min-width:0; color:var(--c-faint); font-size:13px; position:relative; }
+  #publish .stepper li { display:flex; align-items:center; gap:9px; flex:1 1 0; min-width:0; color:var(--c-dim); font-size:13px; position:relative; }
   #publish .stepper li:not(:last-child)::after { content:""; position:absolute; left:34px; right:6px; top:15px; height:2px; background:var(--c-line2); }
   #publish .stepper .dot { width:30px;height:30px;border-radius:999px;border:1.5px solid var(--c-line2);display:grid;place-items:center;font-size:13px;background:#fff;z-index:1;flex:none; }
   #publish .stepper .lbl { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase; letter-spacing:.03em; font-weight:500; position:relative; z-index:1; background:#f7f6f1; margin-left:-9px; padding:0 8px 0 9px; }
-  #publish .stepper li.done .dot { background:var(--c-acc); border-color:var(--c-acc); color:#fff; }
+  #publish .stepper li.done .dot { background:var(--c-acc); border-color:var(--c-acc); color:var(--c-ink); }
   #publish .stepper li.done { color:var(--c-dim); }
   #publish .stepper li.done:not(:last-child)::after { background:var(--c-acc); }
-  #publish .stepper li.now .dot { border-color:var(--c-acc); color:var(--c-acc); box-shadow:0 0 0 4px color-mix(in oklch, var(--c-acc) 20%, transparent); }
+  #publish .stepper li.now .dot { border-color:var(--c-acc); color:var(--c-acc-text); box-shadow:0 0 0 4px color-mix(in oklch, var(--c-acc) 20%, transparent); }
   #publish .stepper li.now { color:var(--c-ink); }
 
   #publish .stephdr { margin-bottom:24px; }
@@ -210,6 +186,29 @@ const canonicalUrl = 'https://pilotprotocol.network/publish';
   #publish .release a { color:var(--c-acc); text-decoration:underline; }
   #publish .agree { display:flex; gap:12px; align-items:flex-start; font-size:15px; line-height:1.5; color:var(--c-ink); cursor:pointer; }
   #publish .agree input { width:auto; margin:2px 0 0; flex:none; accent-color:var(--c-acc); }
+
+  @media (max-width: 768px) {
+    .pub-section { padding:28px 0 72px; }
+    .pub-wrap { padding:0 16px; }
+    #publish { font-size:15px; }
+    #publish .stepper { overflow-x:auto; padding-bottom:10px; margin-bottom:28px; scrollbar-width:thin; }
+    #publish .stepper li { flex:0 0 78px; }
+    #publish .stepper .lbl { font-size:10px; padding-right:4px; }
+    #publish .stephdr h2 { font-size:28px; }
+    #publish .card, #publish .card.release { padding:22px 18px 8px; border-radius:12px; }
+    #publish .row2, #publish .mgrid { grid-template-columns:1fr !important; gap:0; }
+    #publish .mcard { padding:18px 14px 8px; }
+    #publish .mhead { gap:10px; }
+    #publish .mhead .mname { overflow-wrap:anywhere; }
+    #publish .ptable { overflow-x:auto; max-width:100%; padding-bottom:8px; }
+    #publish .ptable .prow { min-width:650px; }
+    #publish .params.http .ptable .prow { min-width:820px; }
+    #publish .navrow { gap:18px; }
+    #publish .navrow .btn { padding:11px 18px; }
+    #publish .review-tbl th { width:120px; }
+    #publish .review-tbl th, #publish .review-tbl td { padding:9px 6px; }
+    #publish .info:hover::after { left:auto; right:-8px; transform:none; width:min(250px,75vw); }
+  }
 </style>
 
 <script>
@@ -325,17 +324,52 @@ function emailStepHTML(){
 
 function renderStepper() {
   document.getElementById('stepper').innerHTML = STEPS.map((s,i)=>
-    `<li class="${i<step?'done':i===step?'now':''}"><span class="dot">${i<step?'✓':i+1}</span><span class="lbl">${s}</span></li>`
+    `<li class="${i<step?'done':i===step?'now':''}" ${i===step?'aria-current="step"':''}><span class="dot">${i<step?'✓':i+1}</span><span class="lbl">${s}</span></li>`
   ).join('');
 }
 
 const root2 = document.getElementById('stepRoot');
-function render() {
+function fieldLabel(field) {
+  const source = field.querySelector('label, .ghead');
+  if (!source) return '';
+  const copy = source.cloneNode(true);
+  copy.querySelectorAll('.info').forEach(el => el.remove());
+  return (copy.textContent || '').replace(/\s+/g, ' ').trim();
+}
+function wireAccessibility() {
+  root2.querySelectorAll('.field').forEach((field, i) => {
+    const control = field.querySelector('input, select, textarea');
+    const label = field.querySelector('label');
+    const name = fieldLabel(field);
+    if (!control || !name) return;
+    if (label) {
+      if (!control.id) control.id = 'publish-field-' + step + '-' + i;
+      label.htmlFor = control.id;
+    } else if (!control.hasAttribute('aria-label')) control.setAttribute('aria-label', name);
+  });
+  const classLabels = {
+    'h-name':'Header name', 'h-value':'Header value', 'm-name':'Method name', 'm-verb':'HTTP verb',
+    'm-path':'HTTP path', 'm-latency':'Latency', 'm-description':'Method description',
+    'p-name':'Parameter name', 'p-type':'Parameter type', 'p-req':'Parameter required',
+    'p-in':'Parameter location', 'p-desc':'Parameter description'
+  };
+  Object.entries(classLabels).forEach(([className, label]) => {
+    root2.querySelectorAll('.' + className).forEach(el => { if (!el.hasAttribute('aria-label')) el.setAttribute('aria-label', label); });
+  });
+  root2.querySelectorAll('.err').forEach(el => el.setAttribute('aria-live', 'polite'));
+  root2.querySelectorAll('button[title]').forEach(el => { if (!el.hasAttribute('aria-label')) el.setAttribute('aria-label', el.title); });
+}
+function render(moveFocus = false) {
   renderStepper();
   root2.innerHTML = STEPS_HTML[step]();
+  wireAccessibility();
   wire();
   if (STEPS[step] === 'Methods' || STEPS[step] === 'Review') refreshPreview();
   persistUI();
+  if (moveFocus) {
+    const heading = root2.querySelector('.stephdr h2');
+    if (heading) { heading.tabIndex = -1; heading.focus(); }
+  }
 }
 
 // Persist which view + step we're on, so a reload keeps you in place (the draft
@@ -542,8 +576,8 @@ function bindVal(id, set){ const el=document.getElementById(id); if(el) el.addEv
 function scrollTop(){ var s=document.getElementById('form-view'); window.scrollTo({ top: s? s.offsetTop-12 : 0, behavior:'smooth' }); }
 function wire() {
   const cur=STEPS[step];
-  const back=document.getElementById('back'); if(back) back.onclick=()=>{ step=Math.max(0,step-1); render(); scrollTop(); };
-  const next=document.getElementById('next'); if(next) next.onclick=()=>{ if(validateStep()) { step++; render(); scrollTop(); } };
+  const back=document.getElementById('back'); if(back) back.onclick=()=>{ step=Math.max(0,step-1); render(true); scrollTop(); };
+  const next=document.getElementById('next'); if(next) next.onclick=()=>{ if(validateStep()) { step++; render(true); scrollTop(); } };
 
   if (cur==='Email'){
     const em=document.getElementById('f-email'); if(em) em.addEventListener('input',()=>{ state.email=em.value.trim(); save(); });
@@ -619,9 +653,16 @@ function wire() {
 }
 
 // ── validation (client mirror of the server's; server is authoritative) ──
-function show(id,msg){ const el=document.getElementById(id); if(el) el.textContent=msg||''; }
+function show(id,msg){
+  const el=document.getElementById(id); if(el) el.textContent=msg||'';
+  const map={ 'e-id':'f-idname', 'e-methods':'add-method' };
+  const control=document.getElementById(map[id] || ('f-'+id.replace(/^e-/,'')));
+  if(control){ control.setAttribute('aria-describedby',id); control.setAttribute('aria-invalid',msg?'true':'false'); }
+  return control;
+}
 function validateStep(){
-  let ok=true; const bad=(id,m)=>{show(id,m); ok=false;};
+  let ok=true; let firstInvalid=null;
+  const bad=(id,m)=>{ const control=show(id,m); if(!firstInvalid && control) firstInvalid=control; ok=false; };
   const cur=STEPS[step];
   if (cur==='Email'){ if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(state.email||'')) bad('e-email','Enter a valid email'); else show('e-email',''); }
   if (cur==='Identity'){
@@ -657,6 +698,7 @@ function validateStep(){
       }
     }
   }
+  if(!ok && firstInvalid){ firstInvalid.focus(); firstInvalid.scrollIntoView({block:'center'}); }
   return ok;
 }
 

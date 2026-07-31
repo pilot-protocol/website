@@ -1,8 +1,9 @@
 ---
 interface Props {
-  active?: 'home' | 'docs' | 'blog' | 'plans' | 'for' | 'tech' | 'apps';
+  active?: 'home' | 'docs' | 'blog' | 'plans' | 'for' | 'tech' | 'apps' | 'trust';
 }
 const { active } = Astro.props;
+import { stableVersion } from '../data/releaseManifest';
 
 const forLinks = [
   { href: '/for/p2p',        label: 'Direct P2P',    desc: 'Peer-to-peer for AI agents' },
@@ -16,40 +17,28 @@ const techLinks = [
   { href: '/for/setups',        label: 'Setups',        desc: 'Pre-wired multi-agent fleets' },
 ];
 
-// Pull latest release version from GitHub at build time.
-let version: string | null = null;
-try {
-  const headers: Record<string, string> = { 'User-Agent': 'pilotprotocol-web' };
-  if (import.meta.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${import.meta.env.GITHUB_TOKEN}`;
-  const res = await fetch('https://api.github.com/repos/pilot-protocol/pilotprotocol/releases/latest', { headers });
-  if (res.ok) {
-    const data: any = await res.json();
-    if (data && typeof data.tag_name === 'string') {
-      version = data.tag_name.replace(/^v/, '');
-    }
-  }
-} catch (e) {
-  // network unreachable at build time - leave version null
-}
-const statusText = version ? `Network live · v${version}` : 'Network live';
+const statusText = `Network live · v${stableVersion}`;
 ---
-<nav class="nav-top">
+<a class="skip-link" href="#page-content">Skip to content</a>
+<nav class="nav-top" aria-label="Primary">
   <div class="wrap">
     <div class="nav-row">
       <a href="/" class="brand" aria-label="Pilot Protocol - home"
          data-track="nav_click" data-track-target="home">
-        <img src="/img/pilot.png" alt="" class="logo" width="44" height="44" />
+        <img src="/img/pilot-96.png" alt="" class="logo" width="44" height="44" />
         <span class="brand-text">Pilot / Protocol<small class="brand-tag">Where agents go</small></span>
       </a>
 
       <div class="nav-links" id="nav-links">
-        <a href="/docs/" class:list={['nav-link', active === 'docs' && 'active']}
+        <a href="/docs/" class:list={['nav-link', active === 'docs' && 'active']} aria-current={active === 'docs' ? 'page' : undefined}
            data-track="nav_click" data-track-target="docs">Docs</a>
-        <a href="/blog/" class:list={['nav-link', active === 'blog' && 'active']}
+        <a href="/trust" class:list={['nav-link', active === 'trust' && 'active']} aria-current={active === 'trust' ? 'page' : undefined}
+           data-track="nav_click" data-track-target="trust">Trust Center</a>
+        <a href="/blog/" class:list={['nav-link', active === 'blog' && 'active']} aria-current={active === 'blog' ? 'page' : undefined}
            data-track="nav_click" data-track-target="blog">Blog</a>
-        <a href="/app-store" class:list={['nav-link', active === 'apps' && 'active']}
+        <a href="/app-store" class:list={['nav-link', active === 'apps' && 'active']} aria-current={active === 'apps' ? 'page' : undefined}
            data-track="nav_click" data-track-target="app-store">App Store</a>
-        <a href="/plans" class:list={['nav-link', active === 'plans' && 'active']}
+        <a href="/plans" class:list={['nav-link', active === 'plans' && 'active']} aria-current={active === 'plans' ? 'page' : undefined}
            data-track="nav_click" data-track-target="plans">Plans</a>
 
         <div class:list={['nav-dropdown', active === 'for' && 'active']}>
@@ -59,9 +48,9 @@ const statusText = version ? `Network live · v${version}` : 'Network live';
               <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
           </button>
-          <div class="nav-dropdown-menu" role="menu">
+          <div class="nav-dropdown-menu">
             {forLinks.map((l) => (
-              <a href={l.href} role="menuitem"
+              <a href={l.href}
                  data-track="nav_click" data-track-target={l.href.replace('/for/', 'for-')}>
                 <span class="dd-label">{l.label}</span>
                 <span class="dd-desc">{l.desc}</span>
@@ -77,9 +66,9 @@ const statusText = version ? `Network live · v${version}` : 'Network live';
               <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
           </button>
-          <div class="nav-dropdown-menu" role="menu">
+          <div class="nav-dropdown-menu">
             {techLinks.map((l) => (
-              <a href={l.href} role="menuitem"
+              <a href={l.href}
                  data-track="nav_click" data-track-target={l.href.replace('/for/', 'for-')}>
                 <span class="dd-label">{l.label}</span>
                 <span class="dd-desc">{l.desc}</span>
@@ -123,6 +112,7 @@ const statusText = version ? `Network live · v${version}` : 'Network live';
     </div>
   </div>
 </nav>
+<span id="page-content" class="skip-target" tabindex="-1"></span>
 
 <script is:inline>
   (function () {

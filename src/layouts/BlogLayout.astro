@@ -40,6 +40,58 @@ const related = blogPosts
   .filter(r => r.shared > 0)
   .sort((a, b) => b.shared - a.shared)
   .slice(0, 3);
+
+// Imported article bodies historically included their own schema and page
+// title. The layout owns both, so remove only those first legacy elements.
+const renderedBody = await Astro.slots.render('default');
+let articleBody = renderedBody
+  .replace(/<script\b(?=[^>]*\btype\s*=\s*["']application\/ld\+json["'])[^>]*>[\s\S]*?<\/script>/i, '')
+  .replace(/<h1\b[^>]*>[\s\S]*?<\/h1>/i, '');
+
+// Some imported tables of contents retained punctuation that their heading
+// IDs had already normalized away. Reconnect those links by their visible
+// heading label so every in-page navigation target is valid.
+const decodeEntities = (value: string) => value
+  .replaceAll('&amp;', '&')
+  .replaceAll('&quot;', '"')
+  .replaceAll('&#39;', "'")
+  .replaceAll('&lt;', '<')
+  .replaceAll('&gt;', '>');
+const labelKey = (value: string) => decodeEntities(
+  value
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&(?:#\d+|#x[\da-f]+|[a-z][\w-]*);/gi, ' '),
+)
+  .normalize('NFKD')
+  .replace(/[^\p{L}\p{N}]+/gu, ' ')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .toLowerCase();
+const headingIds = new Set<string>();
+const headingsByLabel = new Map<string, string>();
+
+for (const match of articleBody.matchAll(/<h([2-6])\b([^>]*)>([\s\S]*?)<\/h\1>/gi)) {
+  const idMatch = match[2].match(/\bid\s*=\s*(?:"([^"]+)"|'([^']+)')/i);
+  const id = idMatch ? decodeEntities(idMatch[1] ?? idMatch[2] ?? '') : '';
+  if (!id) continue;
+  headingIds.add(id);
+  headingsByLabel.set(labelKey(match[3]), id);
+}
+
+articleBody = articleBody.replace(
+  /<a\b([^>]*?)\bhref\s*=\s*(["'])#(.*?)\2([^>]*)>([\s\S]*?)<\/a>/gi,
+  (whole, before, quote, rawFragment, after, label) => {
+    let fragment = rawFragment;
+    try { fragment = decodeURIComponent(rawFragment); } catch { /* Keep the raw fragment. */ }
+    if (headingIds.has(fragment)) return whole;
+    const target = headingsByLabel.get(labelKey(label));
+    return target ? `<a${before}href=${quote}#${target}${quote}${after}>${label}</a>` : whole;
+  },
+);
+
+const faqSectionId = headingIds.has('frequently-asked-questions')
+  ? undefined
+  : 'frequently-asked-questions';
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -81,7 +133,7 @@ const related = blogPosts
 <body>
   <div class="progress-bar" id="progress-bar"></div>
   <Nav active="blog" />
-  <div class="article-layout">
+  <main class="article-layout">
     <article class="article" data-track-read={currentSlug}>
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a> <span class="sep">/</span> <a href="/blog/">Blog</a> <span class="sep">/</span> <span>{title}</span></nav>
       {bannerImage && <img class="article-banner" src={bannerImage} alt={title} loading="lazy" />}
@@ -91,7 +143,7 @@ const related = blogPosts
         <span class="reading-time" id="reading-time"></span>
         {tags.map((tag) => <span class="tag">{tag}</span>)}
       </div>
-      <slot />
+      <Fragment set:html={articleBody} />
     </article>
     <aside class="article-toc" id="article-toc">
       <nav>
@@ -99,10 +151,10 @@ const related = blogPosts
         <ul id="toc-list"></ul>
       </nav>
     </aside>
-  </div>
+  </main>
 
   {faqItems.length > 0 && (
-    <section class="article-faq">
+    <section id={faqSectionId} class="article-faq">
       <div class="article-faq-inner">
         <h2>Frequently asked questions</h2>
         {faqItems.map(item => (
@@ -219,16 +271,43 @@ const related = blogPosts
 
 // Copy buttons on code blocks
 (function() {
+  function normalizeCopyText(value) {
+    return value.split('\n').map(function(line) {
+      return line.replace(/^(\s*)\$\s(?=\S)/, '$1');
+    }).join('\n').trim();
+  }
+
   document.querySelectorAll('.article pre').forEach(function(pre) {
     var btn = document.createElement('button');
     btn.className = 'copy-btn';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Copy code');
     btn.textContent = 'Copy';
     btn.addEventListener('click', function() {
       var code = pre.querySelector('code');
-      var text = code ? code.textContent : pre.textContent;
+      var sourceText;
+      if (code) sourceText = code.textContent;
+      else {
+        var clone = pre.cloneNode(true);
+        var cloneButton = clone.querySelector('.copy-btn');
+        if (cloneButton) cloneButton.remove();
+        sourceText = clone.textContent;
+      }
+      var text = normalizeCopyText(sourceText);
       navigator.clipboard.writeText(text).then(function() {
-        btn.textContent = 'Copied!';
-        setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+        btn.textContent = 'Copied';
+        btn.setAttribute('aria-label', 'Copied');
+        setTimeout(function() {
+          btn.textContent = 'Copy';
+          btn.setAttribute('aria-label', 'Copy code');
+        }, 2000);
+      }).catch(function() {
+        btn.textContent = 'Copy failed';
+        btn.setAttribute('aria-label', 'Copy failed');
+        setTimeout(function() {
+          btn.textContent = 'Copy';
+          btn.setAttribute('aria-label', 'Copy code');
+        }, 2000);
       });
     });
     pre.appendChild(btn);

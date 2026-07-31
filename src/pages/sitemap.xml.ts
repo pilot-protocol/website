@@ -1,4 +1,5 @@
 import { blogPosts } from '../data/blogPosts';
+import { apps } from '../data/apps';
 
 const site = 'https://pilotprotocol.network';
 
@@ -9,7 +10,8 @@ const site = 'https://pilotprotocol.network';
 const pageGlob = import.meta.glob('./**/*.{astro,md,mdx}');
 
 function url(loc: string, lastmod: string, priority: number, changefreq = 'monthly') {
-  return `  <url><loc>${site}${loc}</loc><lastmod>${lastmod}</lastmod><changefreq>${changefreq}</changefreq><priority>${priority}</priority></url>`;
+  const modified = lastmod ? `<lastmod>${lastmod}</lastmod>` : '';
+  return `  <url><loc>${site}${loc}</loc>${modified}<changefreq>${changefreq}</changefreq><priority>${priority}</priority></url>`;
 }
 
 function blogDate(date: string, year?: number): string {
@@ -47,8 +49,7 @@ function priorityFor(loc: string): { p: number; freq: string } {
 }
 
 export async function GET() {
-  const today = new Date().toISOString().split('T')[0];
-  const blogDates = new Map(blogPosts.map((b) => [b.slug, blogDate(b.date, b.year)]));
+  const blogDates = new Map(blogPosts.map((b) => [b.slug, b.iso_date || blogDate(b.date, b.year)]));
 
   const seen = new Set<string>();
   const urls: string[] = [];
@@ -65,16 +66,25 @@ export async function GET() {
     if (loc.includes('[')) continue;                // dynamic template — expanded below
     if (loc.startsWith('/plain/')) continue;        // non-canonical text mirror
     const blogSlug = loc.startsWith('/blog/') ? loc.replace('/blog/', '').replace(/\/$/, '') : '';
-    const lastmod = blogSlug && blogDates.has(blogSlug) ? blogDates.get(blogSlug)! : today;
+    const lastmod = blogSlug && blogDates.has(blogSlug) ? blogDates.get(blogSlug)! : '';
     const { p, freq } = priorityFor(loc);
     add(loc, lastmod, p, freq);
   }
 
-  // 2. Static assets served from public/ that aren't .astro routes.
-  add('/llms.txt', '2026-02-28', 0.5);
-  add('/brand/', today, 0.6);
-  add('/research/ietf/draft-teodor-pilot-problem-statement-01.html', '2026-04-06', 0.7);
-  add('/research/ietf/draft-teodor-pilot-protocol-01.html', '2026-04-06', 0.7);
+  // 2. Dynamic public routes.
+  for (const app of apps) add(`/apps/${app.id}`, app.publishedAt || '', 0.7);
+
+  try {
+    const response = await fetch('https://raw.githubusercontent.com/TeoSlayer/pilot-skills/main/setups.json');
+    if (response.ok) {
+      const catalog = await response.json() as { setups?: { slug: string }[] };
+      for (const setup of catalog.setups || []) add(`/for/setups/${setup.slug}`, '', 0.7);
+    }
+  } catch { /* The collection pages still remain in the sitemap offline. */ }
+
+  // 3. Static assets served from public/ that aren't .astro routes.
+  add('/llms.txt', '2026-07-31', 0.5);
+  add('/brand/', '2026-07-31', 0.6);
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

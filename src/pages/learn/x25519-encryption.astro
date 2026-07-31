@@ -10,14 +10,14 @@ const bodyContent = `
 <ul>
 <li>X25519 (Curve25519 ECDH) is the key-exchange algorithm behind modern encrypted communications — used by TLS 1.3, Signal Protocol, WireGuard, and agent-to-agent overlays like Pilot Protocol.</li>
 <li>It lets two parties derive a shared secret over an untrusted network without ever transmitting the secret itself, using elliptic curve Diffie-Hellman on Curve25519.</li>
-<li>For AI agents, X25519 provides a lightweight, forward-secret key exchange that pairs naturally with AES-GCM for authenticated encryption, all without certificate infrastructure.</li>
+<li>For AI agents, X25519 provides a lightweight key exchange that pairs naturally with AES-GCM for authenticated encryption, all without certificate infrastructure. Pilot currently uses daemon-lifetime X25519 keys, yielding peer-isolated tunnel secrets rather than per-session forward secrecy.</li>
 </ul>
 </blockquote>
 <hr>
 
 <p>When two AI agents need to exchange a sensitive message — a model update, a task handoff, a coordination signal — they face the same fundamental problem that every cryptosystem solves: how to agree on a shared encryption key when an attacker is listening on the wire.</p>
 
-<p>X25519 is one of the most widely deployed solutions to this problem. It is the elliptic curve Diffie-Hellman (ECDH) key-exchange algorithm defined in <a href="https://datatracker.ietf.org/doc/html/rfc7748" target="_blank" rel="noopener">RFC 7748</a>, operating on Curve25519. It is used in TLS 1.3, the Signal end-to-end encryption protocol, WireGuard VPN, and increasingly in agent-native communication protocols. This article explains how X25519 encryption works, what properties it provides, and why it is a natural fit for securing agent-to-agent communication across multicloud and edge environments.</p>
+<p>X25519 is one of the most widely deployed solutions to this problem. It is the elliptic curve Diffie-Hellman (ECDH) key-exchange algorithm defined in <a href="https://www.rfc-editor.org/rfc/rfc7748.html" target="_blank" rel="noopener">RFC 7748</a>, operating on Curve25519. It is used in TLS 1.3, the Signal end-to-end encryption protocol, WireGuard VPN, and increasingly in agent-native communication protocols. This article explains how X25519 encryption works, what properties it provides, and why it is a natural fit for securing agent-to-agent communication across multicloud and edge environments.</p>
 
 <h2 id="table-of-contents">Table of Contents</h2>
 <ul>
@@ -43,7 +43,7 @@ const bodyContent = `
 <td>Two parties derive a shared secret without transmitting it, using elliptic curve Diffie-Hellman on Curve25519.</td>
 </tr>
 <tr>
-<td>It is an IETF standard</td>
+<td>It is defined by RFC 7748</td>
 <td>Defined in RFC 7748, deployed in TLS 1.3, Signal, WireGuard, and dozens of other protocols.</td>
 </tr>
 <tr>
@@ -52,7 +52,7 @@ const bodyContent = `
 </tr>
 <tr>
 <td>No certificate infrastructure needed</td>
-<td>Unlike TLS with X.509, X25519 works with ephemeral keys — ideal for dynamic agent fleets with no PKI.</td>
+<td>Unlike TLS with X.509, X25519 can work without certificate infrastructure — useful for dynamic agent fleets with no PKI.</td>
 </tr>
 </tbody>
 </table>
@@ -61,7 +61,7 @@ const bodyContent = `
 
 <p>X25519 is a key-agreement protocol. It does not encrypt data directly. Instead, it allows two parties to compute the same 32-byte shared secret over an insecure channel, where an eavesdropper who captures all transmitted messages cannot derive that secret. That shared secret is then used as the key for a symmetric cipher — typically AES-256-GCM or ChaCha20-Poly1305 — which handles the actual encryption and decryption.</p>
 
-<p>X25519 was designed by Daniel J. Bernstein as the Diffie-Hellman function on his Curve25519 elliptic curve. It was later adopted as an IETF standard in RFC 7748 and has become the default key-exchange algorithm in many modern protocols. Its design goals were:</p>
+<p>X25519 was designed by Daniel J. Bernstein as the Diffie-Hellman function on his Curve25519 elliptic curve. It was later standardized in RFC 7748 and has become the default key-exchange algorithm in many modern protocols. Its design goals were:</p>
 
 <ul>
 <li><strong>Security by default.</strong> The implementation is constant-time (no data-dependent branching), preventing timing side-channel attacks. The curve is twist-secure, meaning that even if an attacker supplies an invalid public key, the computation does not leak information about the private key.</li>
@@ -71,7 +71,7 @@ const bodyContent = `
 
 <h2 id="how-x25519-key-exchange-works">How X25519 key exchange works</h2>
 
-<p>The core operation is elliptic curve Diffie-Hellman. Each party generates an ephemeral key pair:</p>
+<p>The core operation is elliptic curve Diffie-Hellman. Each party generates an X25519 key pair:</p>
 
 <ul>
 <li><strong>Private key:</strong> 32 random bytes, clamped to eliminate small-subgroup attacks.</li>
@@ -174,10 +174,10 @@ const bodyContent = `
 <p>X25519 is a key-exchange algorithm (how two parties agree on a shared encryption key). AES is a symmetric cipher (how data is encrypted using a key). They are complementary: X25519 establishes the key, and AES-GCM encrypts the data with it.</p>
 
 <h3 id="is-x25519-secure">Is X25519 secure?</h3>
-<p>Yes. X25519 is an IETF standard (RFC 7748), deployed in TLS 1.3, Signal, and WireGuard. It is designed to be constant-time and twist-secure, preventing timing and small-subgroup attacks. No practical attack against Curve25519 has been demonstrated.</p>
+<p>Yes. X25519 is defined by RFC 7748 and deployed in TLS 1.3, Signal, and WireGuard. It is designed to be constant-time and twist-secure, preventing timing and small-subgroup attacks. No practical attack against Curve25519 has been demonstrated.</p>
 
 <h3 id="do-i-need-certificates-for-x25519">Do I need certificates for X25519?</h3>
-<p>No. X25519 key exchange uses ephemeral keys and does not require X.509 certificates, a certificate authority, or any PKI infrastructure. The public keys serve as cryptographic identities directly, which is why X25519 is a natural fit for agent-to-agent protocols where agents start and stop autonomously.</p>
+<p>No. X25519 key exchange does not inherently require X.509 certificates, a certificate authority, or PKI infrastructure. In Pilot, Ed25519 provides persistent identity while X25519 derives peer-specific tunnel secrets.</p>
 
 <h3 id="is-x25519-faster-than-rsa">Is X25519 faster than RSA?</h3>
 <p>X25519 key generation and shared-secret derivation are sub-millisecond on modern hardware, with 32-byte keys. RSA key exchange requires larger keys (256-512 bytes) and does not provide forward secrecy. For agent communication, X25519 is significantly more efficient.</p>
@@ -194,11 +194,11 @@ const faqItems = [
   },
   {
     question: "Is X25519 secure?",
-    answer: "Yes. X25519 is an IETF standard (RFC 7748), deployed in TLS 1.3, Signal, and WireGuard. It is designed to be constant-time and twist-secure, preventing timing and small-subgroup attacks. No practical attack against Curve25519 has been demonstrated.",
+    answer: "Yes. X25519 is defined by RFC 7748 and deployed in TLS 1.3, Signal, and WireGuard. It is designed to be constant-time and twist-secure, preventing timing and small-subgroup attacks. No practical attack against Curve25519 has been demonstrated.",
   },
   {
     question: "Do I need certificates for X25519?",
-    answer: "No. X25519 key exchange uses ephemeral keys and does not require X.509 certificates, a certificate authority, or any PKI infrastructure. The public keys serve as cryptographic identities directly, which is why X25519 is a natural fit for agent-to-agent protocols where agents start and stop autonomously.",
+    answer: "No. X25519 key exchange does not inherently require X.509 certificates, a certificate authority, or PKI infrastructure. In Pilot, Ed25519 provides persistent identity while X25519 derives peer-specific tunnel secrets.",
   },
   {
     question: "Is X25519 faster than RSA?",

@@ -2,7 +2,9 @@
 import BlogLayout from "../../layouts/BlogLayout.astro";
 
 const bodyContent = `
-<p>Pilot Protocol now ships 99 features across 53 protocol commands, backed by 234 tests. This post catalogs everything the enterprise stack does today - identity providers, directory sync, declarative provisioning, SIEM-grade audit export, JWT validation, webhook reliability, per-network Prometheus metrics, and the security hardening that ties it all together. Every feature described here is implemented, tested, and running in production on the live registry.</p>
+<div class="callout"><strong>Implementation milestone, early-access rollout.</strong> This post catalogs the feature set and test coverage reached in March 2026. Enterprise deployments remain assisted early access; current availability and provider-specific admission paths are documented in <a href="/docs/enterprise">Enterprise Docs</a>.</div>
+
+<p>Pilot Protocol reached 99 implemented features across 53 protocol commands, backed by 234 tests. This post catalogs that implementation milestone - identity mapping, directory sync, declarative provisioning, audit export, JWT validation, webhook reliability, per-network metrics, and the security hardening that ties it together.</p>
 
 <h2 id="enterprise-gating">Enterprise Feature Gating</h2>
 
@@ -12,7 +14,7 @@ const bodyContent = `
 
 <h2 id="identity">Identity Provider Integration</h2>
 
-<p>The registry validates identity tokens from five provider types: <strong>OIDC</strong>, <strong>SAML</strong>, <strong>Entra ID</strong>, <strong>LDAP</strong>, and <strong>webhook</strong>. Configuration is per-registry (global) via the <code>set_idp_config</code> protocol command or a blueprint.</p>
+<p>The registry exposes configuration values for <strong>OIDC</strong>, <strong>SAML</strong>, <strong>Entra ID</strong>, <strong>LDAP</strong>, and <strong>webhook</strong>. Native token validation covers OIDC/JWT; the other systems connect through OIDC or an external identity bridge/webhook. Configuration is per-registry (global) via the <code>set_idp_config</code> protocol command or a blueprint.</p>
 
 <h3>Built-in JWT Validation</h3>
 
@@ -35,7 +37,7 @@ const bodyContent = `
 {
   "type": "set_idp_config",
   "admin_token": "$TOKEN",
-  "provider_type": "oidc",
+  "idp_type": "oidc",
   "url": "https://login.microsoftonline.com/tenant/.well-known/jwks",
   "issuer": "https://login.microsoftonline.com/tenant/v2.0",
   "client_id": "your-app-client-id"
@@ -50,7 +52,7 @@ const bodyContent = `
 
 <h3>Webhook-Based Identity</h3>
 
-<p>For providers that do not expose JWKS (LDAP, SAML, custom systems), the registry delegates verification to an external webhook. The webhook receives the token and returns a verified <code>external_id</code>. The external ID links the node to a directory entry for RBAC pre-assignment and directory sync.</p>
+<p>For provider systems that are not served through OIDC/JWKS, use an external identity bridge or webhook. The webhook receives the token and returns a verified <code>external_id</code>. The external ID links the node to a directory entry for RBAC pre-assignment and directory sync.</p>
 
 <h2 id="directory-sync">Directory Sync</h2>
 
@@ -318,7 +320,7 @@ const bodyContent = `
 
 <h2 id="whats-next">What Is Next</h2>
 
-<p>The enterprise stack is production-complete. Every capability above is available today through <code>pilotctl</code> and the JSON API - blueprint provisioning, directory sync, audit export, key lifecycle, and identity providers. Enterprise deployments are early access: we design the rollout with you.</p>
+<p>The documented implementation milestone covers the capabilities above in code and tests. Enterprise deployments remain early access: provider integration, rollout design, and operational readiness are validated with each customer.</p>
 
 <div class="cta">
   <h3>Try the Enterprise Stack</h3>
@@ -331,8 +333,8 @@ const bodyContent = `
 </div>`;
 ---
 <BlogLayout
-  title="Enterprise Production Complete: 99 Features, 234 Tests, Zero Dependencies"
-  description="Pilot Protocol ships the full enterprise stack: OIDC/JWT identity, directory sync, blueprint provisioning, Splunk/CEF/JSON audit export, per-network Prometheus metrics, and 234 tests across 53 protocol commands."
+  title="Enterprise Implementation Milestone: 99 Features, 234 Tests"
+  description="A March 2026 implementation milestone for Pilot enterprise controls, including OIDC/JWT validation, directory mapping, blueprints, audit export, and early-access rollout boundaries."
   date="March 30, 2026"
   tags={["enterprise", "identity", "audit", "directory-sync", "siem"]}
   canonicalPath="/blog/enterprise-production-complete-identity-directory-audit-export"

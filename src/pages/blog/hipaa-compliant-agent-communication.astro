@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p><strong>HIPAA-compliant AI agent communication</strong> requires end-to-end encryption, mutual authentication, and audit logging at every hop in the data path — not just at the agent endpoints. This page explains how to build agent networking that satisfies HIPAA's technical safeguards (45 CFR 164.312) while keeping Protected Health Information (PHI) off third-party infrastructure.</p>
+const bodyContent = `<p><strong>Healthcare agent transport needs clear technical controls</strong> for encryption, authentication, access, and auditability. This page explains how Pilot can support those controls for systems that handle Protected Health Information (PHI). Pilot is infrastructure, not a compliance certification: each organization remains responsible for its full architecture, contracts, policies, risk analysis, and legal review.</p>
 
   <p>A hospital deploys an AI agent to summarize patient records. The agent needs to send those summaries to a specialist's AI assistant for review. The communication crosses a network boundary. The summaries contain Protected Health Information (PHI). And the moment that PHI leaves the hospital's infrastructure, the hospital is responsible for ensuring <a href="https://www.hhs.gov/hipaa/index.html" target="_blank" rel="noopener">HIPAA</a> compliance at every point in the data path.</p>
 
@@ -33,9 +33,9 @@ const bodyContent = `<p><strong>HIPAA-compliant AI agent communication</strong> 
 
   <p>The most common architecture for AI agents involves calling cloud APIs -- OpenAI, Anthropic, Google, or others -- to process data. For general-purpose tasks, this works. For healthcare data, it creates a compliance gap that is difficult to close.</p>
 
-  <p>The core problem: <strong>most AI API providers do not sign BAAs by default</strong>. A Business Associate Agreement is a legal contract required by HIPAA whenever a "covered entity" (hospital, clinic, insurer) shares PHI with a "business associate" (any vendor that handles PHI on their behalf). Without a BAA, sending PHI to the API provider is a HIPAA violation, regardless of how the data is encrypted in transit.</p>
+  <p>The core question is contractual scope. A Business Associate Agreement may be needed when a covered entity shares PHI with a service provider, and provider coverage varies by product and plan. Teams need to verify which processing, transport, logging, support, and subprocessors are covered before sending PHI.</p>
 
-  <p>Some providers offer BAA-covered tiers (typically enterprise plans with significant minimum commitments), but the BAA covers the API processing, not the data path. If your agent sends PHI through a series of hops -- agent to API gateway to load balancer to inference server -- each hop must be covered. And the agent-to-agent communication layer is almost never included in the API provider's BAA scope. This is the same transport challenge that <a href="/blog/cross-company-agent-collaboration-without-shared-infrastructure">cross-company agent collaboration</a> faces: agents on different infrastructure need a secure, encrypted channel that no third-party intermediary controls.</p>
+  <p>Some providers offer BAA-covered services, but scope varies. If an agent sends PHI through an API gateway, load balancer, inference service, observability system, or support workflow, review how each component is covered. This is the same transport challenge that <a href="/blog/cross-company-agent-collaboration-without-shared-infrastructure">cross-company agent collaboration</a> faces: agents on different infrastructure need a secure channel with a documented data path.</p>
 
   <p>The dynamic nature of AI agents makes this worse. As one compliance researcher observed: "Static controls collapse when an agent rewrites its plan mid-run." An agent that decides autonomously to call a new API endpoint, forward data to another agent, or store intermediate results in a cache creates data flows that were never anticipated in the Data Protection Impact Assessment (DPIA). Each unexpected data flow is a potential compliance gap.</p>
 
@@ -45,11 +45,11 @@ const bodyContent = `<p><strong>HIPAA-compliant AI agent communication</strong> 
   </section>
 
   <section>
-  <h2>The Pilot Approach: No Data Touches Third-Party Infrastructure</h2>
+  <h2>The Pilot Approach: Minimize Intermediaries in the Data Path</h2>
 
-  <p>Pilot Protocol is a peer-to-peer overlay network. Agents connect directly to each other through encrypted UDP tunnels. There is no central server that relays application data. The network infrastructure handles peer discovery and NAT traversal signaling, but <strong>application data never passes through the network infrastructure</strong>.</p>
+  <p>Pilot Protocol is a peer-to-peer overlay network. It prefers direct encrypted UDP tunnels, while coordination services handle discovery and NAT traversal. When direct connectivity is unavailable, encrypted relay fallback can add a Pilot-operated intermediary to the data path; the relay forwards ciphertext and does not hold the tunnel key.</p>
 
-  <p>This architecture eliminates an entire category of compliance risk. When Agent A sends a patient summary to Agent B, the data travels through a direct encrypted tunnel between the two agents. No cloud API sees the data. No third-party relay sees the data. No intermediary log captures the data. The only systems that handle ePHI are the two agent endpoints, both of which are on infrastructure you control.</p>
+  <p>This architecture can reduce the number of systems that handle plaintext. On a direct path, application data moves between the two endpoints without an application broker. Teams still need to account for endpoint software, optional relay paths, app services, logs, backups, and every other component in their own data-flow and vendor review.</p>
 
   <p>For the NAT traversal case where direct connectivity is not possible (symmetric NAT on both sides), Pilot uses relay through the beacon server. Even in this case, the data is end-to-end encrypted before it reaches the relay. The beacon sees only encrypted ciphertext that it cannot decrypt, because it does not possess the session key established during the agents' X25519 key exchange.</p>
 
@@ -63,19 +63,19 @@ const bodyContent = `<p><strong>HIPAA-compliant AI agent communication</strong> 
                      Encrypted
                       Tunnel
 
-<span class="comment"># The registry only handles address resolution (no PHI)</span>
-<span class="comment"># The beacon only handles NAT signaling (no PHI)</span>
+<span class="comment"># The registry handles address resolution, not application payloads</span>
+<span class="comment"># The beacon handles NAT signaling and may relay ciphertext</span>
 <span class="comment"># Even relay mode: beacon sees only encrypted ciphertext</span></code></pre>
   </section>
 
   <section>
   <h2>Encryption Properties: X25519 + AES-256-GCM End-to-End</h2>
 
-  <p>Pilot's encryption is not optional. When two agents establish trust, all subsequent communication is encrypted by default using port 443 (the secure port). The encryption stack uses:</p>
+  <p>Pilot tunnel encryption is enabled by default across ports. Port 443 is a secure-service convention, not a distinct second cryptographic layer in the current SDK. The encryption stack uses:</p>
 
   <ul>
-    <li><strong><a href="https://datatracker.ietf.org/doc/html/rfc7748" target="_blank" rel="noopener">X25519</a> key exchange:</strong> Elliptic-curve Diffie-Hellman for session key establishment. Each connection generates a fresh ephemeral key pair, providing forward secrecy -- compromising one session key does not compromise past or future sessions.</li>
-    <li><strong><a href="https://datatracker.ietf.org/doc/html/rfc5288" target="_blank" rel="noopener">AES-256-GCM</a>:</strong> Authenticated encryption for all tunnel traffic. GCM provides both confidentiality (data cannot be read) and integrity (data cannot be modified without detection).</li>
+    <li><strong><a href="https://www.rfc-editor.org/rfc/rfc7748.html" target="_blank" rel="noopener">X25519</a> key exchange:</strong> Each daemon generates a key pair at startup and derives a distinct tunnel secret with each peer. This provides peer isolation; the current daemon-lifetime key design does not provide per-session forward secrecy.</li>
+    <li><strong><a href="https://www.rfc-editor.org/rfc/rfc5288.html" target="_blank" rel="noopener">AES-256-GCM</a>:</strong> Authenticated encryption for all tunnel traffic. GCM provides both confidentiality (data cannot be read) and integrity (data cannot be modified without detection).</li>
     <li><strong>Random nonce prefix per connection:</strong> Each secure connection generates a random nonce prefix, preventing nonce reuse across sessions. This is a defense-in-depth measure against nonce-misuse attacks.</li>
     <li><strong>Ed25519 identity signing:</strong> Trust handshakes are signed with the agent's permanent Ed25519 key, ensuring that the peer you establish a session with is the peer you intended to trust.</li>
   </ul>
@@ -83,7 +83,7 @@ const bodyContent = `<p><strong>HIPAA-compliant AI agent communication</strong> 
   <p>The entire encryption stack uses Go's standard library (<code>crypto/ecdh</code>, <code>crypto/aes</code>, <code>crypto/cipher</code>, <code>crypto/ed25519</code>). There are zero external dependencies. This matters for compliance because every dependency is an additional surface area that must be audited, and Go's standard crypto libraries are well-audited and FIPS-adjacent (the <code>crypto/tls</code> package supports FIPS 140-2 mode on supported platforms). For a broader overview of <a href="/blog/encrypted-tunnel-advantages-peer-to-peer-ai-networks">encrypted tunnel advantages for P2P AI networks</a>, including the security and performance trade-offs of different tunnel architectures, see the dedicated comparison.</p>
 
   <div class="callout">
-    <p><strong>HIPAA mapping:</strong> AES-256-GCM satisfies the transmission security requirement (164.312(e)). The integrity check in GCM satisfies the integrity controls requirement (164.312(c)). Forward secrecy from ephemeral X25519 keys means that even if an agent's long-term identity key is compromised, historical session data remains protected.</p>
+    <p><strong>Control mapping:</strong> AES-256-GCM can support transmission confidentiality and integrity controls. Whether a deployment meets HIPAA requirements depends on implementation, key management, endpoint controls, audit procedures, contracts, and the organization&rsquo;s documented risk analysis.</p>
   </div>
   </section>
 
@@ -94,7 +94,7 @@ const bodyContent = `<p><strong>HIPAA-compliant AI agent communication</strong> 
 
   <h3>Handshake as explicit consent</h3>
 
-  <p>The trust handshake is a two-party protocol. Agent A requests trust from Agent B, providing a justification. Agent B reviews and explicitly approves or rejects. This maps directly to HIPAA's "minimum necessary" principle and GDPR's explicit consent requirement for special category data:</p>
+  <p>The trust handshake is a two-party protocol. Agent A requests trust from Agent B, providing a justification. Agent B reviews and approves or rejects it. This can support a technical authorization workflow, but it is not a substitute for legal consent, minimum-necessary policy, or application-level authorization:</p>
 
   <pre><code><span class="comment"># Hospital agent requests trust with specialist agent</span>
 <span class="cmd">pilotctl handshake 1:0001.0000.0042 "Patient referral data exchange per BAA #2026-0142"</span>
@@ -123,14 +123,14 @@ const bodyContent = `<p><strong>HIPAA-compliant AI agent communication</strong> 
 <span class="comment"># Effect is instant:</span>
 <span class="comment"># - Active connections are terminated</span>
 <span class="comment"># - The revoked agent cannot reconnect</span>
-<span class="comment"># - The revoked agent cannot discover your address</span>
+<span class="comment"># - The revoked peer no longer receives your endpoint through this trust grant</span>
 <span class="comment"># - No waiting for certificate expiration or CRL propagation</span></code></pre>
 
   <p>Compare this to certificate-based access control where revocation requires CRL distribution or OCSP checking, with propagation delays measured in hours. Pilot's revocation is effective within the keepalive interval (30 seconds by default, immediate if a connection is active).</p>
 
   <h3>Private by default</h3>
 
-  <p>Agents on Pilot are <strong>invisible by default</strong>. An agent that has not been explicitly made public cannot be discovered by any other agent, even if they know its address. This means a healthcare agent processing PHI is invisible to the entire network unless it explicitly trusts specific peers. There is no directory listing, no enumeration, no way for an unauthorized agent to discover that a healthcare agent exists.</p>
+  <p>Pilot withholds an agent&rsquo;s reachable endpoint and connectivity from untrusted peers by default. Some directory metadata, tags, or network membership may remain visible depending on configuration, and shared-network membership can grant connectivity. Treat metadata exposure and network join rules as explicit design decisions for healthcare deployments.</p>
 
   <p>This is the opposite of the "Agent Card" model used by some protocols, where agents advertise their capabilities publicly. For healthcare, public advertisement of agent capabilities would leak metadata about what kinds of data processing are happening -- itself a potential compliance concern.</p>
   </section>
@@ -169,7 +169,7 @@ const bodyContent = `<p><strong>HIPAA-compliant AI agent communication</strong> 
   <section>
   <h2>Architecture: Encrypted Tunnels + Trust-Gated Access</h2>
 
-  <p>Pilot Protocol keeps PHI off third-party servers by design. All data flows through direct encrypted tunnels between agents -- point-to-point connections. The network infrastructure only handles address resolution and NAT traversal signaling, never application data.</p>
+  <p>Pilot Protocol prefers direct encrypted tunnels between agents. Coordination infrastructure handles address resolution and NAT traversal, and an encrypted relay path may be used when direct connectivity fails. Applications layered on Pilot can also introduce their own service providers.</p>
 
   <pre><code><span class="comment"># Start agent daemons on each machine handling PHI</span>
 <span class="cmd">pilotctl daemon start --email clinician@hospital.example.com</span>
@@ -183,7 +183,7 @@ const bodyContent = `<p><strong>HIPAA-compliant AI agent communication</strong> 
     <li><strong>Logs:</strong> Stored on your hardware, exported to your SIEM</li>
   </ul>
 
-  <p>No PHI leaves your infrastructure through the network layer. All PHI flows through direct encrypted tunnels between agents. The network only sees agent addresses and public keys -- metadata that does not constitute PHI.</p>
+  <p>On a direct path, plaintext stays at the endpoints and the network transports ciphertext. On a relay path, the relay handles ciphertext and connection metadata. Your risk analysis should classify that metadata and document both paths rather than assuming it cannot be sensitive.</p>
 
   <h3>Multi-site deployment</h3>
 
@@ -205,11 +205,11 @@ const bodyContent = `<p><strong>HIPAA-compliant AI agent communication</strong> 
   <section>
   <h2>What Pilot Does Not Do (And What You Still Need)</h2>
 
-  <p>Pilot provides the transport layer for HIPAA-compliant agent communication. It does not provide everything needed for a fully compliant healthcare AI system. Here is what you still need:</p>
+  <p>Pilot provides transport controls that can support a healthcare deployment. It does not make an agent system compliant on its own. Here is what you still need:</p>
 
   <h3>Business Associate Agreements for your own infrastructure</h3>
 
-  <p>If your agents run on cloud infrastructure (AWS, GCP, Azure), you need a BAA with your cloud provider for the compute and storage that handles ePHI. Pilot eliminates the need for BAAs with <em>communication intermediaries</em> (no third-party relay, no message queue provider, no API gateway provider), but it does not eliminate BAAs for the infrastructure your agents run on.</p>
+  <p>If agents run on cloud infrastructure, review whether a BAA and related contractual controls are required for the compute, storage, observability, support, and relay services in scope. Pilot can reduce intermediary plaintext access, but it does not decide which vendors or paths require contractual coverage.</p>
 
   <h3>De-identification</h3>
 
@@ -228,14 +228,14 @@ const bodyContent = `<p><strong>HIPAA-compliant AI agent communication</strong> 
   <p>HIPAA requires notification within 60 days of discovering a breach affecting 500+ individuals (164.408). Pilot's audit logs provide the forensic data needed to assess what was accessed and when, but your organization must have procedures for detection, assessment, and notification.</p>
 
   <div class="callout">
-    <p><strong>Pilot's role in the compliance stack:</strong> Transport-layer encryption, access control (trust model), audit logging, and infrastructure independence. Pilot handles the "data in transit" requirements and contributes to "access control" and "audit control" requirements. Application-layer compliance, BAAs, DPIAs, and breach procedures remain your responsibility.</p>
+    <p><strong>Pilot's role in the compliance stack:</strong> Transport encryption, peer authorization, and network/security event generation. These controls can contribute to a broader program; application authorization, PHI-access auditing, BAAs, risk assessments, retention, and incident procedures remain your responsibility.</p>
   </div>
   </section>
 
   <section>
   <h2>Getting Started for Healthcare</h2>
 
-  <p>The minimum viable setup for HIPAA-compliant agent communication:</p>
+  <p>A starting point for a healthcare-oriented test deployment:</p>
 
   <pre><code><span class="comment"># 1. Start agent daemons (on each machine handling PHI)</span>
 <span class="cmd">pilotctl daemon start --email agent@hospital.example.com</span>
@@ -250,18 +250,18 @@ const bodyContent = `<p><strong>HIPAA-compliant AI agent communication</strong> 
 <span class="comment"># 5. Send data over encrypted tunnel</span>
 <span class="cmd">pilotctl send-file &lt;peer-address&gt; patient-summary.json</span></code></pre>
 
-  <p>Every step runs on infrastructure you control. Every data exchange is encrypted end-to-end. Every trust relationship is documented with a justification. Every operation is logged for audit. And no PHI touches any third-party system at any point in the data path.</p>
+  <p>This setup gives you encrypted transport, a documented trust relationship, and network/security events to integrate with your audit process. Before using PHI, validate direct and relay paths, endpoint logging, app dependencies, retention, incident response, and contractual scope.</p>
   </section>
 
   <div class="cta">
     <h3>Try Pilot Protocol</h3>
-    <p>End-to-end encrypted agent communication with no third-party data exposure. Auditable, trust-gated, no third-party data exposure.</p>
+    <p>Encrypted, trust-gated agent transport with controls that can support a healthcare security architecture.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 ---
 <BlogLayout
-  title="HIPAA Compliant AI Agent Communication: Encrypted Agent Networking for Healthcare"
-  description="Build HIPAA-compliant AI agent communication with E2E encrypted tunnels, trust-gated access, and audit trails — no third-party data exposure."
+  title="Technical Controls for Healthcare AI Agent Communication"
+  description="How encrypted tunnels, peer trust, and network audit events can support a healthcare AI security architecture — and which responsibilities remain outside the transport layer."
   date="February 20, 2026"
   tags={["healthcare", "HIPAA", "security"]}
   canonicalPath="/blog/hipaa-compliant-agent-communication"
@@ -269,19 +269,19 @@ const bodyContent = `<p><strong>HIPAA-compliant AI agent communication</strong> 
   faqItems={[
     {
       question: "What makes AI agent communication HIPAA compliant?",
-      answer: "HIPAA's Security Rule requires three technical safeguards for ePHI in transit: transmission security (encryption), access control (authorized parties only), and audit controls (record of every access). Agent communication must satisfy all three at every hop in the data path — not just at the endpoints. This means end-to-end encryption (AES-256-GCM), mutual authentication between agents, and structured logging of every data exchange."
+      answer: "Encryption, access controls, and audit mechanisms can support a healthcare security program, but no transport protocol makes a deployment compliant by itself. Organizations must assess the complete system, including endpoints, applications, vendors, contracts, policies, and operational procedures."
     },
     {
       question: "Can HIPAA-compliant AI agents use cloud API providers?",
-      answer: "Only if the provider signs a Business Associate Agreement (BAA) covering every system that touches ePHI. Most AI API providers offer BAA-covered tiers for enterprise plans, but the BAA typically covers the processing endpoint — not the data path between your agent and the API. Every intermediary hop (load balancer, API gateway, logging system) must also be covered. This is why many healthcare teams prefer direct peer-to-peer agent communication: no third-party infrastructure sees the data."
+      answer: "Provider terms and BAA scope vary by service and plan. Review the processing endpoint, transport, logging, support, and subprocessors in the full data flow. Direct peer paths can reduce intermediaries, while encrypted relay fallback and application services still need to be documented."
     },
     {
       question: "What encryption do HIPAA-compliant agent networks need?",
-      answer: "HIPAA's transmission security rule (45 CFR 164.312(e)(1)) requires technical measures to guard against unauthorized access during electronic transmission. AES-256-GCM with forward secrecy (ephemeral key exchange via X25519) satisfies this requirement. The authenticated encryption mode ensures both confidentiality (data cannot be read) and integrity (data cannot be modified without detection) — both are HIPAA requirements."
+      answer: "Pilot uses peer-specific secrets derived from daemon-lifetime X25519 keys and AES-256-GCM authenticated encryption. These controls can support transmission confidentiality and integrity, but the current design does not provide per-session forward secrecy and compliance depends on the complete implementation."
     },
     {
       question: "How does Pilot Protocol's trust model map to HIPAA access controls?",
-      answer: "Pilot's mutual trust handshake maps directly to HIPAA's access control and minimum necessary requirements. Each agent explicitly requests trust with a documented justification (e.g., a BAA reference). The other agent reviews and approves. Revocation is instant — no waiting for certificate expiration or CRL propagation. Every trust operation is logged for audit, and agents processing PHI are invisible to the network by default (private by default), preventing unauthorized discovery."
+      answer: "Pilot's mutual trust handshake can support a technical authorization boundary: each peer is approved or rejected and can later be revoked. Application-level roles, minimum-necessary rules, metadata policy, human approvals, and compliance records remain the operator's responsibility."
     }
   ]}
 >

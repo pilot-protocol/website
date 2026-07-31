@@ -5,7 +5,7 @@ import Footer from '../components/Footer.astro';
 import '../styles/system.css';
 
 const title = "Privacy Policy — Pilot Protocol";
-const description = "How Pilot Protocol collects, uses, and protects your data. GDPR-compliant privacy policy covering the daemon, website, and rendezvous service.";
+const description = "How Pilot Protocol collects, uses, and protects data, including GDPR and CCPA rights across the daemon, website, and rendezvous service.";
 const canonicalUrl = "https://pilotprotocol.network/privacy";
 ---
 <!DOCTYPE html>
@@ -43,12 +43,12 @@ const canonicalUrl = "https://pilotprotocol.network/privacy";
   </ul>
   <p>The data above does <em>not</em> include personal names, and — unless you explicitly supplied one via the <code>-email</code> flag — does not include an email address. The daemon does <em>not</em> log or transmit the payload of any peer-to-peer communication.</p>
 
-  <p><strong>Important:</strong> In direct peer-to-peer mode, traffic after tunnel establishment flows straight between agents and never touches our infrastructure. When a direct path isn't possible (relay or compat mode) traffic transits our beacon servers, but it stays end-to-end encrypted — for overlay tunnel traffic, we cannot see, log, or access its contents in either mode.</p>
+  <p><strong>Important:</strong> In the standard encrypted profile, direct peer-to-peer traffic after tunnel establishment flows straight between agents and never touches our infrastructure. When a direct path isn't possible (relay or compat mode), traffic transits our beacon servers but remains end-to-end encrypted; we can observe routing metadata, not tunnel payload contents. An explicit plaintext override exists for controlled testing and should not be used with sensitive traffic.</p>
 
   <p><strong>Exception — brokered app calls:</strong> Some App Store apps are managed integrations whose calls route through a Pilot-operated broker rather than a peer-to-peer tunnel (for example AgentPhone and other hosted provider apps). For those calls the broker must process the request contents: it authenticates your Pilot identity, attaches the upstream provider credential, enforces spend caps and metering, and forwards the request to the upstream provider's API. The end-to-end encryption guarantee above therefore applies to peer-to-peer tunnel traffic, not to brokered app calls — the contents of a brokered call are necessarily handled by our broker and by the upstream provider named in the app's listing.</p>
 
   <h2>2. Opt-Out Features</h2>
-  <p>Beyond core network operation, four features collect or act on additional data. All four are <strong>on by default</strong> (opt-out model) and can be disabled individually in <code>~/.pilot/config.json</code>. None affect core messaging or peer routing when disabled.</p>
+  <p>Beyond core network operation, four consent controls govern additional behavior and can be disabled individually in <code>~/.pilot/config.json</code>. Telemetry, broadcasts, and skill-injection behavior are enabled by default; review consent is enabled, while the automatic review prompts themselves currently remain off behind feature flags. None affect core messaging or peer routing when disabled.</p>
   <ul>
     <li><strong>App store telemetry</strong> — When you browse or install apps, a signed event (app ID + action) is sent to <code>telemetry.pilotprotocol.network</code>. No message contents or personal data. Disable: set <code>consent.telemetry</code> to <code>false</code> in <code>~/.pilot/config.json</code>.</li>
     <li><strong>Broadcasts</strong> — Network administrators can send datagrams to all agents in a network. Requires a valid admin token on the sender's daemon. Disable: set <code>consent.broadcasts</code> to <code>false</code> in <code>~/.pilot/config.json</code>.</li>

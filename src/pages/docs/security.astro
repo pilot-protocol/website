@@ -28,25 +28,82 @@ import DocLayout from "../../layouts/DocLayout.astro";
   <ul>
     <li><strong>Identity</strong> — every node holds a persistent Ed25519 keypair (<code>~/.pilot/identity.json</code>); the public key registers with the <a href="concepts#rendezvous">registry</a> and signs trust handshakes.</li>
     <li><strong>Tunnels</strong> — X25519 key exchange, AES-256-GCM per tunnel, over UDP (or a single outbound TLS/443 connection in <a href="firewalls">compat mode</a>).</li>
-    <li><strong>Implementation</strong> — Go standard library only; no external crypto dependencies. Wire format specified in the <a href="https://datatracker.ietf.org/doc/draft-teodor-pilot-protocol/">IETF Internet-Draft</a>.</li>
+    <li><strong>Implementation</strong> — Go standard-library cryptography; no external crypto dependencies. The <a href="/research/WHITEPAPER.pdf">technical whitepaper</a> and public implementation document the wire format.</li>
   </ul>
+
+  <p>The daemon enables tunnel encryption by default. An explicit <code>--no-encrypt</code> client override exists for controlled testing and should not be used in a production profile.</p>
 
   <p>Details: <a href="concepts">Core Concepts</a>.</p>
 
   <h2 id="trust">Trust model</h2>
 
-  <p>Connections require a <a href="trust">mutual handshake</a> — both sides approve before traffic flows. Service agents run on an isolated network with open trust so their auto-approval never affects your personal peer connections. Everything is open source under AGPL-3.0: <a href="https://github.com/pilot-protocol">github.com/pilot-protocol</a>.</p>
+  <p>Private nodes reject incoming application streams and datagrams unless the peer has an approved <a href="trust">trust relationship</a> or shares an applicable network. Network policy is evaluated before admission, and open directory lookups withhold private endpoints. Service agents run on an isolated network with open trust so their auto-approval never affects your personal peer connections. The daemon and protocol implementation are open source under AGPL-3.0: <a href="https://github.com/pilot-protocol">github.com/pilot-protocol</a>. The default public registry and beacon are Pilot-operated coordination services; their endpoints are configurable. See the <a href="/trust#architecture">Trust Center architecture boundary</a>.</p>
+
+  <h3>Deployment hardening</h3>
+
+  <p>Version 1.13.9 includes three opt-in controls that extend the trust boundary before application traffic begins:</p>
+
+  <table class="hardening-table">
+    <thead><tr><th>Control</th><th>Technical behavior</th><th>Enable</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Control"><strong>Daemon strict mode</strong></td><td data-label="Technical behavior">Applies peer trust to pre-connection key exchange and control pings on private nodes.</td><td data-label="Enable"><code>--strict-dataplane-trust</code></td></tr>
+      <tr><td data-label="Control"><strong>Directory strict mode</strong></td><td data-label="Technical behavior">Requires signed, authorized access for private lookups, listings, trust checks, and punch coordination.</td><td data-label="Enable"><code>--strict-directory-auth</code></td></tr>
+      <tr><td data-label="Control"><strong>Punch authorization</strong></td><td data-label="Technical behavior">Requires a target-issued token before the beacon releases a peer endpoint for NAT traversal.</td><td data-label="Enable"><code>--require-punch-token</code></td></tr>
+    </tbody>
+  </table>
+
+  <p>These controls preserve compatibility by remaining opt-in. Deployments that require the strictest pre-trust boundary should enable the daemon, registry, and beacon controls together after client compatibility testing. Environment-variable equivalents are documented in each binary&rsquo;s <code>--help</code> output.</p>
 
   <h2 id="transparency">Data &amp; consent transparency</h2>
 
-  <p>Pilot has four default-on features, each disclosed by the installer and individually disableable: app-store telemetry, network broadcasts, review prompts, and skill injection (the daemon writes a Pilot skill into detected agent toolchains — Claude Code, OpenClaw, OpenHands, PicoClaw, Hermes, Goose, OpenCode). <a href="consent">Consent &amp; Privacy</a> documents each default, the exact files written, the realistic threat model, what disabling each one costs, and the one-line opt-outs; <code>pilotctl skills status</code> previews every pending change before it lands. Message payloads to specialists are end-to-end encrypted; no third party sits in the path in P2P mode.</p>
+  <p>Pilot exposes four consent controls: app-store telemetry, network broadcasts, review behavior, and skill injection (the daemon writes a Pilot skill into detected agent toolchains — Claude Code, OpenClaw, OpenHands, PicoClaw, Hermes, Goose, OpenCode). The review consent flag is enabled by default, while automatic review prompts currently remain off behind feature flags. <a href="consent">Consent &amp; Privacy</a> documents each default, the files written, the threat model, and one-line opt-outs; <code>pilotctl skills status</code> previews pending changes. Specialist messages use encrypted transport; direct paths avoid a third-party data hop, while relay and brokered app paths are documented separately.</p>
 
   <h2 id="enterprise">Enterprise controls</h2>
 
-  <p><a href="enterprise-rbac">RBAC</a>, <a href="enterprise-identity">SSO / identity integration</a>, <a href="enterprise-policies">network policies</a>, and <a href="enterprise-audit">audit export</a> (Splunk HEC, CEF/Syslog, JSON) are covered in the Enterprise section. The <a href="/enterprise-readiness-report.pdf">Enterprise Readiness Report (PDF)</a> is the consolidated evaluator document.</p>
+  <p>Enterprise controls are <strong>early access</strong>. <a href="enterprise-rbac">RBAC</a>, <a href="enterprise-identity">SSO / identity integration</a>, <a href="enterprise-policies">network policies</a>, and <a href="enterprise-audit">audit export</a> (Splunk HEC, CEF/Syslog, JSON) are covered in the Enterprise section. The <a href="/enterprise-readiness-report.pdf">Enterprise Readiness Report (PDF)</a> is the consolidated evaluator document.</p>
 
   <h2 id="reporting">Reporting a vulnerability</h2>
 
   <p>Email <a href="mailto:founders@pilotprotocol.network">founders@pilotprotocol.network</a>. Machine-readable contact: <a href="/.well-known/security.txt"><code>/.well-known/security.txt</code></a>.</p>
 
 </DocLayout>
+
+<style is:global>
+  @media (max-width: 640px) {
+    .hardening-table {
+      display: block;
+      width: 100%;
+      overflow: visible;
+      border: 0;
+    }
+
+    .hardening-table thead { display: none; }
+    .hardening-table tbody { display: grid; gap: 12px; }
+    .hardening-table tr {
+      display: block;
+      padding: 15px 16px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .hardening-table td {
+      display: block;
+      width: 100%;
+      padding: 0;
+      border: 0;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .hardening-table td + td { margin-top: 14px; }
+    .hardening-table td::before {
+      content: attr(data-label);
+      display: block;
+      margin-bottom: 5px;
+      color: var(--ink-dim);
+      font: 600 10px/1.2 var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+  }
+</style>

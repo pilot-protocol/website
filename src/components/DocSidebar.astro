@@ -7,14 +7,18 @@ interface Props {
 
 const { activePage } = Astro.props;
 ---
-<div class="sidebar">
+<aside class="sidebar" id="docs-sidebar" aria-label="Documentation">
+  <div class="sidebar-head">
+    <span>Documentation</span>
+    <button class="sidebar-close" id="docs-sidebar-close" type="button" aria-label="Close documentation menu">×</button>
+  </div>
   {docsNav.map((item) => (
     <>
       {item.section && <div class="nav-section">{item.section}</div>}
-      <a class={activePage === item.slug ? 'active' : ''} href={item.href}>
+      <a class={activePage === item.slug ? 'active' : ''} href={item.href} aria-current={activePage === item.slug ? 'page' : undefined}>
         {item.icon && <Fragment set:html={item.icon.replace('<svg', '<svg class="nav-icon"')} />}
         {item.label}
       </a>
     </>
   ))}
-</div>
+</aside>

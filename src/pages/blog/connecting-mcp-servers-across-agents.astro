@@ -157,7 +157,7 @@ data = pilot_receive(port=1001)
 mcp_call("slack", "post_message", channel="#reports", text=data["summary"])
 mcp_call("email", "send", to="cfo@company.com", body=data["full_report"])</code></pre>
 
-  <p>The entire data path is: Postgres → Agent A → Pilot tunnel (encrypted, direct) → Agent B → Slack/Email. No intermediary server. No broker. No shared infrastructure.</p>
+  <p>The application data path is: Postgres → Agent A → encrypted Pilot tunnel → Agent B → Slack/Email. The tunnel is direct when NAT permits and uses encrypted beacon relay fallback otherwise; no separate application broker needs to be deployed.</p>
   </section>
 
   <section>

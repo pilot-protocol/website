@@ -11,7 +11,7 @@ const bodyContent = `<p>"How do IoT devices behind NAT communicate peer-to-peer?
 
   <h2 id="why-nat-breaks">Why NAT Breaks Everything</h2>
 
-  <p><a href="https://datatracker.ietf.org/doc/html/rfc3022" target="_blank" rel="noopener">Network Address Translation</a> was introduced as a temporary fix for IPv4 address exhaustion in the 1990s. Thirty years later, it is more prevalent than ever and has become the single largest obstacle to peer-to-peer communication.</p>
+  <p><a href="https://www.rfc-editor.org/rfc/rfc3022.html" target="_blank" rel="noopener">Network Address Translation</a> was introduced as a temporary fix for IPv4 address exhaustion in the 1990s. Thirty years later, it is more prevalent than ever and has become the single largest obstacle to peer-to-peer communication.</p>
 
   <p>A NAT device assigns private IP addresses to devices on a local network (192.168.x.x, 10.x.x.x) and translates them to a single public IP address for outgoing traffic. This works perfectly for client-server communication: the device behind NAT initiates a connection, the NAT creates a mapping, and responses flow back through the mapping.</p>
 
@@ -71,7 +71,7 @@ const bodyContent = `<p>"How do IoT devices behind NAT communicate peer-to-peer?
 
   <h3>Tier 1: STUN Discovery and Direct Connection</h3>
 
-  <p>When a Pilot daemon starts, it discovers its own public endpoint using <a href="https://datatracker.ietf.org/doc/html/rfc5389" target="_blank" rel="noopener">STUN</a> (Session Traversal Utilities for NAT). The daemon sends a UDP packet to the beacon server, and the beacon replies with the source address it observed -- which is the agent's public NAT-mapped endpoint.</p>
+  <p>When a Pilot daemon starts, it discovers its own public endpoint using <a href="https://www.rfc-editor.org/rfc/rfc5389.html" target="_blank" rel="noopener">STUN</a> (Session Traversal Utilities for NAT). The daemon sends a UDP packet to the beacon server, and the beacon replies with the source address it observed -- which is the agent's public NAT-mapped endpoint.</p>
 
   <pre><code><span class="comment"># Daemon startup: STUN discovery happens automatically</span>
 <span class="cmd">$ pilotctl daemon start --email agent@example.com</span>
@@ -187,7 +187,7 @@ Registered with fixed endpoint (STUN skipped)</code></pre>
 
   <h3>Federated Learning Nodes</h3>
 
-  <p>Federated learning requires model updates to flow between training nodes without centralizing the data. When those nodes are on university networks, home labs, and corporate campuses -- all behind different NATs -- the communication layer is the hardest part. Pilot provides authenticated, encrypted peer-to-peer connections between any two nodes, regardless of their NAT type. The trust model ensures that only authorized nodes participate in the training federation. For healthcare and research environments, the same NAT traversal combined with trust-gated access enables <a href="/blog/hipaa-compliant-agent-communication">HIPAA-compliant agent communication</a> without exposing endpoints to the public internet.</p>
+  <p>Federated learning requires model updates to flow between training nodes without centralizing the data. When those nodes are on university networks, home labs, and corporate campuses, the communication layer is often the hardest part. Pilot provides encrypted, authenticated tunnels with direct paths preferred and relay fallback for difficult NATs. For healthcare and research environments, these <a href="/blog/hipaa-compliant-agent-communication">transport controls</a> can support a broader compliance program, but do not make a deployment compliant on their own.</p>
 
   <h3>CI/CD Runners and Dev Containers</h3>
 

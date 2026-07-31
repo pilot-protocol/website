@@ -166,11 +166,11 @@ const bodyContent = `<p>Which protocol should you use for agent-to-agent messagi
     <tr>
       <td>Pilot Protocol</td>
       <td>~15ms (amortized)</td>
-      <td>Tunnel pre-established; X25519 per connection</td>
+      <td>Encrypted tunnel pre-established; logical streams reuse it</td>
     </tr>
   </table>
 
-  <p>Pilot's advantage here is structural. The expensive work -- STUN discovery, tunnel establishment, encryption negotiation -- happens once when the daemon starts. Each new agent-to-agent connection reuses the existing tunnel and only pays for a lightweight key exchange. When an orchestrator fans out tasks to 50 agents, Pilot's amortized model saves <strong>seconds</strong> of cumulative setup time.</p>
+  <p>Pilot's advantage here is structural. STUN discovery, tunnel establishment, and encryption negotiation are amortized across logical streams. When an orchestrator fans out tasks, streams can reuse an established tunnel instead of rebuilding the full transport path for every call.</p>
 
   <h3>Message Latency (1 KB payload, round-trip)</h3>
 
@@ -315,7 +315,7 @@ nc.Publish("tasks.agent-b", taskPayload)
 
   <p>Pilot Protocol was designed from the ground up for the specific problem of AI agents communicating across arbitrary network topologies.</p>
 
-  <p><strong>Strengths:</strong> Built-in NAT traversal with three tiers (STUN, hole-punch, relay). End-to-end encryption between agents by default -- the rendezvous server never sees plaintext. Virtual 48-bit addresses that persist across network changes. Cryptographic trust model where agents are invisible by default. Single UDP socket for all peer connections keeps memory under 25 MB even at 100 concurrent peers. Pure-Go with a small dependency set; the install ships a daemon binary and a CLI binary (plus an auto-updater).</p>
+  <p><strong>Strengths:</strong> Built-in NAT traversal with three tiers (STUN, hole-punch, relay). Tunnel encryption keeps plaintext out of the rendezvous and relay services. Virtual 48-bit addresses persist across network changes. Reachable endpoints are gated by peer trust or network membership. A single UDP socket serves peer connections, and the install ships a daemon binary, CLI, and auto-updater.</p>
 
   <p><strong>Weaknesses:</strong> Userspace transport means lower raw throughput than kernel TCP -- roughly 20% less on sustained transfers (see the numbers below). The driver package is Go-only, so agents in Python or JavaScript need to shell out to <code>pilotctl</code> or use the IPC socket. No HTTP/2 multiplexing -- connections are byte streams, not structured RPC calls. No durable message log -- if an agent is offline when a message is sent, the message is lost (unlike NATS JetStream). The ecosystem is young compared to gRPC and NATS.</p>
 

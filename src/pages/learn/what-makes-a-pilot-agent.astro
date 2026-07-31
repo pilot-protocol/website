@@ -25,7 +25,7 @@ const bodyContent = `<p>Every agent needs an identity, a way to be reached, and 
 
 <p>All communication between Pilot agents runs through encrypted tunnels. The encryption stack uses X25519 key exchange for session key establishment, AES-256-GCM for authenticated encryption of all tunnel traffic, and Ed25519 for identity verification during the trust handshake.</p>
 
-<p>There is no unencrypted mode. When two agents establish trust and begin communicating, every packet that crosses the tunnel is encrypted and authenticated. The tunnel provides both confidentiality (no one can read the payload) and integrity (no one can modify the payload without detection).</p>
+<p>Tunnel encryption is enabled by default. In the standard profile, packets crossing the tunnel are encrypted and authenticated, providing confidentiality and integrity. An explicit plaintext override exists for controlled testing and should not be used for production traffic.</p>
 
 <p>This is not a configurable option — it is how the protocol works. An agent that joins the network and trusts a peer gets encrypted communication without additional setup, certificates to manage, or TLS termination to configure. The encryption is built into the transport layer, not bolted on at the application layer.</p>
 
@@ -41,11 +41,11 @@ const bodyContent = `<p>Every agent needs an identity, a way to be reached, and 
   <li><strong>Relay fallback</strong> — for symmetric NATs where hole-punching fails, traffic is relayed through the beacon (still end-to-end encrypted)</li>
 </ul>
 
-<p>The agent does not choose among these — the daemon automatically works through the fallback ladder until a path is found. An agent behind a home router communicates with an agent behind a corporate VPN as if they were on the same LAN, with no firewall rules to add, no VPN to configure, and no cloud relay to pay for.</p>
+<p>The agent does not choose among these — the daemon automatically works through the fallback ladder until a path is found. An agent behind a home router can communicate with an agent behind a corporate network without provisioning VPN peering or a workflow-specific relay.</p>
 
-<h2 id="trust-model">Trust Model: Invisible by Default</h2>
+<h2 id="trust-model">Trust Model: Private Connectivity by Default</h2>
 
-<p>A Pilot agent is invisible on the network until it explicitly establishes trust with another agent. No other agent can discover its address, resolve its hostname, or open a connection to it without a mutual handshake.</p>
+<p>A Pilot agent withholds its reachable endpoint from arbitrary peers. Directory metadata may still be visible, while a connection requires a mutual handshake or shared-network membership.</p>
 
 <p>The trust handshake is a bilateral protocol:</p>
 
@@ -60,7 +60,7 @@ const bodyContent = `<p>Every agent needs an identity, a way to be reached, and 
 
 <p>Trust is revocable at any time. Running <code>pilotctl untrust</code> removes the peer from the local trust store and tears down the active tunnel. The revocation is local and instant — no distributed cache to invalidate, no token blocklist to maintain.</p>
 
-<p>This trust model is the foundation for access control in multi-agent systems. Instead of managing API keys for every service and configuring OAuth flows for every pair of agents, the trust relationship at the network layer controls which agents can reach each other at all.</p>
+<p>This trust model is one layer of access control in multi-agent systems. Peer trust and network membership govern reachability; applications still enforce authorization for the data and operations they expose.</p>
 
 <h2 id="specialist-agents">Access to 430+ Specialist Agents</h2>
 
@@ -153,7 +153,7 @@ const bodyContent = `<p>Every agent needs an identity, a way to be reached, and 
 
 <ul>
   <li><strong>Cross-company data exchange.</strong> Two organizations running agents on Pilot can establish an encrypted tunnel with a single handshake. No VPN peering, no shared cloud account, no exposed API endpoints. The trust justification serves as a documented consent record.</li>
-  <li><strong>Secure healthcare communication.</strong> Agents handling Protected Health Information can communicate across organizational boundaries without any third-party infrastructure touching the data. <a href="https://pilotprotocol.network/blog/hipaa-compliant-agent-communication">HIPAA-compliant agent communication</a> is achievable because data travels through direct encrypted tunnels — no relay, no intermediary, no third-party storage.</li>
+  <li><strong>Healthcare-oriented communication controls.</strong> Agents can use encrypted tunnels across organizational boundaries, with direct paths preferred and ciphertext relay fallback when needed. The <a href="https://pilotprotocol.network/blog/hipaa-compliant-agent-communication">healthcare transport guide</a> explains the controls and the compliance responsibilities that remain with the operator.</li>
   <li><strong>Multi-cloud agent fleets.</strong> Agents distributed across AWS, GCP, and Azure communicate directly through encrypted tunnels. No cloud peering arrangement, no VPN mesh, no public-facing API gateways.</li>
   <li><strong>Home-lab and edge agents.</strong> An agent running on a device behind a residential NAT connects securely to agents in the cloud. The NAT traversal is automatic — no port forwarding, no DDNS, no reverse tunnel service.</li>
 </ul>

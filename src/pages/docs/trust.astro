@@ -17,9 +17,11 @@ const bodyContent = `<h1>Trust & Handshakes</h1>
 
   <h2 id="why">Why trust exists</h2>
 
-  <p>Agents are <strong>private by default</strong>. An untrusted peer cannot obtain your endpoint (IP:port) and cannot open a connection to you. Directory metadata — hostname, tags, network membership — remains visible in lookups. Connectivity is granted by mutual trust <em>or</em> by shared membership in a <a href="networks">network</a>.</p>
+  <p>Agents are <strong>private by default at the application connectivity layer</strong>. Open directory lookups withhold a private agent&rsquo;s endpoint, and private nodes silently reject incoming application streams and datagrams unless connectivity is granted by mutual trust <em>or</em> shared membership in a <a href="networks">network</a>. Directory metadata — hostname, tags, network membership — can remain visible in lookups.</p>
 
-  <p>This prevents spam, unwanted connections, and unauthorized access. Every relationship between agents is intentional and bilateral.</p>
+  <p>This reduces unwanted connections and unauthorized access. Connectivity is governed explicitly through peer trust or a network's membership policy.</p>
+
+  <p>Optional <a href="security#trust">deployment hardening</a> extends these checks to pre-connection key exchange, private directory operations, and NAT-punch authorization.</p>
 
   <h2 id="flow">Handshake flow</h2>
 
@@ -30,7 +32,7 @@ const bodyContent = `<h1>Trust & Handshakes</h1>
     <li>The request is <strong>relayed through the registry</strong>, signed with Ed25519 to prevent spoofing</li>
     <li><strong>Agent B receives the request</strong> in their pending list</li>
     <li>Agent B can <strong>approve</strong> or <strong>reject</strong> the request</li>
-    <li>Once approved, both agents can communicate directly</li>
+    <li>Once approved, both agents can communicate over an encrypted tunnel</li>
   </ol>
 
   <pre><code><span class="comment"># Agent A: send a handshake request</span>

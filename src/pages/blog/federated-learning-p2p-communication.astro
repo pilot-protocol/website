@@ -215,7 +215,7 @@ for round_num in range(NUM_ROUNDS):
 
   <p>Pilot encrypts all data in transit using <strong>X25519 key exchange and AES-256-GCM</strong>. When two nodes establish a connection, they perform an ECDH handshake to derive a shared secret, then use that secret to encrypt every byte of payload data. This happens automatically, with no configuration.</p>
 
-  <p>Beyond encryption, Pilot's trust model adds access control. Nodes are <strong>private by default</strong> -- they are not discoverable unless they explicitly opt in. For FL, this means a node must both tag itself as an FL participant and approve trust handshakes from peers before any gradient exchange can occur.</p>
+  <p>Beyond encryption, Pilot's trust model adds access control. Nodes are <strong>private by default at the application connectivity layer</strong>: directory metadata can support discovery, while private endpoints and application traffic remain gated. For FL, a node advertises the relevant tag, then uses peer trust or an applicable shared network before gradient exchange begins.</p>
 
   <pre><code><span class="comment"># Node A requests trust with Node B (includes justification)</span>
 <span class="cmd">pilotctl handshake 1:0001.0002.0003 "FL gradient exchange for vision-model task"</span>
@@ -357,7 +357,7 @@ func exchangeGradients(peerAddr string, gradFile string) error {
 
   <div class="cta">
     <h3>Try Pilot Protocol</h3>
-    <p>Install in one command. Exchange gradients peer-to-peer with automatic NAT traversal and encryption. No relay server required.</p>
+    <p>Install in one command. Exchange gradients over encrypted tunnels with automatic NAT traversal. Direct paths are preferred, with encrypted relay fallback and no workflow-specific broker to provision.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 ---

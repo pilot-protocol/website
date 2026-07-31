@@ -7,6 +7,7 @@ import '../../styles/global.css';
 import '../../styles/system.css';
 
 const filterCategories = ['All', ...categories];
+const sortedPosts = [...blogPosts].sort((a, b) => (b.iso_date || '').localeCompare(a.iso_date || ''));
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -39,7 +40,7 @@ const filterCategories = ['All', ...categories];
         "name": "How does P2P agent networking differ from VPNs?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "VPNs expose an entire network with all-or-nothing access. P2P agent overlay networking gives each agent a persistent virtual address with per-peer trust — agents approve individual peers rather than joining a flat network. This is closer to how messaging apps work than how machines connect in a VPN."
+          "text": "VPNs commonly grant access at a device or network boundary, often refined with ACLs and segmentation. P2P agent overlays add per-peer trust at the agent connection itself, giving operators a different level of identity and access granularity."
         }
       },
       {
@@ -55,7 +56,7 @@ const filterCategories = ['All', ...categories];
         "name": "Can AI agents communicate securely over an overlay network?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. Modern agent overlay networks use end-to-end encryption with X25519 key exchange and AES-GCM so every packet is encrypted and authenticated. Combined with per-peer handshake trust — agents explicitly approve connections — overlay networks provide stronger security than traditional VPNs because no single credential grants access to every peer."
+          "text": "Yes. Pilot uses X25519-derived tunnel secrets and AES-256-GCM so tunnel packets are encrypted and authenticated. Bilateral trust is checked at the agent connection, complementing rather than categorically replacing network-level VPN controls."
         }
       }
     ]
@@ -63,6 +64,7 @@ const filterCategories = ['All', ...categories];
 </head>
 <body>
   <Nav active="blog" />
+  <main>
   <div class="blog-list">
     <div class="eyebrow">Journal</div>
     <h1>AI agent networking, <em>explained</em>.</h1>
@@ -75,35 +77,36 @@ const filterCategories = ['All', ...categories];
         RSS
       </a>
       <span class="rss-divider"></span>
-      <button class="rss-copy" id="rss-copy" title="Copy feed URL">
+      <button type="button" class="rss-copy" id="rss-copy" title="Copy feed URL" aria-label="Copy feed URL">
         <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
       </button>
-      <span class="rss-toast" id="rss-toast">Copied</span>
+      <span class="rss-toast" id="rss-toast" aria-live="polite">Copied</span>
     </div>
 
     <div class="blog-search">
       <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" class="search-input" id="blog-search" placeholder="Search posts…" autocomplete="off" />
+      <input type="text" class="search-input" id="blog-search" placeholder="Search posts…" autocomplete="off" aria-label="Search posts" />
     </div>
 
-    <div class="blog-filters" id="blog-filters">
+    <div class="blog-filters" id="blog-filters" aria-label="Filter posts by category">
       {filterCategories.map((cat) => (
-        <button class={`filter-tab${cat === 'All' ? ' active' : ''}`} data-filter={cat}>{cat}</button>
+        <button type="button" class={`filter-tab${cat === 'All' ? ' active' : ''}`} data-filter={cat} aria-pressed={cat === 'All' ? 'true' : 'false'}>{cat}</button>
       ))}
     </div>
+    <p class="sr-only" id="blog-results-status" aria-live="polite"></p>
 
     <div id="blog-cards">
-      {blogPosts.map((post, i) => {
+      {sortedPosts.map((post, i) => {
         return (
           <a
             class={`blog-card reveal${i === 0 ? ' blog-hero' : ''}`}
-            href={`${post.slug}`}
+            href={`/blog/${post.slug}`}
             data-category={post.category}
             data-tags={post.tags.join(',')}
             data-title={post.title.toLowerCase()}
             data-description={post.description.toLowerCase()}
           >
-            <img src={post.banner} alt={post.title} loading={i < 3 ? 'eager' : 'lazy'} />
+            <img src={`/blog/${post.banner}`} alt={post.title} loading={i < 3 ? 'eager' : 'lazy'} />
             <div class="card-body">
               <h3>{post.title}</h3>
               <p>{post.description}</p>
@@ -129,7 +132,7 @@ const filterCategories = ['All', ...categories];
       </div>
       <div class="faq-item">
         <h3>How does P2P agent networking differ from VPNs?</h3>
-        <p>VPNs expose an entire network with all-or-nothing access. P2P agent overlay networking gives each agent a persistent virtual address with per-peer trust — agents approve individual peers rather than joining a flat network. This is closer to how messaging apps work than how machines connect in a VPN.</p>
+        <p>VPNs commonly grant access at a device or network boundary, often refined with ACLs and segmentation. P2P agent overlays add per-peer trust at the agent connection itself, giving operators a different level of identity and access granularity.</p>
       </div>
       <div class="faq-item">
         <h3>Why do AI agents need NAT traversal?</h3>
@@ -137,11 +140,12 @@ const filterCategories = ['All', ...categories];
       </div>
       <div class="faq-item">
         <h3>Can AI agents communicate securely over an overlay network?</h3>
-        <p>Yes. Modern agent overlay networks use end-to-end encryption with X25519 key exchange and AES-GCM so every packet is encrypted and authenticated. Combined with per-peer handshake trust — agents explicitly approve connections — overlay networks provide stronger security than traditional VPNs because no single credential grants access to every peer.</p>
+        <p>Yes. Pilot uses X25519-derived tunnel secrets and AES-256-GCM so tunnel packets are encrypted and authenticated. Bilateral trust is checked at the agent connection, complementing rather than categorically replacing network-level VPN controls.</p>
       </div>
     </div>
   </section>
 
+  </main>
   <Footer />
 
 <style>
@@ -166,7 +170,7 @@ const filterCategories = ['All', ...categories];
   }
   .blog-faq .faq-item p {
     margin: 0;
-    color: var(--ink-2, #b9b6ad);
+    color: var(--ink-dim);
     line-height: 1.6;
   }
 </style>
@@ -182,8 +186,21 @@ const filterCategories = ['All', ...categories];
   if (!btn || !toast) return;
   btn.addEventListener('click', function() {
     navigator.clipboard.writeText('https://pilotprotocol.network/blog/feed.xml').then(function() {
+      toast.textContent = 'Copied';
+      btn.setAttribute('aria-label', 'Copied');
       toast.classList.add('show');
-      setTimeout(function() { toast.classList.remove('show'); }, 1500);
+      setTimeout(function() {
+        toast.classList.remove('show');
+        btn.setAttribute('aria-label', 'Copy feed URL');
+      }, 1500);
+    }).catch(function() {
+      toast.textContent = 'Copy failed';
+      btn.setAttribute('aria-label', 'Copy failed');
+      toast.classList.add('show');
+      setTimeout(function() {
+        toast.classList.remove('show');
+        btn.setAttribute('aria-label', 'Copy feed URL');
+      }, 1500);
     });
   });
 })();
@@ -205,6 +222,7 @@ const filterCategories = ['All', ...categories];
   var cards = document.querySelectorAll('#blog-cards .blog-card');
   var searchInput = document.getElementById('blog-search');
   var noResults = document.getElementById('no-results');
+  var status = document.getElementById('blog-results-status');
   var activeFilter = 'All';
 
   function applyFilters() {
@@ -225,13 +243,15 @@ const filterCategories = ['All', ...categories];
       }
     });
     noResults.style.display = visible === 0 ? 'block' : 'none';
+    if (status) status.textContent = visible + (visible === 1 ? ' post shown' : ' posts shown');
   }
 
   filters.addEventListener('click', function(e) {
     var tab = e.target.closest('.filter-tab');
     if (!tab) return;
-    filters.querySelectorAll('.filter-tab').forEach(function(t) { t.classList.remove('active'); });
+    filters.querySelectorAll('.filter-tab').forEach(function(t) { t.classList.remove('active'); t.setAttribute('aria-pressed', 'false'); });
     tab.classList.add('active');
+    tab.setAttribute('aria-pressed', 'true');
     activeFilter = tab.getAttribute('data-filter');
     applyFilters();
   });

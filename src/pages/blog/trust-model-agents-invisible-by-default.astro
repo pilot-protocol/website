@@ -5,7 +5,7 @@ const bodyContent = `<p>When Google released the A2A (Agent-to-Agent) protocol, 
 
   <p>This is the default in agent frameworks: agents are <strong>discoverable</strong>. They announce themselves. They welcome connections. The assumption is that open communication is the norm and access control is layered on top.</p>
 
-  <p>Pilot Protocol takes the opposite position: <strong>agents should be invisible by default</strong>. A new agent on the network cannot be found, cannot be connected to, and cannot be enumerated. Visibility is not the default state -- it is a privilege granted explicitly through a cryptographic handshake.</p>
+  <p>Pilot Protocol takes a more private position: <strong>connectivity should be gated by default</strong>. A new agent may have directory metadata in the registry, but its reachable endpoint is withheld from arbitrary peers. Connectivity is granted through a cryptographic trust handshake or an applicable shared-network policy.</p>
 
   <p>This post explains why, how the trust model works technically, what it enables, and what it costs.</p>
 
@@ -42,11 +42,11 @@ const bodyContent = `<p>When Google released the A2A (Agent-to-Agent) protocol, 
 
   <h3>Lookup</h3>
 
-  <p><strong>Lookup</strong> is the operation of finding an agent by hostname. When you run <code>pilotctl find alice</code>, the rendezvous server checks whether "alice" is registered as public. If she is private, the server returns nothing -- not an error, not a "permission denied," just no result. The requesting agent cannot distinguish between a private agent and a nonexistent one.</p>
+  <p><strong>Lookup</strong> is the operation of finding an agent by hostname or metadata. Public agents opt into broad search; private-agent metadata may still appear according to registry and network configuration. A lookup result does not grant a reachable endpoint or permission to connect.</p>
 
-  <pre><code><span class="comment"># Alice is private - lookup returns nothing</span>
+  <pre><code><span class="comment"># Results depend on visibility, registry, and network policy</span>
 <span class="cmd">$ pilotctl find alice</span>
-No agents found matching "alice"
+alice  0:0000.0000.0003  private  endpoint-withheld
 
 <span class="comment"># Alice is public - lookup succeeds</span>
 <span class="cmd">$ pilotctl find alice</span>
@@ -54,18 +54,18 @@ alice  0:0000.0000.0003  public  203.0.113.42:4000</code></pre>
 
   <h3>Resolve</h3>
 
-  <p><strong>Resolve</strong> is the operation of getting an agent's network endpoint (IP:port) so you can establish a tunnel. This is the critical operation -- without the endpoint, you cannot connect. Resolve requires a <strong>mutual trust relationship</strong>. The rendezvous server will only return an agent's endpoint to a peer that the agent has explicitly trusted.</p>
+  <p><strong>Resolve</strong> is the operation of getting an agent's network endpoint (IP:port) so you can establish a tunnel. The rendezvous server returns that endpoint only when a <strong>mutual trust relationship</strong> or shared-network membership authorizes connectivity.</p>
 
-  <p>Even if you know an agent's virtual address, you cannot resolve its endpoint without trust. The address alone is useless -- it is a virtual identifier, not a network location.</p>
+  <p>An agent's virtual address is a durable identifier, not a physical network location. Knowing it is useful for identity and routing, but it does not by itself authorize endpoint resolution.</p>
 
   <h3>Enumeration</h3>
 
-  <p><strong>Backbone enumeration</strong> -- listing all agents on the network -- is blocked entirely. There is no command and no API to retrieve a list of all registered agents. An agent can only see agents it has already discovered through lookup (public agents) or through an established trust relationship.</p>
+  <p><strong>Endpoint enumeration</strong> is separated from directory discovery. Search and registry responses may expose agent metadata, while reachable endpoints remain governed by peer trust and network membership.</p>
 
-  <p>This means an attacker who compromises one agent cannot use it to map the rest of the network. The compromised agent only knows about the peers it was explicitly trusted with.</p>
+  <p>This limits connection scope for a compromised agent to the peers and networks its current policy allows. Directory metadata should still be treated as discoverable control-plane information.</p>
 
   <div class="callout">
-    <p><strong>Design principle:</strong> The amount of information an agent can learn about the network is proportional to the amount of trust it has been granted. Zero trust means zero visibility. This is the opposite of "scan and discover" models where any agent on the network can see everything.</p>
+    <p><strong>Design principle:</strong> Discovery and connectivity are separate decisions. Metadata can support coordination without automatically exposing a usable endpoint or granting access.</p>
   </div>
 
   <h2 id="handshake">The Handshake: Cryptographic Trust Establishment</h2>
@@ -74,7 +74,7 @@ alice  0:0000.0000.0003  public  203.0.113.42:4000</code></pre>
 
   <h3>Step 1: Identity</h3>
 
-  <p>Every agent generates an <strong>Ed25519 key pair</strong> during initialization (<code>pilotctl init</code>). The private key stays on the agent's machine in <code>~/.pilot/identity.json</code>. The public key is registered with the rendezvous server alongside the agent's virtual address and hostname.</p>
+  <p>Every agent generates an <strong>Ed25519 key pair</strong> when the daemon first starts. The private key stays on the agent's machine in <code>~/.pilot/identity.json</code>. The public key is registered with the rendezvous server alongside the agent's virtual address and hostname.</p>
 
   <p>Ed25519 was chosen for several reasons:</p>
 
@@ -171,16 +171,16 @@ Peer not notified — it will see connection failures on its next attempt</code>
     <li>When the project ends, either side runs <code>pilotctl untrust</code> and the relationship is severed instantly</li>
   </ol>
 
-  <p>No VPN peering. No shared credentials. No exposed endpoints. The trust is scoped to exactly the agents that need it, for exactly as long as they need it.</p>
+  <p>No VPN peering or shared credentials are required. Reachable endpoints are disclosed only where peer trust or network policy allows connectivity.</p>
 
   <h3>Regulatory Compliance</h3>
 
-  <p>Regulations like GDPR, HIPAA, and SOC 2 require organizations to demonstrate access control, audit trails, and data flow boundaries. Pilot Protocol's trust model provides these natively:</p>
+  <p>Regulated deployments typically need access control, audit evidence, and data-flow boundaries. Pilot's trust model contributes technical controls in those areas, while compliance remains a property of the complete deployment and operating program:</p>
 
   <ul>
-    <li><strong>Access control</strong> -- only mutually trusted agents can communicate. Trust relationships are cryptographically verifiable.</li>
+    <li><strong>Access control</strong> -- peer trust or shared-network policy determines which agents can communicate. Peer trust relationships are cryptographically verifiable.</li>
     <li><strong>Audit trail</strong> -- every handshake includes a justification message. Who requested access, why, and when is all recorded.</li>
-    <li><strong>Data boundaries</strong> -- agents can only see peers they have been explicitly trusted with. There is no risk of accidental data exposure to agents in other parts of the organization.</li>
+    <li><strong>Data boundaries</strong> -- trust and network membership limit connectivity. Operators still need application authorization, data classification, and review of directory metadata.</li>
     <li><strong>Instant revocation</strong> -- access can be terminated immediately, with proof that it was terminated.</li>
   </ul>
 
@@ -188,13 +188,13 @@ Peer not notified — it will see connection failures on its next attempt</code>
 
   <p>When an agent is compromised in an open network, the attacker can use it to discover and connect to every other agent. The blast radius is the entire network.</p>
 
-  <p>In Pilot Protocol, a compromised agent can only see the peers it was trusted with. It cannot enumerate the network, discover new agents, or establish connections to agents outside its trust set. The blast radius is limited to the compromised agent's trust relationships -- typically a small subset of the total network.</p>
+  <p>In Pilot Protocol, a compromised agent can establish connections only where its peer trust and network memberships permit. It may still see directory metadata, so containment depends on keeping those grants narrow and revoking them promptly.</p>
 
   <p>If the compromise is detected, revoking trust from the compromised agent immediately severs all its connections. The attacker loses access to every peer simultaneously. There is no race condition between detection and containment.</p>
 
   <h2 id="tradeoffs">Trade-Offs: Discovery Is Harder</h2>
 
-  <p>The private-by-default model has an obvious cost: <strong>discovery is harder</strong>. Two agents that have never communicated cannot find each other unless at least one of them is public or an out-of-band introduction happens.</p>
+  <p>The private-by-default model has an obvious cost: <strong>authorized connectivity requires context</strong>. Two agents that have never communicated need a peer handshake, shared-network membership, or an operator-defined introduction before they can connect.</p>
 
   <p>This is intentional.</p>
 
@@ -209,12 +209,12 @@ Peer not notified — it will see connection failures on its next attempt</code>
     <li>The agent behind the address approves or rejects based on its policies</li>
   </ul>
 
-  <p>This separates the discovery mechanism from the communication mechanism. Discovery can be as open or as restricted as the use case requires. But the communication channel is always authenticated, encrypted, and trust-gated. For a complete walkthrough of how agents discover each other through the registry and tag search, see <a href="/blog/how-ai-agents-discover-each-other">How AI Agents Discover Each Other on a Live Network</a>.</p>
+  <p>This separates the discovery mechanism from the communication mechanism. Discovery can be as open or as restricted as the use case requires, while the communication channel is authenticated, encrypted, and gated by peer trust or network policy. For a complete walkthrough of how agents discover each other through the registry and tag search, see <a href="/blog/how-ai-agents-discover-each-other">How AI Agents Discover Each Other on a Live Network</a>.</p>
 
-  <p>Agents can also use the <code>--public</code> flag to opt into discoverability for specific use cases. A data-processing agent that wants to accept tasks from anyone can register as public. A financial analysis agent that should only communicate with approved partners remains private. The choice is per-agent, not per-network.</p>
+  <p>Agents can also use the <code>--public</code> flag to opt into broader discoverability for specific use cases. A data-processing agent may advertise itself publicly, while a financial analysis agent remains private and joins only governed networks. Visibility and network policy are separate controls.</p>
 
   <div class="callout">
-    <p><strong>The asymmetry is deliberate:</strong> making an agent visible is a one-flag operation (<code>--public</code>). Making it invisible is the default that requires no action. The protocol nudges toward privacy because the consequences of accidental exposure are worse than the cost of intentional introduction.</p>
+    <p><strong>The asymmetry is deliberate:</strong> broader discovery is a one-flag operation (<code>--public</code>), while endpoint privacy is the default. The protocol favors explicit exposure over accidental reachability.</p>
   </div>
 
   <h2 id="comparison">Comparison: Trust Models Across Protocols</h2>
@@ -224,13 +224,13 @@ Peer not notified — it will see connection failures on its next attempt</code>
       <tr><th>Property</th><th>A2A</th><th>MCP</th><th>Pilot Protocol</th></tr>
     </thead>
     <tbody>
-      <tr><td>Default visibility</td><td>Public (Agent Cards)</td><td>Configured by client</td><td>Private (invisible)</td></tr>
+      <tr><td>Default visibility</td><td>Public (Agent Cards)</td><td>Configured by client</td><td>Private endpoint; metadata may be visible</td></tr>
       <tr><td>Identity</td><td>URL-based</td><td>Server identity</td><td>Ed25519 key pair</td></tr>
       <tr><td>Authentication</td><td>HTTP auth (various)</td><td>OAuth / API key</td><td>Ed25519 signatures</td></tr>
       <tr><td>Trust establishment</td><td>Fetch Agent Card</td><td>Client configuration</td><td>Mutual handshake</td></tr>
       <tr><td>Revocation</td><td>HTTP 401/403</td><td>Token expiry</td><td>Instant (untrust)</td></tr>
-      <tr><td>Enumeration</td><td>Crawlable</td><td>N/A (point-to-point)</td><td>Blocked</td></tr>
-      <tr><td>Blast radius</td><td>Full network</td><td>Connected servers</td><td>Trust set only</td></tr>
+      <tr><td>Enumeration</td><td>Crawlable</td><td>N/A (point-to-point)</td><td>Metadata scoped; endpoints gated</td></tr>
+      <tr><td>Blast radius</td><td>Deployment-dependent</td><td>Connected servers</td><td>Peer trust and network grants</td></tr>
     </tbody>
   </table>
 
@@ -246,7 +246,7 @@ Peer not notified — it will see connection failures on its next attempt</code>
 ---
 <BlogLayout
   title="Trust Model: Agents Are Invisible by Default"
-  description="Why Pilot Protocol makes agents invisible until trust is explicitly established. Ed25519 identity and mutual handshakes."
+  description="How Pilot Protocol separates agent discovery from endpoint access using Ed25519 identity, mutual handshakes, and network policy."
   date="February 17, 2026"
   tags={["security", "trust", "privacy"]}
   canonicalPath="/blog/trust-model-agents-invisible-by-default"
