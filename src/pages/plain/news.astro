@@ -1,0 +1,27 @@
+---
+import PlainLayout from '../../layouts/PlainLayout.astro';
+import { companyNews } from '../../data/blogPosts';
+const posts = [...companyNews].sort((a, b) => (b.iso_date || '').localeCompare(a.iso_date || ''));
+---
+<PlainLayout
+  title="Company News — Pilot Protocol (plain)"
+  description="Official announcements and company updates from Pilot Protocol."
+  canonical="https://pilotprotocol.network/plain/news/"
+>
+<p><a href="/news/">Switch to the styled newsroom</a></p>
+<h1>Company news</h1>
+<p>Official announcements and company updates from the team building Pilot Protocol.</p>
+<ul>
+  {posts.map((post) => (
+    <li><a href={`/news/${post.slug}`}>{post.title}</a> — <time datetime={post.iso_date}>{post.date}, {post.year || 2026}</time>. {post.description}</li>
+  ))}
+</ul>
+<h2>Resources</h2>
+<ul>
+  <li><a href="/press">Press kit</a></li>
+  <li><a href="/enterprise-readiness-report.pdf">Enterprise Readiness Report</a></li>
+  <li><a href="/pilot-native-use-cases.pdf">Pilot-native use cases</a></li>
+  <li><a href="/roadmap">Product roadmap</a></li>
+</ul>
+<p>Press inquiries: <a href="mailto:press@pilotprotocol.network">press@pilotprotocol.network</a>.</p>
+</PlainLayout>

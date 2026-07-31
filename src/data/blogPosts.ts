@@ -12,6 +12,9 @@ export interface BlogPost {
  iso_date?: string;
 }
 
-export const blogPosts: BlogPost[] = data as BlogPost[];
+export const allPosts: BlogPost[] = data as BlogPost[];
+
+export const companyNews = allPosts.filter((post) => post.category === 'Company');
+export const blogPosts = allPosts.filter((post) => post.category !== 'Company');
 
 export const categories = [...new Set(blogPosts.map(p => p.category))];

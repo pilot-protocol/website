@@ -1,4 +1,4 @@
-import { blogPosts } from '../data/blogPosts';
+import { allPosts } from '../data/blogPosts';
 import { apps } from '../data/apps';
 
 const site = 'https://pilotprotocol.network';
@@ -11,14 +11,8 @@ const pageGlob = import.meta.glob('./**/*.{astro,md,mdx}');
 
 function url(loc: string, lastmod: string, priority: number, changefreq = 'monthly') {
   const modified = lastmod ? `<lastmod>${lastmod}</lastmod>` : '';
-  return `  <url><loc>${site}${loc}</loc>${modified}<changefreq>${changefreq}</changefreq><priority>${priority}</priority></url>`;
-}
-
-function blogDate(date: string, year?: number): string {
-  const y = year || new Date().getFullYear();
-  const d = new Date(`${date}, ${y}`);
-  const iso = d.toISOString();
-  return iso.split('T')[0];
+  const absolute = `${site}${loc}`.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `  <url><loc>${absolute}</loc>${modified}<changefreq>${changefreq}</changefreq><priority>${priority}</priority></url>`;
 }
 
 // Map a glob key (e.g. './docs/app-store.astro') to a route.
@@ -49,7 +43,9 @@ function priorityFor(loc: string): { p: number; freq: string } {
 }
 
 export async function GET() {
-  const blogDates = new Map(blogPosts.map((b) => [b.slug, b.iso_date || blogDate(b.date, b.year)]));
+  const postDates = new Map(
+    allPosts.filter((post) => post.iso_date).map((post) => [post.slug, post.iso_date!]),
+  );
 
   const seen = new Set<string>();
   const urls: string[] = [];
@@ -60,25 +56,32 @@ export async function GET() {
   };
 
   // 1. Every static page route discovered from the filesystem.
-  for (const key of Object.keys(pageGlob)) {
+  for (const key of Object.keys(pageGlob).sort()) {
     const loc = routeFromKey(key);
     if (loc === '/404' || loc === '/500') continue; // error pages
     if (loc.includes('[')) continue;                // dynamic template — expanded below
     if (loc.startsWith('/plain/')) continue;        // non-canonical text mirror
-    const blogSlug = loc.startsWith('/blog/') ? loc.replace('/blog/', '').replace(/\/$/, '') : '';
-    const lastmod = blogSlug && blogDates.has(blogSlug) ? blogDates.get(blogSlug)! : '';
+    const datedPostSlug = loc.startsWith('/blog/')
+      ? loc.replace('/blog/', '').replace(/\/$/, '')
+      : loc.startsWith('/news/')
+        ? loc.replace('/news/', '').replace(/\/$/, '')
+        : '';
+    const lastmod = datedPostSlug && postDates.has(datedPostSlug) ? postDates.get(datedPostSlug)! : '';
     const { p, freq } = priorityFor(loc);
     add(loc, lastmod, p, freq);
   }
 
   // 2. Dynamic public routes.
-  for (const app of apps) add(`/apps/${app.id}`, app.publishedAt || '', 0.7);
+  for (const app of [...apps].sort((a, b) => a.id.localeCompare(b.id))) {
+    add(`/apps/${app.id}`, app.publishedAt || '', 0.7);
+  }
 
   try {
     const response = await fetch('https://raw.githubusercontent.com/TeoSlayer/pilot-skills/main/setups.json');
     if (response.ok) {
       const catalog = await response.json() as { setups?: { slug: string }[] };
-      for (const setup of catalog.setups || []) add(`/for/setups/${setup.slug}`, '', 0.7);
+      const setups = [...(catalog.setups || [])].sort((a, b) => a.slug.localeCompare(b.slug));
+      for (const setup of setups) add(`/for/setups/${setup.slug}`, '', 0.7);
     }
   } catch { /* The collection pages still remain in the sitemap offline. */ }
 
@@ -93,6 +96,6 @@ ${urls.join('\n')}
 `;
 
   return new Response(xml, {
-    headers: { 'Content-Type': 'application/xml' },
+    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
   });
 }

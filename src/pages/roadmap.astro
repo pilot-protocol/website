@@ -1,0 +1,638 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/system.css';
+
+const title = 'Roadmap — Pilot Protocol';
+const description = 'What Pilot Protocol is strengthening now, building next, and exploring across agent networking, security, operations, and developer tooling.';
+const canonicalUrl = 'https://pilotprotocol.network/roadmap';
+const lastUpdated = 'July 2026';
+
+const baseline = [
+  {
+    status: 'Available',
+    title: 'Agent identity & encrypted tunnels',
+    detail: 'Persistent Ed25519 identity, signed handshakes, X25519 key agreement, and AES-256-GCM peer tunnels.',
+  },
+  {
+    status: 'Available',
+    title: 'Private-by-default trust',
+    detail: 'Peer approval, rejection, revocation, shared-network membership, and configurable pre-trust hardening.',
+  },
+  {
+    status: 'Available',
+    title: 'Agent app ecosystem',
+    detail: 'Discoverable packages with review, signature verification, and SHA-256 pinning before installation.',
+  },
+  {
+    status: 'Early access',
+    title: 'Enterprise control surface',
+    detail: 'Private deployments, roles, identity integration, policy, key lifecycle, provisioning, and audit export.',
+  },
+];
+
+const stages = [
+  {
+    id: 'now',
+    number: '01',
+    horizon: 'Now',
+    status: 'In progress',
+    title: 'Harden and prove the foundation.',
+    lede: 'The current focus is making the network easier to trust, operate, and integrate under real deployment conditions.',
+    items: [
+      {
+        area: 'Network operations',
+        title: 'Reliability under real-world conditions',
+        body: 'Harden registry, beacon, NAT traversal, and encrypted relay paths under churn and partial failure. Improve health signals, diagnostics, upgrades, and recovery so operators can understand what the network is doing.',
+        href: '/docs/diagnostics',
+        link: 'Operations documentation',
+      },
+      {
+        area: 'Security',
+        title: 'Verification, hardening, and evidence',
+        body: 'Expand strict pre-trust coverage, validate revocation and key-lifecycle behavior, and turn security findings into regression tests. Prepare the implementation and evidence for broader external review.',
+        href: '/trust',
+        link: 'Trust Center',
+      },
+      {
+        area: 'Enterprise',
+        title: 'Early-access deployments',
+        body: 'Run private and dedicated deployments with design partners. Refine roles, identity integration, network policy, consent, and audit export around real operating requirements.',
+        href: '/docs/enterprise',
+        link: 'Enterprise architecture',
+      },
+      {
+        area: 'Developer experience',
+        title: 'A more predictable developer surface',
+        body: 'Close SDK gaps and make installation, upgrades, examples, error handling, and parity checks more consistent across Node.js, Python, and Swift. Continue compatibility work for additional environments.',
+        href: '/docs/sdk-parity',
+        link: 'SDK parity',
+      },
+    ],
+  },
+  {
+    id: 'next',
+    number: '02',
+    horizon: 'Next',
+    status: 'Queued',
+    title: 'Make Pilot easier to operate at scale.',
+    lede: 'The next horizon turns the early-access control surface into more complete organizational operations and ecosystem tooling.',
+    items: [
+      {
+        area: 'Fleet operations',
+        title: 'Health, lifecycle, and bulk workflows',
+        body: 'Make membership, fleet health, policy state, key state, and audit flow easier to operate across larger deployments. Add safer bulk workflows and clearer recovery paths when part of a fleet falls out of sync.',
+        href: '/docs/networks',
+        link: 'Network operations',
+      },
+      {
+        area: 'Identity & policy',
+        title: 'Deeper control-system integration',
+        body: 'Broaden identity-provider coverage, directory lifecycle, role mapping, and revocation workflows. Improve policy validation and approval hooks so connectivity fits existing organizational controls.',
+        href: '/docs/enterprise-identity',
+        link: 'Identity integration',
+      },
+      {
+        area: 'Deployment',
+        title: 'Dedicated-service resilience',
+        body: 'Strengthen coordination and relay capacity planning, backup and restore, controlled upgrades, and measurable service objectives. Evaluate regional and data-location options with early-access teams.',
+        href: '/trust#architecture',
+        link: 'Architecture boundary',
+      },
+      {
+        area: 'App ecosystem',
+        title: 'Stronger publisher and package trust',
+        body: 'Extend publisher verification, capability declarations, provenance, review automation, and incident handling. Make it clearer what an app can access before installation and while it runs.',
+        href: '/docs/app-store',
+        link: 'App Store model',
+      },
+    ],
+  },
+  {
+    id: 'explore',
+    number: '03',
+    horizon: 'Exploring',
+    status: 'Research',
+    title: 'Expand the network model carefully.',
+    lede: 'These are active areas of investigation. They are directional, may change substantially, and are not release commitments.',
+    items: [
+      {
+        area: 'Network model',
+        title: 'Federated coordination',
+        body: 'Explore portable identity and discovery across independently operated coordination services, with explicit trust boundaries and failure isolation. Any model must preserve private-by-default behavior.',
+        href: '/docs/research',
+        link: 'Technical research',
+      },
+      {
+        area: 'Authorization',
+        title: 'Scoped, delegated authority',
+        body: 'Explore expiring grants, delegated roles, and machine-readable approval context for cross-organization workflows. Pilot would carry connectivity and authorization signals while applications retain business authority.',
+        href: '/governance#authority',
+        link: 'Governance boundary',
+      },
+      {
+        area: 'Transport security',
+        title: 'Per-connection security profiles',
+        body: 'Explore secure-port APIs and per-connection keying for workloads that need isolation beyond the existing encrypted peer tunnel, with explicit negotiation and compatibility behavior.',
+        href: '/docs/research',
+        link: 'Wire specification',
+      },
+      {
+        area: 'Agent commerce',
+        title: 'Budgets, receipts, and audit evidence',
+        body: 'Explore supervisor-controlled budgets, spend policy, receipts, and traceable evidence around paid capabilities. Control and reviewability come before broader transaction automation.',
+        href: '/apps/io.pilot.wallet',
+        link: 'Pilot Wallet',
+      },
+    ],
+  },
+];
+
+const principles = [
+  ['Security before reach', 'A larger network is only useful when identity, privacy, revocation, and operational boundaries remain understandable.'],
+  ['Evidence over claims', 'Availability labels, documentation, telemetry definitions, and implementation evidence should move with the product.'],
+  ['Compatibility by default', 'New controls should fit existing environments and preserve practical upgrade paths for deployed agents.'],
+  ['Incremental delivery', 'Each horizon should produce independently useful improvements rather than depend on one distant platform rewrite.'],
+];
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <BaseHead title={title} description={description} canonicalUrl={canonicalUrl} />
+  <script type="application/ld+json" set:html={JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: title,
+    description,
+    url: canonicalUrl,
+    dateModified: '2026-07-31',
+    about: {
+      '@type': 'SoftwareApplication',
+      name: 'Pilot Protocol',
+      applicationCategory: 'NetworkingApplication',
+    },
+  })}></script>
+</head>
+<body>
+
+<Nav active="roadmap" />
+
+<main>
+  <section class="roadmap-hero">
+    <div class="gridbg" aria-hidden="true"></div>
+    <div class="wrap">
+      <div class="roadmap-kicker">
+        <span>Product roadmap</span>
+        <span class="roadmap-updated"><i aria-hidden="true"></i> Updated <time datetime="2026-07-31">{lastUpdated}</time></span>
+      </div>
+      <h1>Building the network<br/><em>agents can depend on.</em></h1>
+      <div class="roadmap-hero-bottom">
+        <p>Pilot already provides agent identity, encrypted peer connectivity, explicit trust, and installable capabilities. This roadmap shows what we are strengthening now, building next, and investigating for the longer term.</p>
+        <div class="roadmap-actions">
+          <a class="btn primary" href="#now">See current priorities <span class="arr">↓</span></a>
+          <a class="btn" href="/trust#claims">Current product status</a>
+        </div>
+      </div>
+      <div class="roadmap-disclosure">
+        <span>How to read this page</span>
+        <p>Horizons communicate direction rather than fixed delivery dates. Priority and scope can change as security findings, deployment evidence, and operator feedback evolve.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="roadmap-baseline" aria-labelledby="baseline-title">
+    <div class="wrap">
+      <div class="baseline-heading">
+        <div>
+          <span class="eyebrow">Current baseline</span>
+          <h2 id="baseline-title">What exists <em>today.</em></h2>
+        </div>
+        <p>Roadmap items build on these current capabilities. “Early access” means assisted evaluation, not general availability.</p>
+      </div>
+      <div class="baseline-grid">
+        {baseline.map((item, index) => (
+          <article class="baseline-card">
+            <div class="baseline-meta"><span>{String(index + 1).padStart(2, '0')}</span><b class:list={[item.status === 'Available' && 'is-available']}>{item.status}</b></div>
+            <h3>{item.title}</h3>
+            <p>{item.detail}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="roadmap-body" aria-labelledby="priorities-title">
+    <div class="wrap">
+      <div class="roadmap-section-heading">
+        <span class="eyebrow">Priority horizons</span>
+        <h2 id="priorities-title">Now, next, and<br/><em>under investigation.</em></h2>
+      </div>
+
+      {stages.map((stage) => (
+        <section class:list={['roadmap-stage', `stage-${stage.id}`]} id={stage.id} aria-labelledby={`${stage.id}-title`}>
+          <div class="stage-rail">
+            <span class="stage-number">{stage.number}</span>
+            <div class="stage-horizon"><i aria-hidden="true"></i>{stage.horizon}</div>
+            <span class="stage-status">{stage.status}</span>
+          </div>
+          <div class="stage-content">
+            <div class="stage-head">
+              <h3 id={`${stage.id}-title`}>{stage.title}</h3>
+              <p>{stage.lede}</p>
+            </div>
+            <div class="roadmap-items">
+              {stage.items.map((item, index) => (
+                <article class="roadmap-card">
+                  <div class="card-meta"><span>{item.area}</span><span>{stage.number}.{String(index + 1).padStart(2, '0')}</span></div>
+                  <h4>{item.title}</h4>
+                  <p>{item.body}</p>
+                  <a href={item.href}>{item.link} <span aria-hidden="true">↗</span></a>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      ))}
+    </div>
+  </section>
+
+  <section class="roadmap-principles" aria-labelledby="principles-title">
+    <div class="wrap">
+      <div class="principles-head">
+        <div>
+          <span class="eyebrow">How we prioritize</span>
+          <h2 id="principles-title">The filters behind<br/><em>the sequence.</em></h2>
+        </div>
+        <p>Security findings can move work forward immediately. Beyond that, priorities reflect operational evidence, design-partner needs, ecosystem usefulness, and the amount of durable complexity each change introduces.</p>
+      </div>
+      <div class="principles-grid">
+        {principles.map(([name, detail], index) => (
+          <article>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <h3>{name}</h3>
+            <p>{detail}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="roadmap-close">
+    <div class="wrap close-grid">
+      <div>
+        <span class="eyebrow">Help shape the roadmap</span>
+        <h2>Bring us the deployment<br/><em>you cannot solve yet.</em></h2>
+      </div>
+      <div class="close-copy">
+        <p>We are especially interested in multi-agent systems that cross clouds, teams, or organizational boundaries and need clearer identity, policy, audit, or operating controls.</p>
+        <div class="roadmap-actions">
+          <a class="btn primary" href="/contact?topic=roadmap">Talk to the team <span class="arr">→</span></a>
+          <a class="btn" href="https://github.com/pilot-protocol/pilotprotocol" target="_blank" rel="noopener">View the source</a>
+          <a class="btn" href="/enterprise-readiness-report.pdf">Readiness report</a>
+          <a class="btn" href="/pilot-native-use-cases.pdf">Use-case brochure</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<Footer />
+
+<style>
+  .roadmap-hero {
+    position: relative;
+    overflow: hidden;
+    padding: 96px 0 72px;
+    border-bottom: 1px solid var(--line);
+  }
+  .roadmap-hero .wrap { position: relative; z-index: 1; }
+  .roadmap-kicker {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 52px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 560;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .roadmap-updated { display: inline-flex; align-items: center; gap: 8px; }
+  .roadmap-updated i,
+  .stage-horizon i {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-dim);
+  }
+  .roadmap-hero h1 {
+    max-width: 12ch;
+    margin: 0;
+    font-family: var(--sans);
+    font-size: clamp(58px, 8.7vw, 132px);
+    font-weight: 500;
+    line-height: 0.9;
+    letter-spacing: -0.052em;
+    color: var(--ink);
+  }
+  .roadmap-hero h1 em,
+  .roadmap-baseline h2 em,
+  .roadmap-section-heading h2 em,
+  .principles-head h2 em,
+  .roadmap-close h2 em {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-style: italic;
+    color: var(--accent-text);
+    letter-spacing: -0.025em;
+  }
+  .roadmap-hero-bottom {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 48px;
+    margin-top: 52px;
+  }
+  .roadmap-hero-bottom > p {
+    max-width: 62ch;
+    margin: 0;
+    color: var(--ink-dim);
+    font-size: clamp(17px, 1.6vw, 21px);
+    line-height: 1.55;
+  }
+  .roadmap-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .roadmap-disclosure {
+    display: grid;
+    grid-template-columns: 170px minmax(0, 1fr);
+    gap: 24px;
+    margin-top: 64px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+  }
+  .roadmap-disclosure span {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 560;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .roadmap-disclosure p {
+    max-width: 85ch;
+    margin: 0;
+    color: var(--ink-dim);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .roadmap-baseline { padding: 88px 0 96px; background: var(--bg-2); border-bottom: 1px solid var(--line); }
+  .baseline-heading,
+  .principles-head,
+  .close-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+    gap: 80px;
+    align-items: end;
+  }
+  .baseline-heading { margin-bottom: 42px; }
+  .baseline-heading h2,
+  .roadmap-section-heading h2,
+  .principles-head h2,
+  .roadmap-close h2 {
+    margin: 12px 0 0;
+    font-size: clamp(38px, 5.2vw, 72px);
+    font-weight: 500;
+    line-height: 0.98;
+    letter-spacing: -0.04em;
+  }
+  .baseline-heading > p,
+  .principles-head > p,
+  .close-copy > p {
+    max-width: 54ch;
+    margin: 0;
+    color: var(--ink-dim);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  .baseline-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .baseline-card {
+    min-height: 270px;
+    padding: 26px;
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+  }
+  .baseline-card:last-child { border-right: 0; }
+  .baseline-meta,
+  .card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 560;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .baseline-meta b {
+    padding: 4px 7px;
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    font-weight: 560;
+    color: var(--ink-dim);
+  }
+  .baseline-meta b.is-available { color: var(--accent-text); border-color: var(--accent-dim); }
+  .baseline-card h3 {
+    max-width: 13ch;
+    margin: auto 0 14px;
+    font-size: 24px;
+    font-weight: 540;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+  }
+  .baseline-card p { margin: 0; color: var(--ink-dim); font-size: 13px; line-height: 1.5; }
+
+  .roadmap-body { padding: 104px 0 24px; }
+  .roadmap-section-heading { margin-bottom: 28px; }
+  .roadmap-section-heading h2 { max-width: 12ch; }
+  .roadmap-stage {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: 54px;
+    padding: 76px 0;
+    border-top: 1px solid var(--line);
+    scroll-margin-top: calc(var(--nav-h) + 16px);
+  }
+  .stage-rail {
+    align-self: start;
+    position: sticky;
+    top: calc(var(--nav-h) + 28px);
+    display: grid;
+    gap: 12px;
+  }
+  .stage-number {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--ink-dim);
+  }
+  .stage-horizon {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 20px;
+    font-weight: 580;
+    letter-spacing: -0.02em;
+  }
+  .stage-status {
+    width: fit-content;
+    padding: 5px 8px;
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .stage-next .stage-horizon i { background: var(--ink); box-shadow: 0 0 0 4px color-mix(in oklab, var(--ink) 12%, transparent); }
+  .stage-explore .stage-horizon i { background: var(--ink-dim); box-shadow: none; }
+  .stage-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+    gap: 48px;
+    align-items: end;
+    margin-bottom: 34px;
+  }
+  .stage-head h3 {
+    max-width: 15ch;
+    margin: 0;
+    font-size: clamp(34px, 4vw, 56px);
+    font-weight: 520;
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+  .stage-head p { max-width: 49ch; margin: 0; color: var(--ink-dim); font-size: 15px; line-height: 1.6; }
+  .roadmap-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .roadmap-card {
+    min-height: 285px;
+    padding: 28px;
+    border: 1px solid var(--line);
+    border-radius: 15px;
+    background: var(--bg-2);
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .roadmap-card:hover { border-color: var(--line-2); transform: translateY(-2px); }
+  .roadmap-card h4 {
+    max-width: 18ch;
+    margin: 42px 0 13px;
+    font-size: 25px;
+    font-weight: 550;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+  }
+  .roadmap-card p { margin: 0 0 28px; color: var(--ink-dim); font-size: 14px; line-height: 1.55; }
+  .roadmap-card a {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: auto;
+    padding-top: 15px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    font-weight: 580;
+  }
+  .roadmap-card a span { color: var(--accent-text); }
+
+  .roadmap-principles { padding: 96px 0; background: var(--bg-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .principles-head { margin-bottom: 46px; }
+  .principles-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+  .principles-grid article { padding: 26px 26px 0 0; border-right: 1px solid var(--line); }
+  .principles-grid article + article { padding-left: 26px; }
+  .principles-grid article:last-child { border-right: 0; }
+  .principles-grid article > span {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--accent-text);
+  }
+  .principles-grid h3 { margin: 56px 0 12px; font-size: 21px; font-weight: 570; letter-spacing: -0.025em; }
+  .principles-grid p { margin: 0; color: var(--ink-dim); font-size: 13px; line-height: 1.55; }
+
+  .roadmap-close { padding: 112px 0; }
+  .roadmap-close h2 { max-width: 12ch; }
+  .close-copy { display: grid; gap: 30px; }
+
+  @media (max-width: 980px) {
+    .roadmap-hero-bottom,
+    .baseline-heading,
+    .principles-head,
+    .close-grid,
+    .stage-head { grid-template-columns: 1fr; gap: 28px; align-items: start; }
+    .baseline-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .baseline-card:nth-child(2) { border-right: 0; }
+    .baseline-card:nth-child(-n + 2) { border-bottom: 1px solid var(--line); }
+    .roadmap-stage { grid-template-columns: 110px minmax(0, 1fr); gap: 34px; }
+    .principles-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .principles-grid article:nth-child(2) { border-right: 0; }
+    .principles-grid article:nth-child(-n + 2) { padding-bottom: 32px; border-bottom: 1px solid var(--line); }
+    .principles-grid article:nth-child(3) { padding-left: 0; }
+  }
+
+  @media (max-width: 720px) {
+    .roadmap-hero { padding: 58px 0 48px; }
+    .roadmap-kicker { align-items: flex-start; margin-bottom: 38px; }
+    .roadmap-hero h1 { font-size: clamp(46px, 14vw, 68px); line-height: 0.93; }
+    .roadmap-hero-bottom { margin-top: 34px; }
+    .roadmap-disclosure { grid-template-columns: 1fr; gap: 8px; margin-top: 44px; }
+    .roadmap-baseline { padding: 64px 0 68px; }
+    .baseline-grid { grid-template-columns: 1fr; }
+    .baseline-card { min-height: 235px; border-right: 0; border-bottom: 1px solid var(--line); }
+    .baseline-card:nth-child(2) { border-bottom: 1px solid var(--line); }
+    .baseline-card:last-child { border-bottom: 0; }
+    .roadmap-body { padding-top: 72px; }
+    .roadmap-section-heading { margin-bottom: 12px; }
+    .roadmap-stage { grid-template-columns: 1fr; gap: 28px; padding: 56px 0; }
+    .stage-rail { position: static; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; }
+    .stage-number { display: none; }
+    .roadmap-items { grid-template-columns: 1fr; }
+    .roadmap-card { min-height: 270px; padding: 24px; }
+    .roadmap-card h4 { margin-top: 34px; }
+    .roadmap-principles { padding: 68px 0; }
+    .principles-grid { grid-template-columns: 1fr; }
+    .principles-grid article,
+    .principles-grid article + article,
+    .principles-grid article:nth-child(3) { padding: 24px 0 30px; border-right: 0; border-bottom: 1px solid var(--line); }
+    .principles-grid article:last-child { border-bottom: 0; }
+    .principles-grid h3 { margin-top: 34px; }
+    .roadmap-close { padding: 76px 0; }
+  }
+
+  @media (max-width: 430px) {
+    .roadmap-kicker { display: grid; gap: 10px; }
+    .roadmap-actions { display: grid; grid-template-columns: 1fr; width: 100%; }
+    .roadmap-actions .btn { width: 100%; justify-content: center; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .roadmap-card { transition: none; }
+    .roadmap-card:hover { transform: none; }
+  }
+</style>
+
+</body>
+</html>

@@ -1,0 +1,242 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/system.css';
+
+const title = 'Governance — Pilot Protocol';
+const description = 'How Pilot Protocol separates network authority from business authority across identity, admission, trust, policy, lifecycle, audit, and incident response.';
+const canonicalUrl = 'https://pilotprotocol.network/governance';
+
+const controlLayers = [
+  { number: '01', status: 'Core · available', title: 'Identity', body: 'Each daemon has a persistent Ed25519 identity used for signed handshakes and trust operations. Operators can bind external identity context in enterprise deployments.', href: '/docs/security' },
+  { number: '02', status: 'Core + enterprise EA', title: 'Admission', body: 'Private nodes require an applicable peer-trust or shared-network grant. Managed networks can add join rules and external identity validation.', href: '/docs/trust' },
+  { number: '03', status: 'Core · available', title: 'Relationship trust', body: 'Trust is explicit, bilateral, rejectable, and revocable. Strict pre-trust controls can extend checks to discovery and NAT-assistance paths.', href: '/docs/trust' },
+  { number: '04', status: 'Enterprise · early access', title: 'Administrative authority', body: 'Owner, admin, and member roles separate network ownership, delegated administration, and ordinary participation.', href: '/docs/enterprise-rbac' },
+  { number: '05', status: 'Enterprise · early access', title: 'Network policy', body: 'Membership limits, port allowlists, join behavior, member tags, and programmable policy constrain which network relationships may form.', href: '/docs/enterprise-policies' },
+  { number: '06', status: 'Core + enterprise EA', title: 'Lifecycle and evidence', body: 'Rejection, revocation, key lifecycle, structured events, and export paths support removal, investigation, and external review.', href: '/docs/enterprise-audit' },
+];
+
+const operatingLoop = [
+  ['Define', 'Document network purpose, participants, ports, roles, application scopes, and escalation paths.'],
+  ['Approve', 'Assign accountable owners and require human approval for consequential business authority.'],
+  ['Enforce', 'Apply identity, membership, trust, role, and network-policy controls at their respective boundaries.'],
+  ['Observe', 'Export network and security events; correlate them with application, model, and business logs.'],
+  ['Revoke', 'Remove trust, membership, credentials, or application grants when authority changes or risk appears.'],
+  ['Review', 'Revalidate members, roles, policies, keys, evidence retention, and exception handling on a defined cadence.'],
+];
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <BaseHead title={title} description={description} canonicalUrl={canonicalUrl} />
+  <script type="application/ld+json" set:html={JSON.stringify({ '@context': 'https://schema.org', '@type': 'TechArticle', headline: title, description, url: canonicalUrl, author: { '@type': 'Organization', name: 'Pilot Protocol' } })}></script>
+</head>
+<body>
+  <Nav active="governance" />
+  <main>
+    <section class="gov-hero">
+      <div class="gridbg" aria-hidden="true"></div>
+      <div class="wrap">
+        <div class="gov-hero-grid">
+          <div>
+            <span class="gov-eyebrow">Governance model</span>
+            <h1>Authority that stays<br/><em>inside its boundary.</em></h1>
+          </div>
+          <div class="gov-hero-copy">
+            <p>Pilot governs agent identity and network access. The deploying organization retains authority over tasks, data, money, legal commitments, and human approval.</p>
+            <div class="gov-actions">
+              <a class="btn primary" href="#control-model">Review the controls <span class="arr">↓</span></a>
+              <a class="btn" href="/trust">Trust Center</a>
+            </div>
+          </div>
+        </div>
+        <div class="gov-principle"><span>Primary rule</span><strong>Connectivity is not permission to act.</strong><p>A reachable peer still needs application authorization before it can read protected data, spend funds, place an order, or create a binding commitment.</p></div>
+      </div>
+    </section>
+
+    <section class="gov-boundary" id="authority" aria-labelledby="authority-title">
+      <div class="wrap">
+        <div class="gov-section-head">
+          <div><span class="gov-eyebrow">Shared responsibility</span><h2 id="authority-title">Two kinds of<br/><em>authority.</em></h2></div>
+          <p>Good agent governance starts by placing each decision at the layer that has the right context to enforce it.</p>
+        </div>
+        <div class="authority-grid">
+          <article class="authority-card pilot-authority">
+            <div class="authority-head"><span>Pilot boundary</span><h3>Network authority</h3><b>Identity · reachability · membership</b></div>
+            <ul>
+              <li>Authenticate the connecting daemon</li>
+              <li>Decide whether an endpoint is reachable</li>
+              <li>Apply peer trust and shared-network membership</li>
+              <li>Constrain network ports and join behavior</li>
+              <li>Delegate network administration</li>
+              <li>Record network and security state changes</li>
+            </ul>
+          </article>
+          <article class="authority-card app-authority">
+            <div class="authority-head"><span>Organization boundary</span><h3>Business authority</h3><b>Purpose · data · money · consequence</b></div>
+            <ul>
+              <li>Authorize tasks, methods, and data access</li>
+              <li>Set order, payment, and counterparty limits</li>
+              <li>Require human review where consequence warrants it</li>
+              <li>Classify data and enforce retention</li>
+              <li>Govern models, prompts, tools, and credentials</li>
+              <li>Meet legal, regulatory, and contractual duties</li>
+            </ul>
+          </article>
+        </div>
+        <div class="boundary-note"><b>Pilot provides network signals and enforcement points.</b><span>It does not make an agent an authorized employee, purchasing officer, data controller, or legal representative. Those grants remain explicit decisions in the application and organization.</span></div>
+      </div>
+    </section>
+
+    <section class="gov-controls" id="control-model" aria-labelledby="controls-title">
+      <div class="wrap">
+        <div class="gov-section-head">
+          <div><span class="gov-eyebrow">Control model</span><h2 id="controls-title">From identity<br/><em>to evidence.</em></h2></div>
+          <p>Controls are layered so a deployment can deny access early, narrow authority later, and retain evidence of material changes.</p>
+        </div>
+        <div class="control-stack">
+          {controlLayers.map((control) => (
+            <a class="control-layer" href={control.href}>
+              <span class="layer-number">{control.number}</span>
+              <div><span class="layer-status">{control.status}</span><h3>{control.title}</h3></div>
+              <p>{control.body}</p>
+              <i aria-hidden="true">↗</i>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="gov-decision" aria-labelledby="decision-title">
+      <div class="wrap">
+        <div class="gov-section-head">
+          <div><span class="gov-eyebrow">Decision path</span><h2 id="decision-title">Every connection<br/><em>earns its path.</em></h2></div>
+          <p>A cross-boundary workflow should pass through independent network and application decisions before a consequential action occurs.</p>
+        </div>
+        <ol class="decision-flow">
+          <li><span>01</span><b>Identify</b><p>Authenticate the daemon identity and, where configured, validate external identity context.</p></li>
+          <li><span>02</span><b>Admit</b><p>Apply private-node, trust, membership, and join-policy requirements.</p></li>
+          <li><span>03</span><b>Constrain</b><p>Apply network port policy and the minimum relationship required for the workflow.</p></li>
+          <li><span>04</span><b>Authorize</b><p>Let the application evaluate task scope, data, budget, counterparty, and approval state.</p></li>
+          <li><span>05</span><b>Record</b><p>Correlate Pilot audit evidence with application and business-system records.</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="gov-loop" aria-labelledby="loop-title">
+      <div class="wrap loop-grid">
+        <div class="loop-intro"><span class="gov-eyebrow">Operating model</span><h2 id="loop-title">Governance is<br/><em>a loop.</em></h2><p>Technology supplies enforcement points. A production program also needs ownership, change control, evidence retention, and periodic review.</p></div>
+        <ol class="loop-list">
+          {operatingLoop.map(([title, detail], index) => (
+            <li><span>{String(index + 1).padStart(2, '0')}</span><div><h3>{title}</h3><p>{detail}</p></div></li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <section class="gov-status" aria-labelledby="status-title">
+      <div class="wrap status-grid">
+        <div><span class="gov-eyebrow">Availability</span><h2 id="status-title">Clear labels,<br/><em>fewer assumptions.</em></h2></div>
+        <div class="status-copy">
+          <p><b>Core controls</b> include persistent identity, signed handshakes, encrypted tunnels, explicit trust, rejection, revocation, membership, and structured registry events.</p>
+          <p><b>Enterprise controls are early access.</b> Assisted deployments can evaluate roles, external identity validation, directory mapping, policy, key lifecycle, blueprints, and audit export. Scope and operating commitments are established during evaluation.</p>
+          <p><b>Application governance remains yours.</b> Pilot does not replace tool authorization, transaction controls, human approvals, data governance, or compliance programs.</p>
+          <div class="gov-actions">
+            <a class="btn primary" href="/enterprise-readiness-report.pdf">Readiness report <span class="arr">↗</span></a>
+            <a class="btn" href="/docs/enterprise">Enterprise documentation</a>
+            <a class="btn" href="/contact?topic=governance">Discuss your control model</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <Footer />
+
+  <style>
+    .gov-eyebrow { display: block; margin-bottom: 24px; font: 560 10px/1 var(--mono); letter-spacing: .15em; text-transform: uppercase; color: var(--ink-dim); }
+    .gov-hero { position: relative; overflow: hidden; padding: 100px 0 70px; border-bottom: 1px solid var(--line); }
+    .gov-hero .wrap { position: relative; z-index: 1; }
+    .gov-hero-grid, .gov-section-head, .status-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(300px, .85fr); gap: 70px; align-items: end; }
+    .gov-hero h1, .gov-section-head h2, .loop-intro h2, .status-grid h2 { margin: 0; font-weight: 500; line-height: .92; letter-spacing: -.052em; }
+    .gov-hero h1 { max-width: 12ch; font-size: clamp(60px, 8.5vw, 132px); }
+    .gov-hero h1 em, .gov-section-head h2 em, .loop-intro h2 em, .status-grid h2 em { font-family: var(--serif); font-weight: 400; font-style: italic; color: var(--accent-text); }
+    .gov-hero-copy > p { max-width: 38ch; margin: 0; color: var(--ink-dim); font-size: clamp(18px, 2vw, 24px); line-height: 1.45; letter-spacing: -.02em; }
+    .gov-actions { display: flex; flex-wrap: wrap; gap: 11px; margin-top: 30px; }
+    .gov-principle { display: grid; grid-template-columns: 150px minmax(230px, .65fr) 1fr; gap: 30px; align-items: center; margin-top: 72px; padding: 24px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .gov-principle > span { font: 540 9px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent-text); }
+    .gov-principle strong { font-size: 20px; }
+    .gov-principle p { margin: 0; color: var(--ink-dim); font-size: 13px; line-height: 1.5; }
+    .gov-boundary, .gov-controls, .gov-decision, .gov-loop, .gov-status { padding: 104px 0; }
+    .gov-controls, .gov-loop { background: var(--bg-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .gov-section-head { margin-bottom: 48px; }
+    .gov-section-head h2, .loop-intro h2, .status-grid h2 { max-width: 11ch; font-size: clamp(48px, 6vw, 84px); }
+    .gov-section-head > p { max-width: 45ch; margin: 0; color: var(--ink-dim); font-size: 18px; line-height: 1.55; }
+    .authority-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line-2); border-radius: 18px; overflow: hidden; }
+    .authority-card { padding: clamp(28px, 4vw, 52px); background: var(--bg-2); }
+    .authority-card + .authority-card { border-left: 1px solid var(--line-2); }
+    .authority-head { padding-bottom: 30px; border-bottom: 1px solid var(--line); }
+    .authority-head > span, .layer-status { font: 540 9px/1 var(--mono); letter-spacing: .13em; text-transform: uppercase; color: var(--accent-text); }
+    .authority-head h3 { margin: 48px 0 8px; font-size: clamp(30px, 4vw, 48px); font-weight: 530; letter-spacing: -.04em; }
+    .authority-head b { color: var(--ink-dim); font-size: 12px; font-weight: 450; }
+    .authority-card ul { list-style: none; margin: 24px 0 0; }
+    .authority-card li { position: relative; padding: 13px 0 13px 25px; border-bottom: 1px solid var(--line); color: var(--ink-dim); font-size: 14px; }
+    .authority-card li::before { content: '✓'; position: absolute; left: 0; color: var(--accent-text); }
+    .app-authority li::before { content: '→'; }
+    .boundary-note { display: grid; grid-template-columns: minmax(230px, .5fr) 1fr; gap: 40px; margin-top: 16px; padding: 26px 30px; border: 1px solid var(--line); border-radius: 12px; }
+    .boundary-note span { color: var(--ink-dim); font-size: 14px; line-height: 1.55; }
+    .control-stack { border-top: 1px solid var(--line-2); }
+    .control-layer { position: relative; display: grid; grid-template-columns: 70px minmax(210px, .65fr) 1fr 30px; gap: 30px; align-items: center; min-height: 150px; padding: 26px 8px; border-bottom: 1px solid var(--line); }
+    .control-layer:hover { color: inherit; }
+    .layer-number { font: 500 10px/1 var(--mono); color: var(--ink-dim); }
+    .control-layer h3 { margin: 12px 0 0; font-size: 27px; font-weight: 550; letter-spacing: -.03em; }
+    .control-layer > p { max-width: 65ch; margin: 0; color: var(--ink-dim); font-size: 14px; line-height: 1.55; }
+    .control-layer > i { color: var(--accent-text); font-style: normal; }
+    .decision-flow { display: grid; grid-template-columns: repeat(5, 1fr); list-style: none; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+    .decision-flow li { min-height: 275px; display: flex; flex-direction: column; padding: 24px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .decision-flow li > span { font: 500 9px/1 var(--mono); color: var(--accent-text); }
+    .decision-flow b { margin: auto 0 12px; font-size: 21px; }
+    .decision-flow p { margin: 0; color: var(--ink-dim); font-size: 12px; line-height: 1.5; }
+    .loop-grid { display: grid; grid-template-columns: minmax(280px, .75fr) minmax(0, 1.25fr); gap: 90px; align-items: start; }
+    .loop-intro { position: sticky; top: calc(var(--nav-h) + 32px); }
+    .loop-intro > p { max-width: 40ch; margin: 28px 0 0; color: var(--ink-dim); font-size: 16px; line-height: 1.55; }
+    .loop-list { list-style: none; border-top: 1px solid var(--line); }
+    .loop-list li { display: grid; grid-template-columns: 60px 1fr; gap: 22px; padding: 25px 0; border-bottom: 1px solid var(--line); }
+    .loop-list li > span { padding-top: 5px; font: 500 9px/1 var(--mono); color: var(--accent-text); }
+    .loop-list h3 { margin: 0 0 8px; font-size: 22px; font-weight: 560; }
+    .loop-list p { max-width: 64ch; margin: 0; color: var(--ink-dim); font-size: 14px; line-height: 1.5; }
+    .status-grid { align-items: start; }
+    .status-copy > p { margin: 0; padding: 20px 0; border-bottom: 1px solid var(--line); color: var(--ink-dim); font-size: 15px; line-height: 1.6; }
+    .status-copy > p:first-child { border-top: 1px solid var(--line); }
+    .status-copy b { color: var(--ink); }
+    @media (max-width: 940px) {
+      .gov-hero-grid, .gov-section-head, .status-grid, .loop-grid { grid-template-columns: 1fr; gap: 38px; align-items: start; }
+      .gov-principle { grid-template-columns: 130px 1fr; }
+      .gov-principle p { grid-column: 2; }
+      .decision-flow { grid-template-columns: repeat(3, 1fr); }
+      .loop-intro { position: static; }
+    }
+    @media (max-width: 700px) {
+      .gov-hero { padding: 62px 0 48px; }
+      .gov-hero h1 { font-size: clamp(49px, 14vw, 72px); }
+      .gov-principle { grid-template-columns: 1fr; gap: 10px; margin-top: 48px; }
+      .gov-principle p { grid-column: auto; }
+      .gov-boundary, .gov-controls, .gov-decision, .gov-loop, .gov-status { padding: 72px 0; }
+      .authority-grid { grid-template-columns: 1fr; }
+      .authority-card + .authority-card { border-left: 0; border-top: 1px solid var(--line-2); }
+      .boundary-note { grid-template-columns: 1fr; gap: 12px; }
+      .control-layer { grid-template-columns: 42px 1fr 20px; gap: 16px; padding: 26px 0; }
+      .control-layer > p { grid-column: 2 / 4; }
+      .decision-flow { grid-template-columns: 1fr; }
+      .decision-flow li { min-height: 210px; }
+    }
+    @media (max-width: 430px) {
+      .gov-actions { display: grid; grid-template-columns: 1fr; }
+      .gov-actions .btn { width: 100%; justify-content: center; }
+      .authority-card { padding: 26px 22px; }
+      .control-layer { grid-template-columns: 32px 1fr 18px; }
+      .layer-status { line-height: 1.4; }
+    }
+  </style>
+</body>
+</html>

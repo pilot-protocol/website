@@ -373,7 +373,7 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
 
   <p>For 3 clouds with site-to-site VPN, you are paying approximately $108/month in VPN gateway hours alone, before data transfer. For 5 clouds, it is $360/month (10 tunnels). For 10 sites, it is $1,620/month (45 tunnels). And each tunnel requires configuration, monitoring, and maintenance.</p>
 
-  <p>Pilot requires no VPN configuration, no firewall rules beyond port 4000 UDP, and no cloud-specific networking setup. Adding a new cloud means installing Pilot on the new agent and running <code>pilotctl network join</code>.</p>
+  <p>Pilot does not require a site-to-site VPN or cloud interconnect. Default UDP mode needs the documented UDP/4000 path; compat mode uses outbound TCP/443 for supported environments that block UDP. Adding a new cloud still requires installing the daemon, joining the intended network, and applying the appropriate trust and egress policy.</p>
   </section>
 
   <section>
@@ -402,9 +402,9 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
 <span class="comment"># Establish trust with specific agents (not entire networks)</span>
 <span class="cmd">pilotctl handshake 1:0001.0000.0017 "Cross-cloud task delegation"</span></code></pre>
 
-  <p>There are no VPN tunnels to add. No routing tables to update. No firewall rules to modify. No cloud-specific configuration. The agent joins the network, discovers peers, and establishes direct encrypted tunnels. Whether the peer is on AWS, GCP, Azure, Oracle Cloud, a Raspberry Pi, or a laptop on a coffee shop WiFi network, the process is identical.</p>
+  <p>There are no site-to-site VPN tunnels or cloud routing tables to add. The agent joins the network, discovers peers, and establishes an encrypted tunnel using a direct path when available or ciphertext relay fallback otherwise. Operators still need to allow the selected transport and apply environment-specific identity and network policy.</p>
 
-  <p>This is what "cloud-agnostic" actually means for agent networking. Not "works on multiple clouds with per-cloud configuration" but "works on any network with the same two commands." For scenarios that span not just clouds but organizations — such as <a href="https://pilotprotocol.network/blog/cross-company-agent-collaboration-without-shared-infrastructure">cross-company agent collaboration without shared infrastructure</a> — the same overlay model eliminates months of legal and security review cycles.</p>
+  <p>The overlay keeps the agent-facing addressing and trust workflow consistent across supported environments. Cross-organization deployments can use the same transport model, but they still require security, privacy, governance, and contractual review appropriate to the data and parties involved.</p>
   </section>
 
   <section>
@@ -427,14 +427,14 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
 
   <div class="cta">
     <h3>Try Pilot Protocol</h3>
-    <p>Connect agents across any cloud with two commands per agent. No VPN tunnels, no cloud interconnect, no networking expertise required.</p>
+    <p>Connect agents across supported cloud environments without a site-to-site VPN, then validate transport, trust, and relay behavior for your topology.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 
 const faqItems = [
   {
     question: "How do I connect AI agents across AWS, GCP, and Azure without a VPN?",
-    answer: "Install Pilot Protocol on each agent with <code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code>, start the daemon with <code>pilotctl daemon start</code>, and agents discover each other automatically. No VPN tunnels, no cloud interconnect products, and no per-cloud networking configuration are needed. The overlay network handles addressing, NAT traversal, and encryption."
+    answer: "Install Pilot Protocol on each supported host, start the daemon, join the intended network, and establish the required trust relationships. The overlay handles virtual addressing, NAT traversal, and tunnel encryption without a site-to-site VPN, while operators remain responsible for egress, identity, and network policy."
   },
   {
     question: "What is NAT traversal and how does it work for multi-cloud agents?",
@@ -450,7 +450,7 @@ const faqItems = [
   },
   {
     question: "How much does multi-cloud agent networking cost without VPN?",
-    answer: "Pilot Protocol is free and open source (AGPL-3.0). There are no VPN gateway hourly costs, no per-tunnel charges, and no per-user licensing fees. Your only infrastructure cost is the cloud egress for agent-to-agent traffic, which you pay regardless of the connectivity method."
+    answer: "Pilot Protocol's software is open source under AGPL-3.0, and the public backbone is open. Hosting, operations, cloud egress, and relay traffic can still create costs; managed private and enterprise options are in early access. See the plans page for current packaging."
   }
 ];
 ---

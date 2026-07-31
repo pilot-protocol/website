@@ -5,7 +5,7 @@ const bodyContent = `<p>You are building agents that need to talk to each other.
 
   <p>Both are production-grade technologies. Both handle message delivery. Both have healthy ecosystems. But they make fundamentally different architectural assumptions about how agents find each other, how data flows between them, and what infrastructure you need to keep running. Choosing between them means understanding what each one requires from the world around it — and what happens when those requirements are not met.</p>
 
-  <p>This post compares NATS and gRPC on the dimensions that matter for agent-to-agent communication: connectivity model, deployment complexity, message patterns, and what happens when agents cannot reach each other directly. Pilot Protocol appears as a third option at the end, not because it competes head-to-head with either, but because it solves a problem neither was designed for: agents that need to find and talk to each other across arbitrary network boundaries without a central broker or manual address configuration.</p>
+  <p>This post compares NATS and gRPC on the dimensions that matter for agent-to-agent communication: connectivity model, deployment complexity, message patterns, and what happens when agents cannot reach each other directly. Pilot Protocol appears as a third option because it addresses agents that need discovery and encrypted connectivity across network boundaries without provisioning a workflow-specific broker or manual address configuration. Its own registry and beacon still provide coordination and relay fallback.</p>
 
   <h2 id="connectivity">Connectivity Model: Central Broker vs. Direct RPC</h2>
 
@@ -124,7 +124,7 @@ const faqItems = [
   },
   {
     question: "Can NATS and gRPC work across different clouds without a VPN?",
-    answer: "NATS can work across clouds if all agents can connect to a NATS server that has a public or inter-cloud-routable address. The broker must be reachable from every agent. gRPC between agents in different clouds typically requires a VPN, a service mesh with multi-cloud support, or public endpoints with TLS. Neither provides built-in NAT traversal. An overlay network like Pilot Protocol is designed for this scenario — it uses STUN and hole-punching to establish direct encrypted tunnels through NATs without a central broker in the data path.",
+    answer: "NATS can work across clouds if all agents can connect to a reachable NATS server. gRPC between agents in different clouds typically requires a VPN, a multi-cloud service mesh, or reachable endpoints with TLS. Neither provides built-in NAT traversal. An overlay such as Pilot Protocol uses STUN and hole-punching to prefer direct encrypted paths, with ciphertext relay fallback when a direct path cannot be established.",
   },
   {
     question: "Which is faster: NATS or gRPC?",

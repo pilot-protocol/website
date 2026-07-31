@@ -121,7 +121,7 @@ Message delivered (encrypted, 52 bytes)</code></pre>
 
   <p>The most common reason people accept cloud dependency is remote access. "I want to check my thermostat from work." "I want to lock the front door from my phone." Fair requirements. But cloud is not the only way to satisfy them.</p>
 
-  <p>Pilot Protocol includes built-in NAT traversal that works in three stages: STUN discovery determines your NAT type, UDP hole-punching establishes direct connections through compatible NATs, and beacon relay handles the rest. This means your phone, running a Pilot daemon, can connect to your home devices from anywhere without opening ports on your router, without a VPN, and without a cloud relay service.</p>
+  <p>Pilot Protocol includes built-in NAT traversal: STUN discovers the public endpoint, UDP hole-punching establishes direct connections where possible, and the configured beacon provides ciphertext relay fallback. A phone running the daemon can reach home devices without opening router ports or deploying a VPN, but relay-backed traffic still transits that beacon.</p>
 
   <pre><code><span class="comment"># From your phone (connected to mobile data, behind carrier NAT)</span>
 <span class="cmd">$ pilotctl send-message door-lock '{"action": "lock"}'</span>
@@ -144,7 +144,7 @@ Message delivered (encrypted, relay via beacon, 145ms RTT)
   <p>Here is the complete setup flow for adding a new device to a Pilot-based smart home. Compare this to the typical Matter onboarding experience.</p>
 
   <pre><code><span class="comment"># On the new device (e.g., a smart plug running Linux)</span>
-<span class="cmd">$ curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
+<span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
 <span class="cmd">$ pilotctl init --hostname office-plug</span>
 <span class="cmd">$ pilotctl daemon start --email admin@home.local</span>
 Agent online: office-plug (1:0001.0000.0006)

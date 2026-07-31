@@ -98,9 +98,18 @@ if (activePage !== 'index') {
         if (mobile.matches) {
           docsSidebar.toggleAttribute('inert', !shouldOpen);
           docsSidebar.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+          if (shouldOpen) {
+            docsSidebar.setAttribute('role', 'dialog');
+            docsSidebar.setAttribute('aria-modal', 'true');
+          } else {
+            docsSidebar.removeAttribute('role');
+            docsSidebar.removeAttribute('aria-modal');
+          }
         } else {
           docsSidebar.removeAttribute('inert');
           docsSidebar.removeAttribute('aria-hidden');
+          docsSidebar.removeAttribute('role');
+          docsSidebar.removeAttribute('aria-modal');
         }
         if (shouldOpen) menuClose?.focus();
         else if (returnFocus) menuButton.focus();
@@ -111,7 +120,29 @@ if (activePage !== 'index') {
       menuBackdrop?.addEventListener('click', () => setDocsMenu(false, true));
       docsSidebar?.querySelectorAll('a').forEach(link => link.addEventListener('click', () => setDocsMenu(false)));
       document.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && menuButton?.getAttribute('aria-expanded') === 'true') setDocsMenu(false, true);
+        const open = menuButton?.getAttribute('aria-expanded') === 'true';
+        if (event.key === 'Escape' && open) setDocsMenu(false, true);
+        if (event.key === 'Tab' && open && docsSidebar) {
+          const items = Array.from(docsSidebar.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          )).filter(item => !item.hidden && item.getClientRects().length > 0);
+          if (items.length === 0) {
+            event.preventDefault();
+            return;
+          }
+          const first = items[0];
+          const last = items[items.length - 1];
+          if (!docsSidebar.contains(document.activeElement)) {
+            event.preventDefault();
+            first.focus();
+          } else if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
       });
       mobile.addEventListener('change', () => setDocsMenu(false));
       setDocsMenu(false);

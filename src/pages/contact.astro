@@ -1,0 +1,107 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/system.css';
+import '../styles/forms.css';
+
+const title = 'Contact — Pilot Protocol';
+const description = 'Contact Pilot Protocol about enterprise evaluations, product questions, partnerships, press, security reviews, and roadmap feedback.';
+const canonicalUrl = 'https://pilotprotocol.network/contact';
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <BaseHead title={title} description={description} canonicalUrl={canonicalUrl} />
+  {turnstileSiteKey && <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>}
+</head>
+<body>
+  <Nav active="contact" />
+  <main>
+    <section class="form-hero">
+      <div class="gridbg" aria-hidden="true"></div>
+      <div class="wrap form-hero-grid">
+        <div><span class="form-eyebrow">Contact Pilot Protocol</span><h1>Start with the<br/><em>real system.</em></h1></div>
+        <div class="form-hero-copy">
+          <p>Tell us what you are connecting, where the boundaries sit, and what your security or operating requirements look like.</p>
+          <div class="form-direct"><span>Prefer email?</span><a href="mailto:founders@pilotprotocol.network">founders@pilotprotocol.network <i aria-hidden="true">↗</i></a></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="form-main">
+      <div class="wrap form-main-grid">
+        <aside class="form-aside">
+          <span class="form-eyebrow">What happens next</span>
+          <h2>A useful first<br/><em>conversation.</em></h2>
+          <p>We route submissions directly to the founding team. Product and enterprise conversations begin with deployment context rather than a generic sales script.</p>
+          <div class="form-notes">
+            <div class="form-note"><span>01</span><div><h3>Architecture first</h3><p>Share the systems, agents, clouds, teams, or organizations you need to connect.</p></div></div>
+            <div class="form-note"><span>02</span><div><h3>Controls in context</h3><p>We will distinguish current core capabilities, enterprise early access, and application responsibilities.</p></div></div>
+            <div class="form-note"><span>03</span><div><h3>Scoped evaluation</h3><p>When there is a fit, we can define an isolated evaluation and the evidence needed for review.</p></div></div>
+          </div>
+          <div class="form-policy"><h3>Reporting a bug or vulnerability?</h3><p>Use the <a href="/security/disclosure">bug and security disclosure form</a> so the report follows the right handling path.</p></div>
+        </aside>
+
+        <form class="inquiry-form" id="contact-form" data-endpoint="/api/contact" novalidate>
+          <div class="form-heading"><h2>Talk to the team</h2><p>Fields marked with * are required. Please do not submit secrets or customer data.</p></div>
+          <div class="field-grid">
+            <div class="field"><label for="contact-name">Name *</label><input id="contact-name" name="name" type="text" autocomplete="name" maxlength="120" required /></div>
+            <div class="field"><label for="contact-email">Work email *</label><input id="contact-email" name="email" type="email" autocomplete="email" maxlength="254" required /></div>
+            <div class="field"><label for="contact-organization">Organization <span>(optional)</span></label><input id="contact-organization" name="organization" type="text" autocomplete="organization" maxlength="160" /></div>
+            <div class="field"><label for="contact-role">Role <span>(optional)</span></label><input id="contact-role" name="role" type="text" autocomplete="organization-title" maxlength="160" /></div>
+            <div class="field field-full"><label for="contact-topic">Topic *</label><select id="contact-topic" name="topic" required><option value="">Choose a topic</option><option value="enterprise">Enterprise evaluation</option><option value="product">Product question</option><option value="partnership">Partnership</option><option value="press">Press inquiry</option><option value="security-review">Security review</option><option value="governance">Governance and controls</option><option value="roadmap">Roadmap feedback</option><option value="other">Other</option></select></div>
+            <div class="field field-full"><label for="contact-message">How can we help? *</label><textarea id="contact-message" name="message" maxlength="8000" required placeholder="Describe the deployment, the boundary you need to cross, and the outcome you are evaluating."></textarea></div>
+            <div class="honeypot" aria-hidden="true"><label for="contact-website">Company website</label><input id="contact-website" name="company_website" type="text" tabindex="-1" autocomplete="off" /></div>
+            {turnstileSiteKey && <div class="turnstile-wrap"><div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-action="contact" data-theme="auto"></div></div>}
+          </div>
+          <div class="form-footer">
+            <p class="form-privacy">By submitting, you agree that Pilot may use this information to respond to your inquiry. See our <a href="/privacy">Privacy Policy</a>.</p>
+            <button class="btn primary form-submit" type="submit">Send inquiry <span class="arr">→</span></button>
+          </div>
+          <p class="form-status" id="contact-status" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+  </main>
+  <Footer />
+
+  <script is:inline>
+    (function () {
+      var form = document.getElementById('contact-form');
+      var status = document.getElementById('contact-status');
+      if (!form || !status) return;
+      var topic = new URLSearchParams(window.location.search).get('topic');
+      var topicSelect = form.querySelector('[name="topic"]');
+      if (topic && topicSelect && Array.from(topicSelect.options).some(function (option) { return option.value === topic; })) topicSelect.value = topic;
+
+      form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        status.className = 'form-status';
+        if (!form.checkValidity()) { form.reportValidity(); return; }
+        var button = form.querySelector('button[type="submit"]');
+        if (button) { button.disabled = true; button.textContent = 'Sending…'; }
+        var data = Object.fromEntries(new FormData(form).entries());
+        data.turnstile_token = data['cf-turnstile-response'] || '';
+        data.page_url = window.location.href;
+        try {
+          var response = await fetch(form.dataset.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+          var result = await response.json().catch(function () { return {}; });
+          if (!response.ok || !result.ok) throw new Error(result.error || 'We could not send your inquiry.');
+          status.textContent = 'Thank you — your inquiry was sent. Reference ' + result.reference + '.';
+          status.className = 'form-status is-visible is-success';
+          form.reset();
+          if (window.turnstile) window.turnstile.reset();
+        } catch (error) {
+          status.textContent = (error && error.message ? error.message : 'We could not send your inquiry.') + ' You can also email founders@pilotprotocol.network.';
+          status.className = 'form-status is-visible is-error';
+          if (window.turnstile) window.turnstile.reset();
+        } finally {
+          if (button) { button.disabled = false; button.textContent = 'Send inquiry →'; }
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

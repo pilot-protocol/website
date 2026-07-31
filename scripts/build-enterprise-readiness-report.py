@@ -679,7 +679,7 @@ def cover_story() -> list[Flowable]:
         [[
             Paragraph("CORE AVAILABLE", cover_chip_style),
             Paragraph("ENTERPRISE EARLY ACCESS", cover_chip_style),
-            Paragraph("REPORT 02 / JULY 2026", cover_chip_style),
+            Paragraph("REPORT 2.1 / JULY 2026", cover_chip_style),
         ]],
         colWidths=[43 * mm, 55 * mm, 48 * mm],
         hAlign="LEFT",
@@ -779,13 +779,12 @@ def architecture_page() -> list[Flowable]:
         P("VISIBILITY BOUNDARIES", "eyebrow"),
         card_grid(
             [
-                card("Coordination metadata", "Registry + beacon", "Registration metadata, public keys, advertised endpoints, timing, and network membership are processed to operate coordination.", ACCENT_DARK),
-                card("Relay path", "Encrypted payload", "A relay can observe timing and packet metadata. It carries ciphertext and does not receive peer tunnel keys.", CYAN),
-                card("Endpoint content", "Agent controlled", "Application payload is available to the communicating endpoints. Tool permissions and business logic remain outside the network layer.", BLUE),
-                card("Path selection", "Environment dependent", "Direct UDP is preferred. NAT type, firewall policy, and compatibility mode can place traffic on a relay or outbound TLS path.", AMBER),
+                card("Coordination metadata", "Registry + beacon", "Registry operations process registration metadata, public keys, advertised endpoints, timing, and network membership.", ACCENT_DARK),
+                card("Relay path", "Encrypted payload", "A relay observes timing and packet metadata, carries ciphertext, and does not receive tunnel keys.", CYAN),
+                card("Endpoint content", "Agent controlled", "Application payload is visible to its endpoints. Tool permissions and business authority remain above the network layer.", BLUE),
+                card("Path selection", "Environment dependent", "Direct UDP is preferred; NAT, firewall, or compatibility constraints can select relay or outbound TLS paths.", AMBER),
             ],
             columns=2,
-            row_height=31 * mm,
         ),
         Spacer(1, 6 * mm),
         P("DEPLOYMENT OPTIONS", "eyebrow"),
@@ -981,16 +980,13 @@ def audit_operations_page() -> list[Flowable]:
         P("EVENT COVERAGE", "eyebrow"),
         card_grid(
             [
-                card("Identity and keys", "Examples", "Registration, deregistration, rotation, expiry, external IDs, providers, and directory sync.", ACCENT_DARK),
-                card("Networks and policy", "Examples", "Network lifecycle, ownership, policy, member tags, and blueprint provisioning.", BLUE),
-                card("Trust and access", "Examples", "Handshakes, trust create/revoke, invites, role changes, kick, visibility, and membership.", CYAN),
-                card("Delivery health", "Examples", "Exporter health, delivery counters, webhook status, DLQ size, and error metrics.", AMBER),
+                card("Identity and keys", "Examples", "Registration, removal, rotation, expiry, external IDs, providers, and directory sync.", ACCENT_DARK),
+                card("Networks and policy", "Examples", "Lifecycle, ownership, policy, member tags, and blueprint provisioning.", BLUE),
+                card("Trust and access", "Examples", "Handshakes, trust changes, invites, roles, removal, visibility, and membership.", CYAN),
+                card("Delivery health", "Examples", "Export to an external SIEM for durable retention; monitor delivery, webhooks, the dead-letter queue, and errors.", AMBER),
             ],
             columns=2,
-            row_height=30 * mm,
         ),
-        Spacer(1, 5 * mm),
-        callout("Retention model", "For durable evidence, export events to an organization-controlled SIEM or log pipeline. Treat the registry buffer and DLQ as operational aids rather than the system of record.", CYAN),
         PageBreak(),
     ]
     return story
@@ -1037,7 +1033,7 @@ def controls_matrix_page() -> list[Flowable]:
                 card("Evaluate", "Evidence required", "Validate against contractual, regulatory, and production requirements.", CYAN),
             ],
             columns=2,
-            row_height=31 * mm,
+            row_height=35 * mm,
         ),
         Spacer(1, 6 * mm),
         callout("Version discipline", "Tie the control matrix to an exact deployed release, registry configuration, daemon flags, and network blueprint. Re-evaluate after protocol, policy, or infrastructure changes.", ACCENT),
@@ -1194,7 +1190,9 @@ def appendix_page() -> list[Flowable]:
         ("Network policies", "https://pilotprotocol.network/docs/enterprise-policies"),
         ("Audit and compliance", "https://pilotprotocol.network/docs/enterprise-audit"),
         ("Public implementation", "https://github.com/pilot-protocol/pilotprotocol"),
-        ("Technical whitepaper", "https://pilotprotocol.network/research/WHITEPAPER.pdf"),
+        ("Wire specification", "https://pilotprotocol.network/research/WHITEPAPER.pdf"),
+        ("Product roadmap", "https://pilotprotocol.network/roadmap"),
+        ("Company newsroom", "https://pilotprotocol.network/news/"),
     ]
     link_rows = []
     for idx in range(0, len(links), 2):
@@ -1233,7 +1231,7 @@ def appendix_page() -> list[Flowable]:
         Spacer(1, 8 * mm),
         callout(
             "Snapshot and validation",
-            "Report version 2.0, July 2026. Validate every control against the exact deployed release and configuration. Public documentation, early-access behavior, and infrastructure packaging can evolve independently.",
+            "Report version 2.1, July 2026. Validate every control against the exact deployed release and configuration. Public documentation, early-access behavior, and infrastructure packaging can evolve independently.",
             CYAN,
         ),
         Spacer(1, 8 * mm),

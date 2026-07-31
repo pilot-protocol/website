@@ -1,0 +1,108 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+import '../../styles/system.css';
+import '../../styles/forms.css';
+
+const title = 'Bug & Security Disclosure — Pilot Protocol';
+const description = 'Privately report a Pilot Protocol security issue, privacy concern, reliability defect, or product bug to the founding team.';
+const canonicalUrl = 'https://pilotprotocol.network/security/disclosure';
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <BaseHead title={title} description={description} canonicalUrl={canonicalUrl} />
+  {turnstileSiteKey && <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>}
+</head>
+<body>
+  <Nav active="trust" />
+  <main>
+    <section class="form-hero disclosure-hero">
+      <div class="gridbg" aria-hidden="true"></div>
+      <div class="wrap form-hero-grid">
+        <div><span class="form-eyebrow">Coordinated disclosure</span><h1>Tell us what<br/><em>you found.</em></h1></div>
+        <div class="form-hero-copy">
+          <p>Report security issues, privacy concerns, reliability defects, and product bugs directly to the team responsible for Pilot.</p>
+          <div class="form-direct"><span>Direct security contact</span><a href="mailto:founders@pilotprotocol.network?subject=Pilot%20Protocol%20disclosure">founders@pilotprotocol.network <i aria-hidden="true">↗</i></a></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="form-main">
+      <div class="wrap form-main-grid">
+        <aside class="form-aside">
+          <span class="form-eyebrow">Safe reporting</span>
+          <h2>Useful evidence,<br/><em>minimal risk.</em></h2>
+          <p>Provide enough detail to reproduce the issue while minimizing exposure of live systems and sensitive information.</p>
+          <div class="form-notes">
+            <div class="form-note"><span>01</span><div><h3>Minimize data</h3><p>Do not include credentials, private keys, customer data, or destructive payloads. Use redacted samples.</p></div></div>
+            <div class="form-note"><span>02</span><div><h3>Stop at proof</h3><p>Do not persist access, change data, degrade service, or continue when testing may affect another party.</p></div></div>
+            <div class="form-note"><span>03</span><div><h3>Coordinate publication</h3><p>Give the team a reasonable opportunity to investigate and remediate before public disclosure.</p></div></div>
+          </div>
+          <div class="form-policy"><h3>Scope and rewards</h3><p>This channel supports coordinated reporting but does not promise a bounty, safe-harbor determination, or fixed response time. If the issue is urgent, mark the reporter-assessed severity and use the direct email above as well.</p></div>
+        </aside>
+
+        <form class="inquiry-form" id="disclosure-form" data-endpoint="/api/security-disclosure" novalidate>
+          <div class="form-heading"><h2>Private disclosure</h2><p>Fields marked with * are required. Reporter severity is an initial assessment, not a final classification.</p></div>
+          <div class="field-grid">
+            <div class="field"><label for="reporter-name">Name or handle <span>(optional)</span></label><input id="reporter-name" name="name" type="text" autocomplete="name" maxlength="120" /></div>
+            <div class="field"><label for="reporter-email">Email *</label><input id="reporter-email" name="email" type="email" autocomplete="email" maxlength="254" required /></div>
+            <div class="field field-full"><label for="reporter-organization">Organization <span>(optional)</span></label><input id="reporter-organization" name="organization" type="text" autocomplete="organization" maxlength="160" /></div>
+            <div class="field"><label for="issue-type">Issue type *</label><select id="issue-type" name="issue_type" required><option value="">Choose a type</option><option value="security">Security vulnerability</option><option value="privacy">Privacy concern</option><option value="reliability">Reliability defect</option><option value="product-bug">Product bug</option><option value="other">Other</option></select></div>
+            <div class="field"><label for="issue-severity">Reporter-assessed severity *</label><select id="issue-severity" name="severity" required><option value="">Choose severity</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option><option value="unsure">Unsure</option></select></div>
+            <div class="field field-full"><label for="affected-surface">Affected surface *</label><input id="affected-surface" name="affected_surface" type="text" maxlength="500" required placeholder="Component, URL, version, endpoint, or app identifier" /></div>
+            <div class="field field-full"><label for="issue-summary">Summary *</label><input id="issue-summary" name="summary" type="text" maxlength="240" required placeholder="A concise description of the issue" /></div>
+            <div class="field field-full"><label for="issue-details">Technical details *</label><textarea class="tall" id="issue-details" name="details" maxlength="12000" required placeholder="Describe the observed behavior, relevant conditions, and why it matters. Redact sensitive values."></textarea></div>
+            <div class="field field-full"><label for="issue-reproduction">Minimal reproduction <span>(optional)</span></label><textarea id="issue-reproduction" name="reproduction" maxlength="12000" placeholder="Numbered steps, safe proof of concept, expected behavior, and actual behavior"></textarea><p class="field-help">Do not paste live secrets or destructive payloads. We can coordinate a safer transfer method after initial contact.</p></div>
+            <div class="field field-full"><label for="issue-impact">Potential impact <span>(optional)</span></label><textarea id="issue-impact" name="impact" maxlength="6000" placeholder="Who or what could be affected, and under which prerequisites?"></textarea></div>
+            <div class="field field-full"><label for="disclosure-timeline">Disclosure timeline <span>(optional)</span></label><textarea id="disclosure-timeline" name="disclosure_timeline" maxlength="2000" placeholder="Any deadlines, prior contact, or publication plans"></textarea></div>
+            <div class="form-check"><input id="safe-testing" name="safe_testing" value="accepted" type="checkbox" required /><label for="safe-testing"><b>I confirm that this report does not intentionally include live credentials, private keys, customer data, or destructive payloads,</b> and that I stopped testing when continued activity could create harm or unauthorized access.</label></div>
+            <div class="honeypot" aria-hidden="true"><label for="report-website">Company website</label><input id="report-website" name="company_website" type="text" tabindex="-1" autocomplete="off" /></div>
+            {turnstileSiteKey && <div class="turnstile-wrap"><div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-action="security-disclosure" data-theme="auto"></div></div>}
+          </div>
+          <div class="form-footer">
+            <p class="form-privacy">Pilot will use this information to investigate and coordinate with you. See our <a href="/privacy">Privacy Policy</a> and <a href="/.well-known/security.txt">security.txt</a>.</p>
+            <button class="btn primary form-submit" type="submit">Submit disclosure <span class="arr">→</span></button>
+          </div>
+          <p class="form-status" id="disclosure-status" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+  </main>
+  <Footer />
+
+  <script is:inline>
+    (function () {
+      var form = document.getElementById('disclosure-form');
+      var status = document.getElementById('disclosure-status');
+      if (!form || !status) return;
+      form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        status.className = 'form-status';
+        if (!form.checkValidity()) { form.reportValidity(); return; }
+        var button = form.querySelector('button[type="submit"]');
+        if (button) { button.disabled = true; button.textContent = 'Submitting…'; }
+        var data = Object.fromEntries(new FormData(form).entries());
+        data.turnstile_token = data['cf-turnstile-response'] || '';
+        try {
+          var response = await fetch(form.dataset.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+          var result = await response.json().catch(function () { return {}; });
+          if (!response.ok || !result.ok) throw new Error(result.error || 'We could not submit the report.');
+          status.textContent = 'Your report was sent privately. Reference ' + result.reference + '. Keep this reference for follow-up.';
+          status.className = 'form-status is-visible is-success';
+          form.reset();
+          if (window.turnstile) window.turnstile.reset();
+        } catch (error) {
+          status.textContent = (error && error.message ? error.message : 'We could not submit the report.') + ' Please email founders@pilotprotocol.network.';
+          status.className = 'form-status is-visible is-error';
+          if (window.turnstile) window.turnstile.reset();
+        } finally {
+          if (button) { button.disabled = false; button.textContent = 'Submit disclosure →'; }
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
