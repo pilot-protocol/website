@@ -3,21 +3,74 @@ interface Props {
   active?: 'home' | 'docs' | 'blog' | 'plans' | 'for' | 'tech' | 'apps' | 'trust';
 }
 const { active } = Astro.props;
-import { stableVersion } from '../data/releaseManifest';
 
-const forLinks = [
-  { href: '/for/p2p',        label: 'Direct P2P',    desc: 'Peer-to-peer for AI agents' },
-  { href: '/for/mcp',        label: 'MCP + Pilot',   desc: 'Give your MCP servers a network' },
-  { href: '/for/networks',   label: 'Networks',      desc: 'Domain networks agents self-organize into' },
+const navGroups = [
+  {
+    id: 'product', label: 'Product', eyebrow: 'The platform',
+    title: 'One network layer for agents.',
+    desc: 'Identity, encrypted connectivity, trust, and installable capabilities in one system.',
+    activeFor: ['home', 'apps', 'trust', 'plans'],
+    links: [
+      { href: '/', kicker: 'Platform', label: 'Network OS', desc: 'The complete Pilot architecture' },
+      { href: '/trust', kicker: 'Security', label: 'Trust Center', desc: 'Controls, boundaries, and evidence' },
+      { href: '/app-store', kicker: 'Ecosystem', label: 'App Store', desc: 'Capabilities built for agents' },
+      { href: '/plans', kicker: 'Commercial', label: 'Plans', desc: 'Open network and enterprise paths' },
+    ],
+    footer: { href: '/docs/getting-started', label: 'Explore the product' },
+  },
+  {
+    id: 'solutions', label: 'Solutions', eyebrow: 'Built for real systems',
+    title: 'Connect agents across every boundary.',
+    desc: 'Start with one deployment pattern, then expand without replacing the underlying network.',
+    activeFor: ['for'],
+    links: [
+      { href: '/for/p2p', kicker: 'Connectivity', label: 'Direct P2P', desc: 'Private agent-to-agent paths' },
+      { href: '/for/mcp', kicker: 'Integration', label: 'MCP + Pilot', desc: 'Give MCP servers a network' },
+      { href: '/for/networks', kicker: 'Organization', label: 'Managed networks', desc: 'Shared domains and membership' },
+      { href: '/docs/enterprise', kicker: 'Enterprise', label: 'Enterprise controls', desc: 'Identity, policy, roles, and audit' },
+    ],
+    footer: { href: '/for/setups', label: 'Browse deployment setups' },
+  },
+  {
+    id: 'developers', label: 'Developers', eyebrow: 'Build on Pilot',
+    title: 'From first connection to production.',
+    desc: 'Documentation and tooling for connecting, shipping, and operating agent-native software.',
+    activeFor: ['docs', 'tech'],
+    links: [
+      { href: '/docs/getting-started', kicker: 'Start', label: 'Quickstart', desc: 'Install and connect in minutes' },
+      { href: '/docs/', kicker: 'Reference', label: 'Documentation', desc: 'Concepts, CLI, SDKs, and operations' },
+      { href: '/docs/integration', kicker: 'Build', label: 'SDKs & integration', desc: 'Embed Pilot in your stack' },
+      { href: '/for/compatibility', kicker: 'Deploy', label: 'Compatibility', desc: 'Choose the right environment mode' },
+    ],
+    footer: { href: '/for/skills', label: 'Explore agent skills' },
+  },
+  {
+    id: 'resources', label: 'Resources', eyebrow: 'Learn and evaluate',
+    title: 'Technical depth without the guesswork.',
+    desc: 'Architecture, field notes, evaluator material, and a machine-readable version of the site.',
+    activeFor: ['blog'],
+    links: [
+      { href: '/blog/', kicker: 'Journal', label: 'Field notes', desc: 'Guides, launches, and architecture' },
+      { href: '/docs/research', kicker: 'Research', label: 'Technical papers', desc: 'Specifications and evaluations' },
+      { href: '/press', kicker: 'Media', label: 'Press kit', desc: 'Company and brand resources' },
+      { href: '/plain/', kicker: 'Agents', label: 'Machine-readable site', desc: 'The plain-text agent interface' },
+    ],
+    footer: { href: '/enterprise-readiness-report.pdf', label: 'Read the readiness report' },
+  },
+  {
+    id: 'company', label: 'Company', eyebrow: 'Pilot Protocol',
+    title: 'Building the network for agents.',
+    desc: 'Learn about the company, follow our progress, or speak directly with the team.',
+    activeFor: [],
+    links: [
+      { href: '/learn/what-is-pilot-protocol', kicker: 'About', label: 'About Pilot', desc: 'What we are building and why' },
+      { href: '/blog/pilot-raises-4-5m-seed', kicker: 'News', label: 'Company news', desc: 'Latest company announcement' },
+      { href: '/press', kicker: 'Press', label: 'Media resources', desc: 'Brand assets and company facts' },
+      { href: 'mailto:founders@pilotprotocol.network', kicker: 'Contact', label: 'Talk to the team', desc: 'Reach the founders directly' },
+    ],
+    footer: { href: 'mailto:founders@pilotprotocol.network', label: 'Contact Pilot Protocol' },
+  },
 ];
-
-const techLinks = [
-  { href: '/for/skills',        label: 'Skills',        desc: 'Agent skills, one command each' },
-  { href: '/for/compatibility', label: 'Compatibility', desc: 'Per-environment deployment modes' },
-  { href: '/for/setups',        label: 'Setups',        desc: 'Pre-wired multi-agent fleets' },
-];
-
-const statusText = `Network live · v${stableVersion}`;
 ---
 <a class="skip-link" href="#page-content">Skip to content</a>
 <nav class="nav-top" aria-label="Primary">
@@ -25,77 +78,51 @@ const statusText = `Network live · v${stableVersion}`;
     <div class="nav-row">
       <a href="/" class="brand" aria-label="Pilot Protocol - home"
          data-track="nav_click" data-track-target="home">
-        <img src="/img/pilot-96.png" alt="" class="logo" width="44" height="44" />
-        <span class="brand-text">Pilot / Protocol<small class="brand-tag">Where agents go</small></span>
+        <span class="brand-mark"><img src="/img/pilot-96.png" alt="" class="logo" width="40" height="40" /></span>
+        <span class="brand-text"><strong>Pilot</strong><span>Protocol</span></span>
       </a>
 
       <div class="nav-links" id="nav-links">
-        <a href="/docs/" class:list={['nav-link', active === 'docs' && 'active']} aria-current={active === 'docs' ? 'page' : undefined}
-           data-track="nav_click" data-track-target="docs">Docs</a>
-        <a href="/trust" class:list={['nav-link', active === 'trust' && 'active']} aria-current={active === 'trust' ? 'page' : undefined}
-           data-track="nav_click" data-track-target="trust">Trust Center</a>
-        <a href="/blog/" class:list={['nav-link', active === 'blog' && 'active']} aria-current={active === 'blog' ? 'page' : undefined}
-           data-track="nav_click" data-track-target="blog">Blog</a>
-        <a href="/app-store" class:list={['nav-link', active === 'apps' && 'active']} aria-current={active === 'apps' ? 'page' : undefined}
-           data-track="nav_click" data-track-target="app-store">App Store</a>
-        <a href="/plans" class:list={['nav-link', active === 'plans' && 'active']} aria-current={active === 'plans' ? 'page' : undefined}
-           data-track="nav_click" data-track-target="plans">Plans</a>
-
-        <div class:list={['nav-dropdown', active === 'for' && 'active']}>
-          <button type="button" class="nav-dropdown-trigger" aria-haspopup="true" aria-expanded="false">
-            For
-            <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </button>
-          <div class="nav-dropdown-menu">
-            {forLinks.map((l) => (
-              <a href={l.href}
-                 data-track="nav_click" data-track-target={l.href.replace('/for/', 'for-')}>
-                <span class="dd-label">{l.label}</span>
-                <span class="dd-desc">{l.desc}</span>
+        {navGroups.map((group) => (
+          <div class:list={['nav-dropdown', group.activeFor.includes(active || '') && 'active']} data-nav-group={group.id}>
+            <button type="button" class="nav-dropdown-trigger" aria-haspopup="true" aria-expanded="false">
+              <span class="nav-trigger-label">{group.label}</span>
+              <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="nav-dropdown-menu">
+              <div class="nav-menu-intro">
+                <span class="nav-menu-eyebrow">{group.eyebrow}</span>
+                <strong>{group.title}</strong>
+                <p>{group.desc}</p>
+              </div>
+              <div class="nav-menu-links">
+                {group.links.map((l) => (
+                  <a href={l.href} data-track="nav_click" data-track-target={`${group.id}-${l.label.toLowerCase().replaceAll(' ', '-')}`}>
+                    <span class="dd-kicker">{l.kicker}</span>
+                    <span class="dd-label">{l.label}</span>
+                    <span class="dd-desc">{l.desc}</span>
+                    <span class="dd-arrow" aria-hidden="true">↗</span>
+                  </a>
+                ))}
+              </div>
+              <a class="nav-menu-footer" href={group.footer.href}>
+                <span>{group.footer.label}</span><span aria-hidden="true">→</span>
               </a>
-            ))}
+            </div>
           </div>
-        </div>
+        ))}
 
-        <div class:list={['nav-dropdown', active === 'tech' && 'active']}>
-          <button type="button" class="nav-dropdown-trigger" aria-haspopup="true" aria-expanded="false">
-            Tech
-            <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </button>
-          <div class="nav-dropdown-menu">
-            {techLinks.map((l) => (
-              <a href={l.href}
-                 data-track="nav_click" data-track-target={l.href.replace('/for/', 'for-')}>
-                <span class="dd-label">{l.label}</span>
-                <span class="dd-desc">{l.desc}</span>
-              </a>
-            ))}
-          </div>
+        <div class="nav-mobile-actions">
+          <a class="nav-sales" href="mailto:founders@pilotprotocol.network">Contact sales</a>
+          <a class="nav-cta" href="/docs/getting-started">Get started</a>
         </div>
       </div>
 
       <div class="nav-right">
-        <span class="nav-status">
-          <span class="dot"></span>
-          <span class="status-text">{statusText}</span>
-        </span>
-        <a class="bots-link" href="/plain/" aria-label="IF YOU ARE AN AGENT GO HERE"
-           data-track="nav_click" data-track-target="bots">
-          <span class="bots-label">Bots</span>
-          <svg class="icon-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="4" y="8" width="16" height="11" rx="2"></rect>
-            <path d="M12 4v4"></path>
-            <circle cx="12" cy="3.5" r="1"></circle>
-            <circle cx="9" cy="13" r="1.2" fill="currentColor"></circle>
-            <circle cx="15" cy="13" r="1.2" fill="currentColor"></circle>
-            <path d="M9.5 16.5h5"></path>
-            <path d="M2.5 12v3M21.5 12v3"></path>
-          </svg>
-        </a>
+        <a class="nav-sales" href="mailto:founders@pilotprotocol.network">Contact sales</a>
+        <a class="nav-cta" href="/docs/getting-started">Get started</a>
         <button id="theme-toggle" class="theme-toggle" aria-label="Toggle light/dark theme" type="button">
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="4.2"></circle>
@@ -116,6 +143,7 @@ const statusText = `Network live · v${stableVersion}`;
 
 <script is:inline>
   (function () {
+    var nav = document.querySelector('.nav-top');
     var themeBtn = document.getElementById('theme-toggle');
     if (themeBtn) {
       themeBtn.addEventListener('click', function () {
@@ -130,15 +158,42 @@ const statusText = `Network live · v${stableVersion}`;
       });
     }
 
+    function closeDropdowns(except) {
+      document.querySelectorAll('.nav-dropdown.open').forEach(function (dd) {
+        if (dd === except) return;
+        dd.classList.remove('open');
+        var trigger = dd.querySelector('.nav-dropdown-trigger');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      });
+    }
+
+    function closeMobileMenu() {
+      if (!links || !links.classList.contains('mobile-open')) return;
+      links.classList.remove('mobile-open');
+      if (hamb) {
+        hamb.classList.remove('is-open');
+        hamb.setAttribute('aria-expanded', 'false');
+        hamb.setAttribute('aria-label', 'Open menu');
+      }
+      document.body.classList.remove('nav-mobile-open');
+      closeDropdowns();
+    }
+
     // Hamburger (mobile)
     var hamb = document.getElementById('nav-hamburger');
     var links = document.getElementById('nav-links');
     if (hamb && links) {
+      hamb.setAttribute('aria-label', 'Open menu');
       hamb.addEventListener('click', function () {
         var open = links.classList.toggle('mobile-open');
         hamb.classList.toggle('is-open', open);
         hamb.setAttribute('aria-expanded', open ? 'true' : 'false');
+        hamb.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
         document.body.classList.toggle('nav-mobile-open', open);
+        if (!open) closeDropdowns();
+      });
+      links.querySelectorAll('a').forEach(function (link) {
+        link.addEventListener('click', closeMobileMenu);
       });
     }
 
@@ -149,18 +204,15 @@ const statusText = `Network live · v${stableVersion}`;
       trigger.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        var isOpen = dd.classList.toggle('open');
+        var wasOpen = dd.classList.contains('open');
+        closeDropdowns(dd);
+        dd.classList.toggle('open', !wasOpen);
+        var isOpen = !wasOpen;
         trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       });
     });
     document.addEventListener('click', function (e) {
-      document.querySelectorAll('.nav-dropdown.open').forEach(function (dd) {
-        if (!dd.contains(e.target)) {
-          dd.classList.remove('open');
-          var trig = dd.querySelector('.nav-dropdown-trigger');
-          if (trig) trig.setAttribute('aria-expanded', 'false');
-        }
-      });
+      if (!e.target.closest || !e.target.closest('.nav-dropdown')) closeDropdowns();
     });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
@@ -169,12 +221,15 @@ const statusText = `Network live · v${stableVersion}`;
           var trig = dd.querySelector('.nav-dropdown-trigger');
           if (trig) { trig.setAttribute('aria-expanded', 'false'); trig.focus(); }
         });
-        if (links && links.classList.contains('mobile-open')) {
-          links.classList.remove('mobile-open');
-          if (hamb) { hamb.classList.remove('is-open'); hamb.setAttribute('aria-expanded', 'false'); }
-          document.body.classList.remove('nav-mobile-open');
-        }
+        closeMobileMenu();
       }
     });
+
+    // A restrained shadow gives the persistent shell a clear edge once content scrolls beneath it.
+    if (nav) {
+      var syncNavEdge = function () { nav.classList.toggle('is-scrolled', window.scrollY > 8); };
+      syncNavEdge();
+      window.addEventListener('scroll', syncNavEdge, { passive: true });
+    }
   })();
 </script>
