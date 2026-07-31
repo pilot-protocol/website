@@ -98,7 +98,7 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
             <div class="dh-cats">
               {app.categories.map((c) => <a class="tag-pill" href={`/app-store#cat-${c}`} style="text-decoration:none;">{catName(c)}</a>)}
               {app.inCatalogue
-                ? <span class="tag-pill" style="color:var(--accent);border-color:color-mix(in oklab,var(--accent) 45%,var(--line-2));">Live on catalogue</span>
+                ? <span class="tag-pill" style="color:var(--accent-text);border-color:color-mix(in oklab,var(--accent) 45%,var(--line-2));">Live on catalogue</span>
                 : <span class="tag-pill" style="color:var(--ink-dim);">Coming soon</span>}
             </div>
           </div>
@@ -106,7 +106,7 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
 
         <div class="dh-r">
           <div class="dh-install">
-            <div class="install-block" style="min-width:340px;max-width:420px;">
+            <div class="install-block" style="width:min(100%,420px);">
               <div class="ib-bar">
                 <span class="lbl">Install</span>
                 <button class="copy-btn" data-copy={installCmd} type="button">Copy</button>
@@ -381,7 +381,7 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
             const target = idx === -1 ? '' : g.slice(idx + 1);
             return <div class="perm"><code><span class="cap">{cap}</span>{target && <>:{target}</>}</code></div>;
           })}
-          <p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin:12px 0 0;line-height:1.5;">Granted or denied by the agent at install time. No ambient authority.</p>
+          <p style="font-family:var(--mono);font-size:10px;color:var(--ink-dim);margin:12px 0 0;line-height:1.5;">Granted or denied by the agent at install time. No ambient authority.</p>
         </div>
         )}
 
@@ -406,7 +406,7 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
 
 <Footer />
 
-<div id="toast" style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:var(--bg-2);border:1px solid var(--line-2);border-radius:10px;padding:12px 18px;font-family:var(--mono);font-size:12px;color:var(--ink);z-index:9998;transition:opacity .2s,transform .2s;box-shadow:0 10px 30px rgba(0,0,0,.3);"></div>
+<div id="toast" role="status" aria-live="polite" style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:var(--bg-2);border:1px solid var(--line-2);border-radius:10px;padding:12px 18px;font-family:var(--mono);font-size:12px;color:var(--ink);z-index:9998;transition:opacity .2s,transform .2s;box-shadow:0 10px 30px rgba(0,0,0,.3);"></div>
 
 <script>
   const $ = (s, r = document) => r.querySelector(s);
@@ -420,10 +420,17 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
     toastTimer = setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(20px)'; }, 1900);
   }
 
+  const normalizeCopyText = (value) => value.split('\n').map((line) => line.replace(/^(\s*)\$\s(?=\S)/, '$1')).join('\n').trim();
   $$('[data-copy]').forEach((btn) => btn.addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(btn.getAttribute('data-copy')); } catch {}
-    const o = btn.textContent; btn.textContent = 'Copied ✓'; btn.classList.add('copied');
-    toast('Copied  ·  ' + btn.getAttribute('data-copy'));
+    const copyText = normalizeCopyText(btn.getAttribute('data-copy') || '');
+    const o = btn.textContent;
+    try { await navigator.clipboard.writeText(copyText); }
+    catch {
+      btn.textContent = 'Copy failed'; toast('Copy failed');
+      setTimeout(() => { btn.textContent = o; }, 1600); return;
+    }
+    btn.textContent = 'Copied'; btn.classList.add('copied');
+    toast('Copied  ·  ' + copyText);
     setTimeout(() => { btn.textContent = o; btn.classList.remove('copied'); }, 1600);
   }));
 

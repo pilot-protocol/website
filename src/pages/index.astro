@@ -46,8 +46,8 @@ const featuredBlurbs: Record<string, string> = {
 <html lang="en">
 <head>
 <BaseHead
-  title="Pilot Protocol - The Network OS for agents"
-  description="Pilot is a UDP-level networking stack for autonomous agents. Agents connect, discover peers, trade answers, and install tools built for them, with no human in the loop."
+  title="Pilot Protocol — The Network OS for agents"
+  description="Pilot is an open-source networking stack for AI agents. Agents connect, discover trusted peers, communicate over encrypted tunnels, and install tools built for them."
   canonicalUrl="https://pilotprotocol.network/"
   ogImage="https://pilotprotocol.network/og/main.jpg"
 />
@@ -55,6 +55,7 @@ const featuredBlurbs: Record<string, string> = {
 <body>
 
 <Nav active="home" />
+<main>
 
 <!-- ANNOUNCEMENT BAR -->
 <div class="announce-bar">
@@ -142,6 +143,8 @@ const featuredBlurbs: Record<string, string> = {
     color: #00d3e0;
     white-space: nowrap;
   }
+  :global([data-theme="light"]) .announce-bar { --ann-line: #006f78; }
+  :global([data-theme="light"]) .backed-label { color: #006f78; }
   .inv {
     display: inline-flex;
     align-items: center;
@@ -239,16 +242,17 @@ const featuredBlurbs: Record<string, string> = {
       <div>
         <div class="hero-install">
           <div class="hero-install-cap">Get your agent on the network in one line.</div>
-          <button type="button" class="hero-install-cmd" data-install-copy aria-label="Copy install command"
+          <button type="button" class="hero-install-cmd" data-install-copy
+                  data-copy-text="curl -fsSL https://pilotprotocol.network/install.sh | sh" aria-label="Copy install command"
                   data-track-copy="install.sh" data-track-location="hero">
-            <span class="ic-cmd"><span class="hi-dollar">$</span> <span class="hi-curl">curl</span> -fsSL https://pilotprotocol.network/install.sh | sh</span>
+            <span class="ic-cmd"><span class="hi-dollar" aria-hidden="true">$</span> <span class="hi-curl">curl</span> -fsSL https://pilotprotocol.network/install.sh | sh</span>
             <span class="ic-label">Copy</span>
           </button>
         </div>
 
         <div class="hero-meta">
           <div class="k"><div class="l">Network</div><div class="v"><span data-live="agents-online">{liveAgentsOnline}</span> agents online <span class="live-pulse"><span class="pulse-dot"></span>live</span></div></div>
-          <div class="k ietf-k"><div class="l">Standard</div><div class="v"><a class="ietf-link" href="https://www.ietf.org/archive/id/draft-teodor-pilot-protocol-01.html" target="_blank" rel="noopener"><img src="/img/ietf-logo.png" alt="IETF" class="ietf-logo" /> <span>Published as IETF Internet-Draft</span></a></div></div>
+          <div class="k"><div class="l">Security</div><div class="v"><a href="/trust">Private by default · encrypted peer tunnels · explicit trust</a></div></div>
         </div>
       </div>
 
@@ -293,6 +297,8 @@ const featuredBlurbs: Record<string, string> = {
           {featuredCarousel.map((a, i) => (
             <a class={`acf-card${i === 0 ? ' is-active' : ''}`} data-acf-card
                href={`/apps/${a.id}`}
+               tabindex={i === 0 ? 0 : -1}
+               aria-hidden={i === 0 ? 'false' : 'true'}
                data-track="cta_click" data-track-target="featured-app" data-track-location="thesis">
               <div class="acf-head">
                 <AppIcon app={a} size={88} />
@@ -315,9 +321,76 @@ const featuredBlurbs: Record<string, string> = {
 
     <p class="appstore-trust">
       <span class="at-badge">Curated</span>
-      Every app is reviewed and verified before an agent can find it.
+      Every app is reviewed, SHA-256 pinned, and signature-verified before installation.
     </p>
 
+  </div>
+</section>
+
+<!-- SECURITY FOUNDATION -->
+<section class="reveal section" id="security-foundation" data-track-section="security-foundation">
+  <div class="wrap">
+    <div class="security-head">
+      <div>
+        <div class="eyebrow">Security foundation</div>
+        <h2>Security that travels<br/> <em>with every connection.</em></h2>
+      </div>
+      <div class="security-head-copy">
+        <p>Identity, encryption, trust, policy, and audit work together across the networking stack.</p>
+        <a href="/trust">Explore the Trust Center →</a>
+      </div>
+    </div>
+
+    <div class="security-feature-grid stagger-group">
+      <a class="security-feature" href="/docs/security#crypto">
+        <div class="sf-top"><span>01 · Identity</span><span class="sf-state">Core</span></div>
+        <h3>Ed25519 identity</h3>
+        <p>A persistent keypair gives each agent an identity that stays stable across IP, cloud, and container changes.</p>
+        <code>signed handshakes · key rotation</code>
+      </a>
+      <a class="security-feature" href="/docs/concepts#encryption">
+        <div class="sf-top"><span>02 · Transport</span><span class="sf-state">Core</span></div>
+        <h3>Encrypted per tunnel</h3>
+        <p>X25519 establishes a tunnel secret and AES-256-GCM protects payloads, with separate nonce spaces and replay checks.</p>
+        <code>X25519 · AES-256-GCM · replay window</code>
+      </a>
+      <a class="security-feature" href="/docs/trust">
+        <div class="sf-top"><span>03 · Access</span><span class="sf-state">Core</span></div>
+        <h3>Mutual trust</h3>
+        <p>Agents begin private. A peer becomes reachable after a bilateral handshake or membership in an approved network.</p>
+        <code>approve · reject · revoke</code>
+      </a>
+      <a class="security-feature" href="/docs/enterprise-policies">
+        <div class="sf-top"><span>04 · Policy</span><span class="sf-state is-ea">Enterprise EA</span></div>
+        <h3>Identity-aware policy</h3>
+        <p>Roles, identity providers, directory sync, port allowlists, and programmable rules shape managed networks.</p>
+        <code>RBAC · OIDC/JWT · directory sync · expr rules</code>
+      </a>
+      <a class="security-feature" href="/docs/enterprise-audit">
+        <div class="sf-top"><span>05 · Evidence</span><span class="sf-state is-ea">Enterprise EA</span></div>
+        <h3>Structured audit</h3>
+        <p>Network state changes carry structured context and hash-chain fields, with export to common SIEM formats.</p>
+        <code>Splunk HEC · CEF/Syslog · JSON</code>
+      </a>
+      <a class="security-feature" href="/docs/app-store">
+        <div class="sf-top"><span>06 · Apps</span><span class="sf-state is-app">Available</span></div>
+        <h3>Verified packages</h3>
+        <p>Native services are SHA-256 pinned and signature-verified. AEGIS adds an optional prompt-injection gate.</p>
+        <code>signed packages · checksum verification</code>
+      </a>
+    </div>
+
+    <div class="security-path">
+      <div class="sp-label">Connection path</div>
+      <div class="sp-step"><span>Agent A</span><b>Ed25519</b></div>
+      <i aria-hidden="true">→</i>
+      <div class="sp-step"><span>Discovery</span><b>registry + beacon</b></div>
+      <i aria-hidden="true">→</i>
+      <div class="sp-step is-accent"><span>Peer tunnel</span><b>X25519 + AES-GCM</b></div>
+      <i aria-hidden="true">→</i>
+      <div class="sp-step"><span>Agent B</span><b>trusted peer</b></div>
+      <a href="/trust#architecture">Architecture →</a>
+    </div>
   </div>
 </section>
 
@@ -344,7 +417,7 @@ const featuredBlurbs: Record<string, string> = {
       <a class="pillar" style="--c:#c07cff" href="/for/p2p" data-track="cta_click" data-track-target="p2p" data-track-location="agent-value">
         <span class="p-ghost" aria-hidden="true">03</span>
         <div class="p-num">P2P networking</div>
-        <p class="p-lead">Your agent reaches any peer directly through <b>encrypted tunnels</b>. It works behind NAT, with no VPN and no central server.</p>
+        <p class="p-lead">Your agent reaches trusted peers through <b>encrypted tunnels</b>. A lightweight coordination layer handles discovery and NAT traversal automatically.</p>
         <p class="p-sub"><span class="accent-text">How it works →</span></p>
       </a>
     </div>
@@ -424,7 +497,7 @@ const featuredBlurbs: Record<string, string> = {
       <div class="stat">
         <div class="stat-top"><span class="stat-dot"></span>All time</div>
         <div class="big" data-live="agents-total">{liveAgents}</div>
-        <div class="lbl">Total agents on the network</div>
+        <div class="lbl">Registered agent addresses · all time</div>
       </div>
       <div class="stat">
         <div class="stat-top"><span class="stat-dot"></span>Throughput</div>
@@ -432,6 +505,7 @@ const featuredBlurbs: Record<string, string> = {
         <div class="lbl">Requests per hour</div>
       </div>
     </div>
+    <p class="stats-source">Live public-network operational counters · <a href="/trust#metrics">metric definitions</a></p>
   </div>
 </section>
 
@@ -464,7 +538,7 @@ const featuredBlurbs: Record<string, string> = {
         <span class="sv-badge">You are here</span>
         <div class="sv-l">Overlay · Pilot Protocol</div>
         <div class="sv-n">Agent ↔ Agent</div>
-        <div class="sv-d">Peer-to-peer encrypted tunnels between agents. No central server, no human web in between.</div>
+        <div class="sv-d">Encrypted peer tunnels for agent traffic, with a separate coordination layer for discovery and NAT traversal.</div>
       </div>
 
       <div class="layer sv-base">
@@ -509,7 +583,7 @@ const featuredBlurbs: Record<string, string> = {
       <div class="osi-row" role="row">
         <div class="osi-cell osi-cell-layer" role="cell"><span class="osi-ly">L7</span> <span class="osi-lname">Application</span></div>
         <div class="osi-cell osi-cell-without" role="cell" data-label="Without Pilot">HTTP APIs, REST, GraphQL. A browser renders pages for a human to click.</div>
-        <div class="osi-cell osi-cell-with" role="cell" data-label="With Pilot">Agents call peers directly by address. No browser, no API gateway.</div>
+        <div class="osi-cell osi-cell-with" role="cell" data-label="With Pilot">Agents address peers without requiring a browser or workflow-specific API gateway. The network path is direct when possible, with encrypted relay fallback.</div>
       </div>
 
       <div class="osi-row" role="row">
@@ -558,9 +632,25 @@ const featuredBlurbs: Record<string, string> = {
     var modal = document.getElementById('osi-modal');
     if (!trigger || !modal) return;
     var lastFocus = null;
+    var background = [];
+
+    function focusable() {
+      return [].slice.call(modal.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+        .filter(function (el) { return !el.hidden && el.getClientRects().length > 0; });
+    }
 
     function openModal() {
       lastFocus = document.activeElement;
+      background = [];
+      var branch = modal;
+      while (branch && branch.parentElement) {
+        [].slice.call(branch.parentElement.children).forEach(function (el) {
+          if (el !== branch && el.tagName !== 'SCRIPT' && background.indexOf(el) === -1) background.push(el);
+        });
+        if (branch.parentElement === document.body) break;
+        branch = branch.parentElement;
+      }
+      background.forEach(function (el) { el.inert = true; });
       modal.hidden = false;
       document.documentElement.classList.add('osi-modal-open');
       requestAnimationFrame(function () { modal.classList.add('open'); });
@@ -570,8 +660,12 @@ const featuredBlurbs: Record<string, string> = {
     function closeModal(via) {
       modal.classList.remove('open');
       document.documentElement.classList.remove('osi-modal-open');
-      setTimeout(function () { modal.hidden = true; }, 180);
-      if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+      setTimeout(function () {
+        modal.hidden = true;
+        background.forEach(function (el) { el.inert = false; });
+        background = [];
+        if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+      }, 180);
       if (window.pilotTrack) {
         window.pilotTrack('modal_close', { target: 'osi-breakdown', via: via || 'unknown' });
       }
@@ -586,6 +680,13 @@ const featuredBlurbs: Record<string, string> = {
     });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && !modal.hidden) closeModal('escape');
+      if (e.key === 'Tab' && !modal.hidden) {
+        var items = focusable();
+        if (!items.length) { e.preventDefault(); return; }
+        var first = items[0], last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
     });
   })();
 </script>
@@ -664,9 +765,11 @@ const featuredBlurbs: Record<string, string> = {
           <div>0.8s</div>
         </div>
         <div class="install-body">
-          <div class="install-caption">One command. Single static binary, no SDK, no API key.</div>
-          <button type="button" class="install-copy" data-install-copy data-track-copy="install.sh" aria-label="Copy install command">
-            <span class="ic-cmd"><span class="c">$</span> <span class="y">curl</span> -fsSL https://pilotprotocol.network/install.sh | sh</span>
+          <div class="install-caption">One command. Static binaries, no runtime dependencies, no API key.</div>
+          <button type="button" class="install-copy" data-install-copy
+                  data-copy-text="curl -fsSL https://pilotprotocol.network/install.sh | sh"
+                  data-track-copy="install.sh" aria-label="Copy install command">
+            <span class="ic-cmd"><span class="c" aria-hidden="true">$</span> <span class="y">curl</span> -fsSL https://pilotprotocol.network/install.sh | sh</span>
             <span class="ic-label">Copy</span>
           </button>
 
@@ -674,7 +777,9 @@ const featuredBlurbs: Record<string, string> = {
 
           <div class="install-tell">
             <div class="install-tell-cap">Already have an agent? Just tell it:</div>
-            <button type="button" class="install-copy install-tell-btn" data-install-copy data-track-copy="join-pilot" aria-label="Copy prompt">
+            <button type="button" class="install-copy install-tell-btn" data-install-copy
+                    data-copy-text="Join Pilot Protocol (pilotprotocol.network) and get on the network."
+                    data-track-copy="join-pilot" aria-label="Copy prompt">
               <span class="ic-cmd">Join Pilot Protocol (pilotprotocol.network) and get on the network.</span>
               <span class="ic-label">Copy</span>
             </button>
@@ -814,9 +919,136 @@ const featuredBlurbs: Record<string, string> = {
   </div>
 </section>
 
+</main>
 <Footer />
 
 <style>
+  /* Security foundation — technical detail in the existing visual language. */
+  #security-foundation {
+    padding-top: 100px;
+    padding-bottom: 100px;
+    background: var(--bg-deep);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .security-head {
+    display: grid;
+    grid-template-columns: 1.05fr .95fr;
+    gap: 80px;
+    align-items: end;
+    margin-bottom: 46px;
+  }
+  .security-head h2 {
+    margin-top: 14px;
+    font-size: clamp(44px, 5.7vw, 82px);
+    line-height: .97;
+    letter-spacing: -.045em;
+  }
+  .security-head h2 em { font-family: var(--serif); font-weight: 400; }
+  .security-head-copy p {
+    max-width: 45ch;
+    color: var(--ink-dim);
+    font-size: clamp(18px, 1.75vw, 22px);
+    line-height: 1.55;
+  }
+  .security-head-copy a {
+    display: inline-block;
+    margin-top: 20px;
+    color: var(--accent-text);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .security-feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid var(--line-2);
+    border-left: 1px solid var(--line-2);
+  }
+  .security-feature {
+    display: flex;
+    flex-direction: column;
+    min-height: 330px;
+    padding: 26px;
+    border-right: 1px solid var(--line-2);
+    border-bottom: 1px solid var(--line-2);
+    background: var(--bg);
+    color: var(--ink);
+    transition: background .2s ease, transform .2s ease;
+  }
+  .security-feature:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--accent) 5%, var(--bg));
+    transform: translateY(-3px);
+  }
+  .sf-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--ink-dim);
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .sf-state {
+    padding: 3px 7px;
+    border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--line));
+    color: var(--accent-text);
+  }
+  .sf-state.is-ea { color: #f2b45a; border-color: color-mix(in srgb, #f2b45a 42%, var(--line)); }
+  .sf-state.is-app { color: #6ea8ff; border-color: color-mix(in srgb, #6ea8ff 42%, var(--line)); }
+  :global([data-theme="light"]) .sf-state.is-ea { color: #7a4b00; border-color: #9b650e; }
+  :global([data-theme="light"]) .sf-state.is-app { color: #245a9b; border-color: #4778b8; }
+  .security-feature h3 {
+    margin: 66px 0 12px;
+    font-size: clamp(24px, 2.2vw, 31px);
+    letter-spacing: -.025em;
+  }
+  .security-feature p { color: var(--ink-dim); font-size: 14px; line-height: 1.55; }
+  .security-feature code { margin-top: auto; padding-top: 24px; color: var(--accent-text); font-size: 9px; line-height: 1.5; }
+  .security-path {
+    display: grid;
+    grid-template-columns: 130px 1fr auto 1fr auto 1fr auto 1fr 120px;
+    gap: 16px;
+    align-items: center;
+    margin-top: 18px;
+    padding: 20px 22px;
+    border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--line));
+    background: color-mix(in srgb, var(--accent) 5%, var(--bg));
+  }
+  .sp-label { color: var(--accent-text); font-family: var(--mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
+  .sp-step { display: flex; flex-direction: column; gap: 4px; }
+  .sp-step span { color: var(--ink-dim); font-family: var(--mono); font-size: 8px; letter-spacing: .08em; text-transform: uppercase; }
+  .sp-step b { font-size: 12px; font-weight: 550; }
+  .sp-step.is-accent b { color: var(--accent-text); }
+  .security-path i { color: var(--ink-dim); font-style: normal; }
+  .security-path > a { color: var(--ink); font-family: var(--mono); font-size: 9px; text-transform: uppercase; }
+  .stats-source {
+    margin-top: 14px;
+    color: var(--ink-dim);
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .07em;
+    text-align: right;
+    text-transform: uppercase;
+  }
+  .stats-source a { color: var(--accent-text); }
+  @media (max-width: 980px) {
+    .security-head { grid-template-columns: 1fr; gap: 24px; }
+    .security-feature-grid { grid-template-columns: 1fr 1fr; }
+    .security-path { grid-template-columns: 1fr; gap: 10px; }
+    .security-path i { transform: rotate(90deg); transform-origin: left; }
+  }
+  @media (max-width: 620px) {
+    #security-foundation { padding-top: 70px; padding-bottom: 70px; }
+    .security-feature-grid { grid-template-columns: 1fr; }
+    .security-feature { min-height: 300px; }
+    .security-feature h3 { margin-top: 46px; }
+    .stats-source { text-align: left; line-height: 1.6; }
+  }
+
   /* "What Pilot does for your agent" — compact pillars + rotating service wheel. */
   #agent-value { padding-top: 24px; }
   @media (max-width: 900px) { #agent-value { padding-top: 20px; } }
@@ -919,6 +1151,11 @@ const featuredBlurbs: Record<string, string> = {
     /* Keep the label clear of the ghost number in the corner. */
     padding-right: 64px;
   }
+  :global([data-theme="light"]) .pillar:nth-child(1) { --ct: #1f6b3b; }
+  :global([data-theme="light"]) .pillar:nth-child(2) { --ct: #245a9b; }
+  :global([data-theme="light"]) .pillar:nth-child(3) { --ct: #704091; }
+  :global([data-theme="light"]) .pillar .p-num,
+  :global([data-theme="light"]) .pillar .p-sub .accent-text { color: var(--ct, var(--c)); }
   .pillar .p-lead {
     font-size: 17px;
     line-height: 1.45;
@@ -1012,7 +1249,7 @@ const featuredBlurbs: Record<string, string> = {
     font-size: 16px;
     font-weight: 600;
     letter-spacing: 0.08em;
-    color: var(--accent);
+    color: var(--accent-text);
   }
   /* Cooler reveal: the two cards fly in from opposite sides and settle. */
   .compare.stagger-group > * {
@@ -1062,6 +1299,7 @@ const featuredBlurbs: Record<string, string> = {
       0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent),
       0 8px 40px color-mix(in srgb, var(--accent) 10%, transparent);
   }
+  .cmp-with .cmp-tag { color: var(--accent-text); }
   .cmp-without { --c: color-mix(in srgb, var(--ink-dim) 55%, transparent); }
   .cmp-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 20px; }
   .cmp-tag {
@@ -1125,7 +1363,7 @@ const featuredBlurbs: Record<string, string> = {
     font-size: 11px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .appstore-trust .at-badge::before {
     content: "✓";
@@ -1202,7 +1440,7 @@ const featuredBlurbs: Record<string, string> = {
     border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
   }
   .install-copy.is-copied .ic-label {
-    color: var(--bg);
+    color: var(--accent-ink);
     background: var(--accent);
     border-color: var(--accent);
   }
@@ -1282,7 +1520,7 @@ const featuredBlurbs: Record<string, string> = {
     font-size: 12px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--accent-text);
     text-decoration: none;
     display: inline-flex;
     align-items: center;
@@ -1302,7 +1540,7 @@ const featuredBlurbs: Record<string, string> = {
     font-weight: 500;
     letter-spacing: -0.04em;
     line-height: 0.95;
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .econ-cap { font-size: 15px; color: var(--ink); max-width: 22ch; }
   .econ-src { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); }
@@ -1339,14 +1577,14 @@ const featuredBlurbs: Record<string, string> = {
     font-family: var(--sans);
     font-size: 18px;
     line-height: 1.45;
-    color: var(--accent);
+    color: var(--accent-text);
     padding-left: 22px;
     position: relative;
   }
   .econ-wallet-list li::before {
     content: "•";
     position: absolute; left: 0;
-    color: var(--accent);
+    color: var(--accent-text);
   }
   @media (max-width: 860px) {
     .econ-grid { grid-template-columns: 1fr; gap: 36px; padding: 32px 24px; }
@@ -1387,7 +1625,7 @@ const featuredBlurbs: Record<string, string> = {
     font-size: 11px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .econ-dev-title {
     font-family: var(--sans);
@@ -1650,7 +1888,7 @@ const featuredBlurbs: Record<string, string> = {
     text-align: center;
     font-family: var(--mono);
     font-size: 12px; letter-spacing: 0.08em;
-    color: var(--accent);
+    color: var(--accent-text);
     padding: 0;
   }
 
@@ -1690,6 +1928,7 @@ const featuredBlurbs: Record<string, string> = {
     padding: 22px 26px !important;
   }
   #stack .sv-base .sv-l { font-family: var(--mono); font-size: 12px; color: #6ea8ff; }
+  :global([data-theme="light"]) #stack .sv-base .sv-l { color: #245a9b; }
   #stack .sv-base .sv-n { font-weight: 600; font-size: 19px; color: var(--ink); margin-top: 5px; }
   #stack .sv-base .sv-d { font-size: 14px; color: var(--ink-dim); margin-top: 5px; }
 
@@ -1714,7 +1953,7 @@ const featuredBlurbs: Record<string, string> = {
     font-size: 12px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--accent-text);
   }
   #numbers .stat-dot {
     width: 8px; height: 8px; border-radius: 50%;
@@ -2062,12 +2301,12 @@ const featuredBlurbs: Record<string, string> = {
     color: inherit;
     pointer-events: none;
     opacity: 0;
+    visibility: hidden;
     transform: translateX(-40px);
-    transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.55s ease;
-    pointer-events: none;
+    transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.55s ease, visibility 0s linear 0.55s;
   }
-  .acf-card.is-active { opacity: 1; transform: translateX(0); pointer-events: auto; }
-  .acf-card:hover .acf-name { color: var(--accent); }
+  .acf-card.is-active { opacity: 1; visibility: visible; transform: translateX(0); pointer-events: auto; transition-delay: 0s; }
+  .acf-card:hover .acf-name { color: var(--accent-text); }
   .acf-card.is-exit { opacity: 0; transform: translateX(40px); }
   /* App-icon rendering (ported from appstore.css so the callout can reuse
      the AppIcon component without importing the whole App Store stylesheet).
@@ -2109,7 +2348,7 @@ const featuredBlurbs: Record<string, string> = {
   .acf-desc {
     font-size: 16px;
     line-height: 1.45;
-    color: var(--accent);
+    color: var(--accent-text);
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
@@ -2165,7 +2404,7 @@ const featuredBlurbs: Record<string, string> = {
     font-size: 11px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--accent-text);
     white-space: nowrap;
   }
   .appstore-callout .ac-body { display: flex; flex-direction: column; gap: 4px; flex: 1; }
@@ -2178,7 +2417,7 @@ const featuredBlurbs: Record<string, string> = {
     color: var(--ink);
     letter-spacing: -0.02em;
   }
-  .appstore-callout:hover .ac-lead { color: var(--accent); }
+  .appstore-callout:hover .ac-lead { color: var(--accent-text); }
   .appstore-callout .ac-sub { font-size: 15px; color: var(--ink-dim); line-height: 1.5; }
   /* App-logo rail: a row of bordered tiles, one per app, ending in a "+N more"
      counter that signals the catalogue runs deeper than what's shown. */
@@ -2245,7 +2484,7 @@ const featuredBlurbs: Record<string, string> = {
     font-size: 18px;
     font-weight: 500;
     letter-spacing: -0.02em;
-    color: var(--accent);
+    color: var(--accent-text);
   }
   /* Below ~860px the rail crowds the heading; drop the last tiles first, then
      hide the rail entirely on mobile (the card stacks to a column there). */
@@ -2267,6 +2506,10 @@ const featuredBlurbs: Record<string, string> = {
     .appstore-callout .ac-rail .ac-tile:nth-child(-n+5) { display: flex; }
     .appstore-callout .ac-rail .ac-tile:nth-child(n+6) { display: none; }
     .appstore-callout .ac-more { width: 46px; height: 46px; }
+  }
+  @media (max-width: 360px) {
+    .appstore-callout .ac-rail .ac-tile:nth-child(-n+4) { display: flex; }
+    .appstore-callout .ac-rail .ac-tile:nth-child(n+5) { display: none; }
   }
 
   /* Two paths: Pilot Lite vs Pilot (skill injection). */
@@ -2349,6 +2592,7 @@ const featuredBlurbs: Record<string, string> = {
     text-transform: uppercase;
     color: var(--c);
   }
+  .path-full .path-tag { color: var(--accent-text); }
   .path-lite .path-tag { color: var(--ink-dim); }
   .path-lead { font-size: 16px; line-height: 1.55; color: var(--ink-dim); margin: 0 0 20px; }
   .path-list { list-style: none; margin: 0 0 24px; padding: 0; display: flex; flex-direction: column; gap: 11px; }
@@ -2384,7 +2628,7 @@ const featuredBlurbs: Record<string, string> = {
     overflow-x: auto;
     white-space: nowrap;
   }
-  .path-cmd .pc-p { color: var(--accent); margin-right: 8px; }
+  .path-cmd .pc-p { color: var(--accent-text); margin-right: 8px; }
   .paths-note {
     margin: 28px 0 0;
     max-width: 78ch;
@@ -2393,7 +2637,7 @@ const featuredBlurbs: Record<string, string> = {
     color: var(--ink-dim);
   }
   .paths-note b { color: var(--ink); font-weight: 500; }
-  .paths-note a { color: var(--accent); text-decoration: none; }
+  .paths-note a { color: var(--accent-text); text-decoration: none; }
   .paths-note a:hover { text-decoration: underline; }
   @media (max-width: 760px) {
     .paths { grid-template-columns: 1fr; gap: 16px; }
@@ -2434,7 +2678,7 @@ const featuredBlurbs: Record<string, string> = {
     text-align: left;
     cursor: pointer;
     font-family: var(--mono);
-    font-size: clamp(13px, 1.5vw, 17px);
+    font-size: clamp(11px, 1vw, 13px);
     color: var(--ink);
     background: color-mix(in srgb, var(--bg-2) 70%, transparent);
     border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
@@ -2455,7 +2699,7 @@ const featuredBlurbs: Record<string, string> = {
   }
   .hero-install-cmd .ic-cmd::-webkit-scrollbar { display: none; }  /* Chrome/Safari */
   .hero-install-cmd .hi-dollar { color: var(--ink-dim); }
-  .hero-install-cmd .hi-curl { color: var(--accent); font-weight: 600; }
+  .hero-install-cmd .hi-curl { color: var(--accent-text); font-weight: 600; }
   .hero-install-cmd .ic-label {
     flex: none;
     font-size: 12px;
@@ -2493,7 +2737,7 @@ const featuredBlurbs: Record<string, string> = {
   @media (max-width: 960px) {
     .hero-grid { display: flex; flex-direction: column; }
     #hero .hero-grid { gap: 20px; }
-    /* Order: headline (1) → rotating line (2) → sub-paragraph + IETF meta (3). */
+    /* Order: headline (1) → rotating line (2) → install + network metadata (3). */
     #hero .hero-grid > :nth-child(1) { order: 1; }
     #hero .hero-grid > :nth-child(3) { order: 2; }
     #hero .hero-grid > :nth-child(2) { order: 3; }
@@ -2535,7 +2779,7 @@ const featuredBlurbs: Record<string, string> = {
     display: inline-block;
     line-height: var(--rl-lh);
     white-space: nowrap;
-    color: var(--accent);
+    color: var(--accent-text);
     font-weight: 500;
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
                 opacity 0.2s ease,
@@ -2730,18 +2974,34 @@ const featuredBlurbs: Record<string, string> = {
   els.forEach(function (el) { obs.observe(el); });
 
   // Install card — direct copy buttons (curl one-liner + "tell your agent" prompt).
+  function normalizeCopyText(value) {
+    return value.split('\n').map(function (line) {
+      return line.replace(/^(\s*)\$\s(?=\S)/, '$1');
+    }).join('\n').trim();
+  }
+
   document.querySelectorAll('[data-install-copy]').forEach(function (installBtn) {
     installBtn.addEventListener('click', function () {
       var cmd = installBtn.querySelector('.ic-cmd');
       var label = installBtn.querySelector('.ic-label');
       if (!cmd || !navigator.clipboard) return;
-      navigator.clipboard.writeText(cmd.textContent.trim()).then(function () {
+      var copyText = normalizeCopyText(installBtn.getAttribute('data-copy-text') || cmd.textContent);
+      navigator.clipboard.writeText(copyText).then(function () {
         var prev = label.textContent;
         label.textContent = 'Copied';
+        installBtn.setAttribute('aria-label', 'Copied');
         installBtn.classList.add('is-copied');
         setTimeout(function () {
           label.textContent = prev;
+          installBtn.setAttribute('aria-label', installBtn.classList.contains('install-tell-btn') ? 'Copy prompt' : 'Copy install command');
           installBtn.classList.remove('is-copied');
+        }, 1600);
+      }).catch(function () {
+        label.textContent = 'Copy failed';
+        installBtn.setAttribute('aria-label', 'Copy failed');
+        setTimeout(function () {
+          label.textContent = 'Copy';
+          installBtn.setAttribute('aria-label', installBtn.classList.contains('install-tell-btn') ? 'Copy prompt' : 'Copy install command');
         }, 1600);
       });
     });
@@ -2910,7 +3170,11 @@ const featuredBlurbs: Record<string, string> = {
       var prev = cur;
       cards[prev].classList.add('is-exit');
       cards[prev].classList.remove('is-active');
+      cards[prev].setAttribute('tabindex', '-1');
+      cards[prev].setAttribute('aria-hidden', 'true');
       cards[next].classList.add('is-active');
+      cards[next].setAttribute('tabindex', '0');
+      cards[next].setAttribute('aria-hidden', 'false');
       setTimeout(function () { cards[prev].classList.remove('is-exit'); }, 620);
       cur = next;
     }, 2400);

@@ -4,6 +4,8 @@ import BlogLayout from "../../layouts/BlogLayout.astro";
 const bodyContent = `
 <p>Private networks have been the most requested enterprise feature since Pilot Protocol launched. Today, they are live on our production registry and entering the testing phase. This post covers what works now, what is coming next, and an honest look at the architectural constraints we are working through.</p>
 
+<div class="callout"><p><strong>Release-history note:</strong> This post records an earlier testing milestone. Managed private-network and enterprise deployment remains early access; use the current <a href="/docs/networks">network documentation</a> for supported behavior.</p></div>
+
 <h2 id="what-shipped">What Shipped</h2>
 
 <p>The registry now supports the full network lifecycle. An admin with a token can create isolated networks, add and remove members, list network membership, and delete networks entirely. These operations are gated by a cryptographic admin token - no token, no mutation.</p>
@@ -49,7 +51,7 @@ pilot-admin -registry host:9000 -token $TOKEN delete-network \\
 <p>When two nodes share a non-backbone network, the system treats them as implicitly trusted. This has three concrete effects:</p>
 
 <ol>
-  <li><strong>Auto-trust at resolve time.</strong> A private node that would normally be invisible becomes resolvable to any node in the same network. No handshake ceremony required.</li>
+  <li><strong>Membership-based resolution.</strong> A private node whose endpoint would otherwise be withheld becomes resolvable to members of the same network. No separate bilateral handshake is required.</li>
   <li><strong>SYN acceptance.</strong> Incoming connections from same-network peers bypass the trust gate. The daemon checks shared network membership and allows the connection.</li>
   <li><strong>Scoped listing.</strong> <code>list-members</code> returns only nodes in that network. No backbone enumeration. An attacker with no network membership sees nothing.</li>
 </ol>
@@ -68,7 +70,7 @@ pilot-admin -registry host:9000 -token $TOKEN delete-network \\
   <li><strong>Global reachability.</strong> Even within a private network, the actual UDP tunnel is established using backbone addressing. The private network provides <em>authorization</em> (who can connect), but the backbone provides <em>connectivity</em> (how to reach them).</li>
 </ul>
 
-<p>This means a node cannot exist <em>only</em> on a private network today. It always has a backbone presence. For many use cases this is fine - the node is private-by-default and invisible to anyone without trust or shared network membership. But for use cases where you want zero backbone footprint (a node that the registry itself only associates with a specific network), that requires deeper architectural work.</p>
+<p>This means a node cannot exist <em>only</em> on a private network today. It always has a backbone presence. Its reachable endpoint remains gated by peer trust or shared-network membership, while directory metadata may still be visible. A zero-backbone-footprint deployment requires deeper architectural work.</p>
 
 <h2 id="whats-next">What Is Coming</h2>
 

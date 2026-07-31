@@ -2,7 +2,9 @@
 import BlogLayout from "../../layouts/BlogLayout.astro";
 
 const bodyContent = `
-<p>Pilot Protocol v1.5 ships the enterprise stack. Three phases of development, merged to main, covering role-based access control, network policies, structured audit logging, consent-based invites, fleet enrollment, webhook reliability, key lifecycle management, and a health endpoint. This post covers everything that shipped and why it matters for production agent deployments.</p>
+<p>Pilot Protocol v1.5 introduced a broad enterprise-control milestone covering role-based access control, network policies, structured audit logging, consent-based invites, fleet enrollment, webhook reliability, key lifecycle management, and a health endpoint.</p>
+
+<div class="callout"><p><strong>Release-history note:</strong> This article records the v1.5 implementation milestone. Managed enterprise deployment remains early access, and the current <a href="/docs/enterprise">enterprise documentation</a> supersedes release-specific details.</p></div>
 
 <h2 id="rbac">Role-Based Access Control</h2>
 
@@ -165,9 +167,9 @@ pilot-daemon -registry host:9000 -beacon host:9001 \\
 
 <h2 id="secure-channels">Secure Channel Authentication</h2>
 
-<p>Encrypted tunnels now verify identity during the ECDH handshake. Both sides present Ed25519 signatures, and the tunnel records the authenticated <code>PeerNodeID</code>. This binds the ephemeral X25519 session key to a persistent identity - you know who you are talking to, not just that the channel is encrypted.</p>
+<p>Encrypted tunnels verify identity during the key-agreement handshake. Both sides present Ed25519 signatures, and the tunnel records the authenticated <code>PeerNodeID</code>. Current releases derive peer-specific secrets from daemon-lifetime X25519 keys; this authenticates the peer but does not provide per-session forward secrecy.</p>
 
-<p>Backward compatibility is preserved: peers that do not support authentication fall back to unauthenticated encryption. No flag day required.</p>
+<p>The v1.5 rollout included a compatibility transition for older peers. Current deployment guidance is to require authenticated peers and apply the controls described in the <a href="/docs/security">security documentation</a>.</p>
 
 <h2 id="pilotctl">Network Management via pilotctl</h2>
 

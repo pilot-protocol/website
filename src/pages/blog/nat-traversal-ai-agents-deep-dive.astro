@@ -9,7 +9,7 @@ const bodyContent = `<p>NAT is the single biggest obstacle to peer-to-peer commu
 
   <h2 id="why-nat-blocks-agents">Why NAT Blocks Agent-to-Agent Communication</h2>
 
-  <p><a href="https://datatracker.ietf.org/doc/html/rfc1631" target="_blank" rel="noopener">RFC 1631</a> introduced Network Address Translation in 1994 as a stopgap for IPv4 address exhaustion (RFC 3022 later obsoleted it in 2001). A NAT device maps multiple private addresses (192.168.x.x, 10.x.x.x) to a single public IP, rewriting packet headers on the fly. Outbound traffic works because the NAT records each mapping and routes responses back to the correct internal host.</p>
+  <p><a href="https://www.rfc-editor.org/rfc/rfc1631.html" target="_blank" rel="noopener">RFC 1631</a> introduced Network Address Translation in 1994 as a stopgap for IPv4 address exhaustion (RFC 3022 later obsoleted it in 2001). A NAT device maps multiple private addresses (192.168.x.x, 10.x.x.x) to a single public IP, rewriting packet headers on the fly. Outbound traffic works because the NAT records each mapping and routes responses back to the correct internal host.</p>
 
   <p>Inbound traffic is the problem. When Agent A behind NAT-1 wants to send a UDP packet to Agent B behind NAT-2, it addresses the packet to NAT-2's public IP. NAT-2 receives the packet, looks up its mapping table for a matching entry, finds none -- because Agent B never sent a packet to Agent A's NAT -- and drops it silently. The packet vanishes without a trace.</p>
 
@@ -31,7 +31,7 @@ Agent A (192.168.1.50)        NAT-1 (203.0.113.10)        NAT-2 (198.51.100.20) 
 
   <h2 id="four-nat-types">The Four NAT Types: From Friendly to Hostile</h2>
 
-  <p>Not all NATs behave the same way. <a href="https://datatracker.ietf.org/doc/html/rfc3489" target="_blank" rel="noopener">RFC 3489</a> classifies NAT behavior into four types based on how they create and enforce address/port mappings. Understanding these types is essential because each one requires a different traversal strategy.</p>
+  <p>Not all NATs behave the same way. <a href="https://www.rfc-editor.org/rfc/rfc3489.html" target="_blank" rel="noopener">RFC 3489</a> classifies NAT behavior into four types based on how they create and enforce address/port mappings. Understanding these types is essential because each one requires a different traversal strategy.</p>
 
   <h3>Full Cone NAT</h3>
 
@@ -110,7 +110,7 @@ Internal sends to peer     10.20.30.40:4000   --->  NAT maps to 203.0.113.10:<sp
 
   <h2 id="stun-discovery">STUN Discovery: Learning Your Public Endpoint</h2>
 
-  <p>The first step in NAT traversal is self-discovery. An agent behind NAT does not know its own public IP address or the external port assigned by the NAT. <a href="https://datatracker.ietf.org/doc/html/rfc5389" target="_blank" rel="noopener">STUN (Session Traversal Utilities for NAT, RFC 5389)</a> solves this by reflecting the observed source address back to the sender.</p>
+  <p>The first step in NAT traversal is self-discovery. An agent behind NAT does not know its own public IP address or the external port assigned by the NAT. <a href="https://www.rfc-editor.org/rfc/rfc5389.html" target="_blank" rel="noopener">STUN (Session Traversal Utilities for NAT, RFC 5389)</a> solves this by reflecting the observed source address back to the sender.</p>
 
   <p>In Pilot Protocol, the <strong>beacon</strong> server provides the STUN function. When a daemon starts, it sends a STUN-like UDP probe to the beacon on a temporary socket. The beacon reads the source IP and port from the UDP header -- which is the NAT-mapped public endpoint -- and sends it back as the response payload.</p>
 

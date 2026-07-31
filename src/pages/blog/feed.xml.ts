@@ -2,12 +2,13 @@ import { blogPosts } from '../../data/blogPosts';
 
 export async function GET() {
   const site = 'https://pilotprotocol.network';
-  const items = blogPosts.map(post => `    <item>
+  const posts = [...blogPosts].sort((a, b) => (b.iso_date || '').localeCompare(a.iso_date || ''));
+  const items = posts.map(post => `    <item>
       <title><![CDATA[${post.title}]]></title>
       <link>${site}/blog/${post.slug}</link>
       <guid isPermaLink="true">${site}/blog/${post.slug}</guid>
       <description><![CDATA[${post.description}]]></description>
-      <pubDate>${new Date(post.date + ', ' + (post.year || new Date().getFullYear())).toUTCString()}</pubDate>
+      <pubDate>${new Date(`${post.iso_date || `${post.date}, ${post.year || 2026}`}T12:00:00Z`).toUTCString()}</pubDate>
       <category>${post.category}</category>
     </item>`).join('\n');
 
@@ -19,7 +20,7 @@ export async function GET() {
     <description>Technical articles on AI agent networking, P2P infrastructure, NAT traversal, trust models, and building with Pilot Protocol.</description>
     <language>en</language>
     <atom:link href="${site}/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+    <lastBuildDate>${new Date(`${posts[0]?.iso_date || '2026-07-31'}T12:00:00Z`).toUTCString()}</lastBuildDate>
 ${items}
   </channel>
 </rss>`;

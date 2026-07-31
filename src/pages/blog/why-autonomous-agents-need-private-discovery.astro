@@ -1,9 +1,9 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>When OpenClaw agents autonomously joined the Pilot Protocol network, they operated without human supervision. No operator reviewed their trust decisions. No security team audited their connections. No firewall rules governed their traffic. The agents made every security decision themselves. This is the reality of autonomous agent networking -- and it is why private-by-default discovery is not a feature but a requirement.</p>
+const bodyContent = `<p>When OpenClaw agents autonomously joined the Pilot Protocol network, no operator reviewed every individual trust decision in real time. That operating model makes conservative connectivity defaults and explicit policy boundaries especially important; it does not remove the need for operator oversight.</p>
 
-  <p>This article explains why the default visibility model in most agent protocols (public, discoverable, open) is fundamentally wrong for autonomous agents, and how Pilot Protocol's private-by-default model enabled safe autonomous adoption.</p>
+  <p>This article explains why public-by-default visibility can be a poor fit for autonomous agents, and how Pilot Protocol's private-by-default connectivity model supported that adoption.</p>
 
   <section>
   <h2 id="the-public-problem">The Problem With Public-by-Default</h2>
@@ -20,18 +20,18 @@ const bodyContent = `<p>When OpenClaw agents autonomously joined the Pilot Proto
     <li><strong>No off switch without human intervention.</strong> If a public agent is being abused, someone has to notice and take action. Autonomous agents operating overnight, on weekends, or in remote data centers may be exploited for hours before a human checks.</li>
   </ul>
 
-  <p>The CrewAI research makes this concrete. When tested with prompt injection attacks, CrewAI agents exfiltrated sensitive data <strong>65% of the time</strong>. These were agents operating with default security settings. Public discovery meant any peer could send them messages, and the agents had no mechanism to evaluate trust before processing the message content.</p>
+  <p>Public exposure expands the set of peers that can deliver untrusted input. Network-level reachability does not solve prompt injection, but reducing unsolicited connectivity gives application-level validation and policy enforcement a smaller surface to defend.</p>
   </section>
 
   <section>
   <h2 id="private-by-default">How Private-by-Default Works</h2>
 
-  <p>In Pilot Protocol, every agent is invisible by default. When an agent registers with the rendezvous server, its visibility is set to <code>private</code>. This means:</p>
+  <p>In Pilot Protocol, every agent starts private at the connectivity layer. When an agent registers with the rendezvous server, its visibility is set to <code>private</code>. This means:</p>
 
   <ul>
-    <li><strong>Not discoverable via search.</strong> Other agents cannot find it by searching for tags, hostnames, or addresses.</li>
-    <li><strong>Resolve-gated.</strong> Even if another agent knows the exact address, <code>pilotctl lookup</code> will not return the agent's metadata unless trust is already established.</li>
-    <li><strong>Connection-gated.</strong> Tunnel connection attempts from untrusted agents are silently dropped. No error message, no acknowledgment -- the agent simply does not exist from the untrusted peer's perspective.</li>
+    <li><strong>Endpoint privacy.</strong> Directory metadata such as hostname, tags, or network membership may remain visible, but an untrusted peer does not receive the agent's reachable IP and port.</li>
+    <li><strong>Resolve-gated connectivity.</strong> Knowing an address or seeing metadata does not by itself grant a usable endpoint.</li>
+    <li><strong>Policy-gated connections.</strong> Connectivity requires mutual peer trust or shared membership in a network whose policy allows it.</li>
   </ul>
 
   <p>To become discoverable, an agent must explicitly opt in:</p>
@@ -53,7 +53,7 @@ const bodyContent = `<p>When OpenClaw agents autonomously joined the Pilot Proto
 <span class="comment"># Agent B receives the request and decides whether to accept
 # The justification is part of the handshake -- B can evaluate A's stated purpose</span></code></pre>
 
-  <p>Both sides must explicitly accept the handshake. Trust is not assumed from a successful connection. Trust is not inferred from network proximity. Trust is a deliberate, cryptographically signed decision by both parties.</p>
+  <p>A peer handshake is accepted under each side's configured policy and signed cryptographically. Shared-network membership is a separate authorization path, so operators should keep network join rules as deliberate as bilateral trust decisions.</p>
 
   <p>For autonomous agents, this matters because:</p>
 
@@ -75,7 +75,7 @@ const bodyContent = `<p>When OpenClaw agents autonomously joined the Pilot Proto
 
   <p><strong>Self-verification.</strong> 64% of agents established self-trust for loopback health checks. They periodically verified their own networking stack was functioning correctly. This is autonomous monitoring without human setup.</p>
 
-  <p><strong>No backbone enumeration.</strong> Because agents are private by default, there is no way for an attacker to enumerate the entire network. You cannot crawl what you cannot see. The agent network had no public directory, no Agent Cards at well-known URLs, no broadcast discovery. Agents found each other through targeted tag searches or direct address knowledge.</p>
+  <p><strong>No endpoint directory.</strong> Private agents do not expose reachable endpoints to arbitrary peers. Directory metadata can support targeted lookup, while trust and network policy still control whether a connection can be opened.</p>
 
   <p>This is the security model that autonomous agents need: strong defaults that protect by default, explicit opt-in for exposure, and fine-grained trust that can be evaluated and revoked programmatically. Public-by-default protocols assume a human security team. Private-by-default protocols assume the agent is on its own.</p>
   </section>
@@ -86,12 +86,12 @@ const bodyContent = `<p>When OpenClaw agents autonomously joined the Pilot Proto
   <p>If you are building infrastructure for autonomous agents, three principles from the OpenClaw adoption are worth internalizing:</p>
 
   <ol>
-    <li><strong>Default to invisible.</strong> Agents should not exist on the network until they explicitly choose to. Every default-public agent is an unmonitored attack surface.</li>
+    <li><strong>Default to private connectivity.</strong> Registration and metadata should not automatically grant a reachable endpoint or permission to connect.</li>
     <li><strong>Make trust explicit and mutual.</strong> Both sides must agree. Unilateral trust decisions (like following a URL) are insufficient for autonomous operation. The handshake justification gives agents material to reason about.</li>
     <li><strong>Design for revocation, not just establishment.</strong> Revoking trust must be instant and complete. Autonomous agents cannot wait for a human to update an ACL. <code>pilotctl untrust</code> takes effect immediately -- the peer's tunnel is dropped within seconds.</li>
   </ol>
 
-  <p>The agents that adopted Pilot Protocol did so because the security model matched the requirements of unsupervised operation. They did not need to be told to be careful. The protocol defaults made careful the path of least resistance.</p>
+  <p>The observed adoption pattern aligned with a security model that starts from private connectivity and makes broader reachability an explicit policy decision.</p>
   </section>
 
   <div class="cta">
@@ -102,7 +102,7 @@ const bodyContent = `<p>When OpenClaw agents autonomously joined the Pilot Proto
 ---
 <BlogLayout
   title="Why Autonomous Agents Need Private Discovery"
-  description="Public discovery is a security risk. How Pilot Protocol's trust-gated registry keeps agents invisible until explicitly trusted."
+  description="Public discovery can expand attack surface. How Pilot Protocol separates directory metadata from trust- and network-gated connectivity."
   date="March 2, 2026"
   tags={["openclaw", "privacy", "zero-trust"]}
   canonicalPath="/blog/why-autonomous-agents-need-private-discovery"

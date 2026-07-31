@@ -24,6 +24,7 @@ const canonicalUrl = "https://pilotprotocol.network/plans";
 <body>
 
 <Nav active="plans" />
+<main>
 
 <section class="page-head">
   <div class="wrap">
@@ -48,12 +49,12 @@ const canonicalUrl = "https://pilotprotocol.network/plans";
         <div class="tier-ix">01 · <span class="accent">Open</span></div>
         <div class="tier-name">Backbone</div>
         <div class="tier-note">Open to all agents · AGPL-3.0</div>
-        <div class="tier-desc">Full protocol features on the public backbone. No signup, no usage limits, no throttling.</div>
+        <div class="tier-desc">Full protocol features on the public backbone. No metered plan limit; fair-use and security controls still apply.</div>
         <ul>
           <li>Addressing, tunnels, encryption, trust</li>
           <li>NAT traversal (STUN + hole-punch + relay)</li>
           <li>Public registry + beacon</li>
-          <li>Unlimited agents, connections, bandwidth</li>
+          <li>No metered agent or bandwidth plan limit</li>
           <li>AGPL-3.0 open source</li>
           <li>Community support</li>
         </ul>
@@ -89,8 +90,8 @@ const canonicalUrl = "https://pilotprotocol.network/plans";
         <ul>
           <li>Everything in Private Network</li>
           <li>RBAC - owner, admin, member roles with permissions matrix</li>
-          <li>OIDC, SAML, Entra ID, LDAP &amp; webhook identity providers</li>
-          <li>Directory sync (AD / Entra ID / LDAP) with role mapping</li>
+          <li>OIDC/JWT validation &amp; external identity bridges</li>
+          <li>Directory mapping for existing agents and roles</li>
           <li>JWT validation (RS256, HS256) with JWKS caching</li>
           <li>Network policies - membership caps &amp; port whitelists</li>
           <li>Audit export - Splunk HEC, CEF/Syslog, JSON</li>
@@ -98,7 +99,7 @@ const canonicalUrl = "https://pilotprotocol.network/plans";
           <li>Blueprint provisioning - declarative network setup</li>
           <li>Key lifecycle - rotation, expiry, forced renewal</li>
           <li>Consent-based invite flow (30-day TTL)</li>
-          <li>Dedicated rendezvous + priority support + SLA</li>
+          <li>Dedicated rendezvous + priority support + negotiated SLA options</li>
         </ul>
         <div class="tier-cta">
           <a class="btn primary" href="mailto:founders@pilotprotocol.network?subject=Pilot%20Enterprise%20(Early%20Access)">Contact Us <span class="arr">→</span></a>
@@ -129,36 +130,39 @@ const canonicalUrl = "https://pilotprotocol.network/plans";
       <div class="eyebrow">Comparison</div>
       <h2>Every tier runs the <em>full protocol.</em></h2>
     </div>
+    <div class="table-scroll" role="region" aria-label="Plan comparison" tabindex="0">
     <table class="cmp">
+      <caption class="sr-only">Pilot Protocol plan feature comparison</caption>
       <thead>
         <tr>
-          <th></th>
-          <th>Backbone</th>
-          <th>Private Network</th>
-          <th>Enterprise</th>
+          <th scope="col">Feature</th>
+          <th scope="col">Backbone</th>
+          <th scope="col">Private Network</th>
+          <th scope="col">Enterprise</th>
         </tr>
       </thead>
       <tbody>
-        <tr><td>Protocol features</td><td class="good">Full</td><td class="good">Full</td><td class="good">Full</td></tr>
-        <tr><td>Network type</td><td>Public backbone</td><td>Isolated private</td><td>Dedicated deployment</td></tr>
-        <tr><td>Registry</td><td>Shared</td><td>Scoped</td><td>Dedicated</td></tr>
-        <tr><td>NAT traversal</td><td class="good">Built-in</td><td class="good">Built-in</td><td class="good">Built-in</td></tr>
-        <tr><td>E2E encryption</td><td class="good">Yes</td><td class="good">Yes</td><td class="good">Yes</td></tr>
-        <tr><td>SYN trust enforcement</td><td class="mid">-</td><td class="good">Yes</td><td class="good">Yes</td></tr>
-        <tr><td>Network join rules</td><td class="mid">-</td><td>Token + invite</td><td>Token, invite &amp; consent</td></tr>
-        <tr><td>RBAC (owner / admin / member)</td><td class="mid">-</td><td class="mid">-</td><td class="good">Yes</td></tr>
-        <tr><td>Identity providers</td><td class="mid">-</td><td class="mid">-</td><td class="good">OIDC · SAML · Entra ID · LDAP</td></tr>
-        <tr><td>Directory sync</td><td class="mid">-</td><td class="mid">-</td><td class="good">AD / Entra ID / LDAP</td></tr>
-        <tr><td>JWT validation</td><td class="mid">-</td><td class="mid">-</td><td class="good">RS256 · HS256 · JWKS</td></tr>
-        <tr><td>Network policies</td><td class="mid">-</td><td class="mid">-</td><td class="good">Caps &amp; port whitelists</td></tr>
-        <tr><td>Audit</td><td>Webhooks</td><td>Webhooks</td><td>Splunk HEC · CEF/Syslog · JSON</td></tr>
-        <tr><td>Blueprint provisioning</td><td class="mid">-</td><td class="mid">-</td><td class="good">Declarative</td></tr>
-        <tr><td>Key lifecycle</td><td>Self-managed</td><td>Self-managed</td><td class="good">Rotation &amp; forced renewal</td></tr>
-        <tr><td>Rendezvous infra</td><td>Community</td><td>Managed</td><td>Dedicated</td></tr>
-        <tr><td>Support</td><td>Community</td><td>Direct</td><td>Priority &amp; SLA</td></tr>
-        <tr><td>Availability</td><td class="good">Open</td><td class="good">Early access</td><td class="good">Early access</td></tr>
+        <tr><th scope="row">Protocol features</th><td class="good">Full</td><td class="good">Full</td><td class="good">Full</td></tr>
+        <tr><th scope="row">Network type</th><td>Public backbone</td><td>Isolated private</td><td>Dedicated deployment</td></tr>
+        <tr><th scope="row">Registry</th><td>Shared</td><td>Scoped</td><td>Dedicated</td></tr>
+        <tr><th scope="row">NAT traversal</th><td class="good">Built-in</td><td class="good">Built-in</td><td class="good">Built-in</td></tr>
+        <tr><th scope="row">E2E encryption</th><td class="good">Yes</td><td class="good">Yes</td><td class="good">Yes</td></tr>
+        <tr><th scope="row">SYN trust enforcement</th><td class="good">Yes</td><td class="good">Yes</td><td class="good">Yes</td></tr>
+        <tr><th scope="row">Network join rules</th><td class="mid">-</td><td>Token + invite</td><td>Token, invite &amp; consent</td></tr>
+        <tr><th scope="row">RBAC (owner / admin / member)</th><td class="mid">-</td><td class="mid">-</td><td class="good">Yes</td></tr>
+        <tr><th scope="row">Identity providers</th><td class="mid">-</td><td class="mid">-</td><td class="good">OIDC · external identity bridges</td></tr>
+        <tr><th scope="row">Directory sync</th><td class="mid">-</td><td class="mid">-</td><td class="good">Directory mapping</td></tr>
+        <tr><th scope="row">JWT validation</th><td class="mid">-</td><td class="mid">-</td><td class="good">RS256 · HS256 · JWKS</td></tr>
+        <tr><th scope="row">Network policies</th><td class="mid">-</td><td class="mid">-</td><td class="good">Caps &amp; port whitelists</td></tr>
+        <tr><th scope="row">Audit</th><td>Webhooks</td><td>Webhooks</td><td>Splunk HEC · CEF/Syslog · JSON</td></tr>
+        <tr><th scope="row">Blueprint provisioning</th><td class="mid">-</td><td class="mid">-</td><td class="good">Declarative</td></tr>
+        <tr><th scope="row">Key lifecycle</th><td>Self-managed</td><td>Self-managed</td><td class="good">Rotation &amp; forced renewal</td></tr>
+        <tr><th scope="row">Rendezvous infrastructure</th><td>Community</td><td>Managed</td><td>Dedicated</td></tr>
+        <tr><th scope="row">Support</th><td>Community</td><td>Direct</td><td>Priority &amp; negotiated SLA options</td></tr>
+        <tr><th scope="row">Availability</th><td class="good">Open</td><td class="good">Early access</td><td class="good">Early access</td></tr>
       </tbody>
     </table>
+    </div>
   </div>
 </section>
 
@@ -174,6 +178,7 @@ const canonicalUrl = "https://pilotprotocol.network/plans";
   </div>
 </section>
 
+</main>
 <Footer />
 
 </body>

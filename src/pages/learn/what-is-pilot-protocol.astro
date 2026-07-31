@@ -32,7 +32,7 @@ const bodyContent = `
 <h2 id="what-problems-it-solves">What Problems It Solves</h2>
 
 <h3>Direct agent-to-agent communication</h3>
-<p>Two agents that need to exchange data currently require either a shared server (message queue, database, cloud relay) or infrastructure configuration (VPN peering, port forwarding, reverse proxy setup). Pilot lets agents address each other directly by virtual address over encrypted tunnels. No intermediary to set up, configure, or pay for.</p>
+<p>Two agents that need to exchange data often rely on a shared application server or infrastructure configuration such as VPN peering and reverse proxies. Pilot lets agents address each other by virtual address over encrypted tunnels, without provisioning a workflow-specific broker.</p>
 
 <h3>Connectivity across different networks</h3>
 <p>Agents on different clouds (AWS, GCP, Azure), behind different NATs (home router, corporate firewall), and in different deployment environments (laptop, Kubernetes, edge device) all need to reach each other. Pilot's NAT traversal ladder works through STUN, hole-punching, and relay fallback automatically — the agent does not choose among them, the daemon does.</p>
@@ -66,7 +66,7 @@ const bodyContent = `
 
 <p>An agent joins Pilot by installing the daemon and starting it. The daemon generates an Ed25519 key pair, registers the agent's public key with the network registry, and receives a 48-bit virtual address displayed as <code>N:NNNN.HHHH.LLLL</code> (e.g., <code>0:0000.0000.0042</code>). From that point, the agent has a permanent address on the overlay network.</p>
 
-<p>When Agent A wants to communicate with Agent B, it sends a handshake request. Agent B approves. The daemons negotiate encrypted tunnel parameters using X25519, and the two agents begin exchanging messages through the tunnel. All tunnel traffic is encrypted and authenticated — there is no unencrypted mode.</p>
+<p>When Agent A wants to communicate with Agent B, it sends a handshake request. Agent B approves. The daemons negotiate encrypted tunnel parameters using X25519, and the two agents begin exchanging messages through the tunnel. Tunnel encryption is enabled by default; an explicit plaintext override exists for controlled testing, not production profiles.</p>
 
 <p>Pilot runs entirely in userspace. It sends and receives raw UDP datagrams, with reliability, ordering, and congestion control implemented at the application layer (sliding window, AIMD, SACK). Because it is a userspace implementation, it works on any operating system that supports UDP — no kernel modules, no system configuration, no elevated privileges required.</p>
 
@@ -115,7 +115,7 @@ const bodyContent = `
 <ul>
   <li><strong>Multi-cloud agent fleets.</strong> Agents distributed across AWS, GCP, and Azure communicate directly through encrypted tunnels — no cloud peering, no VPN mesh, no public endpoints.</li>
   <li><strong>Cross-company agent collaboration.</strong> Two organizations running agents on Pilot establish an encrypted tunnel with a single handshake — no shared cloud account, no exposed API endpoints.</li>
-  <li><strong>Secure data exchange.</strong> Agents handling sensitive data communicate through direct encrypted tunnels — no relay, no intermediary, no third-party storage.</li>
+  <li><strong>Secure data exchange.</strong> Agents handling sensitive data use encrypted tunnels with direct paths preferred and ciphertext relay fallback when NAT conditions require it, without requiring intermediate object storage.</li>
   <li><strong>Edge and remote agents.</strong> An agent on a device behind residential NAT connects securely to cloud agents — automatic NAT traversal, no port forwarding.</li>
   <li><strong>Research and experimentation.</strong> A fleet of research agents on developer laptops and cloud VMs that need to share findings without setting up shared infrastructure.</li>
 </ul>
@@ -137,7 +137,7 @@ const bodyContent = `
 <span class="comment"># Ask the network assistant for a plan</span>
 <span class="cmd">pilotctl send-message pilot-mom --data 'connect to my research agents and share findings' --wait</span></code></pre>
 
-<p>For more detailed walkthroughs, see <a href="https://pilotprotocol.network/learn/how-pilot-protocol-works">how Pilot Protocol works</a> and the <a href="https://pilotprotocol.network/learn/what-makes-a-pilot-agent">what makes a Pilot agent</a> guide.</p>
+<p>For more detailed walkthroughs, see <a href="/blog/how-pilot-protocol-works">how Pilot Protocol works</a> and the <a href="/learn/what-makes-a-pilot-agent">what makes a Pilot agent</a> guide.</p>
 `;
 
 const faqItems = [

@@ -22,7 +22,7 @@ const bodyContent = `<p>This tutorial takes you from zero to a working multi-age
   <p>Verify the installation:</p>
 
   <pre><code><span class="cmd">$ pilotctl version</span>
-pilotctl v1.13.6</code></pre>
+pilotctl v1.13.9</code></pre>
 
   <div class="callout">
     <p><strong>Alternative:</strong> You can also clone the repository and build from source with <code>go build ./cmd/pilotctl</code>. See the <a href="/docs/getting-started">Getting Started guide</a> for details.</p>
@@ -123,7 +123,7 @@ From: alice (0:0000.0000.0003)
 
   <h3>Transfer a File</h3>
 
-  <p>Send files directly between agents -- no S3, no cloud storage, no intermediary:</p>
+  <p>Send files through the encrypted agent tunnel -- no S3 bucket or workflow-specific file broker:</p>
 
   <pre><code><span class="comment"># Alice sends a file to Bob</span>
 <span class="cmd">$ pilotctl send-file bob ./report.pdf</span>
@@ -156,7 +156,7 @@ Listening...
   <p>Behind those simple CLI commands, a surprising amount happened:</p>
 
   <ol>
-    <li><strong>Identity generation</strong> -- <code>pilotctl init</code> generated an <a href="https://datatracker.ietf.org/doc/html/rfc8032" target="_blank" rel="noopener">Ed25519</a> key pair and stored it in <code>~/.pilot/identity.json</code>. This key pair is the agent's permanent cryptographic identity.</li>
+    <li><strong>Identity generation</strong> -- <code>pilotctl init</code> generated an <a href="https://www.rfc-editor.org/rfc/rfc8032.html" target="_blank" rel="noopener">Ed25519</a> key pair and stored it in <code>~/.pilot/identity.json</code>. This key pair is the agent's permanent cryptographic identity.</li>
     <li><strong>STUN discovery</strong> -- when the daemon started, it sent a UDP packet to the beacon server and learned its own public IP:port mapping. This is how other agents can reach it through NAT.</li>
     <li><strong>Registration</strong> -- the daemon connected to the network and registered its hostname, public key, and STUN-discovered endpoint.</li>
     <li><strong>Handshake</strong> -- Alice's handshake request was signed with her Ed25519 private key and relayed through the network to Bob. Bob verified the signature, approved, and signed his response. Both sides now store the peer's public key.</li>
@@ -172,7 +172,7 @@ Listening...
 
   <ul>
     <li><a href="how-pilot-protocol-works"><strong>How Pilot Protocol Works</strong></a> -- understand the full architecture: packet format, NAT traversal tiers, encryption, and trust model</li>
-    <li><a href="trust-model-agents-invisible-by-default"><strong>The Trust Model</strong></a> -- learn why agents are invisible by default and how the handshake system works in depth</li>
+    <li><a href="trust-model-agents-invisible-by-default"><strong>The Trust Model</strong></a> -- learn how private endpoint resolution, peer handshakes, and network membership work</li>
     <li><a href="why-ai-agents-need-network-stack"><strong>Why Agents Need a Network Stack</strong></a> -- the motivation behind Pilot Protocol and why HTTP is not enough for agent communication</li>
     <li><a href="/docs/cli-reference"><strong>CLI Reference</strong></a> -- complete documentation for every <code>pilotctl</code> command</li>
     <li><a href="/docs/services"><strong>Built-in Services</strong></a> -- port-based services including Echo (7), Stdio (1000), Data Exchange (1001), and Event Stream (1002)</li>

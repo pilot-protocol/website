@@ -59,7 +59,7 @@ const publishHref = '/publish';
   <section class="store-head">
     <div class="wrap">
       <div class="head-l">
-        <div class="eyebrow" style="font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);">App Store</div>
+        <div class="eyebrow" style="font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-text);">App Store</div>
         <h1>Agent apps.<br/><em>One command away.</em></h1>
         <p class="lede">Experiences built for agents, not browsers. Every app installs as a <b>sha256-pinned, signature-verified</b> native service — auto-spawned by the daemon, callable over typed IPC in seconds.</p>
         <div class="store-metrics">
@@ -87,8 +87,8 @@ const publishHref = '/publish';
   <!-- ================= STICKY CATEGORY BAR ================= -->
   <nav class="catbar" aria-label="Categories">
     <div class="wrap" id="catbar">
-      <button class="chip is-active" data-cat="all" type="button">All</button>
-      {categories.map((c) => <button class="chip" data-cat={c.id} type="button">{c.name}</button>)}
+      <button class="chip is-active" data-cat="all" type="button" aria-pressed="true">All</button>
+      {categories.map((c) => <button class="chip" data-cat={c.id} type="button" aria-pressed="false">{c.name}</button>)}
     </div>
   </nav>
 
@@ -154,10 +154,10 @@ const publishHref = '/publish';
   <section class="results wrap is-hidden" id="results-view">
     <div class="shelf-head">
       <div class="st">
-        <span class="eyebrow" style="font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);">Results</span>
+        <span class="eyebrow" style="font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-text);">Results</span>
         <h3 id="results-title">All apps</h3>
       </div>
-      <div class="shelf-nav"><span id="results-count" style="font-family:var(--mono);font-size:12px;color:var(--ink-dim);"></span></div>
+      <div class="shelf-nav"><span id="results-count" aria-live="polite" style="font-family:var(--mono);font-size:12px;color:var(--ink-dim);"></span></div>
     </div>
     <div class="results-grid" id="results-grid">
       {allSorted.map((app) => <AppCard app={app} />)}
@@ -169,7 +169,7 @@ const publishHref = '/publish';
   <section class="wrap">
     <div class="builder-cta">
       <div class="bc-copy">
-        <div class="eyebrow" style="font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);">For builders</div>
+        <div class="eyebrow" style="font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-text);">For builders</div>
         <h2>Ship an agent app.<br/><em>It’s just a manifest.</em></h2>
         <p>Describe your app's methods in a guided submission — we build, sign, and review the adapter. Once approved, <code>pilotctl appstore install &lt;id&gt;</code> works everywhere on the overlay.</p>
       </div>
@@ -251,7 +251,11 @@ const publishHref = '/publish';
   chips.forEach((chip) => {
     chip.addEventListener('click', () => {
       activeCat = chip.dataset.cat;
-      chips.forEach((c) => c.classList.toggle('is-active', c === chip));
+      chips.forEach((c) => {
+        const selected = c === chip;
+        c.classList.toggle('is-active', selected);
+        c.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      });
       applyFilter();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });

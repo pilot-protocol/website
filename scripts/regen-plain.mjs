@@ -218,7 +218,7 @@ const SYSTEM_PROMPT = `You are a technical writer producing a plain-text variant
 1. Extract only FACTS from the source: what the thing is, what it does, how to install/use it, concrete specs.
 2. Strip ALL marketing language: hero lines, pull quotes, "why X matters", testimonials, emoji, decorative eyebrows, calls-to-action beyond a single install hint.
 3. NEVER invent commands, URLs, version numbers, skill names, counts, or technical specs. If the source does not contain a command, do not emit a code block.
-4. If you include a code block, the contents must appear VERBATIM in the source. Do not paraphrase code.
+4. If you include a code block, the contents must appear in the source. Do not paraphrase code. Strip only a conventional leading shell prompt marker ("$ ") from executable command lines; preserve shell variables such as $TOKEN.
 5. Prefer short sentences. No "we", no "you can". Passive-to-neutral voice.
 6. Do not refer to visual elements ("see the chart above", "the hero section"). The plain page has no visuals.
 7. All cross-links in related_links should point under /plain/ or /docs/ — never to marketing routes like /for/*.

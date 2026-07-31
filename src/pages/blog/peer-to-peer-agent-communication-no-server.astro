@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>Every mainstream agent communication pattern puts a server in the middle. API gateways, message brokers, cloud pub/sub, webhook relays - the agents do not talk to each other. They talk to infrastructure, and the infrastructure forwards their messages. This article explains why that is a problem and walks through Pilot Protocol's direct peer-to-peer model from install to data exchange.</p>
+const bodyContent = `<p>Many agent communication patterns put an application server in the middle. API gateways, message brokers, cloud pub/sub, and webhook relays forward every payload. This article explains the trade-offs and walks through Pilot Protocol's direct-preferred model, including its encrypted relay fallback.</p>
 
   <section>
   <h2 id="the-problem-with-middlemen">The Problem With Middlemen</h2>
@@ -15,7 +15,7 @@ const bodyContent = `<p>Every mainstream agent communication pattern puts a serv
   <p><strong>3. The server sees everything.</strong> Even with TLS, the relay server terminates encryption. It can read, log, modify, or drop any message. For sensitive workloads (medical data, financial models, proprietary research), this is a compliance and trust problem.</p>
 
   <div class="callout">
-    <p><strong>The alternative:</strong> Agents connect directly. Data flows from Agent A to Agent B with zero servers in the path. The connection is end-to-end encrypted - no intermediary can read the data. If one agent goes offline, only its connections are affected.</p>
+    <p><strong>The alternative:</strong> Agents connect directly when the network permits. When NAT prevents a direct path, the beacon can relay end-to-end encrypted packets without receiving plaintext. The registry and beacon still provide coordination services.</p>
   </div>
   </section>
 
@@ -25,20 +25,20 @@ const bodyContent = `<p>Every mainstream agent communication pattern puts a serv
   <p>Pilot Protocol gives every agent a permanent 48-bit virtual address and a hostname. When Agent A wants to talk to Agent B, here is what happens:</p>
 
   <ol>
-    <li><strong>Hostname resolution.</strong> Agent A asks the registry: "Where is agent-b?" The registry returns Agent B's virtual address and last-known endpoint.</li>
-    <li><strong>NAT traversal.</strong> If Agent B is behind NAT (most are), Pilot determines the NAT type and uses the appropriate strategy: STUN discovery, UDP hole-punching, or relay fallback.</li>
-    <li><strong>Trust verification.</strong> Before any data flows, both agents verify they have mutual trust. This is a cryptographic handshake, not a config file check.</li>
-    <li><strong>Key exchange.</strong> X25519 Diffie-Hellman establishes a shared secret. AES-256-GCM encrypts all subsequent data.</li>
-    <li><strong>Direct tunnel.</strong> UDP packets flow directly between the two agents. No server in the path. The tunnel has sliding window flow control, congestion control, and automatic segmentation.</li>
+    <li><strong>Hostname resolution.</strong> Agent A asks the registry for Agent B's virtual address and, when policy permits, its current endpoint.</li>
+    <li><strong>NAT traversal.</strong> Pilot tries the available path ladder: STUN-assisted direct reachability, coordinated UDP hole-punching, then relay fallback.</li>
+    <li><strong>Authorization.</strong> Peer trust or shared-network membership must permit the connection.</li>
+    <li><strong>Key agreement.</strong> Daemon-lifetime X25519 keys derive a peer-specific secret. AES-256-GCM protects subsequent data.</li>
+    <li><strong>Tunnel selection.</strong> UDP packets flow directly when possible; otherwise the beacon relays opaque encrypted packets.</li>
   </ol>
 
-  <p>The registry is consulted only for discovery (step 1) and NAT coordination (step 2). Once the tunnel is established, the registry is not involved. It never sees your data.</p>
+  <p>The registry handles identity and discovery, while the beacon assists with STUN, hole-punching, and relay fallback. Neither service receives tunnel plaintext; a relay can still observe transport metadata such as timing and volume.</p>
   </section>
 
   <section>
   <h2 id="nat-traversal-deep-dive">NAT Traversal: The Hard Part</h2>
 
-  <p>The reason you cannot "just open a socket" between two agents is <a href="/blog/nat-traversal-ai-agents-deep-dive">NAT</a>. 88% of networks involve NAT. Your agent does not have a public IP. The peer agent does not have a public IP. Direct connection seems impossible.</p>
+  <p>The reason you often cannot "just open a socket" between two agents is <a href="/blog/nat-traversal-ai-agents-deep-dive">NAT</a>. Agents frequently run behind address translation or firewalls, so an inbound direct connection is not always available.</p>
 
   <p>Pilot solves this with three tiers of traversal, tried in order:</p>
 
@@ -79,10 +79,10 @@ Hole-punch not possible. Switching to relay...
   <p>Pilot agents are <strong>private by default</strong>:</p>
 
   <ul>
-    <li>New agents are invisible on the network. They cannot be discovered, resolved, or connected to.</li>
-    <li>Two agents must perform a mutual trust handshake before they can communicate.</li>
+    <li>New agents withhold their reachable endpoint from arbitrary peers, although directory metadata may be visible.</li>
+    <li>Peer trust or shared-network membership must authorize communication.</li>
     <li>Trust is bidirectional - both sides must agree. One-sided trust does nothing.</li>
-    <li>Trust can be revoked instantly. The connection drops and the agent becomes invisible to the former peer.</li>
+    <li>Revoking peer trust drops the associated connection unless another network policy still grants access.</li>
   </ul>
 
   <pre><code># Agent A trusts Agent B
@@ -199,8 +199,8 @@ with pilot.Driver() as d:
       <tr><td><strong>Single point of failure</strong></td><td>Server down = all comms down</td><td>Only affected agent's connections</td></tr>
       <tr><td><strong>Infrastructure</strong></td><td>Server to deploy, maintain, scale</td><td>Single binary per agent</td></tr>
       <tr><td><strong>NAT handling</strong></td><td>Server must have public IP</td><td>Automatic traversal, no public IP needed</td></tr>
-      <tr><td><strong>Cost</strong></td><td>Server hosting + egress</td><td>Zero infrastructure cost</td></tr>
-      <tr><td><strong>Setup time</strong></td><td>Broker config + credentials</td><td>One command, 30 seconds</td></tr>
+      <tr><td><strong>Cost</strong></td><td>Dedicated broker hosting + egress</td><td>No separate application broker to provision</td></tr>
+      <tr><td><strong>Setup time</strong></td><td>Broker config + credentials</td><td>One-command client installation</td></tr>
     </tbody>
   </table>
   </section>
@@ -213,8 +213,8 @@ with pilot.Driver() as d:
   <ul>
     <li><strong>Sensitive data:</strong> Medical records, financial models, proprietary research. No intermediary should see this data.</li>
     <li><strong>Low latency:</strong> Real-time agent coordination where every millisecond counts. Trading, robotics, live monitoring.</li>
-    <li><strong>Cross-network:</strong> Agents on different clouds, behind different NATs, in different countries. No shared infrastructure.</li>
-    <li><strong>Zero infrastructure:</strong> You want agents to communicate without deploying and maintaining servers.</li>
+    <li><strong>Cross-network:</strong> Agents on different clouds or behind different NATs can use the shared coordination layer without a common application broker.</li>
+    <li><strong>Lower operational overhead:</strong> You do not want to deploy and maintain a dedicated broker for every agent workflow.</li>
     <li><strong>Autonomous agents:</strong> Agents that need to choose their own peers without platform-level access control.</li>
   </ul>
 
@@ -230,14 +230,14 @@ curl -fsSL https://pilotprotocol.network/install.sh | sh
 # Or with Python
 pip install pilotprotocol</code></pre>
 
-  <p>One command. Zero config. Your agents are connected.</p>
+  <p>Install the client, start the daemon, and authorize the peers or networks that should connect.</p>
 
   <p><strong><a href="/for/p2p">Go direct - peer-to-peer for AI agents →</a></strong></p>
   </section>`;
 ---
 <BlogLayout
-  title="Peer-to-Peer Agent Communication With No Server"
-  description="Hub-and-spoke infrastructure bottlenecks AI agents. A step-by-step guide to direct peer-to-peer agent communication: STUN, hole-punching, encrypted tunnels, and trust handshakes — with full code."
+  title="Peer-to-Peer Agent Communication Without an Application Broker"
+  description="A step-by-step guide to direct-preferred agent communication with STUN, hole-punching, encrypted relay fallback, and trust controls."
   date="Mar 30"
   tags={["p2p", "architecture", "networking"]}
   canonicalPath="/blog/peer-to-peer-agent-communication-no-server"

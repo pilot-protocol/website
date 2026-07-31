@@ -97,7 +97,7 @@ const bodyContent = `<p>Your company has an AI research agent. A partner company
   </section>
 
   <section>
-  <h2>Cross-Org Trust Model: Scoped Handshakes, No Shared Infrastructure</h2>
+  <h2>Cross-Org Trust Model: Scoped Handshakes, No Shared App Broker</h2>
 
   <p>The critical property for cross-company collaboration is that <strong>neither company needs to deploy shared infrastructure</strong>. Each company runs its own agents. The agents connect through the Pilot network. Trust is established agent-to-agent, not organization-to-organization.</p>
 
@@ -121,11 +121,11 @@ const bodyContent = `<p>Your company has an AI research agent. A partner company
 <span class="cmd">pilotctl untrust 1:0001.0000.0042</span>
 
 <span class="comment"># The revoked agent can no longer:</span>
-<span class="comment"># - Resolve your address (you become invisible)</span>
+<span class="comment"># - Use the revoked peer-trust grant</span>
 <span class="comment"># - Open connections to your ports</span>
 <span class="comment"># - Send you events or messages</span></code></pre>
 
-  <p>Because agents are <strong>private by default</strong>, revoking trust makes your agent invisible to the revoked peer. They cannot even discover that your agent exists on the network. This is the opposite of the A2A Agent Card model, where agents advertise their capabilities publicly. In Pilot, agents are dark until they choose to be seen, and only to peers they explicitly trust.</p>
+  <p>Because agents are <strong>private by default at the application connectivity layer</strong>, revoking trust removes that peer&rsquo;s connectivity grant. Directory metadata can remain visible, but open lookup does not disclose a private endpoint and application traffic is rejected unless another network policy grants access.</p>
   </section>
 
   <section>
@@ -224,13 +224,13 @@ func main() {
 
   <h3>End-to-end encryption</h3>
 
-  <p>Every connection between trusted agents is encrypted with <strong>X25519 key exchange + AES-256-GCM</strong>. The encryption happens at the tunnel level, between the two agent daemons. The registry, beacon, and any relay infrastructure see only encrypted payloads. Even if the rendezvous infrastructure is compromised, the attacker cannot read the traffic between agents.</p>
+  <p>Tunnel traffic between authorized agents is protected with <strong>peer-specific secrets derived from daemon-lifetime X25519 keys and AES-256-GCM</strong>. The registry, beacon, and any relay infrastructure see encrypted payloads rather than plaintext, although they can observe control-plane and transport metadata.</p>
 
-  <p>Each connection uses a <strong>random nonce prefix</strong>, preventing nonce reuse across sessions. The X25519 key exchange happens when the encrypted UDP tunnel is established between the two daemons, and the resulting symmetric key is used for subsequent communication on that tunnel.</p>
+  <p>Encrypted frames use a <strong>random nonce prefix and counter</strong> for replay protection. The current daemon-lifetime X25519 design provides a distinct secret for each peer pair; it does not provide per-session forward secrecy.</p>
 
   <h3>Trust revocation</h3>
 
-  <p>Either party can revoke trust at any time, with immediate effect. The revoked agent cannot reconnect, cannot resolve the revoker's address, and cannot discover the revoker on the network. This is instant and unilateral -- no waiting for certificate expiration, no CRL distribution delay, no need to coordinate with the other party.</p>
+  <p>Either party can revoke peer trust, tearing down the associated tunnel and removing that authorization grant. Directory metadata may remain visible, and a separate shared-network policy can still authorize connectivity, so operators should review both controls during offboarding.</p>
 
   <h3>Audit trails</h3>
 
@@ -305,18 +305,18 @@ func main() {
 <span class="comment"># Start communicating</span>
 <span class="cmd">pilotctl send-message &lt;partner-address&gt; "Ready to collaborate"</span></code></pre>
 
-  <p>No shared infrastructure to deploy. No API contracts to negotiate. No firewall rules to configure. No VPN to provision. Two agents, two trust handshakes, and a direct encrypted tunnel between them. That is the cross-company collaboration model that the agent ecosystem needs.</p>
+  <p>No partner-specific broker, VPN peering, or shared credential store is required. The agents use Pilot's coordination layer, establish a mutual trust relationship, and communicate over an encrypted tunnel that is direct when the network permits and relayed as ciphertext when needed.</p>
   </section>
 
   <div class="cta">
     <h3>Try Pilot Protocol</h3>
-    <p>Connect agents across organizations with zero shared infrastructure. Mutual trust, E2E encryption, NAT traversal included.</p>
+    <p>Connect agents across organizations without provisioning a workflow-specific broker. Mutual trust, encrypted tunnels, and NAT traversal included.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 ---
 <BlogLayout
-  title="Cross-Company Agent Collaboration Without Shared Infrastructure"
-  description="Connect agents across organizations without shared servers, VPNs, or cloud accounts. Trust-based P2P networking."
+  title="Cross-Company Agent Collaboration Without a Shared App Broker"
+  description="Connect agents across organizations without provisioning a shared workflow broker or VPN peering. Trust-based encrypted networking."
   date="February 20, 2026"
   tags={["B2B", "interoperability", "trust"]}
   canonicalPath="/blog/cross-company-agent-collaboration-without-shared-infrastructure"

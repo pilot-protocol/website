@@ -32,18 +32,18 @@ const bodyContent = `<p>Pilot Protocol implements its entire encryption stack --
   <p>With zero external dependencies, the encryption code is fully determined by the Go version. Every developer, CI system, and deployment pipeline that uses the same Go version produces identical binaries. There is no version skew, no dependency resolution ambiguity, and no risk of pulling a compromised version from a package registry.</p>
 
   <div class="callout">
-    <p><strong>Practical impact:</strong> Pilot Protocol's entire binary -- including the daemon, tunnel layer, encryption, NAT traversal, and CLI -- compiles to a single static binary with no dynamic library dependencies. You can copy it to any Linux, macOS, or Windows machine and run it. No <code>apt install</code>, no <code>brew install</code>, no runtime dependencies to manage.</p>
+    <p><strong>Practical impact:</strong> Pilot&rsquo;s components compile to static binaries with no dynamic runtime dependencies. The standard installer places the daemon, CLI, and updater for supported Linux and macOS targets in one command; see <a href="/for/compatibility">Compatibility</a> for the current platform matrix.</p>
   </div>
 
-  <h2 id="x25519-key-exchange">X25519 Key Exchange: Ephemeral Shared Secrets</h2>
+  <h2 id="x25519-key-exchange">X25519 Key Exchange: Peer-Isolated Shared Secrets</h2>
 
-  <p><a href="https://datatracker.ietf.org/doc/html/rfc7748" target="_blank" rel="noopener">X25519 (RFC 7748)</a> is an elliptic curve Diffie-Hellman function on Curve25519. It allows two parties to derive a shared secret from their respective key pairs without ever transmitting the secret itself. The shared secret is then used to derive the AES-256 encryption key.</p>
+  <p><a href="https://www.rfc-editor.org/rfc/rfc7748.html" target="_blank" rel="noopener">X25519 (RFC 7748)</a> is an elliptic curve Diffie-Hellman function on Curve25519. It allows two parties to derive a shared secret from their respective key pairs without ever transmitting the secret itself. The shared secret is then used to derive the AES-256 encryption key.</p>
 
   <h3>How It Works</h3>
 
   <p>When a Pilot daemon enables encryption it generates an <strong>X25519 key pair</strong> once at startup and reuses it for the tunnels it establishes. Each pair of peers derives a distinct shared secret from their two public keys, so a peer cannot read traffic between two other peers. (Note: because the X25519 key is per-daemon-lifetime rather than per-session, this is not per-session forward secrecy — a future rotating-key design would add that.)</p>
 
-  <pre><code><span class="comment">// Generate ephemeral X25519 key pair using Go's crypto/ecdh</span>
+  <pre><code><span class="comment">// Generate the daemon-lifetime X25519 key pair using Go's crypto/ecdh</span>
 curve := ecdh.X25519()
 
 <span class="comment">// Generate private key (random 32 bytes)</span>
@@ -86,7 +86,7 @@ Agent A                                          Agent B
 
   <h2 id="aes-gcm-encryption">AES-256-GCM: Authenticated Encryption</h2>
 
-  <p>After key exchange, all tunnel frames are encrypted with <a href="https://datatracker.ietf.org/doc/html/rfc5288" target="_blank" rel="noopener">AES-256-GCM (RFC 5288)</a>. GCM (Galois/Counter Mode) is an authenticated encryption mode that provides both <strong>confidentiality</strong> (the data is encrypted) and <strong>integrity</strong> (any modification is detected). It is the same cipher suite used by TLS 1.3 for HTTPS traffic worldwide.</p>
+  <p>After key exchange, all tunnel frames are encrypted with <a href="https://www.rfc-editor.org/rfc/rfc5288.html" target="_blank" rel="noopener">AES-256-GCM (RFC 5288)</a>. GCM (Galois/Counter Mode) is an authenticated encryption mode that provides both <strong>confidentiality</strong> (the data is encrypted) and <strong>integrity</strong> (any modification is detected). It is the same cipher suite used by TLS 1.3 for HTTPS traffic worldwide.</p>
 
   <h3>Encryption in Go</h3>
 
@@ -156,11 +156,11 @@ counter++
 <span class="comment">//   - Same connection never reuses a counter value</span>
 <span class="comment">//   - Even if two connections share a key (they don't), nonces differ</span></code></pre>
 
-  <p>The random prefix is generated once when the secure connection is established. It ensures that even if two connections between the same agents somehow derived the same shared secret (impossible with ephemeral keys, but defense-in-depth), they would still use different nonces. The 8-byte counter supports 2^64 packets per connection -- enough for continuous transmission at gigabit speeds for millions of years.</p>
+  <p>The random prefix is generated once when the secure connection is established. It keeps nonce spaces separate even when reconnecting peers derive the same pair-specific shared secret. The 8-byte counter supports 2^64 packets per connection -- enough for continuous transmission at gigabit speeds for millions of years.</p>
 
   <h3>Why Not Just Use a Counter?</h3>
 
-  <p>A simple counter starting at 0 would be unique within a single connection, but it creates a risk across connections. If an agent reconnects and re-derives the same key (e.g., due to a PRNG failure), counter 0 would be reused with the same key. The random prefix eliminates this risk by adding 32 bits of randomness to every nonce. Combined with ephemeral X25519 keys (which ensure different shared secrets per connection), nonce reuse is effectively impossible.</p>
+  <p>A simple counter starting at 0 would be unique within a single connection, but it creates a risk across reconnections that reuse the same pair-derived secret. The random prefix adds 32 bits of randomness to each connection's nonce space, while the counter prevents reuse within that connection.</p>
 
   <h2 id="handshake-flow">The Complete Handshake Flow</h2>
 
@@ -170,8 +170,8 @@ counter++
 
 Agent A                                          Agent B
    |                                                |
-   |  <span class="comment">1. Generate ephemeral X25519 key pair</span>          |  <span class="comment">1. Generate ephemeral X25519 key pair</span>
-   |     privA, pubA = X25519.GenerateKey()         |     privB, pubB = X25519.GenerateKey()
+   |  <span class="comment">1. Load daemon X25519 key pair</span>                |  <span class="comment">1. Load daemon X25519 key pair</span>
+   |     privA, pubA = LoadDaemonKey()              |     privB, pubB = LoadDaemonKey()
    |                                                |
    |  <span class="comment">2. Exchange public keys via PILK frames</span>        |
    |--- PILK [pubA, 32 bytes] --------------------->|
@@ -198,23 +198,21 @@ Agent A                                          Agent B
 
   <p>The entire handshake adds one round-trip (~0.3ms on typical networks). After the handshake, every packet is encrypted and authenticated with ~5 microseconds of overhead. The agent developer never calls any encryption API -- the daemon handles it automatically — tunnel encryption is a daemon-level default (the <code>-encrypt</code> flag, on by default) applied to all tunnel traffic.</p>
 
-  <h2 id="encrypt-by-default">Encrypt by Default: Port 443</h2>
+  <h2 id="encrypt-by-default">Encrypt by Default Across Ports</h2>
 
-  <p>Pilot Protocol designates port 443 as the <strong>secure port</strong>. Any connection to port 443 automatically performs X25519 key exchange and enables AES-256-GCM encryption. No configuration needed, no flags to remember, no TLS certificates to provision.</p>
+  <p>Pilot applies X25519-derived AES-256-GCM tunnel encryption across ports when encryption is enabled, which is the default. Port 443 is the secure-service convention, but the current SDK does not add a separate per-connection encryption layer there.</p>
 
-  <pre><code><span class="comment"># Connecting to port 443 enables encryption automatically</span>
+  <pre><code><span class="comment"># Port 443 rides the daemon's encrypted tunnel</span>
 <span class="cmd">$ pilotctl connect data-agent 443 --message "sensitive payload"</span>
-Key exchange: X25519 (0.28ms)
-Cipher: AES-256-GCM
-Nonce prefix: a3b2c1d0
-Message encrypted and delivered
+Connected (encrypted tunnel)
+Message delivered
 
 <span class="comment"># Any port — with -encrypt on (the default) all tunnel traffic is encrypted</span>
 <span class="cmd">$ pilotctl connect status-monitor 80 --message "heartbeat"</span>
 Connected (encrypted — -encrypt is on by default)
 Message delivered</code></pre>
 
-  <p>The encrypt-by-default design means that developers who use port 443 get end-to-end encryption without writing any cryptographic code. The Go standard library handles the heavy lifting. The daemon handles the key exchange. The developer handles the application logic.</p>
+  <p>Developers get tunnel encryption without writing cryptographic code or treating port choice as the security control. The Go standard library handles the primitives, the daemon handles key exchange and framing, and the application keeps its own authorization responsibilities.</p>
 
   <h2 id="performance">Performance Characteristics</h2>
 
@@ -244,7 +242,7 @@ Message delivered</code></pre>
   <p>TLS is the obvious choice for encryption, and it is an excellent protocol. But TLS was designed for TCP connections between a client and a server, not for UDP-based overlay networks between peers. Using TLS in Pilot would introduce several problems:</p>
 
   <ul>
-    <li><strong>Certificate management.</strong> TLS requires X.509 certificates. Who issues them? Who revokes them? For a fleet of ephemeral agents that spin up and down dynamically, certificate lifecycle management is a significant operational burden. Pilot uses ephemeral X25519 keys with no certificates.</li>
+    <li><strong>Certificate management.</strong> TLS requires X.509 certificates. Who issues them? Who revokes them? For a fleet of dynamic agents that spin up and down, certificate lifecycle management can add operational work. Pilot derives tunnel secrets with X25519 and does not require X.509 for this layer.</li>
     <li><strong>TCP dependency.</strong> Standard TLS runs over TCP. Pilot runs over UDP. DTLS (Datagram TLS) exists but adds complexity, retransmission logic that conflicts with Pilot's own transport layer, and a much larger handshake.</li>
     <li><strong>External dependencies.</strong> Go's <code>crypto/tls</code> package handles TLS but brings in ASN.1 parsing, X.509 validation, OCSP stapling, and a dozen other features that Pilot does not need. Each feature is additional attack surface.</li>
     <li><strong>Handshake overhead.</strong> A TLS 1.3 handshake requires 1-RTT minimum and involves multiple message types (ClientHello, ServerHello, EncryptedExtensions, Finished). Pilot's key exchange is a single PILK frame in each direction -- 40 bytes each, 80 total.</li>
@@ -288,7 +286,7 @@ Message delivered</code></pre>
 
   <div class="cta">
     <h3>Try Pilot Protocol</h3>
-    <p>End-to-end encryption for AI agents with zero external dependencies. X25519 key exchange, AES-256-GCM authenticated encryption, and forward secrecy -- all built on Go's standard library.</p>
+    <p>End-to-end tunnel encryption for AI agents with zero external dependencies. X25519 key exchange, peer-isolated secrets, and AES-256-GCM authenticated encryption -- all built on Go's standard library.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 
@@ -311,7 +309,7 @@ const faqItems = [
   },
   {
     question: "What is X25519 key exchange used for?",
-    answer: "X25519 (RFC 7748) is an elliptic curve Diffie-Hellman function that lets two agents derive a shared secret from ephemeral key pairs without ever transmitting the secret itself. A Pilot daemon generates an X25519 key pair at startup and derives a distinct shared secret with each peer, so one peer pair's traffic cannot be read by another. (The key is per-daemon-lifetime, so this is peer isolation rather than per-session forward secrecy.)",
+    answer: "X25519 (RFC 7748) is an elliptic curve Diffie-Hellman function that lets two agents derive a shared secret without transmitting it. A Pilot daemon generates an X25519 key pair at startup and derives a distinct secret with each peer, so one peer pair's traffic cannot be read by another. The key is per-daemon-lifetime, so this is peer isolation rather than per-session forward secrecy.",
   },
   {
     question: "Why use AES-256-GCM instead of AES-CBC or another mode?",
@@ -323,7 +321,7 @@ const faqItems = [
   },
   {
     question: "Why not just use TLS for AI agent encryption?",
-    answer: "Standard TLS runs over TCP and depends on X.509 certificate issuance and revocation, which is operationally heavy for a fleet of ephemeral agents. Pilot Protocol runs over UDP and uses ephemeral X25519 keys with no certificates, avoiding the certificate lifecycle and the larger dependency surface that crypto/tls brings in (ASN.1 parsing, X.509 validation, cipher suite negotiation).",
+    answer: "Standard TLS runs over TCP and commonly depends on X.509 certificate issuance and revocation. Pilot Protocol runs over UDP and derives tunnel secrets with X25519 without requiring X.509 at this layer, avoiding that certificate lifecycle and the larger dependency surface that crypto/tls brings in.",
   },
 ];
 ---

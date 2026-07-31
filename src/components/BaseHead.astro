@@ -7,6 +7,8 @@ interface Props {
   canonicalUrl?: string;
   ogImage?: string;
   ogType?: string;
+  ogImageAlt?: string;
+  robots?: string;
 }
 
 const {
@@ -15,6 +17,8 @@ const {
   canonicalUrl,
   ogImage = 'https://pilotprotocol.network/img/pilot.png',
   ogType = 'website',
+  ogImageAlt = 'Pilot Protocol',
+  robots = 'index,follow',
 } = Astro.props;
 
 // X (Twitter) Ads universal website tag. Overridable at build time via
@@ -27,18 +31,20 @@ const TWITTER_PIXEL_ID =
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{title}</title>
 <meta name="description" content={description}>
-<meta name="robots" content="index,follow">
+<meta name="robots" content={robots}>
 {canonicalUrl && <link rel="canonical" href={canonicalUrl}>}
 <meta property="og:type" content={ogType}>
 <meta property="og:title" content={title}>
 <meta property="og:description" content={description}>
 {canonicalUrl && <meta property="og:url" content={canonicalUrl}>}
 <meta property="og:image" content={ogImage}>
+<meta property="og:image:alt" content={ogImageAlt}>
 <meta property="og:site_name" content="Pilot Protocol">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content={title}>
 <meta name="twitter:description" content={description}>
 <meta name="twitter:image" content={ogImage}>
+<meta name="twitter:image:alt" content={ogImageAlt}>
 <meta name="theme-color" content="#0b0b0a" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)">
 
@@ -53,7 +59,8 @@ const TWITTER_PIXEL_ID =
 
 <!-- PILOT-27: consent-check shared module is imported by analytics.ts below. -->
 
-<link rel="icon" href="/img/pilot.png" type="image/png">
+<link rel="icon" href="/img/pilot-48.png" type="image/png" sizes="48x48">
+<link rel="apple-touch-icon" href="/img/pilot-180.png" sizes="180x180">
 
 <!-- PILOT-27: Consent banner injected at the end of <body> from <head> -->
 <script is:inline>

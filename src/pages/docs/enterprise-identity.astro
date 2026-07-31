@@ -4,6 +4,8 @@ import DocLayout from "../../layouts/DocLayout.astro";
 const bodyContent = `<h1>Identity & SSO</h1>
   <p class="subtitle">Identity providers, JWT validation, JWKS caching, external IDs, and directory sync.</p>
 
+  <div class="callout"><strong>Early access.</strong> Identity integration is available in assisted enterprise deployments. Confirm the validation and admission path for your provider with the Pilot team before rollout.</div>
+
   <div class="toc">
     <h4>On this page</h4>
     <ul>
@@ -22,7 +24,7 @@ const bodyContent = `<h1>Identity & SSO</h1>
 
   <h2 id="overview">Overview</h2>
 
-  <p>Enterprise networks can integrate with external identity providers (IDPs) to centralize authentication. Instead of relying solely on Pilot&rsquo;s built-in Ed25519 keys, agents can present tokens from your organization&rsquo;s IDP - OIDC, SAML, Entra ID, LDAP, or a custom webhook - and the registry validates them before granting access.</p>
+  <p>Enterprise registries can connect Pilot identities to external identity systems. The documented native validation path covers OIDC/JWT; SAML, Entra ID, LDAP, and other systems can be connected through an external identity bridge or custom webhook. Network admission remains subject to the network&rsquo;s configured join rule and Pilot identity checks.</p>
 
   <p>Identity integration is registry-global: a single IDP configuration applies across the registry, and setting a new one replaces the previous config. (Blueprint provisioning writes the same global store.)</p>
 
@@ -32,9 +34,9 @@ const bodyContent = `<h1>Identity & SSO</h1>
     <thead><tr><th>Provider</th><th>Type value</th><th>Description</th></tr></thead>
     <tbody>
       <tr><td><strong>OIDC</strong></td><td><code>oidc</code></td><td>OpenID Connect - standard JWT-based SSO. Works with Auth0, Okta, Google, etc.</td></tr>
-      <tr><td><strong>SAML</strong></td><td><code>saml</code></td><td>Security Assertion Markup Language - XML-based enterprise SSO.</td></tr>
-      <tr><td><strong>Entra ID</strong></td><td><code>entra_id</code></td><td>Microsoft Entra ID (Azure AD) - native integration for Microsoft environments.</td></tr>
-      <tr><td><strong>LDAP</strong></td><td><code>ldap</code></td><td>Lightweight Directory Access Protocol - on-premises directory servers.</td></tr>
+      <tr><td><strong>SAML</strong></td><td><code>saml</code></td><td>Connected through an external identity bridge or webhook.</td></tr>
+      <tr><td><strong>Entra ID</strong></td><td><code>entra_id</code></td><td>Connected through OIDC or an external identity bridge.</td></tr>
+      <tr><td><strong>LDAP</strong></td><td><code>ldap</code></td><td>Connected through a directory or webhook bridge.</td></tr>
       <tr><td><strong>Webhook</strong></td><td><code>webhook</code></td><td>Custom HTTP callback - your own verification endpoint for non-standard systems.</td></tr>
     </tbody>
   </table>
@@ -240,7 +242,7 @@ const bodyContent = `<h1>Identity & SSO</h1>
 ---
 <DocLayout
   title="Identity & SSO"
-  description="Identity provider integration for Pilot Protocol - OIDC, SAML, Entra ID, LDAP, JWT validation, JWKS caching, and directory sync."
+  description="Identity integration for Pilot Protocol - native OIDC/JWT validation, bridged provider support, JWKS caching, and directory sync."
   activePage="enterprise-identity"
   canonicalPath="/docs/enterprise-identity"
   prev={{ label: "RBAC & Access Control", href: "/docs/enterprise-rbac" }}

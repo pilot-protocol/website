@@ -5,7 +5,7 @@ const bodyContent = `<p>When AI agents need to share files -- model weights, tra
 
   <p>The upload-download pattern means every file transfer makes two trips: once from the sender to the cloud, once from the cloud to the receiver. For a 2 GB model checkpoint, that is 4 GB of bandwidth consumed and two network hops of latency added. If both agents are on the same local network, the data still leaves the building, traverses the internet to a cloud region, and comes back. If the data is subject to <a href="https://en.wikipedia.org/wiki/Peer-to-peer_file_sharing" target="_blank" rel="noopener">data residency requirements</a>, routing it through a third-party cloud service may violate compliance policies.</p>
 
-  <p>Pilot Protocol enables direct peer-to-peer file transfer between agents. The sender streams the file over an encrypted tunnel to the receiver. No cloud intermediary. No temporary storage. No third-party access to the data. The file travels the shortest network path between the two agents, encrypted end-to-end with AES-256-GCM, traversing NAT automatically. This article walks through the implementation.</p>
+  <p>Pilot Protocol streams files over an encrypted tunnel without requiring intermediate object storage. It prefers the shortest direct path between agents and can fall back to a ciphertext relay when NAT conditions prevent hole-punching. This article walks through the implementation.</p>
 
   <section>
   <h2 id="architecture">How It Works</h2>
@@ -285,12 +285,12 @@ func receiveFile(conn io.ReadWriteCloser, outputDir string) {
       <tr><th>Dimension</th><th>Cloud Storage (S3/GCS)</th><th>Pilot Direct Transfer</th></tr>
     </thead>
     <tbody>
-      <tr><td>Latency</td><td>2 hops (upload + download)</td><td>1 hop (direct P2P)</td></tr>
-      <tr><td>Bandwidth cost</td><td>Egress fees both directions</td><td>Zero (no intermediary)</td></tr>
+      <tr><td>Latency</td><td>2 hops (upload + download)</td><td>1 direct hop when possible; relay adds a hop</td></tr>
+      <tr><td>Bandwidth cost</td><td>Egress fees both directions</td><td>No object-storage egress plan; relay transit may still carry infrastructure cost</td></tr>
       <tr><td>Storage cost</td><td>Per-GB-month for temporary files</td><td>Zero (no intermediate storage)</td></tr>
-      <tr><td>Data residency</td><td>Data stored in cloud region</td><td>Data stays on sender/receiver only</td></tr>
+      <tr><td>Data residency</td><td>Data stored in cloud region</td><td>No intermediate object copy; relay region may matter in fallback mode</td></tr>
       <tr><td>Encryption</td><td>TLS in transit, optional at rest</td><td>AES-256-GCM end-to-end, always on</td></tr>
-      <tr><td>Third-party access</td><td>Cloud provider can access data</td><td>No third party sees the data</td></tr>
+      <tr><td>Third-party access</td><td>Storage provider handles the object</td><td>Relay, if used, sees ciphertext and connection metadata</td></tr>
       <tr><td>Setup</td><td>IAM roles, bucket policies, SDKs</td><td>Pilot daemon + driver connect</td></tr>
       <tr><td>NAT traversal</td><td>Handled by cloud (public endpoints)</td><td>Handled by Pilot (STUN/punch/relay)</td></tr>
       <tr><td>Resumability</td><td>Multipart upload/download</td><td>Reconnect and continue from offset</td></tr>
@@ -362,7 +362,7 @@ func sendWithResume(conn io.ReadWriteCloser, f *os.File, resumeAt int64) error {
 
   <div class="cta">
     <h3>Transfer Files Without the Cloud</h3>
-    <p>Send files directly between agents -- encrypted, NAT-traversing, no intermediary. Install Pilot and start transferring in minutes.</p>
+    <p>Send files over encrypted, NAT-traversing tunnels with direct paths preferred and relay fallback when required.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 ---

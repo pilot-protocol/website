@@ -57,9 +57,13 @@ if (activePage !== 'index') {
 </head>
 <body>
   <Nav active="docs" />
+  <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-controls="docs-sidebar" aria-expanded="false">
+    <span aria-hidden="true">☰</span> Documentation
+  </button>
   <DocSidebar activePage={activePage} />
+  <button class="docs-sidebar-backdrop" id="docs-sidebar-backdrop" type="button" aria-label="Close documentation menu" hidden></button>
   <aside class="toc-sidebar" id="toc-sidebar"></aside>
-  <div class="content">
+  <main class="content">
     <div class="content-body">
       {activePage !== 'index' && <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a> <span class="sep">/</span> <a href="/docs/">Docs</a> <span class="sep">/</span> <span>{title}</span></nav>}
       {activePage !== 'index' && (
@@ -71,13 +75,47 @@ if (activePage !== 'index') {
       <slot />
       {!hidePageNav && <PageNav prev={prev} next={next} />}
     </div>
-  </div>
+  </main>
   <div class="doc-footer-wrap"><DocsFooter /></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js" defer></script>
   <script>
     (function() {
+      const menuButton = document.getElementById('docs-menu-toggle');
+      const menuClose = document.getElementById('docs-sidebar-close');
+      const docsSidebar = document.getElementById('docs-sidebar');
+      const menuBackdrop = document.getElementById('docs-sidebar-backdrop');
+      const mobile = window.matchMedia('(max-width: 768px)');
+
+      function setDocsMenu(open: boolean, returnFocus = false) {
+        if (!menuButton || !docsSidebar || !menuBackdrop) return;
+        const shouldOpen = mobile.matches && open;
+        docsSidebar.classList.toggle('open', shouldOpen);
+        menuButton.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+        document.body.classList.toggle('docs-sidebar-open', shouldOpen);
+        menuBackdrop.hidden = !shouldOpen;
+        if (mobile.matches) {
+          docsSidebar.toggleAttribute('inert', !shouldOpen);
+          docsSidebar.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+        } else {
+          docsSidebar.removeAttribute('inert');
+          docsSidebar.removeAttribute('aria-hidden');
+        }
+        if (shouldOpen) menuClose?.focus();
+        else if (returnFocus) menuButton.focus();
+      }
+
+      menuButton?.addEventListener('click', () => setDocsMenu(menuButton.getAttribute('aria-expanded') !== 'true'));
+      menuClose?.addEventListener('click', () => setDocsMenu(false, true));
+      menuBackdrop?.addEventListener('click', () => setDocsMenu(false, true));
+      docsSidebar?.querySelectorAll('a').forEach(link => link.addEventListener('click', () => setDocsMenu(false)));
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && menuButton?.getAttribute('aria-expanded') === 'true') setDocsMenu(false, true);
+      });
+      mobile.addEventListener('change', () => setDocsMenu(false));
+      setDocsMenu(false);
+
       const sidebar = document.getElementById('toc-sidebar');
       if (!sidebar) return;
       const content = document.querySelector('.content');
