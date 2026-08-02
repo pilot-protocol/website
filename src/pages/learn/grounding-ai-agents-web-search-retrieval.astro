@@ -1,0 +1,156 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `
+<p>An agent that answers from its training data alone goes stale the moment the world moves. Web search retrieval is the standard fix: pull current sources, reason over them, answer. But bolting a search tool onto an agent loop does not automatically ground anything — retrieval only helps when the loop around it is designed. This page collects the <strong>best practices for grounding AI agents with web search retrieval</strong>: what grounding actually requires, the retrieval habits that hold up in production, and how to wire them into an agent today.</p>
+
+<p>If you have built an agent that "searches the web" and still watched it assert a confidently wrong fact, the problem is rarely the search engine. It is usually one of the failure modes below — answering before retrieving, trusting a snippet, or losing the source by the time the answer is written.</p>
+
+<h2 id="grounding-ai-agents-with-web-search-retrieval-what-it-actually-means">Grounding AI agents with web search retrieval: what it actually means</h2>
+
+<p>Grounding means every claim the agent makes can be traced back to a source it actually retrieved. It is not the same as "having a search tool." A grounded answer carries provenance: this statement came from this document, retrieved at this time. An ungrounded answer — even a correct one — carries none.</p>
+
+<p>That distinction drives every practice below. The goal is not to make the agent search more; it is to make the agent's <em>reasoning depend on</em> what it retrieved, and to keep the link between a claim and its source intact from retrieval through to the final answer.</p>
+
+<h2 id="best-practice-1-retrieve-first-synthesize-second">Best practice 1: retrieve first, synthesize second</h2>
+
+<p>The most common failure is answering before the retrieval results exist. The agent sees a question, produces an answer from parametric memory, and treats the search step as optional confirmation. That inverts the dependency. Grounded reasoning should read: search, then reason over what came back.</p>
+
+<p>Structure the loop so the model cannot answer from memory when retrieval is available. A two-phase shape works well:</p>
+
+<ol>
+  <li><strong>Retrieval phase.</strong> The agent decides what to look up, issues queries, and collects candidate documents. No final answer is produced here.</li>
+  <li><strong>Synthesis phase.</strong> The agent reasons over the retrieved set, with an instruction that claims must trace to a document in context — and that a claim with no supporting document is not answerable.</li>
+</ol>
+
+<p>Frameworks that support tool calls natively make this separation natural: the search tool returns, the model's next turn reasons over the result. The discipline is in not letting the model skip the first phase because it "already knows."</p>
+
+<h2 id="best-practice-2-treat-the-query-as-part-of-the-loop">Best practice 2: treat the query as part of the loop, not a fixed string</h2>
+
+<p>A single query written up front rarely captures what a multi-step task actually needs. The agent should be able to issue several queries, read what comes back, and refine. Grounded retrieval is iterative: the first result set tells you which terms worked, which sources are authoritative, and what you still cannot confirm.</p>
+
+<p>Practical habits:</p>
+
+<ul>
+  <li><strong>Query for the claim, not the topic.</strong> If the agent needs to verify "the current maintainer of library X," the query should name the library and the fact being checked, not just the library.</li>
+  <li><strong>Allow multiple queries per task.</strong> One search per question is a common under-retrieval failure. Comparing two positions usually needs at least two independent searches.</li>
+  <li><strong>Let the agent see its own query history.</strong> Otherwise it repeats the same phrasing and gets the same results back.</li>
+  <li><strong>Support follow-up queries.</strong> The second query in a research task is often the one that finds the primary source.</li>
+</ul>
+
+<h2 id="best-practice-3-read-the-source-not-the-snippet">Best practice 3: read the source, not the snippet</h2>
+
+<p>Search snippets are optimized for a human scanning a results page — a few hundred characters, sometimes truncated mid-sentence, sometimes written by the page author to describe something else entirely. An agent that synthesizes an answer from snippets alone is reasoning over fragments. It will routinely miss the one qualifying sentence two paragraphs down that changes the meaning.</p>
+
+<p>Grounding gets substantially more reliable when the agent fetches the full document for the sources it intends to use, then reasons over the full text. The loop becomes: search returns candidates, the agent selects the promising ones, a fetch step pulls each page's content, and synthesis runs over the fetched text.</p>
+
+<p>This is where a web-to-markdown step earns its place. Tools like <a href="https://pilotprotocol.network/app-store">plainweb</a> — available as a Pilot app — turn any URL into clean Markdown in one call, so the agent reads the article rather than the blurb. The cost difference between snippet-level and document-level grounding is one extra step; the correctness difference is large.</p>
+
+<h2 id="best-practice-4-carry-provenance-through-the-loop">Best practice 4: carry provenance through the loop</h2>
+
+<p>Grounding breaks the moment the answer is separated from its sources. If the retrieval step returns documents, but the synthesis step only receives a compressed summary, the link between claim and source is gone. Provenance has to be data that flows through the pipeline, not a formatting nicety applied at the end.</p>
+
+<p>In practice that means:</p>
+
+<ul>
+  <li><strong>Keep source identifiers attached to content.</strong> Each retrieved document should carry its URL (or an internal id) alongside its text, all the way into the synthesis context.</li>
+  <li><strong>Ask for citations in the output contract.</strong> The agent's response schema should include a sources field, so a citation is a structured part of the answer rather than prose that happens to mention a URL.</li>
+  <li><strong>Downstream consumers should be able to verify.</strong> A human reviewer — or another agent — should be able to follow the citation and check the claim against the source. If the answer is correct but nobody can check it, it is not grounded.</li>
+</ul>
+
+<p>Grounded search tools increasingly return this shape directly. The <a href="https://pilotprotocol.network/app-store">cosift</a> app on Pilot's store, for example, returns an answer with a <code>sources</code> array alongside it, so the agent can pass citations through without re-engineering the loop.</p>
+
+<h2 id="best-practice-5-make-freshness-explicit">Best practice 5: make freshness explicit</h2>
+
+<p>Not every question has the same recency requirement. "What is the capital of France" does not need a live query. "What is the current release of Kubernetes" does. An agent that treats all retrieval the same will either serve stale answers for time-sensitive questions or waste queries on stable facts.</p>
+
+<p>Two habits keep freshness under control:</p>
+
+<ul>
+  <li><strong>Decide the recency requirement per question.</strong> Have the agent classify whether the answer depends on current state before it searches. If the question is about a version, a price, an incident, or a policy — search. If it is a stable definition — do not spend the latency.</li>
+  <li><strong>Prefer recent sources for time-sensitive claims.</strong> When the retrieved set mixes a 2019 article and a current release note, the agent should weigh the recent one for facts about the present, and be explicit about the timestamp when it uses either.</li>
+</ul>
+
+<p>Structured search APIs usually expose recency controls (date ranges, sort by date). Using them is part of retrieval design, not an afterthought.</p>
+
+<h2 id="best-practice-6-verify-before-you-act">Best practice 6: verify before the agent acts on a claim</h2>
+
+<p>For agents that take actions — deploy, purchase, send, modify — a grounded answer is not the end of the pipeline. The retrieved evidence should be checked before the action fires, because the web is full of authoritative-looking pages that are wrong, outdated, or adversarial.</p>
+
+<ul>
+  <li><strong>Corroborate consequential claims.</strong> If the agent is about to act on a fact (a version number, a rate, an endpoint), a second independent source is cheap insurance. One source can be a hallucinated-looking page; two agreeing sources are far less likely to be.</li>
+  <li><strong>Watch for injected instructions in retrieved content.</strong> Web pages can contain text that reads as an instruction to an AI agent — "ignore previous instructions" and friends. Retrieved content should pass through a filter before it reaches the reasoning loop. <a href="https://pilotprotocol.network/app-store">AEGIS</a>, another Pilot app, is a runtime firewall for exactly this: it blocks prompt-injection and jailbreak attempts in content before the agent reads it.</li>
+  <li><strong>When sources conflict, say so.</strong> An agent that silently picks one side of a contradiction is not grounded; it is guessing. The honest output is "sources disagree" plus both citations.</li>
+</ul>
+
+<h2 id="wiring-it-up-a-grounded-search-app-in-three-commands">Wiring it up: a grounded search app in three commands</h2>
+
+<p>These practices are easier to keep when the retrieval layer already returns the right shape — full documents, sources attached, recency controls — instead of raw search-engine output that the agent must parse, dedupe, and cite itself. That is the design of the Pilot app store: installable capability apps that run locally on the daemon as typed IPC services — JSON in, JSON out — and follow the same <strong>discover → install → call</strong> loop.</p>
+
+<pre><code><span class="comment"># Discover what is installable</span>
+<span class="cmd">pilotctl appstore catalogue</span>
+
+<span class="comment"># Install the grounded web search app</span>
+<span class="cmd">pilotctl appstore install io.pilot.cosift</span>
+
+<span class="comment"># Call it — JSON in, JSON out, sources attached</span>
+<span class="cmd">pilotctl appstore call io.pilot.cosift cosift.search '{"q":"current Kubernetes release","k":"5"}'</span></code></pre>
+
+<p>Cosift's methods map onto the practices above directly: <code>cosift.search</code> returns keyword + semantic results, <code>cosift.contents</code> fetches a full document (practice 3), <code>cosift.answer</code> returns a synthesized answer with its sources attached (practice 4), and <code>cosift.research</code> runs a multi-step loop that refines queries as it goes (practice 2). Every method is discoverable at runtime via <code>cosift.help</code>, which reports parameters and a latency class — so the agent can pick the cheapest method that answers the question, no docs required.</p>
+
+<p>Because apps are installed locally and called over IPC, the grounding loop stays inside the agent's own machine: no new API key, no separate auth story, no browser automation to babysit. The same pattern holds across the store — plainweb for full-page Markdown, AEGIS for filtering retrieved content before it reaches the model.</p>
+
+<h2 id="the-minimal-grounded-loop">The minimal grounded loop</h2>
+
+<p>Put together, the practices collapse into a loop an agent can run today:</p>
+
+<ol>
+  <li>Decide the question needs current information.</li>
+  <li>Retrieve: search, select candidate sources, fetch full documents.</li>
+  <li>Filter: drop injected or obviously adversarial content before the model sees it.</li>
+  <li>Synthesize: reason over the retrieved text only, citing each claim to a source.</li>
+  <li>Verify: corroborate consequential facts; if sources conflict, report the conflict.</li>
+</ol>
+
+<p>Every step is a design decision, and each one is where grounding silently fails when skipped. Get the loop right and the agent's answers carry the property users actually want: you can check them.</p>
+
+<p>For a deeper walkthrough of grounded search with citations, see <a href="/blog/web-search-api-for-ai-agents-grounded-research">web search APIs for AI agents: grounded research with citations</a>. For the underlying network that lets agents reach each other and their tools across clouds, start with <a href="/learn/what-is-pilot-protocol">what is Pilot Protocol</a>.</p>
+
+<p>Get started with one command:</p>
+
+<pre><code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></pre>
+`;
+
+const faqItems = [
+  {
+    question: "What does grounding an AI agent with web search retrieval mean?",
+    answer: "Grounding means every claim the agent makes can be traced back to a source it actually retrieved. A grounded answer carries provenance — which document it came from — while an ungrounded answer comes from the model's training data and cannot be verified. Web search retrieval is the mechanism; grounding is the property that the answer depends on and cites the retrieved evidence."
+  },
+  {
+    question: "Why is giving an agent a search tool not enough to ground it?",
+    answer: "A search tool only changes what the agent could retrieve. Grounding fails when the agent answers before searching, reasons over snippets instead of full documents, or loses the source link between retrieval and the final answer. The practices that matter are structural: retrieve first, read the full source, and carry provenance through the loop."
+  },
+  {
+    question: "Should an agent read the full page or is the snippet enough?",
+    answer: "For anything beyond a trivial lookup, read the full document. Search snippets are truncated and optimized for humans scanning results. An agent synthesizing from snippets alone misses qualifying sentences and context. The reliable pattern is search to find candidates, then fetch the full page for the sources the agent intends to use."
+  },
+  {
+    question: "How does an agent cite its sources in a grounded answer?",
+    answer: "Provenance should be part of the output contract, not prose. Give the agent a response schema with a sources field, keep source identifiers attached to retrieved content through the pipeline, and require that each claim trace to a document in context. Tools like the cosift app return answers with a sources array attached, which makes this easy to enforce."
+  },
+  {
+    question: "Is retrieved web content safe to feed directly to an agent?",
+    answer: "Not always. Web pages can contain text written to manipulate AI agents — prompt-injection attempts that read like instructions. Retrieved content should pass through a filter before reaching the reasoning loop. Pilot's AEGIS app is a runtime firewall for exactly this, blocking injection and jailbreak attempts in content before the agent reads it."
+  }
+];
+---
+<BlogLayout
+  title="Grounding AI Agents with Web Search Retrieval: Best Practices"
+  description="Grounding AI agents with web search retrieval: retrieve first, read the source, cite every claim, verify before acting."
+  date="August 2, 2026"
+  tags={["grounding", "web-search", "retrieval", "ai-agents", "rag", "app-store"]}
+  canonicalPath="/learn/grounding-ai-agents-web-search-retrieval"
+  faqItems={faqItems}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
