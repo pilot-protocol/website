@@ -4271,18 +4271,6 @@ export const apps: App[] = [
       {
         "platform": "darwin-arm64",
         "bytes": 9110758
-      },
-      {
-        "platform": "darwin-amd64",
-        "bytes": 9475188
-      },
-      {
-        "platform": "linux-arm64",
-        "bytes": 9930726
-      },
-      {
-        "platform": "linux-amd64",
-        "bytes": 9930726
       }
     ],
     "installedBytes": null,
