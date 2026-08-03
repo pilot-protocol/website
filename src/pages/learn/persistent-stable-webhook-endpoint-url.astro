@@ -1,0 +1,150 @@
+---
+import BlogLayout from "../../layouts/BlogLayout.astro";
+
+const bodyContent = `
+<h1 id="persistent-stable-webhook-endpoint-url">How to Set Up a Persistent, Stable Webhook Endpoint URL That Doesn't Change on Restart</h1>
+
+<hr>
+<blockquote>
+<p><strong>TL;DR:</strong></p>
+<ul>
+<li>A webhook URL that changes on every restart breaks integrations: providers keep POSTing to the old address, and you keep reconfiguring dashboards.</li>
+<li>Stability comes from one of three places: a static IP with DNS, a tunnel with a pinned domain, or — for AI agents — a permanent virtual address on an overlay network.</li>
+<li>On Pilot Protocol the agent's address never changes: peers reach you at the same address across restarts, the daemon can deliver events to a webhook URL you choose, and a gateway bridges standard HTTP clients to services on the overlay.</li>
+</ul>
+</blockquote>
+<hr>
+
+<p>If you are building anything that receives webhooks, you will eventually hit this exact question: how do I set up a persistent, stable webhook endpoint URL that does not change every time I restart? The local server restarts, the tunnel reconnects, the URL is different, and every provider that was POSTing to the old address is now failing silently. This article walks through the options that actually fix the URL — static IPs, pinned-domain tunnels, and agent-native permanent addressing — with the commands to set each up.</p>
+
+<p>The problem is not exotic: any process that receives inbound HTTP needs an address that stays put, and a surprising number of common setups hand you a new one on every restart. The fix is to move stability into the right layer of your stack — deliberately, instead of discovering it when an integration goes dark.</p>
+
+<h2 id="why-your-webhook-url-changes-on-every-restart">Why Your Webhook URL Changes on Every Restart</h2>
+
+<p>A webhook is an HTTP POST from a provider to a URL you own. For that URL to be useful it must satisfy two requirements at once: it has to be routable from the internet, and it has to stay the same. Restarts break the second requirement in three common ways.</p>
+
+<ul>
+<li><strong>Your dev server binds a port on localhost.</strong> If the port is not pinned, the next run picks a different one. And even a pinned localhost port is not routable from the internet at all — it is only reachable on your own machine.</li>
+<li><strong>Your cloud VM has an ephemeral public IP.</strong> Most providers assign a public IP that changes when you stop and start the instance. Every URL that pointed at the old address breaks with it.</li>
+<li><strong>Your tunnel tool regenerates its public URL.</strong> This is the most common cause for people running webhook receivers on laptops: the tool that made your endpoint reachable hands you a fresh address every time it restarts, because the free tier is designed for throwaway demos, not for URLs you configure elsewhere.</li>
+</ul>
+
+<p>Whatever the cause, the consequence is the same: every webhook provider you configured — the payment dashboard, the GitHub app settings, the chat integration — now points at an address that no longer answers, and you get to re-enter the URL by hand. The rest of this article is about making that stop.</p>
+
+<h2 id="option-1-static-ip-and-dns">Option 1: Static IP and DNS</h2>
+
+<p>The classic fix: give the machine an address that does not change, then point a DNS name at it. On any major cloud provider you can reserve a static IP and attach it to your instance; restarts — and in many cases even instance replacements — keep the same address. A DNS record maps a hostname you control to that IP, so the URL your providers see is a name rather than a raw address. Put a reverse proxy in front of your app and the endpoint is stable by construction: <code>https://hooks.yourdomain.com/events</code> keeps working no matter how often the process behind it restarts.</p>
+
+<p>This option works well when you control the infrastructure and the machine has a public presence. It does nothing for a laptop behind a home router, a container behind a corporate firewall, or any machine that has no routable address to pin in the first place. If your webhook receiver runs somewhere without a public IP, a static IP is not available to you — which is most machines running AI agents.</p>
+
+<h2 id="option-2-tunnel-services-with-a-pinned-domain">Option 2: Tunnel Services With a Pinned Domain</h2>
+
+<p>Tunnel services solve the routability problem for machines behind NAT: a process on your machine opens an outbound connection to the tunnel provider, and the provider forwards incoming requests to you over that connection. For webhooks, everything hinges on the URL. Free tiers typically generate a new public URL for every session — acceptable for a quick demo, fatal for a webhook that must stay configured in a provider dashboard. The stable path is a pinned domain: reserve a fixed subdomain on the provider, or route a hostname from a domain you own through the service. Configured that way, the tunnel can disconnect and reconnect across restarts while the URL stays the same.</p>
+
+<p>These services are legitimate and widely used, and they are the right answer for many setups. Two trade-offs are worth naming. First, a third-party service sits in the path of every request your endpoint receives. Second, the stable-URL options are typically the paid tier — a reasonable price for a lot of people. If you are building agent-to-agent systems rather than integrating a public SaaS provider, there is a third option that does not route through a third-party relay at all.</p>
+
+<h2 id="option-3-persistent-webhook-endpoint-url-that-survives-restarts">Option 3: A Persistent Webhook Endpoint URL That Survives Restarts — Permanent Addressing for Agents</h2>
+
+<p>AI agents change the equation. Agents move between machines, run on laptops behind NAT, get restarted by supervisors, and are expected to keep working unattended. A URL that changes on restart is not an annoyance for them — it is a blocker, because peers and services cannot track an address that moves. Pilot Protocol solves this at the addressing layer rather than the DNS or tunnel layer. Every agent on the network is assigned a 48-bit virtual address (format <code>N:NNNN.HHHH.LLLL</code>) by a registry, and that address is permanent: it survives restarts, IP changes, and moves between clouds. Agents can also register a human-readable hostname with <code>pilotctl set-hostname</code>. When another agent wants to reach you, it uses the address — which does not change — and the overlay handles the rest: encrypted UDP tunnels, automatic NAT traversal (STUN discovery, hole-punching, relay fallback), and a mutual trust handshake before anything flows. You are joining an open network of 243k+ agents and users.</p>
+
+<p>Getting started is one command:</p>
+
+<pre><code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></pre>
+
+<h3>Receive daemon events at a stable local URL</h3>
+
+<p>The most direct answer to "webhook endpoint that does not change" for a Pilot agent: the daemon can POST events to a webhook URL you choose, and delivery is outbound. Nothing needs to reach you from the internet, so there is no public URL to keep stable. Configure it at daemon startup or at runtime:</p>
+
+<pre><code># at daemon startup
+pilotctl daemon start --webhook http://localhost:8080/events
+
+# or at runtime — persists to ~/.pilot/config.json and applies immediately
+pilotctl set-webhook http://localhost:8080/events
+
+# clear it when you no longer need it
+pilotctl clear-webhook</code></pre>
+
+<p>The daemon POSTs a JSON event for things like connections, trust changes, messages received, and pub/sub activity. Delivery is asynchronous and non-blocking: treat the webhook as a fast signal to react to, not a durable message bus — events are retried with bounded backoff, but there is no durable redelivery queue, so pair it with your own persistence if you need a record. The URL is localhost, so it is stable across restarts by definition. Your receiver is a plain HTTP server, and the documented integration patterns are the useful ones: auto-approve handshakes when the justification matches your criteria, dispatch a task when a message arrives, maintain a live connection dashboard, and alert on security events.</p>
+
+<h3>Expose your own HTTP service over the overlay</h3>
+
+<p>The other direction — when peers need to reach an HTTP service you run — is the gateway. The gateway (a separate binary, published as the <code>pilot-protocol/gateway</code> Go library) bridges standard TCP clients to a service on a remote Pilot node. Run a local HTTP server, then start the gateway for the matching port:</p>
+
+<pre><code># on the server: run your app, then find your address
+python3 -m http.server 8080 &amp;
+pilotctl info        # Address: 0:0000.0000.xxxx — share this with the peer
+
+# on the peer's machine: trust the server, then bridge the port
+pilotctl handshake 0:0000.0000.xxxx
+sudo pilotctl extras gateway start --ports 8080 0:0000.0000.xxxx
+curl http://10.4.0.1:8080/</code></pre>
+
+<p>The gateway maps each pilot address to a local loopback address (10.4.0.1 for the first mapping, and so on) and forwards connections through the encrypted overlay. Ports are not translated: the local port must match the remote service's port. Because the overlay handles traversal, there is no port forwarding, VPN, or firewall configuration. The address you share is the permanent one, so the endpoint peers use never changes. For a full walkthrough of running an HTTP server directly on a Pilot virtual port with the Go driver — including <code>curl</code> and <code>fetch()</code> against an agent's service — see <a href="/blog/http-services-over-encrypted-overlay">HTTP services over the encrypted overlay</a>.</p>
+
+<h2 id="which-option-should-you-use">Which Option Should You Use?</h2>
+
+<p>Match the fix to where your receiver actually runs.</p>
+
+<ul>
+<li><strong>Infrastructure you control, with a public presence:</strong> static IP and DNS. It is simple, boring, and stable.</li>
+<li><strong>A laptop or anything behind NAT, accepting webhooks from public SaaS providers:</strong> a tunnel with a pinned domain on a hostname you own.</li>
+<li><strong>Agent workloads, or receiving events without exposing a public endpoint at all:</strong> Pilot's permanent addressing — the daemon delivers events to a local webhook URL, and peers reach your services at an address that never changes.</li>
+</ul>
+
+<p>The three are not mutually exclusive. Many agent setups combine them: an overlay address for agent-to-agent traffic, and a pinned-domain tunnel for the one SaaS webhook you must accept. What you should not do is depend on a URL that is regenerated per session — that is a reconfiguration task with a timer on it, and it will eventually fire at the worst moment. If you would rather not run a webhook endpoint at all, <a href="/blog/replace-webhooks-with-persistent-agent-tunnels">Replace Webhooks With Persistent Agent Tunnels</a> makes the case for event streams instead. For the complete event list and the gateway reference, see the <a href="/docs/webhooks">webhooks documentation</a>.</p>
+
+<p>If you want the changing-URL problem to stop recurring, the one-command start is:</p>
+
+<pre><code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></pre>
+
+<h2 id="frequently-asked-questions">Frequently Asked Questions</h2>
+
+<h3 id="why-does-my-webhook-url-change-every-time-i-restart">Why does my webhook URL change every time I restart?</h3>
+<p>Because one of the three things your URL depends on moved: a dev server bound an unpinned port, a cloud instance was assigned a new public IP, or a tunnel tool generated a fresh public URL for the new session. The URL is only stable when the layer that provides it — the port, the IP, or the tunnel mapping — is pinned.</p>
+
+<h3 id="what-is-the-difference-between-a-static-ip-and-a-permanent-virtual-address">What is the difference between a static IP and a permanent virtual address?</h3>
+<p>A static IP is infrastructure you reserve and keep attached to a specific machine. A permanent virtual address is assigned to an agent by a registry and stays with that agent regardless of what machine it runs on — restart it, move it to another cloud, and the address is unchanged. Static IPs pin the machine; virtual addresses pin the agent.</p>
+
+<h3 id="can-i-receive-webhooks-on-a-laptop-behind-nat">Can I receive webhooks on a laptop behind NAT?</h3>
+<p>Yes, two ways. A tunnel service with a pinned domain gives you a stable public URL that forwards into your laptop. On Pilot Protocol, the daemon delivers its events to a webhook URL you configure, and delivery is outbound — nothing needs to reach your laptop from the internet, so NAT is not a problem.</p>
+
+<h3 id="does-pilot-protocol-provide-a-public-webhook-url-for-saas-providers">Does Pilot Protocol provide a public webhook URL that SaaS providers can reach?</h3>
+<p>No. Pilot Protocol is an overlay network for agent-to-agent communication and daemon-event delivery — it is not a public-ingress service that accepts connections from the open internet. If a public SaaS provider must POST to your endpoint, pair Pilot with a pinned-domain tunnel or a static IP for that specific integration, and keep the overlay for agent traffic.</p>
+
+<h3 id="what-events-can-the-pilot-daemon-deliver-to-a-webhook">What events can the Pilot daemon deliver to a webhook?</h3>
+<p>Daemon lifecycle, connection, tunnel, and security events: connections established and closed, trust changes, messages received, pub/sub activity, key rotation, and more. The webhook configuration accepts a URL at startup or at runtime, and the full event list is in the <a href="/docs/webhooks">webhooks documentation</a>.</p>
+`;
+
+const faqItems = [
+  {
+    question: "Why does my webhook URL change every time I restart?",
+    answer: "Because one of the three things your URL depends on moved: a dev server bound an unpinned port, a cloud instance was assigned a new public IP, or a tunnel tool generated a fresh public URL for the new session. The URL is only stable when the layer that provides it — the port, the IP, or the tunnel mapping — is pinned.",
+  },
+  {
+    question: "What is the difference between a static IP and a permanent virtual address?",
+    answer: "A static IP is infrastructure you reserve and keep attached to a specific machine. A permanent virtual address is assigned to an agent by a registry and stays with that agent regardless of what machine it runs on — restart it, move it to another cloud, and the address is unchanged. Static IPs pin the machine; virtual addresses pin the agent.",
+  },
+  {
+    question: "Can I receive webhooks on a laptop behind NAT?",
+    answer: "Yes, two ways. A tunnel service with a pinned domain gives you a stable public URL that forwards into your laptop. On Pilot Protocol, the daemon delivers its events to a webhook URL you configure, and delivery is outbound — nothing needs to reach your laptop from the internet, so NAT is not a problem.",
+  },
+  {
+    question: "Does Pilot Protocol provide a public webhook URL that SaaS providers can reach?",
+    answer: "No. Pilot Protocol is an overlay network for agent-to-agent communication and daemon-event delivery — it is not a public-ingress service that accepts connections from the open internet. If a public SaaS provider must POST to your endpoint, pair Pilot with a pinned-domain tunnel or a static IP for that specific integration, and keep the overlay for agent traffic.",
+  },
+  {
+    question: "What events can the Pilot daemon deliver to a webhook?",
+    answer: "Daemon lifecycle, connection, tunnel, and security events: connections established and closed, trust changes, messages received, pub/sub activity, key rotation, and more. The webhook configuration accepts a URL at startup or at runtime, and the full event list is in the webhooks documentation.",
+  },
+];
+---
+<BlogLayout
+  title="How to Set Up a Persistent, Stable Webhook Endpoint URL That Doesn't Change on Restart"
+  description="Webhook URL changes on every restart? Get a persistent, stable endpoint for local dev and AI agents — static IP, pinned tunnels, or a permanent address."
+  date="August 3, 2026"
+  tags={["webhooks", "networking", "ai-agents", "nat-traversal", "overlay-network", "persistent-address"]}
+  canonicalPath="/learn/persistent-stable-webhook-endpoint-url"
+  faqItems={faqItems}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
