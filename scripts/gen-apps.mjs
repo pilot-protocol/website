@@ -38,7 +38,7 @@ const CAT_HUE = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.hue]));
 const CATMAP = {
   'io.pilot.postgres': 'data', 'io.pilot.duckdb': 'data', 'io.pilot.sqlite': 'data', 'io.pilot.mysql': 'data', 'io.pilot.redis': 'data', 'io.pilot.sixtyfour': 'data', 'io.pilot.orthogonal': 'data',
   'io.pilot.cosift': 'ai', 'io.telepat.ideon-free': 'ai',
-  'io.pilot.plainweb': 'web', 'io.pilot.otto': 'web', 'io.pilot.bowmark': 'web',
+  'io.pilot.plainweb': 'web', 'io.pilot.otto': 'web', 'io.pilot.bowmark': 'web', 'io.pilot.firecrawl': 'web',
   'io.pilot.smol': 'infra', 'io.pilot.miren': 'infra', 'io.pilot.docker': 'infra', 'io.pilot.tldr': 'infra',
   'io.pilot.aegis': 'security', 'io.pilot.didit': 'security',
   'io.pilot.slipstream': 'finance', 'io.pilot.wallet': 'finance',
@@ -69,6 +69,7 @@ const ICON_MAP = {
   'io.pilot.orthogonal': { image: 'png', fit: 'cover', bg: '#e3e6df' },
   'io.pilot.agentphone': { image: 'png', fit: 'contain', bg: '#26B65A' },
   'io.pilot.primitive': { image: 'png', fit: 'cover', bg: '#111110' },
+  'io.pilot.firecrawl': { image: 'png', fit: 'contain', bg: '#0b0b0a' },
 };
 
 function relLum(hex) {
@@ -96,7 +97,7 @@ function iconFor(id, hue) {
 const APP_IDS = [
   'io.pilot.primitive', 'io.pilot.agentphone',
   'io.pilot.postgres', 'io.pilot.duckdb', 'io.pilot.sqlite', 'io.pilot.mysql', 'io.pilot.redis', 'io.pilot.sixtyfour',
-  'io.pilot.cosift', 'io.telepat.ideon-free', 'io.pilot.plainweb', 'io.pilot.otto',
+  'io.pilot.cosift', 'io.telepat.ideon-free', 'io.pilot.plainweb', 'io.pilot.otto', 'io.pilot.firecrawl',
   'io.pilot.smol', 'io.pilot.miren', 'io.pilot.docker', 'io.pilot.aegis',
   'io.pilot.slipstream', 'io.pilot.wallet', 'io.pilot.bowmark', 'io.pilot.orthogonal', 'io.pilot.didit', 'io.pilot.tldr',
 ];

@@ -3184,6 +3184,493 @@ export const apps: App[] = [
     "limits": null
   },
   {
+    "id": "io.pilot.firecrawl",
+    "name": "Firecrawl",
+    "tagline": "Turn any website into clean, LLM-ready data",
+    "description": "**Firecrawl** turns any website into clean, LLM-ready data. This app exposes the\n**complete Firecrawl v2 API** — all 50 operations — as Pilot app-store methods,\ngenerated 1:1 from Firecrawl's published OpenAPI spec.\n\nYou do not need a Firecrawl account, an API key, an inbox, or a browser. The app is\nkeyless: Pilot's broker verifies your agent identity, meters your usage, and\nauthenticates upstream on your behalf. Install and call.\n\n**What you get**\n\n- **Scrape** — one URL to clean markdown, HTML, links, screenshots, or schema-shaped\n  JSON. Handles JS-heavy pages, PDFs and Office documents, geo/proxy emulation,\n  ad-blocking, and PII redaction.\n- **Search** — web, news, and image search with query-relevant highlights, domain\n  and time filters, and optional full scraping of every result in the same call.\n- **Map** — enumerate every URL on a domain in about a second. The cheap way to scope\n  a crawl before you pay for one.\n- **Crawl** — async whole-site extraction with include/exclude path regexes, depth and\n  page limits, subdomain and external-link control, robots.txt handling, and webhooks.\n  Describe the crawl in plain English and preview the generated options for free.\n- **Batch scrape** — many known URLs in one job, with per-URL error reporting.\n- **Extract** — LLM-powered structured extraction across many pages against your JSON\n  Schema, optionally with web search and source citations.\n- **Agent** — autonomous web research. Give a prompt and a credit ceiling; the agent\n  decides where to go and returns structured data.\n- **Interact** — drive a real browser with Playwright or natural language, either bound\n  to a scrape job or as a standalone session with persistent profile storage.\n- **Monitor** — recurring checks on pages, whole sites, or web-wide searches, with an AI\n  judge that filters noise against a plain-language goal, and webhook/email/Slack alerts.\n- **Research index** — search scientific papers, read their full-text passages, expand to\n  related work, and search GitHub issues, PRs, and READMEs.\n- **Support** — `firecrawl.ask` diagnoses a failing job from your account's logs, and\n  `firecrawl.docs_search` answers Firecrawl questions with citations.\n- **Usage** — credits, tokens, queue depth, and recent activity, so an agent can check\n  cost and capacity before committing to an expensive call.\n\n**Start with `firecrawl.help`** — it returns every method with its full parameter set,\nlatency class, and measured roundtrip.\n\n**Cost control.** `firecrawl.crawl` takes `limit` and `firecrawl.agent` takes\n`maxCredits`; both default high. Set them. `firecrawl.map` and\n`firecrawl.crawl_params_preview` are the cheap ways to scope work before you spend.\nCheck `firecrawl.credit_usage` and `firecrawl.balance` before a large job.\n\n**Not exposed:** `POST /v2/parse` (upload a local file for parsing) takes\n`multipart/form-data`, which the JSON-in/JSON-out app-store IPC contract cannot\nexpress. Use `firecrawl.scrape` on a public document URL instead — it parses PDF,\nDOCX, XLSX and friends natively.\n",
+    "categories": [
+      "web"
+    ],
+    "primaryCategory": "web",
+    "keywords": [
+      "firecrawl",
+      "scrape",
+      "crawl",
+      "search",
+      "markdown",
+      "extract",
+      "agent",
+      "monitor",
+      "research",
+      "browser"
+    ],
+    "version": "0.1.0",
+    "vendor": "Firecrawl",
+    "vendorUrl": "https://firecrawl.dev",
+    "license": "MIT",
+    "sourceUrl": "https://github.com/pilot-protocol/firecrawl-app",
+    "homepage": "https://firecrawl.dev",
+    "methods": [
+      {
+        "name": "firecrawl.scrape",
+        "summary": "Scrape one URL into clean LLM-ready markdown (or html/links/screenshot/json).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.scrape_status",
+        "summary": "Get the status and result of a previously started scrape job by id.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.scrape_interact",
+        "summary": "Run code or an AI prompt in the live browser session bound to a scrape job.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.scrape_interact_stop",
+        "summary": "Stop the interactive browser session attached to a scrape job and free its resources.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.search",
+        "summary": "Search the web (and optionally scrape every result in one call).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.search_feedback",
+        "summary": "Rate a search job's quality to improve future Firecrawl search results.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.map",
+        "summary": "Discover every URL on a domain, fast — the cheap way to scope a crawl.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.crawl",
+        "summary": "Start an async crawl of an entire site. Returns a job id — poll firecrawl.crawl_status.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.crawl_status",
+        "summary": "Poll a crawl job: status, completed/total counts, credits used, and the scraped pages.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.crawl_cancel",
+        "summary": "Cancel a running crawl job.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.crawl_errors",
+        "summary": "List the pages a crawl job failed on, plus URLs blocked by robots.txt.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.crawl_active",
+        "summary": "List every crawl currently running for your account.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.crawl_params_preview",
+        "summary": "Dry-run: see the crawl options a natural-language prompt would generate, without spending credits.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.batch_scrape",
+        "summary": "Scrape many known URLs in one async job. Returns a job id — poll firecrawl.batch_scrape_status.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.batch_scrape_status",
+        "summary": "Poll a batch scrape job: progress, credits used, and the scraped pages.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.batch_scrape_cancel",
+        "summary": "Cancel a running batch scrape job.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.batch_scrape_errors",
+        "summary": "List the URLs a batch scrape job failed on, with per-URL error detail.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.extract",
+        "summary": "Extract structured JSON from one or many pages using an LLM and your schema. Async — poll firecrawl.extract_status.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.extract_status",
+        "summary": "Poll an extract job and retrieve the structured data once it completes.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.agent",
+        "summary": "Autonomous web research: give a prompt, the agent decides what to visit and returns structured data. Async — poll firecrawl.agent_status.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.agent_status",
+        "summary": "Poll an agent job and retrieve its result once it completes.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.agent_cancel",
+        "summary": "Cancel a running agent job and stop it spending credits.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.interact_create",
+        "summary": "Start a standalone browser session you drive with code — no prior scrape needed.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.interact_list",
+        "summary": "List your standalone interact browser sessions.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.interact_execute",
+        "summary": "Run Playwright or agent-browser code inside a standalone interact session.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.interact_delete",
+        "summary": "Destroy a standalone interact session and release its browser.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.monitor_create",
+        "summary": "Create a recurring check that watches pages, a whole site, or search results and alerts on meaningful change.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.monitor_list",
+        "summary": "List your monitors.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.monitor_get",
+        "summary": "Get one monitor's full configuration.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.monitor_update",
+        "summary": "Update a monitor's schedule, targets, goal, or status (active/paused).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.monitor_delete",
+        "summary": "Delete a monitor and stop its recurring checks.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.monitor_run",
+        "summary": "Trigger a monitor check immediately instead of waiting for its schedule.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.monitor_checks",
+        "summary": "List a monitor's past checks and what changed in each.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.monitor_check",
+        "summary": "Get one monitor check in full, with page-level diffs.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.research_papers",
+        "summary": "Search a purpose-built scientific paper index by natural-language query.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.research_paper",
+        "summary": "Inspect a paper's metadata, or pass query to read its top matching full-text passages.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.research_related",
+        "summary": "Expand a seed paper to related work — citers, references, or semantically similar papers.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.research_github",
+        "summary": "Search GitHub issues, pull requests, discussions, and READMEs by natural-language query.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.ask",
+        "summary": "Diagnose a failing Firecrawl call with an AI support agent — pass the jobId and get a fix.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.docs_search",
+        "summary": "Answer a \"how does Firecrawl do X?\" question from the official docs, with citations.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.feedback",
+        "summary": "Submit quality feedback for a completed search, scrape, parse, or map job.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.credit_usage",
+        "summary": "Remaining credits and the current billing period.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.credit_usage_historical",
+        "summary": "Historical credit usage over time, optionally broken down by API key.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.token_usage",
+        "summary": "Remaining LLM tokens for extract-family operations.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.token_usage_historical",
+        "summary": "Historical token usage over time, optionally broken down by API key.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.queue_status",
+        "summary": "Your scrape queue depth, active jobs, and max concurrency — check before a large batch.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.activity",
+        "summary": "Recent API activity (last 24h) with job ids you can feed to the *_status methods.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.threat_protection",
+        "summary": "Read the account's threat-protection policy (URL risk checks, allow/deny lists).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.threat_protection_update",
+        "summary": "Replace the account's threat-protection policy. Full-document update — unspecified fields reset to defaults.",
+        "example": null,
+        "gated": "Disabled on the shared-key plan. Threat-protection policy is TEAM-WIDE, so on the current managed key one caller's update would change the policy for every Pilot user; the broker refuses this verb. It unlocks when Firecrawl issues per-user keys. Upstream it is also enterprise-only and team-admin-only."
+      },
+      {
+        "name": "firecrawl.balance",
+        "summary": "Your remaining Pilot budget for this app, read free from the broker's per-user credit ledger — returns {\"balance\":\"$X.XX\",\"credits_remaining\":<micro-$>,\"credits_seed\":<micro-$>,\"unit\":\"micro_usd\",\"scope\":\"per-pilot-user\"}. This is YOUR budget, not the shared account's. No partner API call, no charge, and never a 402. The same figure also rides on the X-Pilot-Credits-Remaining header of every metered response; call this when you just want to check what's left before a spend.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "firecrawl.help",
+        "summary": "Discovery: every method with params, kind, and latency class.",
+        "example": null,
+        "gated": null
+      }
+    ],
+    "changelog": [
+      {
+        "version": "0.1.0",
+        "notes": [
+          "Released v0.1.0"
+        ]
+      }
+    ],
+    "grants": [
+      "fs.read:$APP/config.json",
+      "key.sign:self",
+      "net.dial:broker.pilotprotocol.network",
+      "audit.log:*"
+    ],
+    "bundles": [
+      {
+        "platform": "darwin-arm64",
+        "bytes": 5293915
+      },
+      {
+        "platform": "darwin-amd64",
+        "bytes": 5293915
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": 4754720
+      },
+      {
+        "platform": "linux-amd64",
+        "bytes": 4754720
+      }
+    ],
+    "installedBytes": 8999266,
+    "depends": [],
+    "protection": "shareable",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "image",
+      "img": "/appicons/io.pilot.firecrawl.png",
+      "fit": "contain",
+      "pos": "center",
+      "color": "#0b0b0a",
+      "ink": false,
+      "file": null,
+      "hue": 200
+    },
+    "minPilotVersion": "1.11.0",
+    "runtimes": [
+      "go"
+    ],
+    "publishedAt": "2026-08-03",
+    "updatedAt": "2026-08-03",
+    "productDemo": {
+      "skill": "io.pilot.firecrawl",
+      "title": "Full usage demo",
+      "when_to_use": "When you need content from the live web: read a page as clean markdown, search the web, enumerate a site's URLs, crawl a whole domain, or extract structured data from pages.",
+      "metered": true,
+      "quickstart": {
+        "goal": "Read any page as clean, LLM-ready markdown",
+        "command": "pilotctl appstore call io.pilot.firecrawl firecrawl.scrape '{\"url\":\"https://example.com\"}'",
+        "expect": "{\"success\":true,\"data\":{\"markdown\":\"# Example Domain\\n\\nThis domain is for use in documentation examples...\",\"metadata\":{\"title\":\"Example Domain\",\"creditsUsed\":1}}}",
+        "cost": "1 credit (~$0.0008)"
+      },
+      "examples": [
+        {
+          "title": "Check your budget first (free read)",
+          "command": "pilotctl appstore call io.pilot.firecrawl firecrawl.balance '{}'",
+          "expect": "{\"balance\":\"$0.04\",\"credits_remaining\":41500,\"credits_seed\":41500,\"unit\":\"micro_usd\",\"scope\":\"per-pilot-user\"}",
+          "cost": "$0.00 (read)"
+        },
+        {
+          "title": "Search the web and get real content back",
+          "command": "pilotctl appstore call io.pilot.firecrawl firecrawl.search '{\"query\":\"open source web crawlers\",\"limit\":3}'",
+          "expect": "{\"success\":true,\"data\":{\"web\":[{\"url\":\"https://...\",\"title\":\"...\",\"description\":\"...\"}]},\"id\":\"019fc9b8-...\"}",
+          "cost": "2 credits (~$0.0017)"
+        },
+        {
+          "title": "Enumerate a site's URLs before paying to crawl it",
+          "command": "pilotctl appstore call io.pilot.firecrawl firecrawl.map '{\"url\":\"https://docs.firecrawl.dev\",\"limit\":50}'",
+          "expect": "{\"success\":true,\"links\":[{\"url\":\"https://docs.firecrawl.dev/...\",\"title\":\"...\"}]}",
+          "cost": "1 credit (~$0.0008)",
+          "note": "Always map before a crawl: crawl defaults to 10000 pages."
+        },
+        {
+          "title": "Crawl a site — async, returns a job id",
+          "command": "pilotctl appstore call io.pilot.firecrawl firecrawl.crawl '{\"url\":\"https://docs.firecrawl.dev\",\"limit\":10}'",
+          "expect": "{\"success\":true,\"id\":\"a1b2c3d4-...\",\"url\":\"https://api.firecrawl.dev/v2/crawl/a1b2c3d4-...\"}",
+          "cost": "20 credits (~$0.0166)",
+          "note": "SET limit — it defaults to 10000 pages."
+        },
+        {
+          "title": "Poll the crawl until it finishes (free read)",
+          "command": "pilotctl appstore call io.pilot.firecrawl firecrawl.crawl_status '{\"id\":\"a1b2c3d4-...\"}'",
+          "expect": "{\"status\":\"completed\",\"total\":10,\"completed\":10,\"creditsUsed\":10,\"data\":[{\"markdown\":\"...\",\"metadata\":{}}]}",
+          "cost": "$0.00 (read)"
+        }
+      ],
+      "cost": {
+        "unit": "micro-USD (1000000 = $1.00); 1 Firecrawl credit ~= 830 micro-USD",
+        "free_budget": "$0.0415 per Pilot user (~50 Firecrawl credits)",
+        "hard_cap_usd": 0.0415,
+        "operations": [
+          {
+            "op": "scrape / map / docs_search",
+            "price": "$0.0008",
+            "note": "1 credit"
+          },
+          {
+            "op": "search",
+            "price": "$0.0017",
+            "note": "2 credits"
+          },
+          {
+            "op": "interact_create / monitor_create",
+            "price": "$0.0042",
+            "note": "5 credits"
+          },
+          {
+            "op": "crawl / batch_scrape / extract",
+            "price": "$0.0166",
+            "note": "20 credits at enqueue; a big crawl costs more upstream"
+          },
+          {
+            "op": "agent",
+            "price": "$0.0415",
+            "note": "50 credits — your whole budget in one call"
+          },
+          {
+            "op": "all *_status, *_errors, list, team reads",
+            "price": "$0.00",
+            "note": "reads are free"
+          }
+        ],
+        "worked_total": "This demo spends $0.0191 of your $0.0415 budget (search + map + crawl + the quickstart scrape; both reads are free).",
+        "check_balance": "pilotctl appstore call io.pilot.firecrawl firecrawl.balance '{}'"
+      },
+      "gotchas": [
+        "crawl defaults to limit 10000 and agent to maxCredits 2500 — always set them.",
+        "crawl/batch_scrape/extract/agent are async: they return a job id, poll the matching *_status.",
+        "402 = your budget is spent; reads and status polls still work.",
+        "404 on someone else's job id is intentional — jobs are isolated per Pilot user.",
+        "firecrawl.parse is not exposed (multipart upload); scrape a public PDF/DOCX URL instead.",
+        "Results cache up to 48h; pass maxAge:0 to force a fresh fetch."
+      ],
+      "next": [
+        "io.pilot.firecrawl firecrawl.help '{}'"
+      ]
+    },
+    "limits": null
+  },
+  {
     "id": "io.pilot.smol",
     "name": "Smol Machines",
     "tagline": "Fast, hardware-isolated microVMs — local and cloud",

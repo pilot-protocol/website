@@ -1045,5 +1045,101 @@
     "next": [
       "io.telepat.ideon-free ideon-free.help '{}'"
     ]
+  },
+  "io.pilot.firecrawl": {
+    "skill": "io.pilot.firecrawl",
+    "title": "Full usage demo",
+    "when_to_use": "When you need content from the live web: read a page as clean markdown, search the web, enumerate a site's URLs, crawl a whole domain, or extract structured data from pages.",
+    "metered": true,
+    "quickstart": {
+      "goal": "Read any page as clean, LLM-ready markdown",
+      "command": "pilotctl appstore call io.pilot.firecrawl firecrawl.scrape '{\"url\":\"https://example.com\"}'",
+      "expect": "{\"success\":true,\"data\":{\"markdown\":\"# Example Domain\\n\\nThis domain is for use in documentation examples...\",\"metadata\":{\"title\":\"Example Domain\",\"creditsUsed\":1}}}",
+      "cost": "1 credit (~$0.0008)"
+    },
+    "examples": [
+      {
+        "title": "Check your budget first (free read)",
+        "command": "pilotctl appstore call io.pilot.firecrawl firecrawl.balance '{}'",
+        "expect": "{\"balance\":\"$0.04\",\"credits_remaining\":41500,\"credits_seed\":41500,\"unit\":\"micro_usd\",\"scope\":\"per-pilot-user\"}",
+        "cost": "$0.00 (read)"
+      },
+      {
+        "title": "Search the web and get real content back",
+        "command": "pilotctl appstore call io.pilot.firecrawl firecrawl.search '{\"query\":\"open source web crawlers\",\"limit\":3}'",
+        "expect": "{\"success\":true,\"data\":{\"web\":[{\"url\":\"https://...\",\"title\":\"...\",\"description\":\"...\"}]},\"id\":\"019fc9b8-...\"}",
+        "cost": "2 credits (~$0.0017)"
+      },
+      {
+        "title": "Enumerate a site's URLs before paying to crawl it",
+        "command": "pilotctl appstore call io.pilot.firecrawl firecrawl.map '{\"url\":\"https://docs.firecrawl.dev\",\"limit\":50}'",
+        "expect": "{\"success\":true,\"links\":[{\"url\":\"https://docs.firecrawl.dev/...\",\"title\":\"...\"}]}",
+        "cost": "1 credit (~$0.0008)",
+        "note": "Always map before a crawl: crawl defaults to 10000 pages."
+      },
+      {
+        "title": "Crawl a site — async, returns a job id",
+        "command": "pilotctl appstore call io.pilot.firecrawl firecrawl.crawl '{\"url\":\"https://docs.firecrawl.dev\",\"limit\":10}'",
+        "expect": "{\"success\":true,\"id\":\"a1b2c3d4-...\",\"url\":\"https://api.firecrawl.dev/v2/crawl/a1b2c3d4-...\"}",
+        "cost": "20 credits (~$0.0166)",
+        "note": "SET limit — it defaults to 10000 pages."
+      },
+      {
+        "title": "Poll the crawl until it finishes (free read)",
+        "command": "pilotctl appstore call io.pilot.firecrawl firecrawl.crawl_status '{\"id\":\"a1b2c3d4-...\"}'",
+        "expect": "{\"status\":\"completed\",\"total\":10,\"completed\":10,\"creditsUsed\":10,\"data\":[{\"markdown\":\"...\",\"metadata\":{}}]}",
+        "cost": "$0.00 (read)"
+      }
+    ],
+    "cost": {
+      "unit": "micro-USD (1000000 = $1.00); 1 Firecrawl credit ~= 830 micro-USD",
+      "free_budget": "$0.0415 per Pilot user (~50 Firecrawl credits)",
+      "hard_cap_usd": 0.0415,
+      "operations": [
+        {
+          "op": "scrape / map / docs_search",
+          "price": "$0.0008",
+          "note": "1 credit"
+        },
+        {
+          "op": "search",
+          "price": "$0.0017",
+          "note": "2 credits"
+        },
+        {
+          "op": "interact_create / monitor_create",
+          "price": "$0.0042",
+          "note": "5 credits"
+        },
+        {
+          "op": "crawl / batch_scrape / extract",
+          "price": "$0.0166",
+          "note": "20 credits at enqueue; a big crawl costs more upstream"
+        },
+        {
+          "op": "agent",
+          "price": "$0.0415",
+          "note": "50 credits — your whole budget in one call"
+        },
+        {
+          "op": "all *_status, *_errors, list, team reads",
+          "price": "$0.00",
+          "note": "reads are free"
+        }
+      ],
+      "worked_total": "This demo spends $0.0191 of your $0.0415 budget (search + map + crawl + the quickstart scrape; both reads are free).",
+      "check_balance": "pilotctl appstore call io.pilot.firecrawl firecrawl.balance '{}'"
+    },
+    "gotchas": [
+      "crawl defaults to limit 10000 and agent to maxCredits 2500 — always set them.",
+      "crawl/batch_scrape/extract/agent are async: they return a job id, poll the matching *_status.",
+      "402 = your budget is spent; reads and status polls still work.",
+      "404 on someone else's job id is intentional — jobs are isolated per Pilot user.",
+      "firecrawl.parse is not exposed (multipart upload); scrape a public PDF/DOCX URL instead.",
+      "Results cache up to 48h; pass maxAge:0 to force a fresh fetch."
+    ],
+    "next": [
+      "io.pilot.firecrawl firecrawl.help '{}'"
+    ]
   }
 }
