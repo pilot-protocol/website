@@ -4313,24 +4313,25 @@ export const apps: App[] = [
   {
     "id": "io.pilot.bowmark",
     "name": "Bowmark",
-    "tagline": "Navigation cheatsheets for public websites, so agents run cheaper, faster, and more accurately",
-    "description": "Bowmark gives agents a **pre-computed cheatsheet** for the task at hand. A cheatsheet is a compact, ready-to-run answer for one task on one site: a parameterized URL `shortcut` and/or a short `ui_procedure` of UI steps. Instead of burning tokens re-reading a site's DOM and guessing its way through the page, your agent calls `ask({ site, task })` and gets the exact path back. It spends less, finishes sooner, and lands on the right action the first time.\n\nBowmark is **free to use** — no signup and no API key to manage. It's plain request/response REST — no websockets, no server-side browser, no async jobs. Your agent runs the cheatsheet in its own browser; Bowmark only supplies the path.\n\n**Methods.** `bowmark.ask` — give it a site and a plain-English task and it returns the cheatsheet: a URL `shortcut` (a `template` with `{name}` slots you fill and navigate) and/or a `ui_procedure` of steps to run in order, plus an `id`. Call it before any browser action, in place of exploring the page yourself, and execute open-loop. `bowmark.report_outcome` — after running a cheatsheet, report whether every step ran exactly as written; a failure triggers a re-crawl that repairs the path for the next agent, so report `false` on any deviation even if you still got the answer.\n\n**Syntax & edge cases.** `site` is a registrable domain, optionally with a product surface (`google.com`, `docs.stripe.com`, `google.com/maps`); `task` is intent, never a URL. Request the signed-in view with `variants: { auth_state: \"logged_in\", role: \"owner\" }` (also `locale` / `region` / `currency`). A step may be flagged `irreversible` (confirm first) or `requires_user_input` (stop and ask the user). Non-`ok` statuses: `no_useful_data` / `site_not_supported` → browse manually; `ambiguous_scope` → retry with `scopeHint`; `rate_limited` → back off until `error.retry_after` (only new cheatsheet synthesis is capped). Skip it for localhost, RFC1918 IPs, and open-ended search with no destination.",
+    "tagline": "Live data from real websites: prices, stock, fares and quotes, including what only appears after you operate the page",
+    "description": "Bowmark gives agents a **typed function library for the live web**, and runs the script they write against it on the real sites. `get_library({ query })` returns the vocabulary: namespaces, TypeScript types, function signatures and worked examples. `run({ script })` executes a short JavaScript body against them and hands back the result. Ask it for flights and it searches several aggregators at once, dedupes the same physical flight, sorts by price, and returns one normalized list.\n\n**The data it reaches is the kind an index cannot hold.** A fare that only exists after the site's own live poll completes. A price that appears once dates are entered. Stock for one postcode. A quote behind a form. These are not values sitting in the HTML waiting to be fetched, and they change while you read them, so the only way to have them is to operate the page at the moment you are asked. Bowmark does that and hands back structured JSON. It reads ordinary pages too, taking a browser only when one proves necessary.\n\nIt's plain request/response REST: no websockets, no async jobs, and no browser on your side. The script runs server side, in Bowmark's own process with its own browser, so your agent never opens a tab, holds a session, or parses a DOM. A capability like `bowmark.flights.search` fans out across the sites behind it, dedupes, ranks and routes around one that fails, and that whole fan-out is a single call.\n\n**Methods.** `bowmark.get_library` gives it what you want to DO, in the user's own words, or a company if they named one, and it returns the callable functions for that with their types and worked examples. It is read-only and touches no website, so call it first; an unrecognized query returns a one-line index rather than an error. `bowmark.run` takes a plain async JavaScript body written against those signatures. `bowmark` is the only I/O available inside it: no `fetch`, no `import`, no filesystem, no `process`.\n\n**What it covers today.** Flights (search, plus every seller for one itinerary with fare family and bag policy), hotels, car hire, PC parts across several retailers, music catalogue search, insurance carriers in the regulators' own register, work-email domains, and `read.page` / `read.pages` for any page as markdown, text or HTML. Individual sites are callable directly at `bowmark.providers.*` when you want one specific site rather than the fan-out.\n\n**Syntax & edge cases.** Check `status` before `ok`. `partial` means the script ran and the result is real and usable but narrower than you asked; `ok` stays true, and `incomplete.summary` names what never answered. `needs_user` is a pause, not a failure: a site wants a signed-in session, so hand `meta.handoff.url` to the user, wait, then re-send the identical script. A `get_library` answer can be a slice and says so when it is, so never conclude a task is uncovered from a list that announced it was partial; re-query one task, or one company by name. Prefer a capability over `bowmark.providers.*` unless you want one specific site. Skip Bowmark for localhost, RFC1918 addresses, and any page whose answer is already in the text of the page.",
     "categories": [
       "web"
     ],
     "primaryCategory": "web",
     "keywords": [
+      "live-data",
+      "prices",
+      "availability",
+      "stock",
+      "fares",
+      "quotes",
+      "web",
       "browser",
-      "navigation",
-      "recipes",
-      "cheatsheets",
-      "websites",
-      "playwright",
-      "puppeteer",
-      "computer-use",
-      "scraping"
+      "booking",
+      "computer-use"
     ],
-    "version": "0.1.0",
+    "version": "1.0.0",
     "vendor": "Bowmark AI",
     "vendorUrl": "https://bowmark.ai",
     "license": "Proprietary",
@@ -4338,25 +4339,27 @@ export const apps: App[] = [
     "homepage": "https://bowmark.ai",
     "methods": [
       {
-        "name": "bowmark.ask",
-        "summary": "Give it a site and a plain-English task (e.g. 'find Apple's latest 10-K') and it returns a ready-to-run cheatsheet — a URL shortcut to fill and navigate and/or a short ui_procedure of steps. Call it before any browser action, in place of exploring the page yourself, and execute open-loop. status=ok returns an id; no_useful_data/site_not_supported → browse manually; ambiguous_scope → retry with scopeHint; rate_limited → back off. Pass variants:{auth_state:'logged_in'} for signed-in surfaces. Intent, not a URL.",
+        "name": "bowmark.get_library",
+        "summary": "START HERE. Read-only, and it touches no website. Returns the callable function library you write scripts against: the runtime globals plus, for each capability your query matches, its namespace, TypeScript types, function signatures and worked examples. Pass `query` as what you want to DO ('flights', 'price a GPU', 'check stock') or the company or site if the user named one ('Kayak', 'newegg.com'); a phrase in the user's own words is fine. You get what you asked about and nothing else. An unrecognized query, or no query at all, returns a one-line index of every capability instead of an error, so this check never dead ends. Responses are bounded and SAY SO when they are a slice: read that line before concluding anything, because absence from a sliced list means nothing, and the fix is one narrower query, which always returns that entry in full. Two tiers come back: capabilities like `bowmark.flights.search` fan out across several sites, dedupe and rank, so prefer those; `bowmark.providers.kayak.search` is one named site in its native shape.",
         "example": null,
         "gated": null
       },
       {
-        "name": "bowmark.report_outcome",
-        "summary": "After running a cheatsheet from ask, report whether every step ran exactly as written (envelope_id + success, optional evidence). success=true only if it ran clean — no retries, no raw-JS fallback, no extra clicks; false on any deviation, even if you still got the answer. Honest results trigger a re-crawl that keeps the cheatsheet fresh.",
-        "example": null,
-        "gated": null
-      },
-      {
-        "name": "bowmark.help",
-        "summary": "Discovery: every method with params, kind, and latency class.",
+        "name": "bowmark.run",
+        "summary": "Executes your script on the real websites and returns what came back. Call bowmark.get_library FIRST: it gives the exact function names, argument shapes and return types. The language is plain async JavaScript. `bowmark` is a ready global with no import, every call is awaited, and you get real control flow: if, loops, array methods, and Promise.all for fan-out. `return` a value to get it back, `log(...)` for progress lines. `bowmark` is the ONLY I/O: no fetch, no process, no filesystem, no import or require. Write a plain async body, not a wrapping function, and keep it small and deterministic, because it runs in a hard sandbox with CPU, memory and wall-clock ceilings. `script` is the only argument; there is no site argument. Returns {ok, status, result, logs, error, ms}. CHECK `status` BEFORE `ok`: ok | partial (the script ran and the result is real and usable but narrower than asked, ok stays true, and incomplete.summary names what never answered; this is not a failure and re-running usually returns the same thing) | error | needs_user (a site wants a signed-in session, so the run PAUSED: hand meta.handoff.url to the user, wait, then re-send the identical script). Bowmark drives the sites server side, so your agent never opens a browser.",
         "example": null,
         "gated": null
       }
     ],
     "changelog": [
+      {
+        "version": "1.0.0",
+        "notes": [
+          "Replaces bowmark.ask and bowmark.report_outcome with bowmark.get_library and bowmark.run. Bowmark no longer returns a navigation recipe for the caller to execute; it returns a typed function library and runs the caller's script on the real sites.",
+          "Execution moved server side. The calling agent no longer needs a browser of its own.",
+          "product_demo and next_steps rebuilt for the new methods and statuses, including needs_user, where a run that meets a site login pauses and returns a single-use handoff link for the human rather than failing."
+        ]
+      },
       {
         "version": "0.1.0",
         "notes": [
@@ -4374,22 +4377,22 @@ export const apps: App[] = [
     "bundles": [
       {
         "platform": "darwin-arm64",
-        "bytes": 5374254
+        "bytes": 5376763
       },
       {
         "platform": "darwin-amd64",
-        "bytes": 4968650
+        "bytes": 4970970
       },
       {
         "platform": "linux-arm64",
-        "bytes": 5019350
+        "bytes": 5021694
       },
       {
         "platform": "linux-amd64",
-        "bytes": 4613746
+        "bytes": 4615900
       }
     ],
-    "installedBytes": 9105408,
+    "installedBytes": 9113971,
     "depends": [],
     "protection": "shareable",
     "featured": false,
@@ -4414,57 +4417,57 @@ export const apps: App[] = [
     "productDemo": {
       "skill": "io.pilot.bowmark",
       "title": "Full usage demo",
-      "when_to_use": "When your agent is about to act on a known public website — call bowmark.ask({site, task}) first to get a ready-to-run URL shortcut or UI procedure instead of exploring the DOM.",
-      "metered": true,
+      "when_to_use": "When your agent needs a value that only exists on a live site right now, and only after somebody operates it: a current price, stock for one location, a fare, a quote, or anything behind a form, a filter or a login.",
+      "metered": false,
       "quickstart": {
-        "goal": "Get a navigation cheatsheet for a site + task",
-        "command": "pilotctl appstore call io.pilot.bowmark bowmark.ask '{\"site\":\"sec.gov\",\"task\":\"find Apple's latest 10-K filing\"}'",
-        "expect": "{\"status\":\"ok\",\"id\":\"...\",\"shortcut\":{\"template\":\"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={ticker}&type=10-K\"}}"
+        "goal": "See whether a function already covers the task",
+        "command": "pilotctl appstore call io.pilot.bowmark bowmark.get_library '{\"query\":\"flights\"}'",
+        "expect": "markdown: the bowmark.flights capability, with its TypeScript types, search/getBookingOptions signatures, and worked script examples",
+        "note": "Always call this first. An unrecognized query returns a one-line index instead of an error, so the check never dead ends."
       },
       "examples": [
         {
-          "title": "Ask for a UI procedure on a product surface",
-          "goal": "Scope with a path to skip the ambiguous_scope round-trip",
-          "command": "pilotctl appstore call io.pilot.bowmark bowmark.ask '{\"site\":\"google.com/maps\",\"task\":\"get directions from SFO to downtown\"}'",
-          "expect": "{\"status\":\"ok\",\"id\":\"...\",\"ui_procedure\":{\"steps\":[...]}}"
+          "title": "Search flights across several aggregators with one call",
+          "goal": "One capability fans out across sites, dedupes the same physical flight, and sorts by price",
+          "command": "pilotctl appstore call io.pilot.bowmark bowmark.run '{\"script\":\"const { flights, warnings } = await bowmark.flights.search({ from: \\\"YYZ\\\", to: \\\"LHR\\\", depart: \\\"2026-09-14\\\" }); return { cheapest: flights[0], warnings };\"}'",
+          "expect": "{\"ok\":true,\"status\":\"ok\",\"result\":{\"cheapest\":{\"price\":412,\"site\":\"google_flights\"},\"warnings\":[]}}",
+          "note": "These prices only exist after each site's own live poll completes, so they are not fetchable as static HTML. `warnings` names any site dropped from the fan-out, so a degraded search cannot read as a complete one."
         },
         {
-          "title": "Request the signed-in surface",
-          "command": "pilotctl appstore call io.pilot.bowmark bowmark.ask '{\"site\":\"github.com\",\"task\":\"create a new private repo\",\"variants\":{\"auth_state\":\"logged_in\",\"role\":\"owner\"}}'",
-          "expect": "{\"status\":\"ok\",\"id\":\"...\",\"ui_procedure\":{\"steps\":[...]},\"variants_assumed\":{...}}"
+          "title": "Price one part across three retailers",
+          "goal": "Newegg, Micro Center and B&H in parallel, cheapest first",
+          "command": "pilotctl appstore call io.pilot.bowmark bowmark.run '{\"script\":\"const { offers, warnings } = await bowmark.pcparts.search(\\\"GeForce RTX 4070\\\"); return { cheapest: offers[0], stores: offers.length, warnings };\"}'",
+          "expect": "{\"ok\":true,\"status\":\"ok\",\"result\":{\"cheapest\":{\"store\":\"microcenter\",\"price\":539.99},\"warnings\":[]}}",
+          "note": "A store named in `warnings` priced nothing, so \"cheapest of three\" was really the cheapest of two."
         },
         {
-          "title": "Report the outcome to keep cheatsheets fresh",
-          "goal": "success=true only if every step ran clean — no retries or extra clicks",
-          "command": "pilotctl appstore call io.pilot.bowmark bowmark.report_outcome '{\"envelope_id\":\"<id-from-ask>\",\"success\":true}'",
-          "expect": "{\"id\":\"...\"}"
+          "title": "Read any page as markdown",
+          "goal": "Cheap GET first, a browser only if the page proves it needs one",
+          "command": "pilotctl appstore call io.pilot.bowmark bowmark.run '{\"script\":\"const p = await bowmark.read.page(\\\"https://example.com/pricing\\\"); return { title: p.title, servedBy: p.servedBy, content: p.content };\"}'",
+          "expect": "{\"ok\":true,\"status\":\"ok\",\"result\":{\"title\":\"Pricing\",\"servedBy\":\"fetch\",\"content\":\"# Pricing\\n...\"}}",
+          "note": "`servedBy` says which rung paid for it, and `wall` names the bot wall when a rendered look finds one, so a block is a named fact rather than an empty page."
+        },
+        {
+          "title": "Do several lookups in one script",
+          "goal": "Real control flow, so many searches happen in one call instead of one each",
+          "command": "pilotctl appstore call io.pilot.bowmark bowmark.run '{\"script\":\"const cities = [\\\"LHR\\\",\\\"CDG\\\",\\\"AMS\\\"]; const all = await Promise.all(cities.map(to => bowmark.flights.search({ from: \\\"YYZ\\\", to, depart: \\\"2026-09-14\\\" }))); return cities.map((to, i) => ({ to, best: all[i].flights[0]?.price ?? null }));\"}'",
+          "expect": "{\"ok\":true,\"status\":\"ok\",\"result\":[{\"to\":\"LHR\",\"best\":412},{\"to\":\"CDG\",\"best\":389},{\"to\":\"AMS\",\"best\":401}]}"
+        },
+        {
+          "title": "Drill into one site when the fan-out is not what you want",
+          "goal": "The headline fare is one seller's price for one fare class, so ask who else sells it and what the cheap one leaves out",
+          "command": "pilotctl appstore call io.pilot.bowmark bowmark.run '{\"script\":\"const rows = await bowmark.providers.kayak.search({ from: \\\"SFO\\\", to: \\\"JFK\\\", depart: \\\"2026-09-15\\\" }); const cheapest = rows.filter(r => r.price != null).sort((a,b) => a.price - b.price)[0]; const sellers = await bowmark.providers.kayak.getBookingOptions(cheapest); return { headline: cheapest.price, sellers: sellers.length, withCheckedBag: sellers.filter(s => s.checkedBagIncluded === true).length };\"}'",
+          "expect": "{\"ok\":true,\"status\":\"ok\",\"result\":{\"headline\":198,\"sellers\":7,\"withCheckedBag\":3}}",
+          "note": "Two dependent calls, still one script. Providers return that site's native shape, so you give up the cross-site dedupe and the routing around a failing site."
         }
       ],
-      "cost": {
-        "unit": "requests (managed key, currently unmetered)",
-        "free_budget": "managed — no per-user charge today",
-        "hard_cap_usd": 0,
-        "operations": [
-          {
-            "op": "bowmark.ask",
-            "price": "free",
-            "note": "the nav-recipe call (POST /v1/ask); managed key, no per-op meter currently"
-          },
-          {
-            "op": "bowmark.report_outcome",
-            "price": "free",
-            "note": "feedback that triggers a re-crawl; no charge"
-          }
-        ],
-        "worked_total": "Managed key with quota 0 — there is no per-user dollar charge today; both methods are free to call."
-      },
       "gotchas": [
-        "Put intent in `task`, never a URL — 'find Apple's latest 10-K', not a link.",
-        "Execute the cheatsheet open-loop — don't re-snapshot the DOM to verify what it already documents.",
-        "A step flagged `irreversible` needs user confirmation; `requires_user_input` means stop and ask.",
-        "report_outcome success=false on ANY deviation (a retry, raw-JS fallback, extra click) even if you got the answer.",
-        "Non-ok statuses (no_useful_data / site_not_supported / ambiguous_scope / rate_limited) → browse manually or retry with scopeHint.",
-        "Skip Bowmark for localhost, RFC1918 IPs, and open-ended search with no destination."
+        "Call `get_library` before `run`, always. The script has to be written against names only `get_library` supplies, and it is read-only and touches no website.",
+        "Check `status` before `ok`. `partial` means the script ran and the result is real but narrower than you asked; `ok` stays true, and `incomplete.summary` names what never answered.",
+        "`needs_user` is a login pause, not a failure: give the user `meta.handoff.url`, wait, then re-send the identical script. Bowmark holds no site credentials of yours.",
+        "`bowmark` is the only I/O available inside a script. No `fetch`, no `import`, no filesystem, no `process`. Write a plain async body, `return` a value, `log()` for progress.",
+        "A `get_library` answer can be a slice and says so when it is. Never conclude a task is uncovered from a list that announced it was partial; re-query one task, or one company by name.",
+        "Skip Bowmark for localhost, RFC1918 addresses, and any page whose answer is already in the text of the page."
       ],
       "next": [
         "io.pilot.bowmark bowmark.help '{}'"

@@ -143,33 +143,42 @@
   },
   "io.pilot.bowmark": {
     "name": "Bowmark",
-    "tagline": "Navigation cheatsheets for public websites, so agents run cheaper, faster, and more accurately.",
-    "description": "Bowmark gives agents a **pre-computed cheatsheet** for the task at hand. A cheatsheet is a compact, ready-to-run answer for one task on one site: a parameterized URL `shortcut` and/or a short `ui_procedure` of UI steps. Instead of burning tokens re-reading a site's DOM and guessing its way through the page, your agent calls `ask({ site, task })` and gets the exact path back. It spends less, finishes sooner, and lands on the right action the first time.\n\nBowmark is **free to use** — no signup and no API key to manage. It's plain request/response REST — no websockets, no server-side browser, no async jobs. Your agent runs the cheatsheet in its own browser; Bowmark only supplies the path.\n\n**Methods.** `bowmark.ask` — give it a site and a plain-English task and it returns the cheatsheet: a URL `shortcut` (a `template` with `{name}` slots you fill and navigate) and/or a `ui_procedure` of steps to run in order, plus an `id`. Call it before any browser action, in place of exploring the page yourself, and execute open-loop. `bowmark.report_outcome` — after running a cheatsheet, report whether every step ran exactly as written; a failure triggers a re-crawl that repairs the path for the next agent, so report `false` on any deviation even if you still got the answer.\n\n**Syntax & edge cases.** `site` is a registrable domain, optionally with a product surface (`google.com`, `docs.stripe.com`, `google.com/maps`); `task` is intent, never a URL. Request the signed-in view with `variants: { auth_state: \"logged_in\", role: \"owner\" }` (also `locale` / `region` / `currency`). A step may be flagged `irreversible` (confirm first) or `requires_user_input` (stop and ask the user). Non-`ok` statuses: `no_useful_data` / `site_not_supported` → browse manually; `ambiguous_scope` → retry with `scopeHint`; `rate_limited` → back off until `error.retry_after` (only new cheatsheet synthesis is capped). Skip it for localhost, RFC1918 IPs, and open-ended search with no destination.",
+    "tagline": "Live data from real websites: prices, stock, fares and quotes, including what only appears after you operate the page.",
+    "description": "Bowmark gives agents a **typed function library for the live web**, and runs the script they write against it on the real sites. `get_library({ query })` returns the vocabulary: namespaces, TypeScript types, function signatures and worked examples. `run({ script })` executes a short JavaScript body against them and hands back the result. Ask it for flights and it searches several aggregators at once, dedupes the same physical flight, sorts by price, and returns one normalized list.\n\n**The data it reaches is the kind an index cannot hold.** A fare that only exists after the site's own live poll completes. A price that appears once dates are entered. Stock for one postcode. A quote behind a form. These are not values sitting in the HTML waiting to be fetched, and they change while you read them, so the only way to have them is to operate the page at the moment you are asked. Bowmark does that and hands back structured JSON. It reads ordinary pages too, taking a browser only when one proves necessary.\n\nIt's plain request/response REST: no websockets, no async jobs, and no browser on your side. The script runs server side, in Bowmark's own process with its own browser, so your agent never opens a tab, holds a session, or parses a DOM. A capability like `bowmark.flights.search` fans out across the sites behind it, dedupes, ranks and routes around one that fails, and that whole fan-out is a single call.\n\n**Methods.** `bowmark.get_library` gives it what you want to DO, in the user's own words, or a company if they named one, and it returns the callable functions for that with their types and worked examples. It is read-only and touches no website, so call it first; an unrecognized query returns a one-line index rather than an error. `bowmark.run` takes a plain async JavaScript body written against those signatures. `bowmark` is the only I/O available inside it: no `fetch`, no `import`, no filesystem, no `process`.\n\n**What it covers today.** Flights (search, plus every seller for one itinerary with fare family and bag policy), hotels, car hire, PC parts across several retailers, music catalogue search, insurance carriers in the regulators' own register, work-email domains, and `read.page` / `read.pages` for any page as markdown, text or HTML. Individual sites are callable directly at `bowmark.providers.*` when you want one specific site rather than the fan-out.\n\n**Syntax & edge cases.** Check `status` before `ok`. `partial` means the script ran and the result is real and usable but narrower than you asked; `ok` stays true, and `incomplete.summary` names what never answered. `needs_user` is a pause, not a failure: a site wants a signed-in session, so hand `meta.handoff.url` to the user, wait, then re-send the identical script. A `get_library` answer can be a slice and says so when it is, so never conclude a task is uncovered from a list that announced it was partial; re-query one task, or one company by name. Prefer a capability over `bowmark.providers.*` unless you want one specific site. Skip Bowmark for localhost, RFC1918 addresses, and any page whose answer is already in the text of the page.",
     "vendor": "Bowmark AI",
     "vendorUrl": "https://bowmark.ai",
     "license": "Proprietary",
     "sourceUrl": "https://github.com/bowmark-ai/plugin",
     "homepage": "https://bowmark.ai",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "categoriesRaw": [
       "web",
       "browser",
       "automation"
     ],
     "keywords": [
+      "live-data",
+      "prices",
+      "availability",
+      "stock",
+      "fares",
+      "quotes",
+      "web",
       "browser",
-      "navigation",
-      "recipes",
-      "cheatsheets",
-      "websites",
-      "playwright",
-      "puppeteer",
-      "computer-use",
-      "scraping"
+      "booking",
+      "computer-use"
     ],
-    "bundleBytes": 5070051,
-    "installedBytes": 9105408,
+    "bundleBytes": 5072418,
+    "installedBytes": 9113971,
     "changelog": [
+      {
+        "version": "1.0.0",
+        "notes": [
+          "Replaces bowmark.ask and bowmark.report_outcome with bowmark.get_library and bowmark.run. Bowmark no longer returns a navigation recipe for the caller to execute; it returns a typed function library and runs the caller's script on the real sites.",
+          "Execution moved server side. The calling agent no longer needs a browser of its own.",
+          "product_demo and next_steps rebuilt for the new methods and statuses, including needs_user, where a run that meets a site login pauses and returns a single-use handoff link for the human rather than failing."
+        ]
+      },
       {
         "version": "0.1.0",
         "notes": [
