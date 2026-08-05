@@ -4,10 +4,23 @@ interface Props { app: App; size?: 56 | 64 | 88 | 120; }
 const { app, size = 64 } = Astro.props;
 const isImg = app.icon.mode === 'image';
 const pad = isImg && app.icon.fit === 'contain';
+const optimizedPilotIcons = new Set(['io.pilot.wallet', 'io.pilot.plainweb', 'io.pilot.cosift']);
+const usesPilotIcon = optimizedPilotIcons.has(app.id);
+const usesOptimizedRaster = isImg && (app.icon.img?.endsWith('.png') || app.id === 'io.pilot.aegis');
+const imageSrc = usesPilotIcon
+  ? '/img/pilot-240.webp'
+  : usesOptimizedRaster
+    ? `/appicons/optimized/${app.id}-240.webp`
+    : app.icon.img;
+const imageSrcset = usesPilotIcon
+  ? '/img/pilot-48.webp 48w, /img/pilot-96.webp 96w, /img/pilot-240.webp 240w'
+  : usesOptimizedRaster
+    ? `/appicons/optimized/${app.id}-96.webp 96w, /appicons/optimized/${app.id}-240.webp 240w`
+    : undefined;
 const mask = app.icon.file ? `-webkit-mask-image:url(${app.icon.file});mask-image:url(${app.icon.file})` : '';
 ---
 <div class={`app-icon sz-${size}${isImg ? ' is-image' : ''}${pad ? ' pad' : ''}`} style={`--c:${app.icon.color}`} data-ink={app.icon.ink} data-app={app.id} aria-hidden="true">
   {isImg
-    ? <img class="logo-img" src={app.icon.img} alt="" loading="lazy" style={`object-fit:${app.icon.fit};object-position:${app.icon.pos}`} />
+    ? <img class="logo-img" src={imageSrc} srcset={imageSrcset} sizes={`${size}px`} alt="" width={size} height={size} loading="lazy" decoding="async" style={`object-fit:${app.icon.fit};object-position:${app.icon.pos}`} />
     : <span class="logo" style={mask}></span>}
 </div>

@@ -1,6 +1,13 @@
 ---
 // Full site footer - large display text + 4-column nav + fine print
 
+import { solutionGroups } from '../data/solutions';
+
+const enterpriseLinks = [
+  { href: '/enterprise/autonomous-ai-agents', label: 'Autonomous agent control' },
+  { href: '/enterprise/claude-code-management', label: 'Claude Code management' },
+];
+
 // Social links — add new entries here to extend the row.
 const socials = [
   {
@@ -29,8 +36,8 @@ const socials = [
     <div class="foot-grid">
       <div class="foot-about">
         <div class="foot-brand">
-          <img src="/img/pilot.png" alt="" class="foot-logo" width="28" height="28" />
-          <h4>Pilot Protocol</h4>
+          <img src="/img/pilot-48.webp" alt="" class="foot-logo" width="28" height="28" loading="lazy" decoding="async" />
+          <p class="foot-heading">Pilot Protocol</p>
         </div>
         <p>Pilot. Where agents go.</p>
         <div class="foot-social">
@@ -44,7 +51,7 @@ const socials = [
         </div>
       </div>
       <div>
-        <h4>Product</h4>
+        <p class="foot-heading">Product</p>
         <a href="/learn/what-is-pilot-protocol">Network OS</a>
         <a href="/trust">Trust Center</a>
         <a href="/governance">Governance</a>
@@ -53,7 +60,7 @@ const socials = [
         <a href="/docs/enterprise">Enterprise controls</a>
       </div>
       <div>
-        <h4>Developers</h4>
+        <p class="foot-heading">Developers</p>
         <a href="/docs/">Documentation</a>
         <a href="/docs/getting-started">Quickstart</a>
         <a href="/docs/integration">SDKs &amp; integration</a>
@@ -63,8 +70,9 @@ const socials = [
         <a href="/docs/research">Research</a>
       </div>
       <div>
-        <h4>Company</h4>
-        <a href="/learn/what-is-pilot-protocol">About</a>
+        <p class="foot-heading">Company</p>
+        <a href="/about">About</a>
+        <a href="/learn/">Learning center</a>
         <a href="/roadmap">Roadmap</a>
         <a href="/news/">Company news</a>
         <a href="/blog/">Blog</a>
@@ -73,18 +81,18 @@ const socials = [
         <a href="/contact">Contact</a>
       </div>
       <div>
-        <h4>Legal</h4>
+        <p class="foot-heading">Legal</p>
         <a href="/privacy">Privacy Policy</a>
         <a href="/cookies">Cookie Policy</a>
         <a href="/terms">Terms of Service</a>
         <a href="/aup">Acceptable Use</a>
         <a href="/publisher-agreement">Publisher Agreement</a>
         <a href="/security/disclosure">Security disclosure</a>
-        <a href="javascript:void(0)" id="cookie-preferences-link">Cookie Preferences</a>
+        <button type="button" id="cookie-preferences-link">Cookie Preferences</button>
       </div>
     </div>
 
-    <a class="foot-plain-band" href="/plain/" aria-label="Plain-text variant for AI agents">
+    <a class="foot-plain-band" href="/plain/">
       <span class="fp-label">Plain text for agents</span>
       <span class="fp-path">/plain</span>
       <span class="fp-arrow">→</span>
@@ -96,6 +104,43 @@ const socials = [
         <span class="foot-status">pilot://0x00000000 · backbone · up</span>
       </div>
     </div>
+
+    <nav class="foot-solutions" aria-label="Explore Pilot solutions">
+      <div class="foot-solutions-intro">
+        <span>Explore Pilot</span>
+        <span>Capabilities by workflow</span>
+      </div>
+      <div class="foot-solutions-grid">
+        {solutionGroups.map((group) => (
+          <div class="foot-solutions-group">
+            <p>{group.name}</p>
+            <div>
+              {group.solutions.map((solution) => (
+                <a
+                  href={`/solutions/${solution.slug}`}
+                  data-track="footer_solution_click"
+                  data-track-target={solution.slug}
+                  data-track-location="footer_directory"
+                >{solution.footerLabel}</a>
+              ))}
+            </div>
+          </div>
+        ))}
+        <div class="foot-solutions-group">
+          <p>Enterprise</p>
+          <div>
+            {enterpriseLinks.map((link) => (
+              <a
+                href={link.href}
+                data-track="footer_enterprise_click"
+                data-track-target={link.href.split('/').at(-1)}
+                data-track-location="footer_directory"
+              >{link.label}</a>
+            ))}
+          </div>
+        </div>
+      </div>
+    </nav>
   </div>
 </footer>
 
@@ -153,7 +198,7 @@ const socials = [
     margin-bottom: 64px;
   }
 
-  .foot-grid h4 {
+  .foot-grid .foot-heading {
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.14em;
@@ -162,13 +207,22 @@ const socials = [
     margin: 0 0 16px;
     font-weight: 500;
   }
-  .foot-grid a {
+  .foot-grid a,
+  .foot-grid button {
     display: block;
+    width: 100%;
     padding: 6px 0;
+    border: 0;
+    background: transparent;
     color: var(--ink);
+    font-family: inherit;
     font-size: 15px;
+    line-height: inherit;
+    text-align: left;
+    cursor: pointer;
   }
-  .foot-grid a:hover { color: var(--accent-text); }
+  .foot-grid a:hover,
+  .foot-grid button:hover { color: var(--accent-text); }
   .foot-brand {
     display: flex;
     align-items: center;
@@ -181,7 +235,7 @@ const socials = [
     display: block;
     object-fit: contain;
   }
-  .foot-brand h4 { margin: 0; }
+  .foot-brand .foot-heading { margin: 0; }
 
   .foot-about p {
     color: var(--ink-dim);
@@ -189,7 +243,7 @@ const socials = [
     line-height: 1.55;
     max-width: 34ch;
   }
-  .foot-about > h4 { margin: 0 0 16px; }
+  .foot-about > .foot-heading { margin: 0 0 16px; }
 
   .foot-social {
     display: flex;
@@ -269,6 +323,64 @@ const socials = [
     align-items: center;
     flex-wrap: wrap;
   }
+
+  /* A dense, low-emphasis capability directory at the absolute bottom of the
+     footer. It follows the large-company footer pattern without competing with
+     the primary navigation or the main footer calls to action. */
+  .foot-solutions {
+    margin-top: 34px;
+    padding-top: 24px;
+    border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  }
+  .foot-solutions-intro {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+    color: color-mix(in srgb, var(--ink-dim) 58%, transparent);
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+  .foot-solutions-intro span:last-child { opacity: .62; }
+  .foot-solutions-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 32px;
+  }
+  .foot-solutions-group p {
+    margin: 0 0 9px;
+    color: color-mix(in srgb, var(--ink-dim) 58%, transparent);
+    font-family: var(--mono);
+    font-size: 9px;
+    line-height: 1.2;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+  .foot-solutions-group > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px 0;
+  }
+  .foot-solutions-group a {
+    display: inline-flex;
+    align-items: center;
+    color: color-mix(in srgb, var(--ink-dim) 64%, transparent);
+    font-size: 11px;
+    line-height: 1.45;
+    text-decoration: none;
+    transition: color .15s ease;
+  }
+  .foot-solutions-group a:not(:last-child)::after {
+    content: '·';
+    margin: 0 8px;
+    color: color-mix(in srgb, var(--ink-faint) 68%, transparent);
+  }
+  .foot-solutions-group a:hover { color: var(--ink); }
   .foot-plain {
     color: var(--ink-dim);
     text-decoration: none;
@@ -281,9 +393,13 @@ const socials = [
   }
   @media (max-width: 700px) {
     .foot-grid { grid-template-columns: 1fr 1fr; gap: 24px; }
+    .foot-solutions-grid { grid-template-columns: 1fr 1fr; gap: 22px 28px; }
   }
   @media (max-width: 480px) {
     .foot-grid { grid-template-columns: 1fr 1fr; gap: 24px; }
     .site-footer { padding: 56px 0 32px; }
+    .foot-solutions-intro span:last-child { display: none; }
+    .foot-solutions-grid { grid-template-columns: 1fr; gap: 18px; }
+    .foot-solutions-group a { font-size: 10.5px; }
   }
 </style>

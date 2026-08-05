@@ -2832,7 +2832,7 @@ export const apps: App[] = [
     "id": "io.pilot.plainweb",
     "name": "Plainweb",
     "tagline": "Any web page as clean Markdown — no HTML, no JS, one call",
-    "description": "Plainweb is a Pilot-owned URL→Markdown service: give it any web page and get back clean, accurate Markdown — no HTML, no JavaScript, just plain text structured as Markdown.\n\nWhat an agent gets:\n- **One call** — `plainweb.fetch(url)` fetches the page and returns it as Markdown (GFM tables, fenced code with language, task lists). The target URL goes straight in the path.\n- **Accurate extraction** — a cost-aware static→headless-Chrome fetch ladder (most pages never launch Chrome), go-readability primary (preserves code blocks and tables) with go-trafilatura fallback, converted via html-to-markdown v2.\n- **Scheme-less OK** — bare hosts like `example.com` are sanitized to `https://`.\n\nGood to know:\n- **Free and open — no API key required.** Public endpoints are open to every caller.\n- **Rate limit:** anonymous callers get **1000 requests/second** (burst 2000); a master key only elevates a caller past that limit.\n- The reply is `text/markdown`, returned by the adapter as `{ \"content_type\", \"content\" }` (the Markdown is in `content`).\n- In-house Pilot Protocol tool, deployed on Cloud Run.",
+    "description": "Plainweb is a Pilot-owned URL→Markdown service: give it any web page and get back clean, accurate Markdown — no HTML, no JavaScript, just plain text structured as Markdown.\n\nWhat an agent gets:\n- **One call** — `plainweb.fetch(url)` fetches the page and returns it as Markdown (GFM tables, fenced code with language, task lists). The target URL goes straight in the path.\n- **Accurate extraction** — a cost-aware static→headless-Chrome fetch ladder (most pages never launch Chrome), go-readability primary (preserves code blocks and tables) with go-trafilatura fallback, converted via html-to-markdown v2.\n- **Scheme-less OK** — bare hosts like `example.com` are sanitized to `https://`.\n\nGood to know:\n- **Free to call — no API key required.** Public endpoints are available to every caller.\n- **Rate limit:** anonymous callers get **1000 requests/second** (burst 2000); a master key only elevates a caller past that limit.\n- The reply is `text/markdown`, returned by the adapter as `{ \"content_type\", \"content\" }` (the Markdown is in `content`).\n- In-house Pilot Protocol tool, deployed on Cloud Run.",
     "categories": [
       "web"
     ],
@@ -2853,7 +2853,7 @@ export const apps: App[] = [
     "vendor": "Pilot Protocol",
     "vendorUrl": "https://pilotprotocol.network",
     "license": "Proprietary",
-    "sourceUrl": "https://github.com/pilot-protocol/plainweb",
+    "sourceUrl": null,
     "homepage": "https://pilotprotocol.network",
     "methods": [
       {
@@ -3997,7 +3997,7 @@ export const apps: App[] = [
     "id": "io.pilot.slipstream",
     "name": "Slipstream",
     "tagline": "Polymarket smart-money leaderboard, signals, and tape",
-    "description": "SLIPSTREAM — Polymarket smart-money leaderboard, signals, tape & opportunities (Ed25519-signed API).",
+    "description": "# Slipstream — market intelligence for agents\n\nSlipstream gives an agent a focused, read-oriented view of Polymarket activity through nine discoverable Pilot methods. It brings leaderboards, market signals, transaction tape, market records, wallet context, skilled participants, opportunities, service statistics, and method help into the same request-and-response interface used by other Pilot apps.\n\n## What an agent can inspect\n\n- `slipstream.leaderboard` surfaces ranked market participants.\n- `slipstream.signals` and `slipstream.opportunities` expose the service's derived market-intelligence views.\n- `slipstream.tape` provides the activity stream, while `slipstream.markets` provides market context.\n- `slipstream.wallet` and `slipstream.skilled` support participant-level research.\n- `slipstream.stats` describes service-level statistics, and `slipstream.help` is the runtime discovery entry point.\n\nThe API responses are Ed25519-signed so a caller can verify their origin before using the result downstream. As published in the current catalog, Slipstream exposes research and monitoring methods; it does **not** list an order-placement or trade-execution method. That boundary matters for operators: an agent can use the app as one input to an analysis workflow, but execution policy, spending authority, human approval, and independent verification remain outside this app.\n\nFor production use, inspect `slipstream.help` at runtime before relying on a field or parameter, retain the signed response with the surrounding decision record, and treat market signals as time-sensitive evidence rather than guaranteed outcomes.",
     "categories": [
       "finance"
     ],
@@ -4017,55 +4017,55 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "slipstream.leaderboard",
-        "summary": null,
+        "summary": "Read Slipstream's ranked view of Polymarket participants for market research.",
         "example": null,
         "gated": null
       },
       {
         "name": "slipstream.signals",
-        "summary": null,
+        "summary": "Read the current derived market signals published by Slipstream.",
         "example": null,
         "gated": null
       },
       {
         "name": "slipstream.tape",
-        "summary": null,
+        "summary": "Read the recent market-activity tape used for monitoring and analysis.",
         "example": null,
         "gated": null
       },
       {
         "name": "slipstream.markets",
-        "summary": null,
+        "summary": "Retrieve the market records and context available through Slipstream.",
         "example": null,
         "gated": null
       },
       {
         "name": "slipstream.wallet",
-        "summary": null,
+        "summary": "Inspect the wallet-level market context exposed by the service.",
         "example": null,
         "gated": null
       },
       {
         "name": "slipstream.skilled",
-        "summary": null,
+        "summary": "Inspect Slipstream's view of skilled market participants.",
         "example": null,
         "gated": null
       },
       {
         "name": "slipstream.opportunities",
-        "summary": null,
+        "summary": "Read the service's current opportunity view for further research.",
         "example": null,
         "gated": null
       },
       {
         "name": "slipstream.stats",
-        "summary": null,
+        "summary": "Read service and dataset statistics exposed by Slipstream.",
         "example": null,
         "gated": null
       },
       {
         "name": "slipstream.help",
-        "summary": null,
+        "summary": "Discover the current Slipstream methods and their runtime parameters.",
         "example": null,
         "gated": null
       }
@@ -4271,18 +4271,6 @@ export const apps: App[] = [
       {
         "platform": "darwin-arm64",
         "bytes": 9110758
-      },
-      {
-        "platform": "darwin-amd64",
-        "bytes": 9475188
-      },
-      {
-        "platform": "linux-arm64",
-        "bytes": 9930726
-      },
-      {
-        "platform": "linux-amd64",
-        "bytes": 9930726
       }
     ],
     "installedBytes": null,

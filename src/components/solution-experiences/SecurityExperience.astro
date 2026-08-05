@@ -1,0 +1,64 @@
+---
+import SolutionFunnel from '../SolutionFunnel.astro';
+import SolutionProof from '../SolutionProof.astro';
+import SolutionRelated from '../SolutionRelated.astro';
+import CampaignActions from './CampaignActions.astro';
+import type { SolutionExperienceProps } from './types';
+
+const { solution, story, funnel, turnstileSiteKey = '' } = Astro.props as SolutionExperienceProps;
+const permissions = [
+  ['Package signature', 'verified', 'allow'],
+  ['Binary hash', 'pinned', 'allow'],
+  ['Filesystem', '/workspace only', 'limit'],
+  ['Outbound network', 'deny by default', 'deny'],
+];
+---
+
+<main class="campaign-page campaign-security" style={`--solution-hue:${solution.hue}`}>
+  <section class="security-hero" aria-labelledby={`${solution.slug}-title`}>
+    <div class="wrap security-shell">
+      <aside class="security-rail"><span>SEC</span><i></i><small>Review<br/>07—A</small><b>2026</b></aside>
+      <div class="security-dossier">
+        <div class="security-dossier-head"><span>Execution authority review</span><span>Decision required</span></div>
+        <div class="security-dossier-grid">
+          <header>
+            <span class="security-classification">Agent application / privileged action</span>
+            <h1 id={`${solution.slug}-title`}>{story.heroLead}<br/><em>{story.heroEmphasis}</em></h1>
+            <p>{story.lede}</p>
+            <CampaignActions solution={solution} funnel={funnel} location="security_hero" />
+          </header>
+          <div class="security-verdict">
+            <div class="security-verdict-top"><span>Execution decision</span><strong><i></i>Allowed with limits</strong></div>
+            <h2>wallet.pay</h2>
+            <p>Authority is derived from a verified package and an explicit local grant—not from the model request alone.</p>
+            <dl>{permissions.map(([key, value, tone]) => <div><dt>{key}</dt><dd class={`tone-${tone}`}>{value}</dd></div>)}</dl>
+            <footer><span>Audit event #P-1842</span><span>Policy v4.2</span></footer>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <SolutionFunnel solution={solution} funnel={funnel} turnstileSiteKey={turnstileSiteKey} />
+
+  <section class="security-boundaries" aria-labelledby="security-boundaries-title">
+    <div class="wrap security-boundaries-grid">
+      <header><span>Control surface</span><h2 id="security-boundaries-title">Four checks between intent<br/><em>and execution.</em></h2><p>{solution.problemBody}</p></header>
+      <div class="security-control-stack">
+        {solution.capabilities.map((capability, index) => (
+          <article><span>Control 0{index + 1}</span><div><small>{capability.label}</small><h3>{capability.title}</h3><p>{capability.body}</p></div><b>{index === 0 ? 'VERIFY' : index === 1 ? 'SCOPE' : 'INSPECT'}</b></article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="security-audit" aria-labelledby="security-audit-title">
+    <div class="wrap">
+      <aside><span>Independent finding</span><strong>{solution.signal.value}</strong><p>{solution.signal.body}</p><a href={solution.signal.href} target="_blank" rel="noopener noreferrer">{solution.signal.source} ↗</a></aside>
+      <div><span>Audit sequence</span><h2 id="security-audit-title">The trail survives the call.</h2><ol>{solution.steps.map((step, index) => <li><span>0{index + 1}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol></div>
+    </div>
+  </section>
+
+  <SolutionProof solution={solution} />
+  <SolutionRelated solution={solution} story={story} />
+</main>

@@ -1,6 +1,7 @@
 ---
 import BaseHead from '../components/BaseHead.astro';
 import Nav from '../components/Nav.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
 import DocSidebar from '../components/DocSidebar.astro';
 import DocsFooter from '../components/DocsFooter.astro';
 import PageNav from '../components/PageNav.astro';
@@ -23,11 +24,11 @@ const { title, description, activePage, canonicalPath, ogImage = 'https://pilotp
 const canonicalUrl = canonicalPath ? `https://pilotprotocol.network${canonicalPath}` : undefined;
 
 const breadcrumbItems = [
-  { name: "Home", url: "https://pilotprotocol.network/" },
-  { name: "Docs", url: "https://pilotprotocol.network/docs/" },
+  { name: 'Home', href: '/' },
+  { name: 'Documentation', href: '/docs/' },
 ];
 if (activePage !== 'index') {
-  breadcrumbItems.push({ name: title, url: canonicalUrl || "" });
+  breadcrumbItems.push({ name: title });
 }
 ---
 <!DOCTYPE html>
@@ -42,21 +43,12 @@ if (activePage !== 'index') {
     "description": description,
     "url": canonicalUrl,
     "isPartOf": { "@type": "WebSite", "name": "Pilot Protocol", "url": "https://pilotprotocol.network/" },
-    "publisher": { "@type": "Organization", "name": "Vulture Labs" }
-  })}></script>
-  <script type="application/ld+json" set:html={JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": breadcrumbItems.map((item, i) => ({
-      "@type": "ListItem",
-      "position": i + 1,
-      "name": item.name,
-      "item": item.url
-    }))
+    "author": { "@id": "https://pilotprotocol.network/#organization" },
+    "publisher": { "@id": "https://pilotprotocol.network/#organization" }
   })}></script>
 </head>
 <body>
-  <Nav active="docs" />
+  <Nav active="docs" breadcrumbs={false} />
   <button class="docs-menu-toggle" id="docs-menu-toggle" type="button" aria-controls="docs-sidebar" aria-expanded="false">
     <span aria-hidden="true">☰</span> Documentation
   </button>
@@ -65,7 +57,7 @@ if (activePage !== 'index') {
   <aside class="toc-sidebar" id="toc-sidebar"></aside>
   <main class="content">
     <div class="content-body">
-      {activePage !== 'index' && <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a> <span class="sep">/</span> <a href="/docs/">Docs</a> <span class="sep">/</span> <span>{title}</span></nav>}
+      <Breadcrumbs compact items={breadcrumbItems} />
       {activePage !== 'index' && (
         <a class="back-overview" href="/docs/#flow">
           <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>

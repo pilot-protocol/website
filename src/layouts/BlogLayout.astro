@@ -2,7 +2,10 @@
 import BaseHead from '../components/BaseHead.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
-import { blogPosts, companyNews } from '../data/blogPosts';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import articleImageManifest from '../data/articleImageManifest.json';
+import { allPosts, blogPosts, companyNews } from '../data/blogPosts';
+import { getBlogImage } from '../lib/blogImages';
 import '../styles/global.css';
 import '../styles/system.css';
 
@@ -14,23 +17,37 @@ interface Props {
   canonicalPath?: string;
   bannerImage?: string;
   faqItems?: { question: string; answer: string }[];
-  section?: 'blog' | 'news';
+  section?: 'blog' | 'learn' | 'news';
+  author?: { name: string; url?: string; type?: 'Organization' | 'Person' };
+  dateModified?: string;
 }
 
-const { title, description, date, tags, canonicalPath, bannerImage, faqItems = [], section = 'blog' } = Astro.props;
-const isNews = section === 'news';
-const collectionLabel = isNews ? 'Newsroom' : 'Blog';
-const collectionPath = isNews ? '/news/' : '/blog/';
-const collectionPosts = isNews ? companyNews : blogPosts;
+const { title, description, date, tags, canonicalPath, bannerImage, faqItems = [], section = 'blog', author, dateModified } = Astro.props;
 const cleanPath = canonicalPath ? canonicalPath.replace(/\.html$/, '') : undefined;
 const canonicalUrl = cleanPath ? `https://pilotprotocol.network${cleanPath}` : undefined;
+const effectiveSection = cleanPath?.startsWith('/learn/') ? 'learn' : section;
+const isNews = effectiveSection === 'news';
+const isLearn = effectiveSection === 'learn';
+const collectionLabel = isNews ? 'Newsroom' : isLearn ? 'Learning Center' : 'Blog';
+const collectionPath = isNews ? '/news/' : isLearn ? '/learn/' : '/blog/';
+const collectionPosts = isNews ? companyNews : blogPosts;
+const relatedPath = isLearn ? '/blog/' : collectionPath;
+const heroImage = bannerImage ? getBlogImage(bannerImage) : undefined;
 const ogImage = bannerImage
-  ? `https://pilotprotocol.network${bannerImage}`
-  : 'https://pilotprotocol.network/img/pilot.png';
+  ? `https://pilotprotocol.network${heroImage?.src || bannerImage}`
+  : 'https://pilotprotocol.network/og/main.jpg';
 
 const pathParts = Astro.url.pathname.replace(/\/$/, '').split('/');
 const currentSlug = pathParts[pathParts.length - 1].replace('.html', '');
 const currentIndex = collectionPosts.findIndex(p => p.slug === currentSlug);
+const currentPost = allPosts.find(p => p.slug === currentSlug);
+const publishedAt = currentPost?.iso_date || date;
+const modifiedAt = dateModified || publishedAt;
+const articleAuthor = author || {
+  name: 'Pilot Protocol editorial team',
+  url: 'https://pilotprotocol.network/about#publishing',
+  type: 'Organization' as const,
+};
 
 const prevPost = currentIndex > 0 ? collectionPosts[currentIndex - 1] : null;
 const nextPost = currentIndex >= 0 && currentIndex < collectionPosts.length - 1 ? collectionPosts[currentIndex + 1] : null;
@@ -72,6 +89,39 @@ const labelKey = (value: string) => decodeEntities(
   .replace(/\s+/g, ' ')
   .trim()
   .toLowerCase();
+
+const setImageAttribute = (tag: string, name: string, value: string | number) => {
+  const pattern = new RegExp(`\\s${name}\\s*=\\s*(?:"[^"]*"|'[^']*')`, 'i');
+  if (pattern.test(tag)) return tag.replace(pattern, ` ${name}="${value}"`);
+  return tag.replace(/(\s*\/?>)$/, ` ${name}="${value}"$1`);
+};
+
+let bodyImageIndex = 0;
+articleBody = articleBody.replace(/<img\b[^>]*>/gi, (originalTag) => {
+  let tag = originalTag;
+  const sourceMatch = tag.match(/\bsrc\s*=\s*(?:"([^"]+)"|'([^']+)')/i);
+  const remoteSource = sourceMatch ? decodeEntities(sourceMatch[1] ?? sourceMatch[2] ?? '') : '';
+  const optimized = articleImageManifest[remoteSource as keyof typeof articleImageManifest];
+
+  if (optimized) {
+    tag = setImageAttribute(tag, 'src', optimized.src);
+    tag = setImageAttribute(tag, 'srcset', optimized.srcset);
+    tag = setImageAttribute(tag, 'sizes', '(max-width: 760px) calc(100vw - 40px), 720px');
+    tag = setImageAttribute(tag, 'width', optimized.width);
+    tag = setImageAttribute(tag, 'height', optimized.height);
+  }
+
+  tag = setImageAttribute(tag, 'decoding', 'async');
+  if (bodyImageIndex === 0 && !heroImage) {
+    tag = setImageAttribute(tag, 'loading', 'eager');
+    tag = setImageAttribute(tag, 'fetchpriority', 'high');
+  } else {
+    tag = setImageAttribute(tag, 'loading', 'lazy');
+    tag = setImageAttribute(tag, 'fetchpriority', 'low');
+  }
+  bodyImageIndex += 1;
+  return tag;
+});
 const headingIds = new Set<string>();
 const headingsByLabel = new Map<string, string>();
 
@@ -102,26 +152,18 @@ const faqSectionId = headingIds.has('frequently-asked-questions')
 <html lang="en">
 <head>
   <BaseHead title={title} description={description} canonicalUrl={canonicalUrl} ogImage={ogImage} ogType="article" />
+  {heroImage && <link rel="preload" as="image" href={heroImage.src} imagesrcset={heroImage.srcset} imagesizes="(max-width: 760px) calc(100vw - 40px), 720px" fetchpriority="high" />}
   <script type="application/ld+json" set:html={JSON.stringify({
     "@context": "https://schema.org",
     "@type": "Article",
     "headline": title,
     "description": description,
     "image": ogImage,
-    "author": {"@type": "Organization", "name": "Vulture Labs"},
-    "publisher": {"@type": "Organization", "name": "Vulture Labs", "logo": {"@type": "ImageObject", "url": "https://pilotprotocol.network/img/pilot.png"}},
-    "datePublished": date,
-    "dateModified": date,
+    "author": {"@type": articleAuthor.type || "Organization", "name": articleAuthor.name, "url": articleAuthor.url},
+    "publisher": {"@id": "https://pilotprotocol.network/#organization"},
+    "datePublished": publishedAt,
+    "dateModified": modifiedAt,
     "mainEntityOfPage": canonicalUrl
-  })}></script>
-  <script type="application/ld+json" set:html={JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://pilotprotocol.network/"},
-      {"@type": "ListItem", "position": 2, "name": collectionLabel, "item": `https://pilotprotocol.network${collectionPath}`},
-      {"@type": "ListItem", "position": 3, "name": title, "item": canonicalUrl}
-    ]
   })}></script>
   {faqItems.length > 0 && (
     <script type="application/ld+json" set:html={JSON.stringify({
@@ -137,18 +179,28 @@ const faqSectionId = headingIds.has('frequently-asked-questions')
 </head>
 <body>
   <div class="progress-bar" id="progress-bar"></div>
-  <Nav active={isNews ? 'news' : 'blog'} />
+  <Nav active={isNews ? 'news' : 'blog'} breadcrumbs={false} />
   <main class="article-layout">
     <article class="article" data-track-read={currentSlug}>
-      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a> <span class="sep">/</span> <a href={collectionPath}>{collectionLabel}</a> <span class="sep">/</span> <span>{title}</span></nav>
-      {bannerImage && <img class="article-banner" src={bannerImage} alt={title} loading="lazy" />}
+      <Breadcrumbs compact items={[
+        { name: 'Home', href: '/' },
+        { name: collectionLabel, href: collectionPath },
+        { name: title },
+      ]} />
+      {heroImage && <img class="article-banner" src={heroImage.src} srcset={heroImage.srcset} sizes="(max-width: 760px) calc(100vw - 40px), 720px" alt={title} width={heroImage.width} height={heroImage.height} loading="eager" decoding="sync" fetchpriority="high" />}
       <h1>{title}</h1>
       <div class="article-meta">
+        <a href={articleAuthor.url || '/about#publishing'}>By {articleAuthor.name}</a>
         <span>{date}</span>
         <span class="reading-time" id="reading-time"></span>
         {tags.map((tag) => <span class="tag">{tag}</span>)}
       </div>
       <Fragment set:html={articleBody} />
+      <footer class="article-provenance">
+        <strong>About this article</strong>
+        <p>Published by the Pilot Protocol team. Product claims are scoped to the availability labels and technical references linked in the article; deployment behavior can vary by version and environment.</p>
+        <p><a href="/about#publishing">How we publish</a> · <a href="/contact?topic=correction">Suggest a correction</a> · <a href="/docs/research">Technical references</a></p>
+      </footer>
     </article>
     <aside class="article-toc" id="article-toc">
       <nav>
@@ -177,15 +229,18 @@ const faqSectionId = headingIds.has('frequently-asked-questions')
       <div class="related-inner">
         <h2>Related Posts</h2>
         <div class="related-grid">
-          {related.map(post => (
-            <a class="related-card" href={`${collectionPath}${post.slug}`}>
-              <img src={`/blog/${post.banner}`} alt={post.title} loading="lazy" />
-              <div class="related-body">
-                <h3>{post.title}</h3>
-                <span class="related-meta">{post.date} &middot; {post.category}</span>
-              </div>
-            </a>
-          ))}
+          {related.map(post => {
+            const image = getBlogImage(`/blog/${post.banner}`);
+            return (
+              <a class="related-card" href={`${relatedPath}${post.slug}`}>
+                <img src={image.src} srcset={image.srcset} sizes="(max-width: 720px) calc(100vw - 40px), 360px" alt={post.title} width={image.width} height={image.height} loading="lazy" decoding="async" />
+                <div class="related-body">
+                  <h3>{post.title}</h3>
+                  <span class="related-meta">{post.date} &middot; {post.category}</span>
+                </div>
+              </a>
+            );
+          })}
         </div>
       </div>
     </section>

@@ -1,0 +1,65 @@
+---
+import SolutionFunnel from '../SolutionFunnel.astro';
+import SolutionProof from '../SolutionProof.astro';
+import SolutionRelated from '../SolutionRelated.astro';
+import CampaignActions from './CampaignActions.astro';
+import type { SolutionExperienceProps } from './types';
+
+const { solution, story, funnel, turnstileSiteKey = '' } = Astro.props as SolutionExperienceProps;
+const inputs = ['PostgreSQL', 'Internal HTTP', 'UDP service', 'Webhook'];
+---
+
+<main class="campaign-page campaign-integration" style={`--solution-hue:${solution.hue}`}>
+  <section class="integration-hero" aria-labelledby={`${solution.slug}-title`}>
+    <div class="wrap">
+      <div class="integration-masthead"><span>Integration field note</span><span>Existing system → agent edge</span><span>02 / 12</span></div>
+      <header class="integration-title-row">
+        <h1 id={`${solution.slug}-title`}>{story.heroLead}<br/><em>{story.heroEmphasis}</em></h1>
+        <div><p>{story.lede}</p><CampaignActions solution={solution} funnel={funnel} location="integration_hero" /></div>
+      </header>
+
+      <div class="integration-seam" aria-label="Pilot integration seam diagram">
+        <div class="integration-systems">
+          <span class="seam-label">Systems you keep</span>
+          {inputs.map((input, index) => <div><span>{String(index + 1).padStart(2, '0')}</span><strong>{input}</strong></div>)}
+        </div>
+        <div class="integration-bridge">
+          <span class="seam-label">Smallest viable seam</span>
+          <div><i></i><strong>Pilot agent edge</strong><small>SDK · socket · gateway · webhook</small></div>
+        </div>
+        <div class="integration-output">
+          <span class="seam-label">Agent-facing result</span>
+          <div><small>Reachable capability</small><strong>inventory.lookup</strong><span>trusted · typed · observable</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <SolutionFunnel solution={solution} funnel={funnel} turnstileSiteKey={turnstileSiteKey} />
+
+  <section class="integration-adapters" aria-labelledby="integration-adapters-title">
+    <div class="wrap">
+      <header><span>Four ways in</span><h2 id="integration-adapters-title">Change the boundary.<br/><em>Keep the contract.</em></h2></header>
+      <div class="adapter-matrix">
+        {solution.capabilities.map((capability, index) => (
+          <article><span>0{index + 1} / {capability.label}</span><h3>{capability.title}</h3><p>{capability.body}</p><b aria-hidden="true">↘</b></article>
+        ))}
+        <aside><small>Operating problem</small><h3>{solution.problemTitle}</h3><p>{solution.problemBody}</p></aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="integration-delivery" aria-labelledby="integration-delivery-title">
+    <div class="wrap">
+      <div class="integration-evidence"><strong>{solution.signal.value}</strong><p>{solution.signal.body}</p><a href={solution.signal.href} target="_blank" rel="noopener noreferrer">{solution.signal.source} ↗</a></div>
+      <div class="integration-runbook">
+        <span>Integration runbook</span>
+        <h2 id="integration-delivery-title">One seam at a time.</h2>
+        <ol>{solution.steps.map((step, index) => <li><span>{index + 1}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol>
+      </div>
+    </div>
+  </section>
+
+  <SolutionProof solution={solution} />
+  <SolutionRelated solution={solution} story={story} />
+</main>

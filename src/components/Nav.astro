@@ -1,8 +1,12 @@
 ---
+import Breadcrumbs, { type BreadcrumbItem } from './Breadcrumbs.astro';
+
 interface Props {
   active?: 'home' | 'docs' | 'blog' | 'news' | 'roadmap' | 'governance' | 'contact' | 'plans' | 'for' | 'tech' | 'apps' | 'trust';
+  breadcrumbs?: BreadcrumbItem[] | false;
+  breadcrumbLabel?: string;
 }
-const { active } = Astro.props;
+const { active, breadcrumbs, breadcrumbLabel } = Astro.props;
 
 const navGroups = [
   {
@@ -51,6 +55,7 @@ const navGroups = [
     desc: 'Architecture, field notes, evaluator material, and a machine-readable version of the site.',
     activeFor: ['blog'],
     links: [
+      { href: '/learn/', kicker: 'Learn', label: 'Learning center', desc: 'Foundations, transport, and security' },
       { href: '/blog/', kicker: 'Journal', label: 'Field notes', desc: 'Technical guides and architecture' },
       { href: '/docs/research', kicker: 'Research', label: 'Technical papers', desc: 'Specifications and evaluations' },
       { href: '/pilot-native-use-cases.pdf', kicker: 'Use cases', label: 'Deployment patterns', desc: 'What the combined Pilot surface enables' },
@@ -65,7 +70,7 @@ const navGroups = [
     desc: 'Learn about the company, follow our progress, or speak directly with the team.',
     activeFor: ['news', 'roadmap', 'contact'],
     links: [
-      { href: '/learn/what-is-pilot-protocol', kicker: 'About', label: 'About Pilot', desc: 'What we are building and why' },
+      { href: '/about', kicker: 'About', label: 'About Pilot', desc: 'Company, people, and publishing standards' },
       { href: '/roadmap', kicker: 'Direction', label: 'Product roadmap', desc: 'What we are strengthening next' },
       { href: '/news/', kicker: 'Newsroom', label: 'Company news', desc: 'Announcements and company updates' },
       { href: '/contact', kicker: 'Contact', label: 'Talk to the team', desc: 'Enterprise, partnerships, and press' },
@@ -78,10 +83,10 @@ const navGroups = [
 <nav class="nav-top" aria-label="Primary">
   <div class="wrap">
     <div class="nav-row">
-      <a href="/" class="brand" aria-label="Pilot Protocol - home"
+      <a href="/" class="brand"
          data-track="nav_click" data-track-target="home">
-        <span class="brand-mark"><img src="/img/pilot-96.png" alt="" class="logo" width="40" height="40" /></span>
-        <span class="brand-text"><strong>Pilot</strong><span>Protocol</span></span>
+        <span class="brand-mark"><img src="/img/pilot-48.webp" alt="" class="logo" width="40" height="40" decoding="async" /></span>
+        <span class="brand-text"><strong>Pilot</strong><span>Protocol</span></span><span class="sr-only"> home</span>
       </a>
 
       <div class="nav-links" id="nav-links">
@@ -141,6 +146,9 @@ const navGroups = [
     </div>
   </div>
 </nav>
+{Astro.url.pathname !== '/' && breadcrumbs !== false && (
+  <Breadcrumbs items={Array.isArray(breadcrumbs) ? breadcrumbs : undefined} currentLabel={breadcrumbLabel} />
+)}
 <span id="page-content" class="skip-target" tabindex="-1"></span>
 
 <script is:inline>

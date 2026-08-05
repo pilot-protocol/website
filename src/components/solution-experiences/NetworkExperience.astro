@@ -1,0 +1,78 @@
+---
+import SolutionFunnel from '../SolutionFunnel.astro';
+import SolutionProof from '../SolutionProof.astro';
+import SolutionRelated from '../SolutionRelated.astro';
+import CampaignActions from './CampaignActions.astro';
+import type { SolutionExperienceProps } from './types';
+
+const { solution, story, funnel, turnstileSiteKey = '' } = Astro.props as SolutionExperienceProps;
+---
+
+<main class="campaign-page campaign-network" style={`--solution-hue:${solution.hue}`}>
+  <section class="network-hero" aria-labelledby={`${solution.slug}-title`}>
+    <div class="wrap network-hero-shell">
+      <header class="network-copy">
+        <div class="campaign-overline"><span>Network 01</span><span>{solution.eyebrow}</span></div>
+        <h1 id={`${solution.slug}-title`}>{story.heroLead}<br/><em>{story.heroEmphasis}</em></h1>
+        <p>{story.lede}</p>
+        <CampaignActions solution={solution} funnel={funnel} location="network_hero" />
+      </header>
+
+      <div class="network-topology" aria-label="Example private agent topology">
+        <div class="network-topology-bar"><span>pilot://production</span><span><i></i>4 peers reachable</span></div>
+        <div class="network-canvas">
+          <div class="network-orbit orbit-one" aria-hidden="true"></div>
+          <div class="network-orbit orbit-two" aria-hidden="true"></div>
+          <div class="network-node node-local"><small>Local</small><strong>agent-ops</strong><span>10.AC.20.01</span></div>
+          <div class="network-node node-cloud"><small>Cloud</small><strong>agent-research</strong><span>direct · 34ms</span></div>
+          <div class="network-node node-partner"><small>Partner</small><strong>agent-supply</strong><span>relay · encrypted</span></div>
+          <div class="network-node node-edge"><small>Edge</small><strong>agent-field</strong><span>direct · 18ms</span></div>
+          <div class="network-core"><span>P</span><small>identity + trust</small></div>
+        </div>
+        <div class="network-topology-foot"><span>Mutual trust required</span><span>Application traffic remains encrypted</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="network-architecture" aria-labelledby="network-architecture-title">
+    <div class="wrap">
+      <header>
+        <span class="campaign-index">Architecture / 02</span>
+        <h2 id="network-architecture-title">The network details disappear.<br/><em>The trust decision does not.</em></h2>
+        <p>{solution.problemBody}</p>
+      </header>
+      <ol class="network-layers">
+        {solution.capabilities.map((capability, index) => (
+          <li>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <div><small>{capability.label}</small><h3>{capability.title}</h3><p>{capability.body}</p></div>
+            <i aria-hidden="true"></i>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <section class="network-path" aria-labelledby="network-path-title">
+    <div class="wrap network-path-grid">
+      <aside class="network-signal">
+        <span>Independent signal</span>
+        <strong>{solution.signal.value}</strong>
+        <p>{solution.signal.body}</p>
+        <a href={solution.signal.href} target="_blank" rel="noopener noreferrer">{solution.signal.source} ↗</a>
+      </aside>
+      <div class="network-route">
+        <header><span>Connection trace</span><h2 id="network-path-title">Unknown endpoint → verified peer</h2></header>
+        <ol>
+          {solution.steps.map((step, index) => (
+            <li><span>{String(index + 1).padStart(2, '0')}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <SolutionFunnel solution={solution} funnel={funnel} turnstileSiteKey={turnstileSiteKey} />
+  <SolutionProof solution={solution} />
+  <SolutionRelated solution={solution} story={story} />
+</main>

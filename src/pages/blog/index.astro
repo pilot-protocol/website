@@ -3,6 +3,7 @@ import BaseHead from '../../components/BaseHead.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
 import { blogPosts, categories } from '../../data/blogPosts';
+import { getBlogImage } from '../../lib/blogImages';
 import '../../styles/global.css';
 import '../../styles/system.css';
 
@@ -12,7 +13,7 @@ const sortedPosts = [...blogPosts].sort((a, b) => (b.iso_date || '').localeCompa
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <BaseHead title="Agent Overlay Networking: Guides &amp; Walkthroughs | Pilot Protocol" description="Learn how to connect AI agents over a P2P overlay network: NAT traversal, encrypted tunnels, trust models, and the app store. Real commands, working code." canonicalUrl="https://pilotprotocol.network/blog/" ogImage="https://pilotprotocol.network/og/blogs.jpg" />
+  <BaseHead title="Agent Overlay Networking: Guides & Walkthroughs | Pilot Protocol" description="Learn how to connect AI agents over a P2P overlay network: NAT traversal, encrypted tunnels, trust models, and the app store. Real commands, working code." canonicalUrl="https://pilotprotocol.network/blog/" ogImage="https://pilotprotocol.network/og/blogs.jpg" />
   <script type="application/ld+json" set:html={JSON.stringify({
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -97,6 +98,7 @@ const sortedPosts = [...blogPosts].sort((a, b) => (b.iso_date || '').localeCompa
 
     <div id="blog-cards">
       {sortedPosts.map((post, i) => {
+        const image = getBlogImage(`/blog/${post.banner}`);
         return (
           <a
             class={`blog-card reveal${i === 0 ? ' blog-hero' : ''}`}
@@ -106,7 +108,7 @@ const sortedPosts = [...blogPosts].sort((a, b) => (b.iso_date || '').localeCompa
             data-title={post.title.toLowerCase()}
             data-description={post.description.toLowerCase()}
           >
-            <img src={`/blog/${post.banner}`} alt={post.title} loading={i < 3 ? 'eager' : 'lazy'} />
+            <img src={image.src} srcset={image.srcset} sizes="(max-width: 720px) calc(100vw - 40px), 360px" alt={post.title} width={image.width} height={image.height} loading={i === 0 ? 'eager' : 'lazy'} decoding="async" fetchpriority={i === 0 ? 'high' : 'auto'} />
             <div class="card-body">
               <h3>{post.title}</h3>
               <p>{post.description}</p>

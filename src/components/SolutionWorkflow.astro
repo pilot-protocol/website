@@ -1,0 +1,25 @@
+---
+import type { SolutionProfile } from '../data/solutions';
+import type { SolutionStory } from '../data/solutionStories';
+
+interface Props { solution: SolutionProfile; story: SolutionStory }
+const { solution, story } = Astro.props;
+---
+
+<section class="solution-section solution-flow-section" aria-labelledby={`${solution.slug}-workflow-title`}>
+  <div class="wrap solution-flow-grid">
+    <div class="solution-flow-intro">
+      <div class="eyebrow">How the workflow resolves</div>
+      <h2 id={`${solution.slug}-workflow-title`}>{story.workflowHeading.lead}<br/><em>{story.workflowHeading.emphasis}</em></h2>
+      <p>{story.workflowHeading.body}</p>
+    </div>
+    <ol class="solution-flow">
+      {solution.steps.map((step, index) => (
+        <li>
+          <span class="solution-flow-num">{String(index + 1).padStart(2, '0')}</span>
+          <div><h3>{step.title}</h3><p>{step.body}</p></div>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>

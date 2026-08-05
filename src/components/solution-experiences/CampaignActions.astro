@@ -1,0 +1,29 @@
+---
+import type { SolutionFunnel } from '../../data/solutionStories';
+import type { SolutionProfile } from '../../data/solutions';
+
+interface Props {
+  solution: SolutionProfile;
+  funnel: SolutionFunnel;
+  location: string;
+}
+
+const { solution, funnel, location } = Astro.props;
+---
+
+<div class="campaign-actions">
+  <a
+    class="btn campaign-primary"
+    href="#start"
+    data-track="solution_cta_click"
+    data-track-target={`${solution.slug}:funnel`}
+    data-track-location={location}
+  >{funnel.submitLabel} <span class="arr">→</span></a>
+  <a
+    class="btn campaign-secondary"
+    href={solution.primaryCta.href}
+    data-track="solution_cta_click"
+    data-track-target={`${solution.slug}:product`}
+    data-track-location={location}
+  >{solution.primaryCta.label}</a>
+</div>

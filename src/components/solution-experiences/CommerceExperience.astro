@@ -1,0 +1,55 @@
+---
+import SolutionFunnel from '../SolutionFunnel.astro';
+import SolutionProof from '../SolutionProof.astro';
+import SolutionRelated from '../SolutionRelated.astro';
+import CampaignActions from './CampaignActions.astro';
+import type { SolutionExperienceProps } from './types';
+
+const { solution, story, funnel, turnstileSiteKey = '' } = Astro.props as SolutionExperienceProps;
+---
+
+<main class="campaign-page campaign-commerce" style={`--solution-hue:${solution.hue}`}>
+  <section class="commerce-hero" aria-labelledby={`${solution.slug}-title`}>
+    <div class="wrap commerce-hero-grid">
+      <article class="commerce-receipt" aria-label="Example agent payment receipt">
+        <div class="receipt-brand"><span>PILOT / WALLET</span><span>SETTLED</span></div>
+        <div class="receipt-check">✓</div>
+        <small>PAYMENT CONFIRMED</small>
+        <h2>42.00 <span>USDC</span></h2>
+        <p>Compute reservation · job #8F42</p>
+        <dl><div><dt>Buyer</dt><dd>agent-research</dd></div><div><dt>Counterparty</dt><dd>compute-east</dd></div><div><dt>Mandate</dt><dd>compute / max 50</dd></div><div><dt>Network</dt><dd>Base</dd></div><div><dt>Transaction</dt><dd>0x71…9ac2</dd></div></dl>
+        <footer><span>Identity verified</span><span>Limit enforced</span></footer>
+      </article>
+
+      <header class="commerce-copy">
+        <span>Bounded agent commerce / 10</span>
+        <h1 id={`${solution.slug}-title`}>{story.heroLead}<br/><em>{story.heroEmphasis}</em></h1>
+        <p>{story.lede}</p>
+        <CampaignActions solution={solution} funnel={funnel} location="commerce_hero" />
+        <div class="commerce-terms"><span>No invisible authority</span><span>No unbounded balance</span><span>No anonymous counterparty</span></div>
+      </header>
+    </div>
+  </section>
+
+  <section class="commerce-mandate" aria-labelledby="commerce-mandate-title">
+    <div class="wrap commerce-mandate-grid">
+      <header><span>Spending mandate</span><h2 id="commerce-mandate-title">Authority is a data structure.<br/><em>Make it narrow.</em></h2><p>{solution.problemBody}</p></header>
+      <div class="mandate-card">
+        <div><span>Allowed purpose</span><strong>Isolated compute</strong></div><div><span>Per-transaction limit</span><strong>≤ 50 USDC</strong></div><div><span>Approved recipients</span><strong>2 service agents</strong></div><div><span>Human review</span><strong>Above 35 USDC</strong></div><div><span>Expires</span><strong>24 hours</strong></div><footer><span>Mandate #M-1842</span><b>Active</b></footer>
+      </div>
+    </div>
+    <div class="wrap commerce-controls">{solution.capabilities.map((capability, index) => <article><span>Control 0{index + 1}</span><small>{capability.label}</small><h3>{capability.title}</h3><p>{capability.body}</p></article>)}</div>
+  </section>
+
+  <section class="commerce-ledger" aria-labelledby="commerce-ledger-title">
+    <div class="wrap">
+      <header><span>Transaction sequence</span><h2 id="commerce-ledger-title">Request. Check. Settle. Release.</h2></header>
+      <ol>{solution.steps.map((step, index) => <li><span>0{index + 1}</span><div><h3>{step.title}</h3><p>{step.body}</p></div><b>{index < solution.steps.length - 1 ? '→' : '✓'}</b></li>)}</ol>
+      <aside><strong>{solution.signal.value}</strong><p>{solution.signal.body}</p><a href={solution.signal.href} target="_blank" rel="noopener noreferrer">{solution.signal.source} ↗</a></aside>
+    </div>
+  </section>
+
+  <SolutionFunnel solution={solution} funnel={funnel} turnstileSiteKey={turnstileSiteKey} />
+  <SolutionProof solution={solution} />
+  <SolutionRelated solution={solution} story={story} />
+</main>

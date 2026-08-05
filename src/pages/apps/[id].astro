@@ -3,6 +3,7 @@ import BaseHead from '../../components/BaseHead.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
 import AppIcon from '../../components/AppIcon.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import Shelf from '../../components/Shelf.astro';
 import { apps, categories, relatedApps } from '../../data/apps';
 import { fmtBytes, fmtDate, platformLabel, osOf, osSummary, ALL_PLATFORMS } from '../../data/format';
@@ -68,7 +69,7 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
 })}></script>
 </head>
 <body>
-<Nav active="apps" />
+<Nav active="apps" breadcrumbs={false} />
 
 <main class="store">
 
@@ -79,11 +80,11 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         Back to App Store
       </a>
-      <div class="crumbs">
-        <a href="/app-store">App Store</a><span class="sep">/</span>
-        <a href={`/app-store#cat-${app.primaryCategory}`}>{catName(app.primaryCategory)}</a><span class="sep">/</span>
-        <span>{app.name}</span>
-      </div>
+      <Breadcrumbs compact items={[
+        { name: 'Home', href: '/' },
+        { name: 'App Store', href: '/app-store' },
+        { name: app.name },
+      ]} />
 
       <div class="dh-grid">
         <div class="dh-l">

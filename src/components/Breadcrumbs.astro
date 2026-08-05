@@ -1,0 +1,164 @@
+---
+export interface BreadcrumbItem {
+  name: string;
+  href?: string;
+}
+
+interface Props {
+  items?: BreadcrumbItem[];
+  currentLabel?: string;
+  compact?: boolean;
+}
+
+const { items, currentLabel, compact = false } = Astro.props;
+const origin = Astro.site ?? new URL('https://pilotprotocol.network');
+const pathname = Astro.url.pathname
+  .replace(/\/index\.html$/i, '/')
+  .replace(/\.html$/i, '');
+
+const labels: Record<string, string> = {
+  about: 'About',
+  'app-store': 'App Store',
+  aup: 'Acceptable Use Policy',
+  blog: 'Blog',
+  brand: 'Brand Kit',
+  contact: 'Contact',
+  cookies: 'Cookie Policy',
+  docs: 'Documentation',
+  governance: 'Governance',
+  learn: 'Learning Center',
+  news: 'Newsroom',
+  plans: 'Plans',
+  press: 'Press Kit',
+  privacy: 'Privacy Policy',
+  publish: 'Publish an App',
+  'publisher-agreement': 'Publisher Agreement',
+  roadmap: 'Roadmap',
+  security: 'Security',
+  disclosure: 'Vulnerability Disclosure',
+  terms: 'Terms of Service',
+  trust: 'Trust Center',
+};
+
+function titleCase(value: string) {
+  return value
+    .replace(/^io\.pilot\./, '')
+    .replace(/^io\.telepat\./, '')
+    .replaceAll('-', ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function inferredItems(): BreadcrumbItem[] {
+  const clean = pathname.replace(/^\/+|\/+$/g, '');
+  if (!clean) return [];
+  const segments = clean.split('/');
+  const crumbs: BreadcrumbItem[] = [{ name: 'Home', href: '/' }];
+
+  if (segments[0] === 'apps') {
+    crumbs.push({ name: 'App Store', href: '/app-store' });
+    crumbs.push({ name: currentLabel || titleCase(segments.at(-1) || 'App') });
+    return crumbs;
+  }
+
+  if (segments[0] === 'for' && segments[1] === 'setups') {
+    crumbs.push({ name: 'Fleet Blueprints', href: '/for/setups' });
+    if (segments.length > 2) crumbs.push({ name: currentLabel || titleCase(segments.at(-1) || 'Setup') });
+    return crumbs;
+  }
+
+  if (segments[0] === 'for') {
+    crumbs.push({ name: currentLabel || titleCase(segments.at(-1) || 'Solutions') });
+    return crumbs;
+  }
+
+  let accumulated = '';
+  for (let index = 0; index < segments.length; index += 1) {
+    const segment = segments[index];
+    accumulated += `/${segment}`;
+    const last = index === segments.length - 1;
+    crumbs.push({
+      name: last && currentLabel ? currentLabel : labels[segment] || titleCase(segment),
+      href: last ? undefined : `${accumulated}/`,
+    });
+  }
+  return crumbs;
+}
+
+const crumbs = items?.length ? items : inferredItems();
+const schemaItems = crumbs.map((item, index) => ({
+  '@type': 'ListItem',
+  position: index + 1,
+  name: item.name,
+  ...(item.href || index === crumbs.length - 1
+    ? { item: new URL(item.href || pathname, origin).toString() }
+    : {}),
+}));
+---
+{crumbs.length > 1 && (
+  <>
+    <script type="application/ld+json" set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: schemaItems,
+    })}></script>
+    <nav class:list={['site-breadcrumbs', compact && 'is-compact']} aria-label="Breadcrumb">
+      <ol>
+        {crumbs.map((item, index) => (
+          <li>
+            {item.href && index < crumbs.length - 1
+              ? <a href={item.href}>{item.name}</a>
+              : <span aria-current={index === crumbs.length - 1 ? 'page' : undefined}>{item.name}</span>}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  </>
+)}
+
+<style>
+  .site-breadcrumbs {
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bg-2) 74%, transparent);
+  }
+  .site-breadcrumbs ol {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    max-width: var(--wrap-max);
+    min-height: 42px;
+    margin: 0 auto;
+    padding: 0 48px;
+    list-style: none;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .site-breadcrumbs ol::-webkit-scrollbar { display: none; }
+  .site-breadcrumbs li {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    color: var(--ink-dim);
+    font: 520 10px/1.2 var(--mono);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .site-breadcrumbs li + li::before {
+    content: '/';
+    margin: 0 10px;
+    color: var(--ink-faint);
+  }
+  .site-breadcrumbs a { color: var(--ink-dim); }
+  .site-breadcrumbs a:hover { color: var(--accent-text); }
+  .site-breadcrumbs [aria-current='page'] { color: var(--ink); }
+  .site-breadcrumbs.is-compact { margin-bottom: 28px; border: 0; background: transparent; }
+  .site-breadcrumbs.is-compact ol { min-height: 0; padding: 0; }
+  @media (max-width: 900px) {
+    .site-breadcrumbs ol { padding-inline: 28px; }
+  }
+  @media (max-width: 520px) {
+    .site-breadcrumbs ol { min-height: 40px; padding-inline: 20px; }
+    .site-breadcrumbs li { font-size: 9px; letter-spacing: .06em; }
+    .site-breadcrumbs li + li::before { margin-inline: 8px; }
+  }
+</style>
