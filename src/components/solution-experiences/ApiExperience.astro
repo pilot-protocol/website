@@ -1,0 +1,57 @@
+---
+import SolutionFunnel from '../SolutionFunnel.astro';
+import SolutionProof from '../SolutionProof.astro';
+import SolutionRelated from '../SolutionRelated.astro';
+import CampaignActions from './CampaignActions.astro';
+import type { SolutionExperienceProps } from './types';
+
+const { solution, story, funnel, turnstileSiteKey = '' } = Astro.props as SolutionExperienceProps;
+---
+
+<main class="campaign-page campaign-api" style={`--solution-hue:${solution.hue}`}>
+  <section class="api-hero" aria-labelledby={`${solution.slug}-title`}>
+    <div class="wrap api-workbench">
+      <div class="api-docs-pane">
+        <div class="api-docs-nav"><span>API → AGENT METHOD</span><b>11 / 12</b></div>
+        <header><span>Distribution for agent-ready services</span><h1 id={`${solution.slug}-title`}>{story.heroLead}<br/><em>{story.heroEmphasis}</em></h1><p>{story.lede}</p><CampaignActions solution={solution} funnel={funnel} location="api_hero" /></header>
+        <div class="api-method-list"><span>Method contract</span><strong>crm.account_enrich</strong><small>Look up a company and return normalized firmographic context.</small><div><b>Input</b><code>domain: string</code></div><div><b>Output</b><code>AccountProfile</code></div></div>
+      </div>
+      <div class="api-code-pane" aria-label="Agent method manifest preview">
+        <div class="api-code-tabs"><span class="is-active">manifest.json</span><span>handler.ts</span><b>● signed</b></div>
+        <pre><code><i>01</i>  &#123;
+<i>02</i>    <em>"id"</em>: <strong>"com.acme.crm"</strong>,
+<i>03</i>    <em>"version"</em>: <strong>"1.2.0"</strong>,
+<i>04</i>    <em>"methods"</em>: [&#123;
+<i>05</i>      <em>"name"</em>: <strong>"account_enrich"</strong>,
+<i>06</i>      <em>"description"</em>: <strong>"Enrich a company"</strong>,
+<i>07</i>      <em>"input"</em>: &#123;
+<i>08</i>        <em>"domain"</em>: <strong>"string"</strong>
+<i>09</i>      &#125;,
+<i>10</i>      <em>"grants"</em>: [<strong>"network:api.acme.com"</strong>]
+<i>11</i>    &#125;],
+<i>12</i>    <em>"integrity"</em>: <strong>"sha256:9ac…"</strong>
+<i>13</i>  &#125;</code></pre>
+        <div class="api-code-status"><span>Schema valid</span><span>Signature valid</span><span>Ready to publish</span></div>
+      </div>
+    </div>
+  </section>
+
+  <SolutionFunnel solution={solution} funnel={funnel} turnstileSiteKey={turnstileSiteKey} />
+
+  <section class="api-packaging" aria-labelledby="api-packaging-title">
+    <div class="wrap">
+      <header><span>Packaging surface</span><h2 id="api-packaging-title">Document the job.<br/><em>Declare the boundary.</em></h2><p>{solution.problemBody}</p></header>
+      <div class="api-contract-grid">{solution.capabilities.map((capability, index) => <article><div><span>0{index + 1}</span><small>{capability.label}</small></div><h3>{capability.title}</h3><p>{capability.body}</p><code>{index === 0 ? 'input → output' : index === 1 ? 'grant[]' : 'catalogue.publish()'}</code></article>)}</div>
+    </div>
+  </section>
+
+  <section class="api-publish-flow" aria-labelledby="api-publish-title">
+    <div class="wrap api-publish-grid">
+      <div><span>Publish flow</span><h2 id="api-publish-title">From endpoint to discoverable capability.</h2><ol>{solution.steps.map((step, index) => <li><span>0{index + 1}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol></div>
+      <aside><strong>{solution.signal.value}</strong><p>{solution.signal.body}</p><a href={solution.signal.href} target="_blank" rel="noopener noreferrer">{solution.signal.source} ↗</a></aside>
+    </div>
+  </section>
+
+  <SolutionProof solution={solution} />
+  <SolutionRelated solution={solution} story={story} />
+</main>

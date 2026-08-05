@@ -1,0 +1,70 @@
+---
+import SolutionFunnel from '../SolutionFunnel.astro';
+import SolutionProof from '../SolutionProof.astro';
+import SolutionRelated from '../SolutionRelated.astro';
+import CampaignActions from './CampaignActions.astro';
+import type { SolutionExperienceProps } from './types';
+
+const { solution, story, funnel, turnstileSiteKey = '' } = Astro.props as SolutionExperienceProps;
+const feeds = [
+  ['Scientific', 'Crossref · arXiv', 'live'],
+  ['Markets', 'SEC · FRED', 'live'],
+  ['Geographic', 'Overture · OSM', 'live'],
+  ['Security', 'CVE · NVD', 'live'],
+  ['Reference', 'Wikidata', 'live'],
+];
+---
+
+<main class="campaign-page campaign-data" style={`--solution-hue:${solution.hue}`}>
+  <section class="data-hero" aria-labelledby={`${solution.slug}-title`}>
+    <div class="wrap data-hero-grid">
+      <header class="data-copy">
+        <div class="data-live"><i></i>12 live sources connected</div>
+        <span>Structured research / 12</span>
+        <h1 id={`${solution.slug}-title`}>{story.heroLead}<br/><em>{story.heroEmphasis}</em></h1>
+        <p>{story.lede}</p>
+        <CampaignActions solution={solution} funnel={funnel} location="data_hero" />
+      </header>
+
+      <div class="data-observatory" aria-label="Live research source observatory">
+        <div class="data-observatory-head"><span>Source observatory</span><span>Updated 14:32 UTC</span></div>
+        <div class="data-radar">
+          <div class="radar-circle circle-one"></div><div class="radar-circle circle-two"></div><div class="radar-circle circle-three"></div><i class="radar-sweep"></i>
+          <span class="radar-point point-one"><b></b>papers</span><span class="radar-point point-two"><b></b>markets</span><span class="radar-point point-three"><b></b>geo</span><span class="radar-point point-four"><b></b>security</span>
+          <strong>P</strong>
+        </div>
+        <div class="data-feed-list">{feeds.map(([name, source, status]) => <div><span>{name}</span><strong>{source}</strong><small><i></i>{status}</small></div>)}</div>
+        <footer><span>5 source classes</span><span>Structured outputs</span><span>Provenance retained</span></footer>
+      </div>
+    </div>
+  </section>
+
+  <section class="data-brief" aria-labelledby="data-brief-title">
+    <div class="wrap data-brief-grid">
+      <article>
+        <div><span>Research brief / generated</span><span>Question Q-1842</span></div>
+        <h2 id="data-brief-title">Where are grid-storage projects accelerating, and what changed this quarter?</h2>
+        <p>A structured answer joins current project filings, geographic records, market indicators, and recent papers while preserving the limits of each source.</p>
+        <dl><div><dt>Live facts</dt><dd>18 cited records</dd></div><div><dt>Interpretation</dt><dd>Separated</dd></div><div><dt>Coverage gaps</dt><dd>2 flagged</dd></div></dl>
+        <footer>Evidence packet attached →</footer>
+      </article>
+      <header><span>Output, not a data dump</span><h2>Current evidence.<br/><em>Visible provenance.</em></h2><p>{solution.problemBody}</p></header>
+    </div>
+  </section>
+
+  <section class="data-source-matrix" aria-labelledby="data-source-title">
+    <div class="wrap">
+      <header><span>Specialist surfaces</span><h2 id="data-source-title">Route each question<br/>to the source that owns it.</h2></header>
+      <div>{solution.capabilities.map((capability, index) => <article><span>Source class 0{index + 1}</span><small>{capability.label}</small><h3>{capability.title}</h3><p>{capability.body}</p><b>{index === 0 ? 'DISCOVER' : index === 1 ? 'QUERY' : 'COMPOSE'}</b></article>)}</div>
+    </div>
+  </section>
+
+  <SolutionFunnel solution={solution} funnel={funnel} turnstileSiteKey={turnstileSiteKey} />
+
+  <section class="data-research-flow" aria-labelledby="data-flow-title">
+    <div class="wrap"><div><span>Research assembly</span><h2 id="data-flow-title">The brief shows its work.</h2><ol>{solution.steps.map((step, index) => <li><span>0{index + 1}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol></div><aside><strong>{solution.signal.value}</strong><p>{solution.signal.body}</p><a href={solution.signal.href} target="_blank" rel="noopener noreferrer">{solution.signal.source} ↗</a></aside></div>
+  </section>
+
+  <SolutionRelated solution={solution} story={story} />
+  <SolutionProof solution={solution} />
+</main>

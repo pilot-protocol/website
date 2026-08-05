@@ -1,0 +1,60 @@
+---
+import SolutionFunnel from '../SolutionFunnel.astro';
+import SolutionProof from '../SolutionProof.astro';
+import SolutionRelated from '../SolutionRelated.astro';
+import CampaignActions from './CampaignActions.astro';
+import type { SolutionExperienceProps } from './types';
+
+const { solution, story, funnel, turnstileSiteKey = '' } = Astro.props as SolutionExperienceProps;
+---
+
+<main class="campaign-page campaign-compute" style={`--solution-hue:${solution.hue}`}>
+  <section class="compute-hero" aria-labelledby={`${solution.slug}-title`}>
+    <div class="wrap compute-shell">
+      <header class="compute-copy">
+        <span class="compute-prompt">pilot run / isolated-compute</span>
+        <h1 id={`${solution.slug}-title`}><span>&gt;</span> {story.heroLead}<br/><em>{story.heroEmphasis}</em></h1>
+        <p>{story.lede}</p>
+        <CampaignActions solution={solution} funnel={funnel} location="compute_hero" />
+        <small>{solution.audience}</small>
+      </header>
+
+      <div class="compute-terminal" aria-label="Isolated compute job output">
+        <div class="compute-terminal-bar"><span><i></i><i></i><i></i></span><strong>job/8f42c1</strong><b>isolated</b></div>
+        <div class="compute-terminal-body">
+          <p><span>01</span><code>$ pilot app call smol.run</code></p>
+          <p><span>02</span><code>creating microVM........ <b>done</b></code></p>
+          <p><span>03</span><code>mount /workspace.......... <b>read-only</b></code></p>
+          <p><span>04</span><code>network egress........... <b>denied</b></code></p>
+          <p><span>05</span><code>execute analysis.py...... <b>running</b></code></p>
+          <div class="compute-result"><span>RESULT</span><strong>3 files · 1 chart · exit 0</strong><small>cpu 1.2s · memory 84MB · artifacts retained 24h</small></div>
+        </div>
+        <div class="compute-terminal-foot"><span>Boundary: hardware-isolated microVM</span><span>Audit: enabled</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="compute-boundary" aria-labelledby="compute-boundary-title">
+    <div class="wrap compute-boundary-grid">
+      <header><span>Containment model</span><h2 id="compute-boundary-title">Disposable by design.<br/><em>Useful by contract.</em></h2><p>{solution.problemBody}</p></header>
+      <div class="compute-rings">
+        <div class="compute-ring ring-host"><span>Host</span><div class="compute-ring ring-runtime"><span>Supervisor</span><div class="compute-ring ring-vm"><span>microVM</span><div class="compute-ring ring-job"><strong>generated job</strong><small>bounded input / output</small></div></div></div></div>
+      </div>
+      <div class="compute-controls">
+        {solution.capabilities.map((capability, index) => <article><span>0{index + 1}</span><small>{capability.label}</small><h3>{capability.title}</h3><p>{capability.body}</p></article>)}
+      </div>
+    </div>
+  </section>
+
+  <section class="compute-jobs" aria-labelledby="compute-jobs-title">
+    <div class="wrap">
+      <header><span>Job lifecycle</span><h2 id="compute-jobs-title">The host receives artifacts, not assumptions.</h2></header>
+      <ol>{solution.steps.map((step, index) => <li><span>0{index + 1}</span><div><h3>{step.title}</h3><p>{step.body}</p></div><b>{index < solution.steps.length - 1 ? '↓' : '✓'}</b></li>)}</ol>
+      <aside><strong>{solution.signal.value}</strong><p>{solution.signal.body}</p><a href={solution.signal.href} target="_blank" rel="noopener noreferrer">{solution.signal.source} ↗</a></aside>
+    </div>
+  </section>
+
+  <SolutionFunnel solution={solution} funnel={funnel} turnstileSiteKey={turnstileSiteKey} />
+  <SolutionProof solution={solution} />
+  <SolutionRelated solution={solution} story={story} />
+</main>

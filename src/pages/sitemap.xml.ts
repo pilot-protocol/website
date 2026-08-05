@@ -1,7 +1,9 @@
 import { allPosts } from '../data/blogPosts';
 import { apps } from '../data/apps';
+import { solutions } from '../data/solutions';
 
 const site = 'https://pilotprotocol.network';
+const CAMPAIGN_LASTMOD = '2026-08-05';
 
 // Enumerate every page module so the sitemap reflects the real route
 // tree — no hand-maintained list to drift out of date. New pages appear
@@ -32,6 +34,7 @@ function priorityFor(loc: string): { p: number; freq: string } {
   if (loc === '/blog/') return { p: 0.9, freq: 'weekly' };
   if (loc === '/docs/' || loc === '/docs/getting-started') return { p: 0.9, freq: 'monthly' };
   if (loc === '/plans' || loc === '/app-store') return { p: 0.9, freq: 'monthly' };
+  if (loc.startsWith('/enterprise/')) return { p: 0.8, freq: 'monthly' };
   if (loc.startsWith('/blog/')) return { p: 0.8, freq: 'monthly' };
   if (loc.startsWith('/docs/')) {
     const slug = loc.replace('/docs/', '').replace(/\/$/, '');
@@ -66,12 +69,20 @@ export async function GET() {
       : loc.startsWith('/news/')
         ? loc.replace('/news/', '').replace(/\/$/, '')
         : '';
-    const lastmod = datedPostSlug && postDates.has(datedPostSlug) ? postDates.get(datedPostSlug)! : '';
+    const lastmod = datedPostSlug && postDates.has(datedPostSlug)
+      ? postDates.get(datedPostSlug)!
+      : loc.startsWith('/enterprise/')
+        ? CAMPAIGN_LASTMOD
+        : '';
     const { p, freq } = priorityFor(loc);
     add(loc, lastmod, p, freq);
   }
 
   // 2. Dynamic public routes.
+  for (const solution of [...solutions].sort((a, b) => a.slug.localeCompare(b.slug))) {
+    add(`/solutions/${solution.slug}`, CAMPAIGN_LASTMOD, 0.7);
+  }
+
   for (const app of [...apps].sort((a, b) => a.id.localeCompare(b.id))) {
     add(`/apps/${app.id}`, app.publishedAt || '', 0.7);
   }
@@ -85,8 +96,7 @@ export async function GET() {
     }
   } catch { /* The collection pages still remain in the sitemap offline. */ }
 
-  // 3. Static assets served from public/ that aren't .astro routes.
-  add('/llms.txt', '2026-07-31', 0.5);
+  // 3. Indexable HTML served from public/ that isn't an Astro route.
   add('/brand/', '2026-07-31', 0.6);
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

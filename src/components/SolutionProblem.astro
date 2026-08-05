@@ -1,0 +1,28 @@
+---
+import type { SolutionProfile } from '../data/solutions';
+
+interface Props { solution: SolutionProfile }
+const { solution } = Astro.props;
+---
+
+<section class="solution-problem" aria-labelledby={`${solution.slug}-problem-title`}>
+  <div class="wrap solution-problem-grid">
+    <div class="solution-problem-copy">
+      <div class="eyebrow">The operating problem</div>
+      <h2 id={`${solution.slug}-problem-title`}>{solution.problemTitle}</h2>
+      <p>{solution.problemBody}</p>
+    </div>
+    <aside class="solution-signal" aria-label="External research signal">
+      <span class="solution-signal-label">Independent signal</span>
+      <strong>{solution.signal.value}</strong>
+      <p>{solution.signal.body}</p>
+      <a
+        href={solution.signal.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        data-track="solution_evidence_click"
+        data-track-target={`${solution.slug}:${solution.signal.source}`}
+      >{solution.signal.source} <span aria-hidden="true">↗</span></a>
+    </aside>
+  </div>
+</section>
