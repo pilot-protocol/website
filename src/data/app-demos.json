@@ -126,57 +126,42 @@
   "io.pilot.bowmark": {
     "skill": "io.pilot.bowmark",
     "title": "Full usage demo",
-    "when_to_use": "When your agent needs a value that only exists on a live site right now, and only after somebody operates it: a current price, stock for one location, a fare, a quote, or anything behind a form, a filter or a login.",
+    "when_to_use": "When the answer only exists on a live website right now, after someone operates it: a price, stock, a fare, a quote, a form.",
     "metered": false,
     "quickstart": {
       "goal": "See whether a function already covers the task",
       "command": "pilotctl appstore call io.pilot.bowmark bowmark.get_library '{\"query\":\"flights\"}'",
-      "expect": "markdown: the bowmark.flights capability, with its TypeScript types, search/getBookingOptions signatures, and worked script examples",
-      "note": "Always call this first. An unrecognized query returns a one-line index instead of an error, so the check never dead ends."
+      "expect": "markdown: the bowmark.flights capability, with its types, signatures and examples",
+      "note": "Always call this first. An unrecognized query returns a one-line index, not an error."
     },
     "examples": [
       {
-        "title": "Search flights across several aggregators with one call",
-        "goal": "One capability fans out across sites, dedupes the same physical flight, and sorts by price",
-        "command": "pilotctl appstore call io.pilot.bowmark bowmark.run '{\"script\":\"const { flights, warnings } = await bowmark.flights.search({ from: \\\"YYZ\\\", to: \\\"LHR\\\", depart: \\\"2026-09-14\\\" }); return { cheapest: flights[0], warnings };\"}'",
-        "expect": "{\"ok\":true,\"status\":\"ok\",\"result\":{\"cheapest\":{\"price\":412,\"site\":\"google_flights\"},\"warnings\":[]}}",
-        "note": "These prices only exist after each site's own live poll completes, so they are not fetchable as static HTML. `warnings` names any site dropped from the fan-out, so a degraded search cannot read as a complete one."
-      },
-      {
-        "title": "Price one part across three retailers",
-        "goal": "Newegg, Micro Center and B&H in parallel, cheapest first",
-        "command": "pilotctl appstore call io.pilot.bowmark bowmark.run '{\"script\":\"const { offers, warnings } = await bowmark.pcparts.search(\\\"GeForce RTX 4070\\\"); return { cheapest: offers[0], stores: offers.length, warnings };\"}'",
-        "expect": "{\"ok\":true,\"status\":\"ok\",\"result\":{\"cheapest\":{\"store\":\"microcenter\",\"price\":539.99},\"warnings\":[]}}",
-        "note": "A store named in `warnings` priced nothing, so \"cheapest of three\" was really the cheapest of two."
+        "title": "Search flights across several aggregators",
+        "goal": "One capability fans out, dedupes the same flight, sorts by price",
+        "command": "pilotctl appstore call io.pilot.bowmark bowmark.run '{\"script\":\"const { flights, warnings } = await bowmark.flights.search({ from: \\\"YYZ\\\", to: \\\"LHR\\\", depart: \\\"2026-09-14\\\" }); return { best: flights[0], warnings };\"}'",
+        "expect": "{\"ok\":true,\"status\":\"ok\",\"result\":{\"best\":{\"price\":412,\"site\":\"google_flights\"},\"warnings\":[]}}",
+        "note": "These prices exist only after each site's own live poll, so no static fetch reaches them. `warnings` names a site dropped."
       },
       {
         "title": "Read any page as markdown",
         "goal": "Cheap GET first, a browser only if the page proves it needs one",
         "command": "pilotctl appstore call io.pilot.bowmark bowmark.run '{\"script\":\"const p = await bowmark.read.page(\\\"https://example.com/pricing\\\"); return { title: p.title, servedBy: p.servedBy, content: p.content };\"}'",
         "expect": "{\"ok\":true,\"status\":\"ok\",\"result\":{\"title\":\"Pricing\",\"servedBy\":\"fetch\",\"content\":\"# Pricing\\n...\"}}",
-        "note": "`servedBy` says which rung paid for it, and `wall` names the bot wall when a rendered look finds one, so a block is a named fact rather than an empty page."
+        "note": "`servedBy` names the cheapest rung that worked, and `wall` names the bot wall when there is one."
       },
       {
-        "title": "Do several lookups in one script",
-        "goal": "Real control flow, so many searches happen in one call instead of one each",
-        "command": "pilotctl appstore call io.pilot.bowmark bowmark.run '{\"script\":\"const cities = [\\\"LHR\\\",\\\"CDG\\\",\\\"AMS\\\"]; const all = await Promise.all(cities.map(to => bowmark.flights.search({ from: \\\"YYZ\\\", to, depart: \\\"2026-09-14\\\" }))); return cities.map((to, i) => ({ to, best: all[i].flights[0]?.price ?? null }));\"}'",
-        "expect": "{\"ok\":true,\"status\":\"ok\",\"result\":[{\"to\":\"LHR\",\"best\":412},{\"to\":\"CDG\",\"best\":389},{\"to\":\"AMS\",\"best\":401}]}"
-      },
-      {
-        "title": "Drill into one site when the fan-out is not what you want",
-        "goal": "The headline fare is one seller's price for one fare class, so ask who else sells it and what the cheap one leaves out",
-        "command": "pilotctl appstore call io.pilot.bowmark bowmark.run '{\"script\":\"const rows = await bowmark.providers.kayak.search({ from: \\\"SFO\\\", to: \\\"JFK\\\", depart: \\\"2026-09-15\\\" }); const cheapest = rows.filter(r => r.price != null).sort((a,b) => a.price - b.price)[0]; const sellers = await bowmark.providers.kayak.getBookingOptions(cheapest); return { headline: cheapest.price, sellers: sellers.length, withCheckedBag: sellers.filter(s => s.checkedBagIncluded === true).length };\"}'",
-        "expect": "{\"ok\":true,\"status\":\"ok\",\"result\":{\"headline\":198,\"sellers\":7,\"withCheckedBag\":3}}",
-        "note": "Two dependent calls, still one script. Providers return that site's native shape, so you give up the cross-site dedupe and the routing around a failing site."
+        "title": "Drill into one site instead of the fan-out",
+        "goal": "One named site, two dependent calls, one script",
+        "command": "pilotctl appstore call io.pilot.bowmark bowmark.run '{\"script\":\"const k = bowmark.providers.kayak; const [best] = await k.search({ from: \\\"SFO\\\", to: \\\"JFK\\\", depart: \\\"2026-09-15\\\" }); const sellers = await k.getBookingOptions(best); return { price: best.price, sellers: sellers.length };\"}'",
+        "expect": "{\"ok\":true,\"status\":\"ok\",\"result\":{\"price\":198,\"sellers\":7}}",
+        "note": "A provider returns that site's native shape, so you give up the cross-site dedupe and the routing around failures."
       }
     ],
     "gotchas": [
-      "Call `get_library` before `run`, always. The script has to be written against names only `get_library` supplies, and it is read-only and touches no website.",
-      "Check `status` before `ok`. `partial` means the script ran and the result is real but narrower than you asked; `ok` stays true, and `incomplete.summary` names what never answered.",
-      "`needs_user` is a login pause, not a failure: give the user `meta.handoff.url`, wait, then re-send the identical script. Bowmark holds no site credentials of yours.",
-      "`bowmark` is the only I/O available inside a script. No `fetch`, no `import`, no filesystem, no `process`. Write a plain async body, `return` a value, `log()` for progress.",
-      "A `get_library` answer can be a slice and says so when it is. Never conclude a task is uncovered from a list that announced it was partial; re-query one task, or one company by name.",
-      "Skip Bowmark for localhost, RFC1918 addresses, and any page whose answer is already in the text of the page."
+      "Call `get_library` before `run`, always. A script uses names only it supplies, and it touches no website.",
+      "Check `status` before `ok`. `partial` is a real result, narrower than asked; `incomplete.summary` names what never answered, and `failures[].fixable` true means YOUR argument was wrong, so fix and re-run.",
+      "`needs_user` is a login pause, not a failure: give the user `meta.handoff.url`, wait, then re-send the script.",
+      "`bowmark` is the only I/O in a script. No `fetch`, `import`, filesystem or `process`. Write a plain async body and `return`."
     ],
     "next": [
       "io.pilot.bowmark bowmark.help '{}'"
