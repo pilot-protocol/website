@@ -1,0 +1,64 @@
+---
+import SolutionFunnel from '../SolutionFunnel.astro';
+import SolutionProof from '../SolutionProof.astro';
+import SolutionRelated from '../SolutionRelated.astro';
+import CampaignActions from './CampaignActions.astro';
+import type { SolutionExperienceProps } from './types';
+
+const { solution, story, funnel, turnstileSiteKey = '' } = Astro.props as SolutionExperienceProps;
+---
+
+<main class="campaign-page campaign-communications" style={`--solution-hue:${solution.hue}`}>
+  <section class="communications-hero" aria-labelledby={`${solution.slug}-title`}>
+    <div class="wrap communications-stage">
+      <div class="communications-ui" aria-label="Agent conversation handoff preview">
+        <div class="communications-inbox">
+          <div class="inbox-head"><strong>Agent inbox</strong><span>3 active</span></div>
+          <div class="inbox-item"><i>DM</i><div><strong>Delivery update</strong><small>Email · 10:14</small></div><b>1</b></div>
+          <div class="inbox-item is-active"><i>SK</i><div><strong>Supplier callback</strong><small>Voice · live</small></div><b>●</b></div>
+          <div class="inbox-item"><i>AL</i><div><strong>Address confirmed</strong><small>SMS · 09:42</small></div></div>
+        </div>
+        <div class="communications-phone">
+          <div class="phone-speaker"></div>
+          <div class="phone-status"><span>9:41</span><span>● ● ●</span></div>
+          <div class="phone-contact"><i>SK</i><small>Supplier line</small><strong>Connected · 01:42</strong></div>
+          <div class="phone-wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="phone-transcript"><span>Agent</span><p>Can we move order 1842 to the afternoon window?</p><span>Supplier</span><p>Confirmed for 14:30. I’ll send the update by email.</p></div>
+          <div class="phone-actions"><button type="button" tabindex="-1">Mute</button><button type="button" tabindex="-1">Handoff</button><button type="button" tabindex="-1">End</button></div>
+        </div>
+        <div class="communications-handoff"><span>Context packet</span><strong>Case #1842</strong><small>Email ✓</small><small>SMS ✓</small><small>Voice ✓</small><b>Human review ready →</b></div>
+      </div>
+
+      <header class="communications-copy">
+        <span>Conversation operations / 08</span>
+        <h1 id={`${solution.slug}-title`}>{story.heroLead}<br/><em>{story.heroEmphasis}</em></h1>
+        <p>{story.lede}</p>
+        <CampaignActions solution={solution} funnel={funnel} location="communications_hero" />
+        <small>{solution.audience}</small>
+      </header>
+    </div>
+  </section>
+
+  <SolutionFunnel solution={solution} funnel={funnel} turnstileSiteKey={turnstileSiteKey} />
+
+  <section class="communications-continuity" aria-labelledby="communications-continuity-title">
+    <div class="wrap">
+      <header><span>Conversation continuity</span><h2 id="communications-continuity-title">One case.<br/><em>Every channel attached.</em></h2><p>{solution.problemBody}</p></header>
+      <div class="communications-channels">
+        {solution.capabilities.map((capability, index) => (
+          <article><div class={`channel-symbol symbol-${index + 1}`}>{index === 0 ? '@' : index === 1 ? '◖' : '↔'}</div><span>{capability.label}</span><h3>{capability.title}</h3><p>{capability.body}</p></article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="communications-journey" aria-labelledby="communications-journey-title">
+    <div class="wrap communications-journey-grid">
+      <div><span>Handoff timeline</span><h2 id="communications-journey-title">The context travels with the conversation.</h2><ol>{solution.steps.map((step, index) => <li><span>0{index + 1}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol></div>
+      <aside><span>Independent signal</span><strong>{solution.signal.value}</strong><p>{solution.signal.body}</p><a href={solution.signal.href} target="_blank" rel="noopener noreferrer">{solution.signal.source} ↗</a></aside>
+    </div>
+  </section>
+
+  <SolutionRelated solution={solution} story={story} />
+  <SolutionProof solution={solution} />
+</main>

@@ -1,0 +1,136 @@
+---
+import type { SolutionProfile } from '../data/solutions';
+import type { SolutionFunnel } from '../data/solutionStories';
+
+interface Props {
+  solution: SolutionProfile;
+  funnel: SolutionFunnel;
+  turnstileSiteKey?: string;
+}
+
+const { solution, funnel, turnstileSiteKey = '' } = Astro.props;
+const fieldId = (name: string) => `${solution.slug}-${name}`;
+---
+
+<section class="solution-funnel-section" id="start" aria-labelledby={fieldId('funnel-title')}>
+  <div class="wrap solution-funnel-shell">
+    <div class="solution-funnel-offer">
+      <span class="funnel-eyebrow">{funnel.eyebrow}</span>
+      <h2 id={fieldId('funnel-title')}>{funnel.title}<br/><em>{funnel.emphasis}</em></h2>
+      <p>{funnel.body}</p>
+      <div class="funnel-deliverables">
+        <span>What you get</span>
+        <ol>
+          {funnel.deliverables.map((item, index) => (
+            <li><span>{String(index + 1).padStart(2, '0')}</span>{item}</li>
+          ))}
+        </ol>
+      </div>
+    </div>
+
+    <form
+      class="solution-funnel-form"
+      data-solution-funnel
+      data-endpoint="/forms/solution-lead"
+      data-profile={solution.slug}
+      data-success={funnel.success}
+      novalidate
+    >
+      <div class="funnel-form-head">
+        <span>Start with one real workflow</span>
+        <strong>About 2 minutes</strong>
+      </div>
+      <div class="funnel-fields">
+        <div class="funnel-field">
+          <label for={fieldId('name')}>Name *</label>
+          <input id={fieldId('name')} name="name" type="text" autocomplete="name" maxlength="120" required />
+        </div>
+        <div class="funnel-field">
+          <label for={fieldId('email')}>Work email *</label>
+          <input id={fieldId('email')} name="email" type="email" autocomplete="email" maxlength="254" required />
+        </div>
+        <div class="funnel-field funnel-field-wide">
+          <label for={fieldId('organization')}>Organization <span>optional</span></label>
+          <input id={fieldId('organization')} name="organization" type="text" autocomplete="organization" maxlength="160" />
+        </div>
+        <div class="funnel-field funnel-field-wide">
+          <label for={fieldId('choice')}>{funnel.choiceLabel} *</label>
+          <select id={fieldId('choice')} name="choice" required>
+            <option value="">Choose the closest fit</option>
+            {funnel.choices.map((choice) => <option value={choice}>{choice}</option>)}
+          </select>
+        </div>
+        <div class="funnel-field funnel-field-wide">
+          <label for={fieldId('context')}>{funnel.contextLabel} *</label>
+          <textarea id={fieldId('context')} name="context" maxlength="4000" required placeholder={funnel.contextPlaceholder}></textarea>
+        </div>
+        <input type="hidden" name="profile" value={solution.slug} />
+        <input type="hidden" name="offer" value={funnel.submitLabel} />
+        <div class="funnel-honeypot" aria-hidden="true">
+          <label for={fieldId('website')}>Website</label>
+          <input id={fieldId('website')} name="company_website" type="text" tabindex="-1" autocomplete="off" />
+        </div>
+        {turnstileSiteKey && (
+          <div class="funnel-turnstile"><div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-action="solution-lead" data-theme="auto"></div></div>
+        )}
+      </div>
+      <div class="funnel-submit-row">
+        <p>Do not include credentials, secrets, or customer data. By submitting, you agree that Pilot may use this information to respond. <a href="/privacy">Privacy Policy</a>.</p>
+        <button
+          class="btn solution-primary"
+          type="submit"
+          data-track="solution_funnel_submit"
+          data-track-target={solution.slug}
+        >{funnel.submitLabel} <span class="arr">→</span></button>
+      </div>
+      <p class="funnel-status" role="status" aria-live="polite"></p>
+    </form>
+  </div>
+</section>
+
+<script is:inline>
+  (function () {
+    document.querySelectorAll('[data-solution-funnel]').forEach(function (form) {
+      if (form.dataset.bound === 'true') return;
+      form.dataset.bound = 'true';
+      var status = form.querySelector('.funnel-status');
+      var button = form.querySelector('button[type="submit"]');
+      form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        if (!form.checkValidity()) { form.reportValidity(); return; }
+        var original = button ? button.innerHTML : '';
+        if (button) { button.disabled = true; button.textContent = 'Sending…'; }
+        if (status) { status.textContent = ''; status.className = 'funnel-status'; }
+        var data = Object.fromEntries(new FormData(form).entries());
+        data.turnstile_token = data['cf-turnstile-response'] || '';
+        data.page_url = window.location.href;
+        try {
+          var response = await fetch(form.dataset.endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          });
+          var result = await response.json().catch(function () { return {}; });
+          if (!response.ok || !result.ok) throw new Error(result.error || 'We could not send this request.');
+          if (status) {
+            status.textContent = form.dataset.success + ' Reference ' + result.reference + '.';
+            status.className = 'funnel-status is-visible is-success';
+          }
+          if (window.posthog && typeof window.posthog.capture === 'function') {
+            window.posthog.capture('solution_lead_submitted', { profile: form.dataset.profile, reference: result.reference });
+          }
+          form.reset();
+          if (window.turnstile) window.turnstile.reset();
+        } catch (error) {
+          if (status) {
+            status.textContent = (error && error.message ? error.message : 'We could not send this request.') + ' You can also email founders@pilotprotocol.network.';
+            status.className = 'funnel-status is-visible is-error';
+          }
+          if (window.turnstile) window.turnstile.reset();
+        } finally {
+          if (button) { button.disabled = false; button.innerHTML = original; }
+        }
+      });
+    });
+  })();
+</script>

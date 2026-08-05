@@ -1,0 +1,94 @@
+---
+import type { SolutionStory } from '../data/solutionStories';
+
+interface Props {
+  story: SolutionStory;
+  mode?: 'hero' | 'full';
+}
+
+const { story, mode = 'full' } = Astro.props;
+const { infographic } = story;
+---
+
+{mode === 'hero' ? (
+  <aside class:list={['solution-artifact', 'is-hero', `artifact-${infographic.kind}`]} aria-label={`Example ${infographic.artifact.label}`}>
+    <div class="artifact-head">
+      <span>{infographic.artifact.label}</span>
+      <span class="artifact-status"><i aria-hidden="true"></i>{infographic.artifact.status}</span>
+    </div>
+    <div class="artifact-body">
+      <span class="artifact-output-label">Example output</span>
+      <h2>{infographic.artifact.title}</h2>
+      <p>{infographic.artifact.summary}</p>
+      <dl>
+        {infographic.artifact.rows.map((row) => (
+          <div>
+            <dt>{row.key}</dt>
+            <dd class:list={[row.tone && `is-${row.tone}`]}>{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+    <div class="artifact-foot"><span>{infographic.artifact.footer}</span><span aria-hidden="true">↗</span></div>
+  </aside>
+) : (
+  <section class="solution-infographic-section" aria-labelledby={`${story.slug}-infographic-title`}>
+    <div class="wrap">
+    <div class:list={['solution-infographic', `kind-${infographic.kind}`]}>
+    <div class="infographic-heading">
+      <div>
+        <span class="infographic-eyebrow">{infographic.eyebrow}</span>
+        <h2 id={`${story.slug}-infographic-title`}>{infographic.title}</h2>
+      </div>
+      <p>{infographic.summary}</p>
+    </div>
+
+    <div class="infographic-canvas">
+      <ol class="infographic-stages" aria-label={`${infographic.title} stages`}>
+        {infographic.stages.map((stage, index) => (
+          <li>
+            <div class="stage-head">
+              <span class="stage-number">{String(index + 1).padStart(2, '0')}</span>
+              <span class="stage-label">{stage.label}</span>
+            </div>
+            <h3>{stage.title}</h3>
+            <p>{stage.body}</p>
+            <ul>
+              {stage.items.map((item) => <li>{item}</li>)}
+            </ul>
+            {index < infographic.stages.length - 1 && <span class="stage-connector" aria-hidden="true"><i></i><b>→</b></span>}
+          </li>
+        ))}
+      </ol>
+
+      <aside class:list={['solution-artifact', `artifact-${infographic.kind}`]} aria-label={`Example ${infographic.artifact.label}`}>
+        <div class="artifact-head">
+          <span>{infographic.artifact.label}</span>
+          <span class="artifact-status"><i aria-hidden="true"></i>{infographic.artifact.status}</span>
+        </div>
+        <div class="artifact-body">
+          <span class="artifact-output-label">Generated artifact</span>
+          <h3>{infographic.artifact.title}</h3>
+          <p>{infographic.artifact.summary}</p>
+          <dl>
+            {infographic.artifact.rows.map((row) => (
+              <div>
+                <dt>{row.key}</dt>
+                <dd class:list={[row.tone && `is-${row.tone}`]}>{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+        <div class="artifact-foot"><span>{infographic.artifact.footer}</span><span aria-hidden="true">↗</span></div>
+      </aside>
+    </div>
+
+    <div class="infographic-legend">
+      <span><i class="legend-product"></i>Pilot product surface</span>
+      <span><i class="legend-boundary"></i>Explicit boundary</span>
+      <span><i class="legend-output"></i>Generated output</span>
+    </div>
+    </div>
+    </div>
+  </section>
+)}

@@ -1,0 +1,56 @@
+---
+import SolutionFunnel from '../SolutionFunnel.astro';
+import SolutionProof from '../SolutionProof.astro';
+import SolutionRelated from '../SolutionRelated.astro';
+import CampaignActions from './CampaignActions.astro';
+import type { SolutionExperienceProps } from './types';
+
+const { solution, story, funnel, turnstileSiteKey = '' } = Astro.props as SolutionExperienceProps;
+---
+
+<main class="campaign-page campaign-capabilities" style={`--solution-hue:${solution.hue}`}>
+  <section class="capability-hero" aria-labelledby={`${solution.slug}-title`}>
+    <div class="wrap capability-hero-grid">
+      <header>
+        <span class="capability-pill">Capability directory · live</span>
+        <h1 id={`${solution.slug}-title`}>{story.heroLead}<br/><em>{story.heroEmphasis}</em></h1>
+        <p>{story.lede}</p>
+        <CampaignActions solution={solution} funnel={funnel} location="capability_hero" />
+      </header>
+
+      <div class="capability-browser" aria-label="Capability catalogue preview">
+        <div class="capability-browser-bar"><span>Pilot capabilities</span><span>⌘ K</span></div>
+        <div class="capability-search"><span aria-hidden="true">⌕</span><strong>What should the agent be able to do?</strong></div>
+        <div class="capability-results">
+          {solution.capabilities.map((capability, index) => (
+            <article><span class={`capability-icon icon-${index + 1}`}>{index === 0 ? '↗' : index === 1 ? '⌁' : '◇'}</span><div><small>{capability.label}</small><h2>{capability.title}</h2><p>{capability.body}</p></div><b>Install</b></article>
+          ))}
+        </div>
+        <div class="capability-browser-foot"><span>Signed catalogue</span><span>Typed methods</span><span>Remote services</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="capability-composition" aria-labelledby="capability-composition-title">
+    <div class="wrap">
+      <header><span>Composition canvas</span><h2 id="capability-composition-title">One outcome.<br/><em>Several bounded specialists.</em></h2><p>{solution.problemBody}</p></header>
+      <ol class="capability-plan">
+        {solution.steps.map((step, index) => (
+          <li><span class="capability-plan-num">{String(index + 1).padStart(2, '0')}</span><div><small>{index === 0 ? 'Intent' : index === 1 ? 'Inspection' : index === 2 ? 'Invocation' : 'Composition'}</small><h3>{step.title}</h3><p>{step.body}</p></div></li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <section class="capability-market-signal">
+    <div class="wrap">
+      <div><span>Research signal</span><strong>{solution.signal.value}</strong></div>
+      <p>{solution.signal.body}</p>
+      <a href={solution.signal.href} target="_blank" rel="noopener noreferrer">{solution.signal.source} ↗</a>
+    </div>
+  </section>
+
+  <SolutionFunnel solution={solution} funnel={funnel} turnstileSiteKey={turnstileSiteKey} />
+  <SolutionRelated solution={solution} story={story} />
+  <SolutionProof solution={solution} />
+</main>

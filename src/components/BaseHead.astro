@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { formatPageTitle } from '../lib/seo.mjs';
 
 interface Props {
   title: string;
@@ -15,11 +16,26 @@ const {
   title,
   description,
   canonicalUrl,
-  ogImage = 'https://pilotprotocol.network/img/pilot.png',
+  ogImage = 'https://pilotprotocol.network/og/main.jpg',
   ogType = 'website',
   ogImageAlt = 'Pilot Protocol',
-  robots = 'index,follow',
+  robots = 'index,follow,max-image-preview:large',
 } = Astro.props;
+
+const pageTitle = formatPageTitle(title, Astro.url.pathname);
+const canonical = canonicalUrl
+  ? new URL(canonicalUrl, Astro.site ?? 'https://pilotprotocol.network')
+  : !robots.toLowerCase().includes('noindex')
+    ? new URL(Astro.url.pathname, Astro.site ?? 'https://pilotprotocol.network')
+    : undefined;
+if (canonical) {
+  canonical.search = '';
+  canonical.hash = '';
+  canonical.pathname = canonical.pathname
+    .replace(/\/index\.html$/i, '/')
+    .replace(/\.html$/i, '');
+}
+const resolvedCanonical = canonical?.toString();
 
 // X (Twitter) Ads universal website tag. Overridable at build time via
 // PUBLIC_TWITTER_PIXEL_ID; set to an empty string to ship without the pixel.
@@ -29,24 +45,66 @@ const TWITTER_PIXEL_ID =
 ---
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{title}</title>
+<title>{pageTitle}</title>
 <meta name="description" content={description}>
 <meta name="robots" content={robots}>
-{canonicalUrl && <link rel="canonical" href={canonicalUrl}>}
+<meta name="author" content="Pilot Protocol">
+{resolvedCanonical && <link rel="canonical" href={resolvedCanonical}>}
 <meta property="og:type" content={ogType}>
-<meta property="og:title" content={title}>
+<meta property="og:title" content={pageTitle}>
 <meta property="og:description" content={description}>
-{canonicalUrl && <meta property="og:url" content={canonicalUrl}>}
+{resolvedCanonical && <meta property="og:url" content={resolvedCanonical}>}
 <meta property="og:image" content={ogImage}>
 <meta property="og:image:alt" content={ogImageAlt}>
 <meta property="og:site_name" content="Pilot Protocol">
+<meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content={title}>
+<meta name="twitter:site" content="@pilotprotocol_">
+<meta name="twitter:title" content={pageTitle}>
 <meta name="twitter:description" content={description}>
 <meta name="twitter:image" content={ogImage}>
 <meta name="twitter:image:alt" content={ogImageAlt}>
 <meta name="theme-color" content="#0b0b0a" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)">
+<meta name="color-scheme" content="dark light">
+
+<script type="application/ld+json" set:html={JSON.stringify({
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': 'https://pilotprotocol.network/#organization',
+      name: 'Pilot Protocol',
+      legalName: 'Vulture Labs, Inc.',
+      url: 'https://pilotprotocol.network/',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://pilotprotocol.network/img/pilot-180.png',
+        width: 180,
+        height: 180,
+      },
+      sameAs: [
+        'https://github.com/pilot-protocol/pilotprotocol',
+        'https://x.com/pilotprotocol_',
+        'https://www.linkedin.com/company/112569955/',
+      ],
+      contactPoint: [{
+        '@type': 'ContactPoint',
+        contactType: 'customer support',
+        email: 'founders@pilotprotocol.network',
+        url: 'https://pilotprotocol.network/contact',
+      }],
+    },
+    {
+      '@type': 'WebSite',
+      '@id': 'https://pilotprotocol.network/#website',
+      url: 'https://pilotprotocol.network/',
+      name: 'Pilot Protocol',
+      publisher: { '@id': 'https://pilotprotocol.network/#organization' },
+      inLanguage: 'en-US',
+    },
+  ],
+})}></script>
 
 <!-- PILOT-175: fonts self-hosted under /fonts/*. Removed the Google Fonts
      preconnect + stylesheet links so the browser never contacts
@@ -55,7 +113,39 @@ const TWITTER_PIXEL_ID =
      three families (Inter Tight, JetBrains Mono, Instrument Serif)
      with identical subsets + unicode-range gating, so per-page font
      bytes are unchanged. -->
-<link rel="stylesheet" href="/fonts/fonts.css">
+<style is:global>
+  @font-face {
+    font-family: 'Inter Tight';
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url('/fonts/NGSwv5HMAFg6IuGlBNMjxLsH8ag.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Instrument Serif';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/jizBRFtNs2ka5fXjeivQ4LroWlx-6zUTjg.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Instrument Serif';
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/jizHRFtNs2ka5fXjeivQ4LroWlx-6zAjjH7M.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 400 600;
+    font-display: swap;
+    src: url('/fonts/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwg.woff2') format('woff2');
+  }
+</style>
+<link rel="stylesheet" href="/fonts/fonts.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/fonts/fonts.css"></noscript>
+<link rel="preload" href="/fonts/NGSwv5HMAFg6IuGlBNMjxLsH8ag.woff2" as="font" type="font/woff2" crossorigin="anonymous">
 
 <!-- PILOT-27: consent-check shared module is imported by analytics.ts below. -->
 
@@ -68,7 +158,7 @@ const TWITTER_PIXEL_ID =
     var bannerHTML = '<div id="pilot-consent-banner" class="consent-banner consent-banner--bottom" role="dialog" aria-label="Cookie consent" style="display:none">' +
       '<div class="consent-banner__inner">' +
         '<div class="consent-banner__text">' +
-          '<p>We use analytics cookies, plus heatmaps and session replay with all form inputs masked, to understand how our site is used. We do not build a profile of you. <a href="/cookies">Learn more</a>.</p>' +
+          '<p>We use analytics cookies, plus heatmaps and session replay with all form inputs masked, to understand how our site is used. We do not build a profile of you. <a href="/cookies">Cookie policy</a>.</p>' +
         '</div>' +
         '<div class="consent-banner__actions">' +
           '<button id="pilot-consent-accept" class="btn primary consent-btn" data-consent="accepted">Accept</button>' +
@@ -164,7 +254,7 @@ const TWITTER_PIXEL_ID =
   }
   .consent-banner__text { flex: 1; min-width: 240px; }
   .consent-banner__text p { margin: 0; }
-  .consent-banner__text a { color: var(--accent, #aaff00); text-decoration: underline; }
+  .consent-banner__text a { color: var(--accent-text, #647900); text-decoration: underline; }
   .consent-banner__actions {
     display: flex;
     gap: 12px;

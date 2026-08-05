@@ -12,7 +12,17 @@ let catalog: {categories: any[]; total: number} = { categories: [], total: 0 };
 try {
   // Catalog lives under the maintainer's account until the repo transfers to the org.
   const res = await fetch("https://raw.githubusercontent.com/TeoSlayer/pilot-skills/main/skills.json");
-  if (res.ok) catalog = await res.json();
+  if (res.ok) {
+    catalog = await res.json();
+    // Do not publish catalog entries whose advertised source is absent.
+    catalog.categories = catalog.categories
+      .map((category: any) => ({
+        ...category,
+        skills: category.skills.filter((skill: any) => skill.slug !== 'pilot-momy'),
+      }))
+      .filter((category: any) => category.skills.length > 0);
+    catalog.total = catalog.categories.reduce((total: number, category: any) => total + category.skills.length, 0);
+  }
 } catch {}
 ---
 <!DOCTYPE html>
@@ -31,6 +41,7 @@ try {
 <body>
 
 <Nav active="tech" />
+<main>
 
 <section class="page-head">
   <div class="wrap">
@@ -119,6 +130,7 @@ try {
   </div>
 </section>
 
+</main>
 <Footer />
 
 <style>

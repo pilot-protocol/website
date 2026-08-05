@@ -1,0 +1,106 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Nav from '../../components/Nav.astro';
+import ApiExperience from '../../components/solution-experiences/ApiExperience.astro';
+import CapabilityExperience from '../../components/solution-experiences/CapabilityExperience.astro';
+import CommerceExperience from '../../components/solution-experiences/CommerceExperience.astro';
+import CommunicationsExperience from '../../components/solution-experiences/CommunicationsExperience.astro';
+import ComputeExperience from '../../components/solution-experiences/ComputeExperience.astro';
+import DataExperience from '../../components/solution-experiences/DataExperience.astro';
+import IntegrationExperience from '../../components/solution-experiences/IntegrationExperience.astro';
+import NetworkExperience from '../../components/solution-experiences/NetworkExperience.astro';
+import SalesExperience from '../../components/solution-experiences/SalesExperience.astro';
+import SearchExperience from '../../components/solution-experiences/SearchExperience.astro';
+import SecurityExperience from '../../components/solution-experiences/SecurityExperience.astro';
+import WebExperience from '../../components/solution-experiences/WebExperience.astro';
+import { solutions, type SolutionProfile } from '../../data/solutions';
+import { solutionFunnels, solutionStories } from '../../data/solutionStories';
+import '../../styles/system.css';
+import '../../styles/solution-shared.css';
+import '../../styles/solution-campaigns.css';
+import '../../styles/solution-campaigns-responsive.css';
+
+export function getStaticPaths() {
+  return solutions.map((solution) => ({
+    params: { slug: solution.slug },
+    props: { solution },
+  }));
+}
+
+interface Props {
+  solution: SolutionProfile;
+}
+
+const { solution } = Astro.props;
+const story = solutionStories[solution.slug];
+const funnel = solutionFunnels[solution.slug];
+const experiences = {
+  'private-agent-network': NetworkExperience,
+  'agent-integration': IntegrationExperience,
+  'agent-capability-store': CapabilityExperience,
+  'secure-agent-runtime': SecurityExperience,
+  'grounded-agent-search': SearchExperience,
+  'web-access-for-agents': WebExperience,
+  'isolated-agent-compute': ComputeExperience,
+  'agent-email-phone': CommunicationsExperience,
+  'sales-agent-stack': SalesExperience,
+  'agent-commerce': CommerceExperience,
+  'agent-ready-apis': ApiExperience,
+  'live-data-for-agents': DataExperience,
+};
+const Experience = experiences[solution.slug as keyof typeof experiences];
+
+if (!story || !funnel || !Experience) {
+  throw new Error(`Missing solution landing-page configuration for ${solution.slug}`);
+}
+
+const canonicalUrl = `https://pilotprotocol.network/solutions/${solution.slug}`;
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <BaseHead
+    title={solution.metaTitle}
+    description={solution.description}
+    canonicalUrl={canonicalUrl}
+  />
+  {turnstileSiteKey && <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>}
+  <script type="application/ld+json" set:html={JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: solution.metaTitle,
+    description: solution.description,
+    url: canonicalUrl,
+    inLanguage: 'en-US',
+    dateModified: '2026-08-05',
+    isPartOf: { '@id': 'https://pilotprotocol.network/#website' },
+    author: { '@id': 'https://pilotprotocol.network/#organization' },
+    publisher: { '@id': 'https://pilotprotocol.network/#organization' },
+    citation: solution.signal.href,
+    mainEntity: {
+      '@type': 'SoftwareApplication',
+      name: 'Pilot Protocol',
+      applicationCategory: 'DeveloperApplication',
+      operatingSystem: 'Linux, macOS, Windows',
+      url: 'https://pilotprotocol.network/',
+    },
+  })}></script>
+</head>
+<body data-solution-profile={solution.slug}>
+
+<Nav
+  active="for"
+  breadcrumbs={[
+    { name: 'Home', href: '/' },
+    { name: solution.footerLabel },
+  ]}
+/>
+
+<Experience solution={solution} story={story} funnel={funnel} turnstileSiteKey={turnstileSiteKey} />
+
+<Footer />
+
+</body>
+</html>

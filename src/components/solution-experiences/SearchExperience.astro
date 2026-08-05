@@ -1,0 +1,60 @@
+---
+import SolutionFunnel from '../SolutionFunnel.astro';
+import SolutionProof from '../SolutionProof.astro';
+import SolutionRelated from '../SolutionRelated.astro';
+import CampaignActions from './CampaignActions.astro';
+import type { SolutionExperienceProps } from './types';
+
+const { solution, story, funnel, turnstileSiteKey = '' } = Astro.props as SolutionExperienceProps;
+---
+
+<main class="campaign-page campaign-search" style={`--solution-hue:${solution.hue}`}>
+  <section class="search-hero" aria-labelledby={`${solution.slug}-title`}>
+    <div class="wrap search-hero-grid">
+      <header class="search-editorial">
+        <div class="search-issue"><span>Cosift field guide</span><span>No. 05</span></div>
+        <span class="search-kicker">Grounded private research</span>
+        <h1 id={`${solution.slug}-title`}>{story.heroLead}<br/><em>{story.heroEmphasis}</em></h1>
+        <p>{story.lede}</p>
+        <CampaignActions solution={solution} funnel={funnel} location="search_hero" />
+      </header>
+
+      <article class="search-answer" aria-label="Example cited research answer">
+        <div class="search-query"><span>⌕</span><strong>What changed in the enterprise policy?</strong><kbd>↵</kbd></div>
+        <div class="search-answer-meta"><span>Research answer</span><span>4 sources · 0.91 grounding</span></div>
+        <h2>The policy now requires human approval before external transfers.</h2>
+        <p>The August revision adds a review checkpoint for transfers outside approved counterparties and records the reviewer identity in the audit export.<sup>1</sup> Existing internal transfers retain the prior threshold.<sup>2</sup></p>
+        <ol class="search-sources">
+          <li><span>01</span><div><strong>Enterprise policy · Aug 2026</strong><small>§4.2 External counterparties</small></div><b>92%</b></li>
+          <li><span>02</span><div><strong>Transfer controls handbook</strong><small>Threshold and exception matrix</small></div><b>87%</b></li>
+          <li><span>03</span><div><strong>Audit export reference</strong><small>Reviewer attribution fields</small></div><b>81%</b></li>
+        </ol>
+        <footer><span>Answer generated from the approved index</span><span>View retrieval trace ↗</span></footer>
+      </article>
+    </div>
+  </section>
+
+  <section class="search-quality" aria-labelledby="search-quality-title">
+    <div class="wrap">
+      <header><span>Retrieval is an engineering system</span><h2 id="search-quality-title">Measure the path<br/><em>from corpus to claim.</em></h2><p>{solution.problemBody}</p></header>
+      <div class="search-quality-table">
+        <div class="quality-head"><span>Stage</span><span>What Pilot contributes</span><span>Inspectable output</span></div>
+        {solution.capabilities.map((capability, index) => (
+          <article><span>0{index + 1} · {capability.label}</span><div><h3>{capability.title}</h3><p>{capability.body}</p></div><strong>{index === 0 ? 'Source inventory' : index === 1 ? 'Ranked passages' : 'Cited answer'}</strong></article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="search-evaluation" aria-labelledby="search-evaluation-title">
+    <div class="wrap search-evaluation-grid">
+      <div class="search-evaluation-copy"><span>Evaluation loop</span><h2 id="search-evaluation-title">Fluency is not the acceptance test.</h2><p>{story.workflowHeading.body}</p><CampaignActions solution={solution} funnel={funnel} location="search_evaluation" /></div>
+      <ol>{solution.steps.map((step, index) => <li><span>{String(index + 1).padStart(2, '0')}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol>
+      <aside><strong>{solution.signal.value}</strong><p>{solution.signal.body}</p><a href={solution.signal.href} target="_blank" rel="noopener noreferrer">{solution.signal.source} ↗</a></aside>
+    </div>
+  </section>
+
+  <SolutionFunnel solution={solution} funnel={funnel} turnstileSiteKey={turnstileSiteKey} />
+  <SolutionProof solution={solution} />
+  <SolutionRelated solution={solution} story={story} />
+</main>

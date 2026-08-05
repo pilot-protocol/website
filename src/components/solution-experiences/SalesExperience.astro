@@ -1,0 +1,50 @@
+---
+import SolutionFunnel from '../SolutionFunnel.astro';
+import SolutionProof from '../SolutionProof.astro';
+import SolutionRelated from '../SolutionRelated.astro';
+import CampaignActions from './CampaignActions.astro';
+import type { SolutionExperienceProps } from './types';
+
+const { solution, story, funnel, turnstileSiteKey = '' } = Astro.props as SolutionExperienceProps;
+---
+
+<main class="campaign-page campaign-sales" style={`--solution-hue:${solution.hue}`}>
+  <section class="sales-hero" aria-labelledby={`${solution.slug}-title`}>
+    <div class="wrap">
+      <header class="sales-headline">
+        <div><span>Revenue workflow / Account room 09</span><h1 id={`${solution.slug}-title`}>{story.heroLead}<br/><em>{story.heroEmphasis}</em></h1></div>
+        <div><p>{story.lede}</p><CampaignActions solution={solution} funnel={funnel} location="sales_hero" /></div>
+      </header>
+
+      <article class="sales-account" aria-label="Example generated account brief">
+        <div class="sales-account-bar"><span>Account brief</span><span>Generated 2m ago</span><b>Ready for seller review</b></div>
+        <header><div class="account-mark">NW</div><div><small>Target account</small><h2>Northwind Logistics</h2><p>Enterprise supply-chain software · 4,800 employees</p></div><dl><div><dt>Fit</dt><dd>92</dd></div><div><dt>Intent</dt><dd>High</dd></div><div><dt>Timing</dt><dd>Q3</dd></div></dl></header>
+        <div class="sales-account-grid">
+          <section><span>Why now</span><h3>Three distribution centers are consolidating their automation stack.</h3><ul><li>New VP Operations appointed</li><li>Active warehouse modernization program</li><li>Hiring for agent-platform roles</li></ul></section>
+          <section><span>People map</span><div class="people-row"><i>AM</i><div><strong>Avery Morgan</strong><small>VP Operations · likely sponsor</small></div></div><div class="people-row"><i>JL</i><div><strong>Jordan Lee</strong><small>Platform lead · technical evaluator</small></div></div></section>
+          <section><span>Recommended opening</span><blockquote>“Saw the new warehouse automation program. We can show how isolated agents coordinate across sites without another central broker.”</blockquote><small>Grounded in 5 cited signals</small></section>
+        </div>
+        <footer><span>Company intelligence</span><span>Web research</span><span>Contact channels</span><strong>Open evidence packet ↗</strong></footer>
+      </article>
+    </div>
+  </section>
+
+  <SolutionFunnel solution={solution} funnel={funnel} turnstileSiteKey={turnstileSiteKey} />
+
+  <section class="sales-pipeline" aria-labelledby="sales-pipeline-title">
+    <div class="wrap">
+      <header><span>Account production line</span><h2 id="sales-pipeline-title">Every stage returns<br/><em>a usable sales object.</em></h2><p>{solution.problemBody}</p></header>
+      <ol>{solution.steps.map((step, index) => <li><span>0{index + 1}</span><div class="pipeline-status"><i></i>{index < 3 ? 'Complete' : 'Seller review'}</div><h3>{step.title}</h3><p>{step.body}</p><b>{index < solution.steps.length - 1 ? '→' : '✓'}</b></li>)}</ol>
+    </div>
+  </section>
+
+  <section class="sales-stack" aria-labelledby="sales-stack-title">
+    <div class="wrap sales-stack-grid">
+      <div><span>Composable stack</span><h2 id="sales-stack-title">Specialists contribute.<br/>The brief stays coherent.</h2><div class="sales-stack-cards">{solution.capabilities.map((capability, index) => <article><span>{index + 1}</span><small>{capability.label}</small><h3>{capability.title}</h3><p>{capability.body}</p></article>)}</div></div>
+      <aside><strong>{solution.signal.value}</strong><p>{solution.signal.body}</p><a href={solution.signal.href} target="_blank" rel="noopener noreferrer">{solution.signal.source} ↗</a></aside>
+    </div>
+  </section>
+
+  <SolutionRelated solution={solution} story={story} />
+  <SolutionProof solution={solution} />
+</main>

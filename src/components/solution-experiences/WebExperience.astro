@@ -1,0 +1,61 @@
+---
+import SolutionFunnel from '../SolutionFunnel.astro';
+import SolutionProof from '../SolutionProof.astro';
+import SolutionRelated from '../SolutionRelated.astro';
+import CampaignActions from './CampaignActions.astro';
+import type { SolutionExperienceProps } from './types';
+
+const { solution, story, funnel, turnstileSiteKey = '' } = Astro.props as SolutionExperienceProps;
+---
+
+<main class="campaign-page campaign-web" style={`--solution-hue:${solution.hue}`}>
+  <section class="web-hero" aria-labelledby={`${solution.slug}-title`}>
+    <div class="wrap">
+      <header class="web-title">
+        <span>Web task router / 06</span>
+        <h1 id={`${solution.slug}-title`}>{story.heroLead}<br/><em>{story.heroEmphasis}</em></h1>
+        <div><p>{story.lede}</p><CampaignActions solution={solution} funnel={funnel} location="web_hero" /></div>
+      </header>
+
+      <div class="web-browser" aria-label="Agent web workflow preview">
+        <div class="web-browser-chrome"><i></i><i></i><i></i><div>https://supplier.example/portal/orders/1842</div><span>⋯</span></div>
+        <div class="web-browser-tabs"><span class="is-active">Live browser</span><span>Clean extraction</span><span>Site guidance</span><b>Task #1842 · running</b></div>
+        <div class="web-browser-body">
+          <aside>
+            <span>Route selected</span><strong>Real interaction</strong><p>Authenticated session and dynamic controls detected.</p>
+            <dl><div><dt>Session</dt><dd>attached</dd></div><div><dt>Risk</dt><dd>review on submit</dd></div><div><dt>Fallback</dt><dd>extract</dd></div></dl>
+          </aside>
+          <div class="web-page-preview">
+            <div class="preview-nav"><strong>SUPPLIER PORTAL</strong><span>Orders</span><span>Inventory</span><span>Account</span></div>
+            <div class="preview-content"><small>ORDER #1842</small><h2>Confirm revised delivery</h2><p>Dock availability changed. Select a new appointment window.</p><div class="preview-options"><span>Aug 14 · 09:00</span><span class="selected">Aug 14 · 14:30 ✓</span><span>Aug 15 · 11:00</span></div><button type="button" tabindex="-1">Review confirmation</button></div>
+          </div>
+          <div class="web-event-log"><span>10:14:02 page ready</span><span>10:14:04 option selected</span><span>10:14:04 approval requested</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="web-routing" aria-labelledby="web-routing-title">
+    <div class="wrap">
+      <header><span>Choose by page behavior</span><h2 id="web-routing-title">Three surfaces.<br/><em>One task contract.</em></h2><p>{solution.problemBody}</p></header>
+      <div class="web-route-cards">
+        {solution.capabilities.map((capability, index) => (
+          <article class={`web-route route-${index + 1}`}><span>Route 0{index + 1}</span><div class="route-glyph" aria-hidden="true">{index === 0 ? '◎' : index === 1 ? '≡' : '⌘'}</div><small>{capability.label}</small><h3>{capability.title}</h3><p>{capability.body}</p><b>{index === 0 ? 'Dynamic' : index === 1 ? 'Readable' : 'Repeatable'}</b></article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <SolutionFunnel solution={solution} funnel={funnel} turnstileSiteKey={turnstileSiteKey} />
+
+  <section class="web-task-trace" aria-labelledby="web-trace-title">
+    <div class="wrap">
+      <div><span>Task trace</span><h2 id="web-trace-title">From intent to observable result.</h2><p>{story.workflowHeading.body}</p></div>
+      <ol>{solution.steps.map((step, index) => <li><span>0{index + 1}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol>
+      <aside><strong>{solution.signal.value}</strong><p>{solution.signal.body}</p><a href={solution.signal.href} target="_blank" rel="noopener noreferrer">{solution.signal.source} ↗</a></aside>
+    </div>
+  </section>
+
+  <SolutionRelated solution={solution} story={story} />
+  <SolutionProof solution={solution} />
+</main>
