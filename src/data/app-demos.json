@@ -126,57 +126,42 @@
   "io.pilot.bowmark": {
     "skill": "io.pilot.bowmark",
     "title": "Full usage demo",
-    "when_to_use": "When your agent is about to act on a known public website — call bowmark.ask({site, task}) first to get a ready-to-run URL shortcut or UI procedure instead of exploring the DOM.",
-    "metered": true,
+    "when_to_use": "When the answer only exists on a live website right now, after someone operates it: a price, stock, a fare, a quote, a form.",
+    "metered": false,
     "quickstart": {
-      "goal": "Get a navigation cheatsheet for a site + task",
-      "command": "pilotctl appstore call io.pilot.bowmark bowmark.ask '{\"site\":\"sec.gov\",\"task\":\"find Apple's latest 10-K filing\"}'",
-      "expect": "{\"status\":\"ok\",\"id\":\"...\",\"shortcut\":{\"template\":\"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={ticker}&type=10-K\"}}"
+      "goal": "See whether a function already covers the task",
+      "command": "pilotctl appstore call io.pilot.bowmark bowmark.get_library '{\"query\":\"flights\"}'",
+      "expect": "markdown: the bowmark.flights capability, with its types, signatures and examples",
+      "note": "Always call this first. An unrecognized query returns a one-line index, not an error."
     },
     "examples": [
       {
-        "title": "Ask for a UI procedure on a product surface",
-        "goal": "Scope with a path to skip the ambiguous_scope round-trip",
-        "command": "pilotctl appstore call io.pilot.bowmark bowmark.ask '{\"site\":\"google.com/maps\",\"task\":\"get directions from SFO to downtown\"}'",
-        "expect": "{\"status\":\"ok\",\"id\":\"...\",\"ui_procedure\":{\"steps\":[...]}}"
+        "title": "Search flights across several aggregators",
+        "goal": "One capability fans out, dedupes the same flight, sorts by price",
+        "command": "pilotctl appstore call io.pilot.bowmark bowmark.run '{\"script\":\"const { flights, warnings } = await bowmark.flights.search({ from: \\\"YYZ\\\", to: \\\"LHR\\\", depart: \\\"2026-09-14\\\" }); return { best: flights[0], warnings };\"}'",
+        "expect": "{\"ok\":true,\"status\":\"ok\",\"result\":{\"best\":{\"price\":412,\"site\":\"google_flights\"},\"warnings\":[]}}",
+        "note": "These prices exist only after each site's own live poll, so no static fetch reaches them. `warnings` names a site dropped."
       },
       {
-        "title": "Request the signed-in surface",
-        "command": "pilotctl appstore call io.pilot.bowmark bowmark.ask '{\"site\":\"github.com\",\"task\":\"create a new private repo\",\"variants\":{\"auth_state\":\"logged_in\",\"role\":\"owner\"}}'",
-        "expect": "{\"status\":\"ok\",\"id\":\"...\",\"ui_procedure\":{\"steps\":[...]},\"variants_assumed\":{...}}"
+        "title": "Read any page as markdown",
+        "goal": "Cheap GET first, a browser only if the page proves it needs one",
+        "command": "pilotctl appstore call io.pilot.bowmark bowmark.run '{\"script\":\"const p = await bowmark.read.page(\\\"https://example.com/pricing\\\"); return { title: p.title, servedBy: p.servedBy, content: p.content };\"}'",
+        "expect": "{\"ok\":true,\"status\":\"ok\",\"result\":{\"title\":\"Pricing\",\"servedBy\":\"fetch\",\"content\":\"# Pricing\\n...\"}}",
+        "note": "`servedBy` names the cheapest rung that worked, and `wall` names the bot wall when there is one."
       },
       {
-        "title": "Report the outcome to keep cheatsheets fresh",
-        "goal": "success=true only if every step ran clean — no retries or extra clicks",
-        "command": "pilotctl appstore call io.pilot.bowmark bowmark.report_outcome '{\"envelope_id\":\"<id-from-ask>\",\"success\":true}'",
-        "expect": "{\"id\":\"...\"}"
+        "title": "Drill into one site instead of the fan-out",
+        "goal": "One named site, two dependent calls, one script",
+        "command": "pilotctl appstore call io.pilot.bowmark bowmark.run '{\"script\":\"const k = bowmark.providers.kayak; const [best] = await k.search({ from: \\\"SFO\\\", to: \\\"JFK\\\", depart: \\\"2026-09-15\\\" }); const sellers = await k.getBookingOptions(best); return { price: best.price, sellers: sellers.length };\"}'",
+        "expect": "{\"ok\":true,\"status\":\"ok\",\"result\":{\"price\":198,\"sellers\":7}}",
+        "note": "A provider returns that site's native shape, so you give up the cross-site dedupe and the routing around failures."
       }
     ],
-    "cost": {
-      "unit": "requests (managed key, currently unmetered)",
-      "free_budget": "managed — no per-user charge today",
-      "hard_cap_usd": 0,
-      "operations": [
-        {
-          "op": "bowmark.ask",
-          "price": "free",
-          "note": "the nav-recipe call (POST /v1/ask); managed key, no per-op meter currently"
-        },
-        {
-          "op": "bowmark.report_outcome",
-          "price": "free",
-          "note": "feedback that triggers a re-crawl; no charge"
-        }
-      ],
-      "worked_total": "Managed key with quota 0 — there is no per-user dollar charge today; both methods are free to call."
-    },
     "gotchas": [
-      "Put intent in `task`, never a URL — 'find Apple's latest 10-K', not a link.",
-      "Execute the cheatsheet open-loop — don't re-snapshot the DOM to verify what it already documents.",
-      "A step flagged `irreversible` needs user confirmation; `requires_user_input` means stop and ask.",
-      "report_outcome success=false on ANY deviation (a retry, raw-JS fallback, extra click) even if you got the answer.",
-      "Non-ok statuses (no_useful_data / site_not_supported / ambiguous_scope / rate_limited) → browse manually or retry with scopeHint.",
-      "Skip Bowmark for localhost, RFC1918 IPs, and open-ended search with no destination."
+      "Call `get_library` before `run`, always. A script uses names only it supplies, and it touches no website.",
+      "Check `status` before `ok`. `partial` is a real result, narrower than asked; `incomplete.summary` names what never answered, and `failures[].fixable` true means YOUR argument was wrong, so fix and re-run.",
+      "`needs_user` is a login pause, not a failure: give the user `meta.handoff.url`, wait, then re-send the script.",
+      "`bowmark` is the only I/O in a script. No `fetch`, `import`, filesystem or `process`. Write a plain async body and `return`."
     ],
     "next": [
       "io.pilot.bowmark bowmark.help '{}'"

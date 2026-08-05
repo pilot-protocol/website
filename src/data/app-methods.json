@@ -881,16 +881,12 @@
   ],
   "io.pilot.bowmark": [
     {
-      "name": "bowmark.ask",
-      "summary": "Give it a site and a plain-English task (e.g. 'find Apple's latest 10-K') and it returns a ready-to-run cheatsheet — a URL shortcut to fill and navigate and/or a short ui_procedure of steps. Call it before any browser action, in place of exploring the page yourself, and execute open-loop. status=ok returns an id; no_useful_data/site_not_supported → browse manually; ambiguous_scope → retry with scopeHint; rate_limited → back off. Pass variants:{auth_state:'logged_in'} for signed-in surfaces. Intent, not a URL."
+      "name": "bowmark.get_library",
+      "summary": "START HERE. Read-only, and it touches no website. Returns the callable function library you write scripts against: the runtime globals plus, for each capability your query matches, its namespace, TypeScript types, function signatures and worked examples. Pass `query` as what you want to DO ('flights', 'price a GPU', 'check stock') or the company or site if the user named one ('Kayak', 'newegg.com'); a phrase in the user's own words is fine. You get what you asked about and nothing else. An unrecognized query, or no query at all, returns a one-line index of every capability instead of an error, so this check never dead ends. Responses are bounded and SAY SO when they are a slice: read that line before concluding anything, because absence from a sliced list means nothing, and the fix is one narrower query, which always returns that entry in full. Two tiers come back: capabilities like `bowmark.flights.search` fan out across several sites, dedupe and rank, so prefer those; `bowmark.providers.kayak.search` is one named site in its native shape."
     },
     {
-      "name": "bowmark.report_outcome",
-      "summary": "After running a cheatsheet from ask, report whether every step ran exactly as written (envelope_id + success, optional evidence). success=true only if it ran clean — no retries, no raw-JS fallback, no extra clicks; false on any deviation, even if you still got the answer. Honest results trigger a re-crawl that keeps the cheatsheet fresh."
-    },
-    {
-      "name": "bowmark.help",
-      "summary": "Discovery: every method with params, kind, and latency class."
+      "name": "bowmark.run",
+      "summary": "Executes your script on the real websites and returns what came back. Call bowmark.get_library FIRST: it gives the exact function names, argument shapes and return types. The language is plain async JavaScript. `bowmark` is a ready global with no import, every call is awaited, and you get real control flow: if, loops, array methods, and Promise.all for fan-out. `return` a value to get it back, `log(...)` for progress lines. `bowmark` is the ONLY I/O: no fetch, no process, no filesystem, no import or require. Write a plain async body, not a wrapping function, and keep it small and deterministic, because it runs in a hard sandbox with CPU, memory and wall-clock ceilings. `script` is the only argument; there is no site argument. Returns {ok, status, result, logs, error, ms}. CHECK `status` BEFORE `ok`: ok | partial (the script ran and the result is real and usable but narrower than asked, ok stays true, and incomplete.summary names what never answered; this is not a failure. Check incomplete.failures[].fixable: true means YOUR argument was rejected, not the site, so fix it and run again; otherwise re-running returns the same thing) | error | needs_user (a site wants a signed-in session, so the run PAUSED: hand meta.handoff.url to the user, wait, then re-send the identical script). Bowmark drives the sites server side, so your agent never opens a browser."
     }
   ],
   "io.pilot.docker": [
