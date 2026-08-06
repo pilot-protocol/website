@@ -1,0 +1,158 @@
+---
+import BlogLayout from "../../layouts/BlogLayout.astro";
+
+const bodyContent = `
+<h1 id="zerotier-vs-tailscale-which-overlay-network-should-you-use">ZeroTier vs Tailscale: which overlay network should you use?</h1>
+
+<hr>
+<blockquote>
+<p><strong>TL;DR:</strong></p>
+<ul>
+<li>Tailscale is a Layer&nbsp;3 WireGuard mesh with a hosted control plane: SSO identity, MagicDNS names, ACLs, and DERP relay fallback. It is the fastest way to put devices and servers on one private network.</li>
+<li>ZeroTier emulates a virtual Ethernet switch (Layer&nbsp;2): machines join by a 16-digit network ID, a controller authorizes membership, and planet root servers handle discovery and relay. It is the right tool when you actually need L2 behavior — broadcast, multicast, non-IP protocols.</li>
+<li>Pick by workload, not by hype: IP reachability and team identity point to Tailscale; Ethernet semantics or a self-hosted controller point to ZeroTier.</li>
+<li>Neither was built for AI agents. Both address <em>machines</em>; agents need durable addresses, capability discovery, and per-peer trust — the gap an agent-native overlay like Pilot Protocol fills, and the subject of our <a href="/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents">full comparison of Pilot, Tailscale, Nebula, and ZeroTier</a>.</li>
+</ul>
+</blockquote>
+<hr>
+
+<p>Choosing between ZeroTier and Tailscale usually means you have the same problem we all hit: machines in different places — laptops, servers, containers, cloud VMs — that need to talk to each other as if they were on one private network. Both tools solve that problem, and both solve it well. The difference is in <em>how</em> they build the network, and that difference decides which one fits your workload. This guide compares the two on architecture, identity, control plane, and licensing, and gives you a decision framework you can apply today.</p>
+
+<h2 id="zerotier-vs-tailscale-the-short-answer">ZeroTier vs Tailscale: the short answer</h2>
+
+<p>ZeroTier and Tailscale are both overlay networks: encrypted virtual networks built on top of the public internet, with NAT traversal so hosts behind routers and clouds can reach each other without open ports. The architectural split is the whole story:</p>
+
+<ul>
+<li><strong>Tailscale is Layer&nbsp;3.</strong> It wraps WireGuard in a control plane that distributes keys, assigns IPs, and relays when direct connections fail. Your identity provider authenticates devices; ACLs decide who can talk to whom.</li>
+<li><strong>ZeroTier is Layer&nbsp;2.</strong> It emulates an Ethernet switch across the internet. Joined devices behave as if they share a physical LAN — broadcast and multicast work, and even non-IP protocols can ride the virtual wire. A controller authorizes membership per network.</li>
+</ul>
+
+<table>
+<thead>
+<tr><th></th><th>Tailscale</th><th>ZeroTier</th></tr>
+</thead>
+<tbody>
+<tr><td>OSI layer</td><td>L3 (IP)</td><td>L2 (Ethernet)</td></tr>
+<tr><td>Crypto core</td><td>WireGuard</td><td>Custom (Curve25519-based)</td></tr>
+<tr><td>Identity</td><td>SSO / OIDC accounts</td><td>Network ID + controller approval</td></tr>
+<tr><td>Naming</td><td>MagicDNS hostnames</td><td>16-digit network ID</td></tr>
+<tr><td>Discovery / relay</td><td>Coordination server + DERP relays</td><td>Planet root servers</td></tr>
+<tr><td>Self-hosting</td><td>Headscale reimplements the control server</td><td>Controller can be run yourself</td></tr>
+<tr><td>Best fit</td><td>Devices and teams, fast, with SSO</td><td>LAN replication, L2 semantics, self-hosted control</td></tr>
+</tbody>
+</table>
+
+<p>If your mental model is "give this machine an IP on my private network," both deliver. The question is which layer you want the network to live at.</p>
+
+<h2 id="what-both-get-right">What both get right</h2>
+
+<p>Before the differences, the shared strengths — because both are genuinely good at the core job. Each gives you encrypted connectivity over the public internet, so traffic between your machines is protected from the networks in between. Each includes NAT traversal, which is why they work from home offices, hotel Wi-Fi, and cloud subnets without port forwarding: you join the overlay, you do not open the firewall. For the classic use case — a private network that spans the internet — you can pick either one and be fine. The differences matter at the margins, and for workloads the designers did not plan for.</p>
+
+<h2 id="architecture-virtual-ethernet-vs-wireguard-mesh">Architecture: virtual Ethernet vs a WireGuard mesh</h2>
+
+<p><strong>ZeroTier builds a virtual switch.</strong> Joining a ZeroTier network puts your machine on an emulated Layer&nbsp;2 segment: the same subnet, the same broadcast domain. That is more powerful than most workloads need — and it is exactly right for the ones that need it. Legacy systems, game servers, appliances, or anything that expects to discover neighbors by broadcast or speak a non-IP protocol behave on ZeroTier the way they behave on a physical LAN. The cost: you are emulating Ethernet frames to move application traffic, so the network carries more machinery than a pure IP tunnel does. The existing <a href="/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents">overlay comparison on this site</a> describes ZeroTier as "more network than you need" for agent messaging — true for agents, not for the LAN-replication cases it was built for.</p>
+
+<p><strong>Tailscale builds a Layer&nbsp;3 mesh.</strong> The WireGuard data plane encrypts IP packets between peers; a hosted coordination server handles key exchange, IP assignment, and NAT traversal. When a direct hole-punch fails, DERP relays carry the traffic. There is no broadcast domain and no shared switch — each peer is an IP endpoint, named by MagicDNS and gated by ACLs. That model is simpler to reason about: IP in, IP out.</p>
+
+<h2 id="identity-and-access-control">Identity and access control</h2>
+
+<p>The two tools also differ in who gets to be on the network and how that is decided.</p>
+
+<p><strong>ZeroTier</strong> organizes around networks identified by a 16-digit ID. A controller — hosted by ZeroTier, or run by you — authorizes which members belong. Membership is per network, and the controller can approve or revoke at join time. Identity is the network ID plus whatever the controller enforces; there is no built-in SSO story, so teams that want identity-provider integration build it on top.</p>
+
+<p><strong>Tailscale</strong> ties identity to your existing identity provider. Devices authenticate through Google, Okta, GitHub, or any OIDC provider; the coordination server issues the WireGuard keys; ACLs express exactly which devices can reach which, in a policy language that reads like code. For teams, that is a big operational win: onboarding and offboarding follow the identity system you already run, and access control is reviewable in the repo. MagicDNS gives every node a human-readable name, which removes a whole class of "what is the IP of the CI runner" questions.</p>
+
+<h2 id="who-runs-the-control-plane">Who runs the control plane</h2>
+
+<p>Both networks depend on coordination infrastructure that you do not run by default. That matters more than most comparisons admit, because the control plane is the part that decides membership.</p>
+
+<p><strong>Tailscale's</strong> coordination server is hosted by Tailscale (the company). The clients are open source, and <a href="https://github.com/juanfont/headscale" target="_blank" rel="noopener">Headscale</a> — a community reimplementation — exists for teams that want the Tailscale client experience with a control server they operate themselves. The trade is the familiar one: hosted control means less operations, but your network's membership logic lives with a third party unless you run Headscale.</p>
+
+<p><strong>ZeroTier's</strong> planet root servers handle discovery and relay, and the controller that authorizes membership is the piece you can run yourself — a common pattern for teams that want ZeroTier's L2 network with their own authorization logic. Same trade, different split: the data plane is peer-to-peer in both cases, but the control path is something you either outsource or own.</p>
+
+<h2 id="licensing-and-self-hosting">Licensing and self-hosting</h2>
+
+<p>Licensing is a real input to the decision. Tailscale's client code is open source (BSD-licensed), with the control plane as the product — self-hosting that plane means running Headscale. ZeroTier is BSL-licensed: source-available, with use restrictions that matter if you plan to offer the software as a service. If your organization has a policy on source-available licenses, that alone may settle the question. The operational question is the same as the control-plane one: which side are you comfortable running yourself?</p>
+
+<h2 id="which-should-you-pick">Which should you pick?</h2>
+
+<ul>
+<li><strong>Connecting people, laptops, and servers fast, with your existing SSO?</strong> Tailscale. The identity integration and ACL model are the strongest reasons to choose it.</li>
+<li><strong>Replicating a LAN across sites — broadcast, multicast, non-IP protocols, appliances that expect a shared subnet?</strong> ZeroTier. That is precisely the L2 job it exists to do.</li>
+<li><strong>Self-hosting the control plane?</strong> ZeroTier's controller or Tailscale's Headscale both work; pick based on whether you want L2 or L3 semantics underneath.</li>
+<li><strong>Minimal operations, no interest in running coordination infrastructure?</strong> Tailscale, whose hosted control plane is the least work of the two.</li>
+</ul>
+
+<p>Both are mature, both are encrypted, and both handle NAT. The decision is about layer, identity, and who runs the control plane.</p>
+
+<h2 id="where-agents-change-the-equation">Where agents change the equation</h2>
+
+<p>Neither ZeroTier nor Tailscale was designed for AI agents, and the difference is not a small one. Both tools address <em>machines</em>: a host gets an IP, joins a network, and is trusted by virtue of membership. Autonomous agents have different requirements:</p>
+
+<ul>
+<li><strong>A durable address that survives restarts, IP changes, and moving between clouds</strong> — not an IP that changes when the workload migrates.</li>
+<li><strong>Discovery by capability</strong> — finding "an agent that can do X," not "the machine at 100.64.0.7."</li>
+<li><strong>Per-peer trust</strong> — deciding to trust a specific agent via an explicit handshake, rather than trusting everything on the network because "joined" means "trusted."</li>
+</ul>
+
+<p>A VPN's joined-equals-trusted model creates a flat trust surface: a compromised agent can reach every other agent on the network. That is fine for infrastructure connectivity and the wrong granularity for agent communication. If you want the deeper argument, our <a href="/blog/why-ai-agents-need-network-stack">post on why AI agents need their own network stack</a> walks through it, and <a href="/blog/connect-ai-agents-behind-nat-without-vpn">connecting AI agents behind NAT without a VPN</a> covers the traversal side.</p>
+
+<p>This is where <a href="https://pilotprotocol.network">Pilot Protocol</a> enters the picture — not as a VPN competitor, but one layer up. Pilot is an open-source overlay network built for agents: every agent gets a permanent virtual address, encrypted UDP tunnels (X25519 key exchange + AES-GCM) with STUN, hole-punching, and relay fallback for NAT, a rendezvous registry and nameserver for discovery, and an explicit mutual handshake so trust is per-peer rather than per-network. It is implemented in Go with zero external dependencies and ships as a static AGPL-3.0 binary, and it is already home to 243k+ agents and users. The honest framing: Pilot does not replace ZeroTier or Tailscale. You can absolutely run agents on top of either overlay — you would just be building addressing, discovery, and trust yourself, on a layer that does not know what an agent is.</p>
+
+<p>For the full four-way treatment — including Nebula and a direct comparison table — see <a href="/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents">Pilot vs Tailscale, Nebula, and ZeroTier for AI agents</a>.</p>
+
+<p>Get started with one command:</p>
+
+<pre><code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></pre>
+
+<h2 id="frequently-asked-questions">Frequently asked questions</h2>
+
+<h3 id="is-zerotier-better-than-tailscale">Is ZeroTier better than Tailscale?</h3>
+<p>Not in general — they solve the same problem at different layers. ZeroTier emulates a Layer&nbsp;2 Ethernet network, which makes it better when you need broadcast, multicast, or non-IP protocols. Tailscale builds a Layer&nbsp;3 WireGuard mesh with SSO identity and ACLs, which makes it better for teams that want fast adoption and identity-provider integration. Choose based on whether your workload needs L2 semantics, not on which tool is "better."</p>
+
+<h3 id="can-zerotier-and-tailscale-be-used-together">Can ZeroTier and Tailscale be used together?</h3>
+<p>Yes. They operate at different layers and have no reason to conflict: a machine can be on a Tailscale mesh for IP reachability and on a ZeroTier network for an L2 segment at the same time. Overlays are additive — the practical question is whether your workload actually needs both, not whether they interoperate.</p>
+
+<h3 id="which-is-more-secure-zerotier-or-tailscale">Which is more secure, ZeroTier or Tailscale?</h3>
+<p>Both use modern authenticated encryption (WireGuard for Tailscale, a Curve25519-based custom protocol for ZeroTier), and both encrypt traffic between peers. The meaningful security differences are in the control plane: Tailscale's hosted coordination server and your SSO provider, or ZeroTier's planet roots and your controller. In practice the security posture is mostly determined by who runs your control plane and how you manage membership, not by the crypto primitive.</p>
+
+<h3 id="do-zerotier-and-tailscale-work-behind-nat">Do ZeroTier and Tailscale work behind NAT?</h3>
+<p>Yes — NAT traversal is a core feature of both. Each attempts a direct hole-punched connection between peers and falls back to a relay (Tailscale's DERP servers, ZeroTier's planet roots) when a direct path is not possible. That is what makes them work from home networks, office firewalls, and cloud subnets without port forwarding.</p>
+
+<h3 id="should-i-use-zerotier-or-tailscale-for-ai-agents">Should I use ZeroTier or Tailscale for AI agents?</h3>
+<p>Either can carry the traffic, but neither provides what agents actually need: a durable address that survives restarts and cloud moves, discovery by capability, and per-peer trust instead of blanket network membership. An agent-native overlay like Pilot Protocol provides those at the application layer and runs alongside a VPN rather than replacing it. Our <a href="/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents">overlay comparison for AI agents</a> lays out the full picture.</p>
+`;
+
+const faqItems = [
+  {
+    question: "Is ZeroTier better than Tailscale?",
+    answer: "Not in general — they solve the same problem at different layers. ZeroTier emulates a Layer 2 Ethernet network, which makes it better when you need broadcast, multicast, or non-IP protocols. Tailscale builds a Layer 3 WireGuard mesh with SSO identity and ACLs, which makes it better for teams that want fast adoption and identity-provider integration. Choose based on whether your workload needs L2 semantics, not on which tool is \"better.\"",
+  },
+  {
+    question: "Can ZeroTier and Tailscale be used together?",
+    answer: "Yes. They operate at different layers and have no reason to conflict: a machine can be on a Tailscale mesh for IP reachability and on a ZeroTier network for an L2 segment at the same time. Overlays are additive — the practical question is whether your workload actually needs both, not whether they interoperate.",
+  },
+  {
+    question: "Which is more secure, ZeroTier or Tailscale?",
+    answer: "Both use modern authenticated encryption (WireGuard for Tailscale, a Curve25519-based custom protocol for ZeroTier), and both encrypt traffic between peers. The meaningful security differences are in the control plane: Tailscale's hosted coordination server and your SSO provider, or ZeroTier's planet roots and your controller. In practice the security posture is mostly determined by who runs your control plane and how you manage membership, not by the crypto primitive.",
+  },
+  {
+    question: "Do ZeroTier and Tailscale work behind NAT?",
+    answer: "Yes — NAT traversal is a core feature of both. Each attempts a direct hole-punched connection between peers and falls back to a relay (Tailscale's DERP servers, ZeroTier's planet roots) when a direct path is not possible. That is what makes them work from home networks, office firewalls, and cloud subnets without port forwarding.",
+  },
+  {
+    question: "Should I use ZeroTier or Tailscale for AI agents?",
+    answer: "Either can carry the traffic, but neither provides what agents actually need: a durable address that survives restarts and cloud moves, discovery by capability, and per-peer trust instead of blanket network membership. An agent-native overlay like Pilot Protocol provides those at the application layer and runs alongside a VPN rather than replacing it.",
+  },
+];
+---
+<BlogLayout
+  title="ZeroTier vs Tailscale: Which Overlay Network Should You Use?"
+  description="ZeroTier vs Tailscale: compare architecture, identity, and control plane — then pick the right overlay network with a decision framework."
+  date="August 6, 2026"
+  tags={["zerotier", "tailscale", "overlay-network", "vpn", "networking", "comparison"]}
+  canonicalPath="/learn/zerotier-vs-tailscale"
+  faqItems={faqItems}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
