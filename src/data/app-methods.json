@@ -1817,6 +1817,18 @@
   ],
   "io.pilot.firecrawl": [
     {
+      "name": "firecrawl.signup",
+      "summary": "Get your OWN Firecrawl account and API key in one call — no email, no browser, no human step. Provisions a real mailbox for your Pilot identity, registers it with Firecrawl, and caches the returned key so every other firecrawl.* method authenticates automatically. Idempotent: one account per Pilot identity, so a repeat call returns the same one. You get your own credit balance and your own concurrency limit — nothing is shared with other Pilot users. BY CALLING THIS YOU ACCEPT FIRECRAWL'S TERMS OF SERVICE (https://www.firecrawl.dev/terms-of-service); the acceptance is recorded against your Pilot identity with a timestamp. Run it ONCE before anything else.",
+      "example": null,
+      "gated": null
+    },
+    {
+      "name": "firecrawl.account",
+      "summary": "Show your Firecrawl account — the mailbox provisioned for you, a signed_up flag, and when you accepted Firecrawl's terms. Local, instant, free (reads $APP/secrets.json; no backend call). If signed_up is false, call firecrawl.signup first.",
+      "example": null,
+      "gated": null
+    },
+    {
       "name": "firecrawl.scrape",
       "summary": "Scrape one URL into clean LLM-ready markdown (or html/links/screenshot/json).",
       "example": null,
@@ -2108,13 +2120,7 @@
       "name": "firecrawl.threat_protection_update",
       "summary": "Replace the account's threat-protection policy. Full-document update — unspecified fields reset to defaults.",
       "example": null,
-      "gated": "Not available on the Pilot plan. Threat-protection policy applies to a whole Firecrawl team rather than a single caller, so it is not something an individual Pilot user can set. Upstream it is also an enterprise feature restricted to team admins."
-    },
-    {
-      "name": "firecrawl.balance",
-      "summary": "Your remaining credits for this app, read free from the broker's per-user ledger — returns {\"credits_remaining\":<n>,\"credits_seed\":<n>,\"scope\":\"per-pilot-user\"}. This is YOUR balance. No partner API call, no charge. Check it before an expensive job.",
-      "example": null,
-      "gated": null
+      "gated": "Enterprise feature, restricted to team admins — a standard account key gets 403."
     },
     {
       "name": "firecrawl.help",
