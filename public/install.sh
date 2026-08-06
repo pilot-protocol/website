@@ -313,9 +313,13 @@ manifest_field() {
 # release's checksums.txt (served from GitHub).
 manifest_platform_sha256() {
     _mp_plat="$1"; _mp_file="$2"
-    sed -n "/\"${_mp_plat}\"[[:space:]]*:[[:space:]]*{/,/}/p" "$_mp_file" \
-      | grep '"sha256"' | head -1 \
-      | sed -E 's/.*"sha256"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/'
+    # The authority is free to emit compact JSON. A line-range parser sees all
+    # platform objects on that one line and a greedy replacement can therefore
+    # return the final platform's hash. Collapse whitespace deliberately, then
+    # constrain the match to this platform's first closing brace.
+    tr -d '\r\n' < "$_mp_file" \
+      | sed -n -E "s/.*\"${_mp_plat}\"[[:space:]]*:[[:space:]]*\\{[^}]*\"sha256\"[[:space:]]*:[[:space:]]*\"([^\"]*)\"[^}]*\\}.*/\\1/p" \
+      | head -1
 }
 
 # version_compare a b emits -1 / 0 / 1 for a<b / a==b / a>b.
