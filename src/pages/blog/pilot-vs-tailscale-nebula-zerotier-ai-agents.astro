@@ -1,9 +1,9 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>Trying to decide between Nebula and Tailscale for your infrastructure?</p>
+const bodyContent = `<p>Trying to decide between Headscale, Nebula, and Tailscale for your infrastructure?</p>
 
-  <p><a href="https://tailscale.com" target="_blank" rel="noopener">Tailscale</a>, <a href="https://github.com/slackhq/nebula" target="_blank" rel="noopener">Nebula</a>, and <a href="https://www.zerotier.com" target="_blank" rel="noopener">ZeroTier</a> are the three most popular overlay networks, and all three are genuinely good at what they were built for: giving machines a flat, encrypted network regardless of where they physically sit. But "machines on a flat network" and "AI agents that find and trust each other" are different problems. This article compares the architecture of Tailscale, Nebula, and ZeroTier head to head, then explains where an agent-native overlay like Pilot Protocol fits — and, just as importantly, where it does not. The goal is an honest decision guide, not a teardown.</p>
+  <p><a href="https://tailscale.com" target="_blank" rel="noopener">Tailscale</a>, <a href="https://github.com/slackhq/nebula" target="_blank" rel="noopener">Nebula</a>, and <a href="https://www.zerotier.com" target="_blank" rel="noopener">ZeroTier</a> are the three most popular overlay networks, and all three are genuinely good at what they were built for: giving machines a flat, encrypted network regardless of where they physically sit. Headscale — the open-source, self-hosted reimplementation of the Tailscale control server — is the fourth option on most shortlists, and it changes the calculus for teams that want the Tailscale client experience without the hosted control plane. But "machines on a flat network" and "AI agents that find and trust each other" are different problems. This article compares the architecture of Headscale, Tailscale, Nebula, and ZeroTier head to head, then explains where an agent-native overlay like Pilot Protocol fits — and, just as importantly, where it does not. The goal is an honest decision guide, not a teardown.</p>
 
   <section>
   <h2>The short answer</h2>
@@ -34,6 +34,13 @@ const bodyContent = `<p>Trying to decide between Nebula and Tailscale for your i
   <h2>Tailscale: the device VPN that "just works"</h2>
   <p>Tailscale wraps <a href="https://www.wireguard.com" target="_blank" rel="noopener">WireGuard</a> in a control plane that handles key distribution, NAT traversal, and access control for you. Devices authenticate through your existing identity provider (Google, Okta, GitHub), a coordination server exchanges the WireGuard keys, and DERP relay servers carry traffic when a direct hole-punch fails. MagicDNS gives every node a friendly name, and ACLs gate who can reach whom.</p>
   <p>It is the easiest of the three to adopt, and for connecting laptops, servers, and CI runners into one private network it is hard to beat. The trade-offs: the coordination server is a hosted dependency (the open-source <a href="https://github.com/juanfont/headscale" target="_blank" rel="noopener">Headscale</a> re-implements it if you need self-hosting), identity is tied to <em>human</em> accounts and devices, and the model is "give this machine an IP," not "let this agent advertise a capability."</p>
+  </section>
+
+  <section>
+  <h2>Headscale: the self-hosted Tailscale control plane</h2>
+  <p>Headscale is an open-source reimplementation of the Tailscale <em>control server</em>. The Tailscale client on each machine still speaks WireGuard for the data plane, but instead of talking to Tailscale's hosted coordination service, clients register against a Headscale server you run yourself. You get the familiar <code>tailscale up</code> experience, MagicDNS-style naming, and ACLs — with the membership logic, key distribution, and coordination state living on infrastructure you control.</p>
+  <p>What Headscale is <em>not</em> is a separate protocol or a different client. It is a compatible control-plane implementation: the wire protocol between client and control server is the same one Tailscale clients already speak. That is precisely its appeal — teams adopt Headscale to remove the hosted dependency from their Tailscale deployment without changing anything on the endpoint. The trade-offs mirror Tailscale's: identity is tied to devices and (depending on your setup) human accounts, discovery is a coordination server rather than a directory of capabilities, and the abstraction remains the host and its IP. There is no notion of an agent, a capability, or a per-message trust decision.</p>
+  <p>If you are choosing between the hosted control plane and Headscale, the question is one of operational ownership, not capability: do you want Tailscale to run the coordination layer, or do you want to run it yourself? (For the agent-native version of that question — per-peer trust and capability discovery instead of network membership — see <a href="/blog/why-autonomous-agents-need-private-discovery">why autonomous agents need private discovery</a>.)</p>
   </section>
 
   <section>
@@ -68,8 +75,29 @@ const bodyContent = `<p>Trying to decide between Nebula and Tailscale for your i
   </section>
 
   <section>
+  <h2>Headscale vs Nebula: the direct comparison</h2>
+  <p>Headscale and Nebula are the two most common answers when a team decides it wants a self-hosted mesh and asks: "Do we keep the Tailscale client experience, or run a fully independent stack?" Both remove the hosted dependency from the control path, but they get there differently — Headscale by reimplementing an existing control protocol, Nebula by shipping its own complete network stack.</p>
+  <table>
+    <thead>
+      <tr><th>&nbsp;</th><th>Headscale</th><th>Nebula</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>What it is</td><td>Self-hosted reimplementation of the Tailscale control server</td><td>Standalone overlay network with its own client, CA, and lighthouses</td></tr>
+      <tr><td>Client</td><td>The standard Tailscale client (no changes on endpoints)</td><td>Nebula's own agent, installed per host</td></tr>
+      <tr><td>Data plane</td><td>WireGuard</td><td>Noise protocol framework over UDP</td></tr>
+      <tr><td>Identity model</td><td>Tailscale-style device auth against your control server</td><td>Signed certificates you issue per host from your own CA</td></tr>
+      <tr><td>Discovery</td><td>Coordination server (yours)</td><td>Lighthouses you run</td></tr>
+      <tr><td>Operational ownership</td><td>You run the control server; endpoint behavior stays Tailscale</td><td>You own the CA, cert rotation, and lighthouses</td></tr>
+      <tr><td>Best fit</td><td>Teams that want the Tailscale experience with no hosted control plane</td><td>Server fleets that want a self-contained stack with no dependency on the Tailscale protocol</td></tr>
+    </tbody>
+  </table>
+  <p>The practical difference is compatibility versus independence. Headscale keeps you on the Tailscale client and its ecosystem — your endpoints behave exactly as they would with the hosted service, which is the point. Nebula asks you to adopt its client and run a certificate authority, but in exchange nothing in your stack references Tailscale's protocol at all. Both are legitimate, well-maintained, self-hosted choices; the decision is about whether you want to stay inside the Tailscale ecosystem or run a protocol of your own.</p>
+  <p>What neither provides is an agent layer. Both are built around hosts, IPs, and network membership — there is no notion of a discoverable capability, a per-peer trust handshake, or a durable address that follows an agent across machines and clouds. That is the layer Pilot Protocol occupies, described next.</p>
+  </section>
+
+  <section>
   <h2>Where Pilot Protocol is different</h2>
-  <p>Pilot does not try to be a better VPN. It operates one layer up. The questions an agent actually asks are: <em>"What is my durable address? How do I discover an agent that can do X? How do I prove who I am and decide whether to trust this peer — per connection, not per network?"</em> A VPN answers none of these; it just delivers packets once you already know the IP. (For a broader look at why agents need their own networking layer, see <a href="/blog/why-ai-agents-need-network-stack">why AI agents need their own network stack</a>.)</p>
+  <p>Pilot does not try to be a better VPN. It operates one layer up. The questions an agent actually asks are: <em>"What is my durable address? How do I discover an agent that can do X? How do I prove who I am and decide whether to trust this peer — per connection, not per network?"</em> A VPN answers none of these; it just delivers packets once you already know the IP. (For a broader look at why agents need their own networking layer, see <a href="/blog/why-ai-agents-need-network-stack">why AI agents need their own network stack</a>, or start with the <a href="/learn/what-is-pilot-protocol">plain-language primer on what Pilot Protocol is</a>.)</p>
   <ul>
     <li><strong>Agents, not hosts, are addressable.</strong> Every agent gets a permanent 48-bit virtual address that survives restarts, IP changes, and moving between clouds. You message an agent, not a machine.</li>
     <li><strong>Trust is per-peer, not per-network.</strong> Joining a Tailscale tailnet or a ZeroTier network ID means you are "in." Pilot uses an explicit handshake: two agents mutually approve a trust link before they exchange data, so membership and trust are decoupled.</li>
@@ -83,7 +111,8 @@ const bodyContent = `<p>Trying to decide between Nebula and Tailscale for your i
   <h2>Which should you choose?</h2>
   <ul>
     <li><strong>Connecting laptops, servers, and CI into one private network, fast?</strong> Tailscale.</li>
-    <li><strong>Large server fleet, want to own identity end to end with no SaaS?</strong> Nebula.</li>
+    <li><strong>Want the Tailscale client experience but refuse a hosted control plane?</strong> Headscale.</li>
+    <li><strong>Large server fleet, want to own identity end to end with no SaaS and no dependency on the Tailscale protocol?</strong> Nebula.</li>
     <li><strong>Need true L2 / broadcast behavior across sites?</strong> ZeroTier.</li>
     <li><strong>Building software where the unit is an autonomous agent that must discover, address, and trust other agents?</strong> Pilot Protocol — at the agent layer, optionally over one of the above.</li>
   </ul>
@@ -114,6 +143,18 @@ const faqItems = [
     answer: "Both are excellent <em>device</em> VPNs, but neither is built for agents. They connect hosts by IP and treat network membership as trust. If your unit of work is an autonomous agent that must discover peers and make per-connection trust decisions, you will end up building addressing, discovery, and trust on top of them — which is the problem an agent-native overlay like Pilot solves directly.",
   },
   {
+    question: "What is the difference between Headscale and Nebula?",
+    answer: "Headscale is a self-hosted reimplementation of the Tailscale control server: your endpoints run the standard Tailscale client over WireGuard, but register against a control server you operate instead of Tailscale's hosted service. Nebula is a standalone overlay network with its own client, a certificate authority you run, and lighthouses for discovery — nothing in its stack depends on the Tailscale protocol. Both are self-hosted and remove the hosted dependency from the control path; Headscale keeps you inside the Tailscale ecosystem, Nebula gives you a fully independent stack.",
+  },
+  {
+    question: "Headscale vs Nebula: which should I pick?",
+    answer: "Pick Headscale if you want the familiar Tailscale client experience — no endpoint changes, WireGuard data plane, MagicDNS-style naming — but need the coordination server to run on infrastructure you control. Pick Nebula if you want a self-contained stack with no dependency on the Tailscale protocol at all, and you are comfortable running a certificate authority and lighthouses. Neither provides an agent layer: both are built around hosts and IPs, so agents still need addressing, discovery, and per-peer trust from somewhere else.",
+  },
+  {
+    question: "Is Headscale the same as Tailscale?",
+    answer: "Not exactly. Headscale is an open-source reimplementation of the Tailscale control server, not a fork of the Tailscale product. The endpoint clients are the standard Tailscale clients and the data plane is WireGuard, so the day-to-day experience matches Tailscale — but the coordination, key distribution, and membership logic run on a server you operate rather than Tailscale's hosted service. It is the self-hosted answer to the question 'who holds the keys to network membership.'",
+  },
+  {
     question: "What is the difference between Nebula and Tailscale?",
     answer: "Tailscale wraps WireGuard in a hosted coordination server and authenticates devices through your SSO/identity provider — it is the fastest to adopt. Nebula is self-hosted: you run your own certificate authority and lighthouses, issue each host a signed certificate, and keep all identity in your control with no SaaS in the path. Tailscale optimizes for ease; Nebula optimizes for self-sovereign control of server fleets.",
   },
@@ -140,10 +181,11 @@ const faqItems = [
 ];
 ---
 <BlogLayout
-  title="Nebula vs Tailscale vs ZeroTier: Overlay Network for AI Agents"
-  description="Compare Nebula, Tailscale, and ZeroTier head to head on architecture, identity, and trust — plus why agent-native networking changes the equation."
+  title="Headscale vs Nebula vs Tailscale: Overlay Network for AI Agents"
+  description="Headscale vs Nebula vs Tailscale head to head on architecture, identity, and trust — plus why agent-native networking changes the equation."
   date="June 28, 2026"
-  tags={["comparison", "overlay-network", "vpn", "networking"]}
+  dateModified="August 7, 2026"
+  tags={["comparison", "overlay-network", "vpn", "networking", "headscale", "nebula"]}
   canonicalPath="/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents"
   bannerImage="/blog/banners/pilot-vs-tailscale-nebula-zerotier-ai-agents.svg"
   faqItems={faqItems}
