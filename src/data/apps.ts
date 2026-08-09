@@ -70,6 +70,12 @@ export const categories: Category[] = [
     "hue": 155
   },
   {
+    "id": "work",
+    "name": "Work & Research",
+    "blurb": "Put real-world work in motion and get real answers back — human hands on a task, and pricing research with your own customers.",
+    "hue": 45
+  },
+  {
     "id": "comms",
     "name": "Communications",
     "blurb": "Give an agent its own phone number or email inbox — voice, SMS/iMessage, email, and threaded conversations.",
@@ -78,6 +84,1185 @@ export const categories: Category[] = [
 ];
 
 export const apps: App[] = [
+  {
+    "id": "io.pilot.dial",
+    "name": "Dial",
+    "tagline": "A complete phone identity for your agent — voice calls, SMS and iMessage on a real US number, provisioned in one call",
+    "description": "Dial gives your agent its own real phone number: place and receive AI voice calls, send and receive SMS and iMessage, and wait on inbound events without polling. Bring your Dial API key at install time and every method authenticates as your own account. The account is yours, works outside Pilot too, and starts with $5 of credit and no credit card. No key yet? dial.signup emails a 6-digit code and dial.verify exchanges it for one. What you can do - Call people. dial.place_call runs an autonomous AI voice call from your number: book a table, chase a delivery, return a missed call. Pass transferTo and it waits out hold music and IVR menus, then cold-transfers to your human the moment a real person answers — never to a recording. Poll dial.get_call for the transcript, or block on dial.wait_for_event. - Give the call your tools. Connect a Context MCP and your MCP server tools become available to the voice agent DURING the call, so it can look something up or take an action mid-conversation. Dial runs the OAuth 2.1 flow and keeps the token fresh in the background. - Text people. dial.send_message delivers over iMessage when the recipient supports it and falls back to SMS otherwise, same call either way. Show a typing indicator first with dial.typing. - Wait, do not poll. dial.wait_for_event blocks until an inbound reply, a 2FA code, or a finished call shows up. A 408 means try again, not an error. - Own the identity. Set each number inbound behavior, voice and language, and on iMessage numbers the display name and avatar recipients see in Messages. Cost Reads are free. $3/month per number. US SMS $0.02 per segment. Managed voice $0.22/min all-in; self-hosted voice $0.13/min if you bring your own LLM over a WebSocket. Your $5 signup credit covers the first usage and spend pauses at $0 rather than surprising you. Good to know A brand-new account is on the free tier until it is topped up, which caps calls at 5 minutes and 2 concurrent calls. Both lift permanently on the first top-up. Emergency and crisis numbers are blocked. Always pass numbers in E.164, e.g. +14155551234. Every method, its parameters and latency class are discoverable at runtime via dial.help.",
+    "categories": [
+      "comms"
+    ],
+    "primaryCategory": "comms",
+    "keywords": [
+      "phone",
+      "sms",
+      "imessage",
+      "voice",
+      "calls",
+      "telephony",
+      "agent",
+      "webhooks"
+    ],
+    "version": "0.1.0",
+    "vendor": "GetDial AI",
+    "vendorUrl": "https://getdial.ai",
+    "license": "MIT",
+    "sourceUrl": "https://github.com/GetDial-AI/cli",
+    "homepage": "https://getdial.ai",
+    "methods": [
+      {
+        "name": "dial.status",
+        "summary": "Your account: credit balance, plan, and the limits currently in force (max call duration, max concurrent calls). Free. Call this first to orient.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.usage",
+        "summary": "Activity analytics: message and call counts, voice minutes, per-day series, and busiest numbers. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.signup",
+        "summary": "Start creating a Dial account. Emails a 6-digit code and returns a verificationId; pass both to dial.verify to finish. Only needed if you do not already have an API key.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.verify",
+        "summary": "Finish signup by exchanging the emailed code for an API key. The new account starts with $5 of credit and no card on file.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.list_numbers",
+        "summary": "Your phone numbers, with capabilities, setup status, and per-number inbound configuration. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.buy_number",
+        "summary": "Provision a new US phone number. COSTS $3/month. Requires an explicit consent attestation because it spends money on behalf of the account holder, so confirm with your human first.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.get_number",
+        "summary": "One phone number by id. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.set_number",
+        "summary": "Update a number: nickname, inbound behavior, voice, language, call ceiling, and (iMessage numbers only) the display name and avatar recipients see. Only the fields you send change. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.release_number",
+        "summary": "Release a number. IRREVERSIBLE: the number is gone and the unused month is not refunded. Confirm with your human first.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.send_message",
+        "summary": "Send a text. Delivers over iMessage when the recipient supports it, otherwise SMS, same call either way. COSTS MONEY (US SMS $0.02 per segment). Pass exactly one of fromNumber or fromNumberId.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.list_messages",
+        "summary": "Your messages, inbound and outbound, newest first (up to the 100 most recent). Free. Poll this for replies, or prefer dial.wait_for_event to block until one arrives.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.typing",
+        "summary": "Show or clear a typing indicator before you reply. iMessage numbers display it; SMS numbers ignore it, so it is always safe to call. Sending a message clears it automatically. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.place_call",
+        "summary": "Place an outbound AI voice call. Returns a call id immediately; the call runs in the background. COSTS MONEY per minute. Pass transferTo to have the agent wait out hold queues and IVR menus and hand the live call to a human when a real person answers. Poll dial.get_call, or block on dial.wait_for_event with call.ended.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.get_call",
+        "summary": "One call with its status and transcript once available. THE poll target after dial.place_call. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.list_calls",
+        "summary": "Your calls, newest first (up to the 100 most recent), inbound and outbound. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.end_call",
+        "summary": "Hang up a call that is still in progress. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.wait_for_event",
+        "summary": "Block until a matching event arrives instead of polling. Use it for an inbound reply or a 2FA code (message.received) or a finished call (call.ended, call.transcribed). A 408 means the wait timed out: try again, it is not an error. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.list_context_mcps",
+        "summary": "The MCP servers connected to your voice agent. Secrets and tokens are masked. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.add_context_mcp",
+        "summary": "Connect an MCP server so its tools are available to your AI voice agent DURING calls, to look something up or take an action mid-conversation. Works unattended for servers needing no auth or a static header. An OAuth server instead returns an authorizationUrl and stays pending until a human grants consent in a browser. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "dial.remove_context_mcp",
+        "summary": "Disconnect an MCP server from your voice agent. Its tools stop being offered on future calls. Free.",
+        "example": null,
+        "gated": null
+      }
+    ],
+    "changelog": [
+      {
+        "version": "0.1.0",
+        "notes": [
+          "First release on the Pilot app store."
+        ]
+      }
+    ],
+    "grants": [
+      "fs.read:$APP/config.json",
+      "fs.read:$APP/secrets.json",
+      "key.sign:self",
+      "audit.log:*"
+    ],
+    "bundles": [
+      {
+        "platform": "darwin-arm64",
+        "bytes": null
+      },
+      {
+        "platform": "darwin-amd64",
+        "bytes": null
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": null
+      },
+      {
+        "platform": "linux-amd64",
+        "bytes": null
+      }
+    ],
+    "installedBytes": null,
+    "depends": [],
+    "protection": "shareable",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "image",
+      "img": "/appicons/io.pilot.dial.png",
+      "fit": "cover",
+      "pos": "center",
+      "color": "#2b2b28",
+      "ink": false,
+      "file": null,
+      "hue": 315
+    },
+    "minPilotVersion": "1.10.0",
+    "runtimes": [
+      "go"
+    ],
+    "publishedAt": "2026-08-05",
+    "updatedAt": "2026-08-05",
+    "productDemo": {
+      "skill": "io.pilot.dial",
+      "title": "Full usage demo",
+      "metered": true,
+      "when_to_use": "When a task needs a phone: call a business and sit through the hold queue, text someone and wait for the reply, or receive a 2FA code on a real US number.",
+      "quickstart": {
+        "goal": "See your credit and the limits in force before spending anything",
+        "command": "pilotctl appstore call io.pilot.dial dial.status '{}'",
+        "expect": "{\"credit\":\"$5.00\",\"plan\":\"free\",\"maxCallDurationSeconds\":300,\"maxConcurrentCalls\":2}",
+        "cost": "$0.00 (read)",
+        "note": "Free. A new account starts with $5 and no card. No key yet? dial.signup emails a code and dial.verify exchanges it for one."
+      },
+      "examples": [
+        {
+          "title": "Get a number, then text someone",
+          "goal": "A number is the prerequisite for everything else",
+          "command": "pilotctl appstore call io.pilot.dial dial.buy_number '{\"areaCode\":\"415\",\"explicitProgrammaticConsent\":\"yes\"}'",
+          "expect": "{\"id\":\"num_...\",\"phoneNumber\":\"+14155550123\"}",
+          "cost": "$3.00/month",
+          "note": "Spends money, so it requires an explicit consent attestation — confirm with your human first. Then dial.send_message delivers over iMessage when the recipient supports it, else SMS."
+        },
+        {
+          "title": "Place a call and let it wait out the IVR",
+          "goal": "The thing an agent genuinely cannot do itself",
+          "command": "pilotctl appstore call io.pilot.dial dial.place_call '{\"to\":\"+14155550199\",\"fromNumber\":\"+14155550123\",\"outboundInstruction\":\"Ask if they take reservations for 4 at 8pm Friday\",\"transferTo\":\"+14155550100\"}'",
+          "expect": "{\"id\":\"call_...\",\"status\":\"queued\"}",
+          "cost": "$0.22/min",
+          "note": "transferTo hands the live call to your human the moment a real person answers — never to a recording. Poll dial.get_call for the transcript."
+        },
+        {
+          "title": "Block until the reply arrives, instead of polling",
+          "command": "pilotctl appstore call io.pilot.dial dial.wait_for_event '{\"eventType\":\"message.received\",\"timeout\":120}'",
+          "expect": "{\"event\":\"message.received\",\"message\":{\"body\":\"Your code is 481920\"}}",
+          "cost": "$0.00 (read)",
+          "note": "A 408 means try again, not an error. This is how you catch a 2FA code without spinning."
+        }
+      ],
+      "cost": {
+        "unit": "USD",
+        "free_budget": "$5.00 signup credit, no card",
+        "hard_cap_usd": 5,
+        "operations": [
+          {
+            "op": "reads (status, usage, list_*, get_call, wait_for_event)",
+            "price": "free"
+          },
+          {
+            "op": "dial.buy_number",
+            "price": "$3.00/month",
+            "note": "requires an explicit consent attestation"
+          },
+          {
+            "op": "dial.send_message",
+            "price": "$0.02 per SMS segment",
+            "note": "iMessage delivery where supported"
+          },
+          {
+            "op": "dial.place_call",
+            "price": "$0.22/min",
+            "note": "$0.13/min self-hosted if you bring your own LLM"
+          }
+        ],
+        "worked_total": "$3.44 — one number for a month ($3.00), one 2-minute call ($0.44), reads free. Inside the $5 signup credit."
+      },
+      "gotchas": [
+        "Reads are free; buying a number, texting and calling cost money. Check dial.status first.",
+        "dial.buy_number needs an explicit consent attestation because it spends — confirm with your human.",
+        "A new account is capped at 5-minute calls and 2 concurrent until the first top-up.",
+        "Always pass numbers in E.164, e.g. +14155551234. Emergency and crisis numbers are blocked.",
+        "Prefer dial.wait_for_event over polling; a 408 means retry, not failure."
+      ],
+      "next": [
+        "io.pilot.dial dial.help '{}'"
+      ]
+    },
+    "limits": null
+  },
+  {
+    "id": "io.pilot.deadsimple",
+    "name": "Dead Simple Email",
+    "tagline": "An email identity your agent provisions for itself, then uses to send, receive, and read its own signup codes",
+    "description": "Dead Simple Email gives an agent a real, deliverable email identity — not a sandbox — and it can get one entirely on its own. A single call to `deadsimple.signup` returns an account, an API key and a live inbox. No dashboard, no verification email, no human in the loop.\n\n**The method agents reach for most is `deadsimple.get_verification_code`.** It pulls the one-time code or magic link straight out of the newest inbound message, so an agent can sign itself up for a third-party service or clear a 2FA prompt without ever parsing an email body. Filter by sender and by timestamp so a stale code is never returned. This is what turns \"the provider emails you a code\" from a dead end into a step.\n\nFrom there the agent sends, replies on-thread, reply-alls, forwards, reads full messages with headers and attachments, and walks whole conversation threads over one REST API.\n\nUnderneath is real sending infrastructure: DKIM-signed egress through a dedicated MTA, bounce and complaint handling, suppression lists, and optional open and click tracking. Inbound mail can be pushed to HMAC-SHA256 signed webhooks that retry on exponential backoff. A supervisor agent can watch every inbox in a workspace at once with `list_all_messages`, and inboxes can be created in bulk, tagged, and torn down when a throwaway identity is finished.\n\n**Tiers.** A self-provisioned agent account starts on trial: 1 inbox, 10 sends an hour, 25 a day. Calling `deadsimple.claim` with an email a human controls, then `deadsimple.claim_verify`, moves it to the Free plan — 5 inboxes and 5,000 emails a month — keeping the same API key, inboxes and history. Paid plans scale to 500 inboxes, 25 custom domains, and 1,000 requests a minute.\n\n**Edge cases.** A 429 with code `trial_send_limit_exceeded` is a quota signal, not a transient failure — do not blindly retry, claim the account instead. Pagination is cursor-based. Spam is excluded from `list_messages` unless `include_spam` is true. Delete throwaway inboxes when finished so they stop counting against the quota.",
+    "categories": [
+      "comms"
+    ],
+    "primaryCategory": "comms",
+    "keywords": [
+      "email",
+      "inbox",
+      "otp",
+      "verification code",
+      "magic link",
+      "agent onboarding",
+      "transactional email",
+      "threads",
+      "attachments",
+      "webhooks"
+    ],
+    "version": "0.1.0",
+    "vendor": "Dead Simple Email",
+    "vendorUrl": "https://deadsimple.email",
+    "license": "Proprietary",
+    "sourceUrl": "https://deadsimple.email",
+    "homepage": "https://deadsimple.email",
+    "methods": [
+      {
+        "name": "deadsimple.signup",
+        "summary": "START HERE if you have no key. Provisions a Dead Simple account, an API key and a live inbox in one call, with no human, no dashboard and no verification email. Returns {account_id, api_key, inbox}. Save api_key as the DEADSIMPLE_API_KEY secret — every other method authenticates with it. Idempotent per Idempotency-Key, so a retry after a dropped connection returns the same account rather than a second one. The account starts on the trial tier: 1 inbox, 10 sends an hour, 25 a day.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.claim",
+        "summary": "Start lifting the trial caps by attaching an email address a human controls. Sends a 6-digit code to that address; pass it to deadsimple.claim_verify to finish. Your existing API key, inboxes and message history are untouched by the upgrade.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.claim_verify",
+        "summary": "Confirm the code from deadsimple.claim and move the account from trial to the Free plan (5 inboxes, 5,000 emails a month). The same API key keeps working.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.create_inbox",
+        "summary": "Create a real, deliverable email inbox in one call. Returns an inbox_id and a live address that can send and receive immediately — no SMTP setup, no DNS, no mailbox provisioning. Use this when you already have a key and want an additional identity.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.list_inboxes",
+        "summary": "List the inboxes this key can see, newest first. Cursor-paginated: pass the cursor from the previous response for the next page.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.get_inbox",
+        "summary": "Fetch one inbox: its address, display name, tags, status, and counters.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.delete_inbox",
+        "summary": "Permanently delete an inbox and its stored messages. IRREVERSIBLE. Use when a throwaway identity is finished so it stops counting against the inbox quota.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.send_email",
+        "summary": "Send an email from one of your inboxes. Plain text or HTML, cc/bcc, base64 attachments, scheduled send, and optional open/click tracking. Real DKIM-signed egress, not a test harness. On the trial tier this is capped at 10 an hour and 25 a day; a 429 with code trial_send_limit_exceeded is a quota signal, not a transient failure.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.get_verification_code",
+        "summary": "THE method agents reach for. Pulls the one-time code or magic link straight out of the newest inbound message, so a signup or 2FA prompt can be cleared without parsing an email body. Non-blocking: returns found=false if nothing has arrived, so poll every 2-3 seconds for up to a minute after triggering the mail. Set `since` to a timestamp taken BEFORE you triggered it, and `from_contains` to the sender domain, so a stale code is never returned.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.list_messages",
+        "summary": "List messages in an inbox, newest first, with sender, subject, snippet, and labels. Spam is excluded unless include_spam is true. Cursor-paginated.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.get_message",
+        "summary": "Get one message in full: headers, plain-text and HTML bodies, and attachment metadata.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.reply",
+        "summary": "Reply to the sender of a message. Threading headers are set automatically so the reply lands in the same conversation — never hand-build In-Reply-To.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.reply_all",
+        "summary": "Reply to the sender and every other recipient of a message, with threading headers set automatically.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.forward",
+        "summary": "Forward a message, with its attachments, to new recipients.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.list_threads",
+        "summary": "List conversation threads in an inbox, each with its latest message, so an agent can track ongoing exchanges instead of loose messages.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.get_thread",
+        "summary": "Get a full conversation thread with every message in order — the context an agent needs before replying.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.get_attachment",
+        "summary": "Get a time-limited signed download URL for an attachment. The link expires in one hour.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.list_all_messages",
+        "summary": "List messages across every inbox this key can see, newest first. For a supervisor agent watching many identities at once — cheaper than iterating inboxes.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "deadsimple.create_webhook",
+        "summary": "Register an HMAC-SHA256 signed webhook for inbound mail, bounces, and complaints, so long-running work does not have to poll list_messages in a loop. Deliveries retry on exponential backoff and every attempt is logged.",
+        "example": null,
+        "gated": null
+      }
+    ],
+    "changelog": [
+      {
+        "version": "0.1.0",
+        "notes": [
+          "First release on the Pilot app store."
+        ]
+      }
+    ],
+    "grants": [
+      "fs.read:$APP/config.json",
+      "fs.read:$APP/secrets.json",
+      "key.sign:self",
+      "audit.log:*"
+    ],
+    "bundles": [
+      {
+        "platform": "darwin-arm64",
+        "bytes": null
+      },
+      {
+        "platform": "darwin-amd64",
+        "bytes": null
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": null
+      },
+      {
+        "platform": "linux-amd64",
+        "bytes": null
+      }
+    ],
+    "installedBytes": null,
+    "depends": [],
+    "protection": "shareable",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "image",
+      "img": "/appicons/io.pilot.deadsimple.png",
+      "fit": "contain",
+      "pos": "center",
+      "color": "#ffffff",
+      "ink": false,
+      "file": null,
+      "hue": 315
+    },
+    "minPilotVersion": "1.10.0",
+    "runtimes": [
+      "go"
+    ],
+    "publishedAt": "2026-07-27",
+    "updatedAt": "2026-07-27",
+    "productDemo": {
+      "skill": "io.pilot.deadsimple",
+      "title": "Full usage demo",
+      "when_to_use": "When your agent needs an email address of its own: to sign itself up for a third-party service and read the code back, or to send and receive real mail as part of a task.",
+      "metered": false,
+      "quickstart": {
+        "goal": "Get an account, an API key and a live inbox in one call",
+        "command": "pilotctl appstore call io.pilot.deadsimple deadsimple.signup '{\"label\":\"my-agent\"}'",
+        "expect": "{\"data\":{\"account_id\":\"...\",\"api_key\":\"dse_...\",\"inbox\":{\"inbox_id\":\"...\",\"email\":\"...@box1.deadsimple.email\"},\"plan\":{\"plan\":\"trial\",\"inbox_limit\":1,\"sends_per_hour\":10}}}",
+        "note": "Everything is under data. Save data.api_key as DEADSIMPLE_API_KEY — it is shown once. Already have a key? Skip this and call create_inbox."
+      },
+      "examples": [
+        {
+          "title": "Sign up for a third-party service and read the code back",
+          "goal": "The whole point: clear an email verification without a human",
+          "command": "pilotctl appstore call io.pilot.deadsimple deadsimple.get_verification_code '{\"inbox_id\":\"<id>\",\"since\":\"2026-08-06T12:00:00Z\",\"from_contains\":\"stripe.com\"}'",
+          "expect": "{\"data\":{\"found\":true,\"code\":\"481920\",\"magic_link\":null,\"message_id\":\"...\"}}",
+          "note": "Note the time BEFORE submitting your address, pass it as `since`, then poll every 2-3s. found=false just means it has not landed yet. Never parse the raw email yourself."
+        },
+        {
+          "title": "Send a real email",
+          "command": "pilotctl appstore call io.pilot.deadsimple deadsimple.send_email '{\"inbox_id\":\"<id>\",\"to\":\"someone@example.com\",\"subject\":\"Report ready\",\"text_body\":\"The run finished.\"}'",
+          "expect": "{\"data\":{\"message_id\":\"...\",\"status\":\"queued\"}}",
+          "note": "DKIM-signed egress, not a sandbox. Trial caps this at 10/hour, 25/day."
+        },
+        {
+          "title": "Read a conversation before replying",
+          "goal": "Get the whole thread, then reply on it with threading handled for you",
+          "command": "pilotctl appstore call io.pilot.deadsimple deadsimple.get_thread '{\"inbox_id\":\"<id>\",\"thread_id\":\"<tid>\"}'",
+          "expect": "{\"data\":{\"thread_id\":\"...\",\"messages\":[{\"message_id\":\"...\",\"from\":\"...\",\"subject\":\"...\"}]}}",
+          "note": "Then reply with the message_id; threading headers are set for you."
+        }
+      ],
+      "gotchas": [
+        "Every response is wrapped: the payload is under data, with meta.request_id beside it.",
+        "Call signup only when you have no key. It is idempotent per Idempotency-Key, so a retry returns the same account, not a second one.",
+        "Trial is 1 inbox, 10 sends/hour, 25/day. A 429 trial_send_limit_exceeded is a QUOTA signal, not transient — do not retry it.",
+        "Lift the caps with claim then claim_verify. Your key, inboxes and history survive.",
+        "get_verification_code needs since from BEFORE you triggered the mail, or you may read a stale code."
+      ],
+      "next": [
+        "io.pilot.deadsimple deadsimple.help '{}'"
+      ]
+    },
+    "limits": null
+  },
+  {
+    "id": "io.pilot.kinetic",
+    "name": "Kinetic Pricing",
+    "tagline": "Decide what to charge, using answers from your own customers rather than a guess",
+    "description": "Kinetic Pricing runs real pricing research end to end: choose the method that fits the decision, draft and preview the survey, send a link to your own customers, and read results computed by an analysis engine rather than asserted by a model.\n\n**Pick the right method or the answer is worthless.** `method_recommend` takes the decision in plain language and returns the method that answers it. Van Westendorp finds an acceptable price *range*; Gabor-Granger tests specific price *points* and produces a demand curve; MaxDiff ranks which features carry value; choice-based conjoint models trade-offs. Asking the wrong one produces a confident, useless number.\n\n**Everything up to launch is free.** Drafting, editing, regenerating the survey and previewing it cost nothing, and preview stores no respondent evidence. Launching costs $149-$199 depending on method, and that fee is paid by a human on Stripe's hosted page rather than out of an agent's budget. `study_checkout_create` returns the link and explicitly does not complete the purchase.\n\n**You supply the respondents.** Kinetic has no panel. `respondent_link_get` gives a link to send to your own customers or prospects, so the quality of the answer depends on who you send it to.\n\n**The numbers are computed, not narrated.** `results_get` returns what the analysis engine calculated, `evidence_get` traces a number back to the answers behind it, and `narrative_generate` writes an explanation *from* those results. Check `study_quality_get` before believing any of it, since speeders and straight-liners produce clean-looking nonsense, and check `study_progress_get` against the method's recommended minimum sample.\n\nAlso included: pricing-page teardowns, Kinetic's published research, and CSV export.",
+    "categories": [
+      "work"
+    ],
+    "primaryCategory": "work",
+    "keywords": [
+      "pricing",
+      "willingness to pay",
+      "van westendorp",
+      "gabor granger",
+      "maxdiff",
+      "conjoint",
+      "market research",
+      "saas pricing"
+    ],
+    "version": "1.0.0",
+    "vendor": "Kinetic Pricing",
+    "vendorUrl": "https://kineticpricing.com",
+    "license": "Proprietary",
+    "sourceUrl": "https://kineticpricing.com",
+    "homepage": "https://kineticpricing.com",
+    "methods": [
+      {
+        "name": "kinetic.method_list",
+        "summary": "List the pricing-research methods available, with each one's server-owned launch price in cents, methodology version, and sample-size guidance. Van Westendorp finds an acceptable price RANGE, Gabor-Granger tests exact price POINTS, MaxDiff ranks feature value, choice-based conjoint models trade-offs. Free, and the right first call when you do not yet know which study to run.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.method_recommend",
+        "summary": "Describe the pricing decision in plain language and get back the method that fits it, with reasoning. Free. Use this instead of guessing between Van Westendorp and Gabor-Granger: they answer different questions, and the wrong one produces a confident, useless number.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.study_create",
+        "summary": "START HERE once you know the decision. Creates a draft study. You do NOT pick the method: Kinetic derives the methodology from decision_type (first_time and new_tier map to Van Westendorp today) and returns it on the study along with price_cents. Free — a draft costs nothing and is not launched. Returns {id, methodology, status:\"draft\", price_cents}.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.study_prefill",
+        "summary": "Generate a draft study filled in from a description of your product and audience, so you edit a sensible starting point rather than an empty form. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.study_get",
+        "summary": "Read one study: its configuration, state, and position in the lifecycle. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.study_list",
+        "summary": "List your studies with their states. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.study_update",
+        "summary": "Edit a draft study: name, prices, features, audience and question configuration. Only the fields you send change. Free, and only valid before launch.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.study_duplicate",
+        "summary": "Copy an existing study into a new draft, to run the same design against a different audience or set of prices. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.survey_regenerate",
+        "summary": "Regenerate the respondent-facing survey from the study's current configuration after editing it. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.survey_preview",
+        "summary": "Read the survey exactly as a respondent will see it, WITHOUT storing any respondent evidence. Free. Always preview before launching: once a study is live the questions are fixed, and a bad question wastes the whole sample.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.study_launch",
+        "summary": "Take a draft live so it can collect responses. COSTS MONEY: the launch price comes from kinetic.method_list (currently $149-$199 by method) and must be paid first via kinetic.study_checkout_create. Confirm with your human before calling. Once live the questions are fixed.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.respondent_link_get",
+        "summary": "Get the link to send to your customers or prospects. THEY are the respondents: Kinetic supplies no panel, so the quality of the answer depends on who you send this to. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.study_progress_get",
+        "summary": "How many responses have arrived against the recommended sample size. Free. Poll after launch; results are only meaningful once you clear the method's recommended minimum.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.study_quality_get",
+        "summary": "Response-quality signals: speeders, straight-liners, and other patterns meaning a response should not be trusted. Free. Check this before believing the results.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.study_close",
+        "summary": "Stop collecting responses and finalize the study so results can be computed. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.results_get",
+        "summary": "The deterministic results: numbers Kinetic's analysis engine computed from the responses, not a model's opinion of them. Free. This is the output you act on.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.evidence_get",
+        "summary": "The structured respondent evidence behind the results, so a number can be traced to the answers that produced it. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.narrative_generate",
+        "summary": "Generate a written explanation of the results. The narrative is written FROM the deterministic results, so it explains the computed numbers rather than inventing them. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.narrative_get",
+        "summary": "Read a previously generated narrative. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.results_export_csv",
+        "summary": "Export results and responses as CSV for analysis elsewhere. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.offer_list",
+        "summary": "List what is purchasable and what it costs: one-time study prices and Kinetic Pro plans. Free, and the honest place to check a price before committing to a spend.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.study_checkout_create",
+        "summary": "Start payment for a draft study. Returns {checkout_url, study_id, amount_cents} and does NOT complete the purchase. A human must open checkout_url and pay on Stripe's hosted page; hand them the link and stop. Once paid, kinetic.study_launch will work. Confirm the amount with your human first.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.teardown_create",
+        "summary": "Run a teardown of a public pricing page and get a structured read of how it is constructed. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.teardown_get",
+        "summary": "Read a completed teardown. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.research_list",
+        "summary": "Browse Kinetic's published pricing research. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.research_get",
+        "summary": "Read one published research piece. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "kinetic.task_get",
+        "summary": "Poll a long-running task (prefill, teardown, export) for completion. Free.",
+        "example": null,
+        "gated": null
+      }
+    ],
+    "changelog": [
+      {
+        "version": "1.0.0",
+        "notes": [
+          "First release on the Pilot app store."
+        ]
+      }
+    ],
+    "grants": [
+      "fs.read:$APP/config.json",
+      "key.sign:self",
+      "net.dial:broker.pilotprotocol.network",
+      "audit.log:*"
+    ],
+    "bundles": [
+      {
+        "platform": "darwin-arm64",
+        "bytes": null
+      },
+      {
+        "platform": "darwin-amd64",
+        "bytes": null
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": null
+      },
+      {
+        "platform": "linux-amd64",
+        "bytes": null
+      }
+    ],
+    "installedBytes": null,
+    "depends": [],
+    "protection": "shareable",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "image",
+      "img": "/appicons/io.pilot.kinetic.png",
+      "fit": "cover",
+      "pos": "center",
+      "color": "#1b3329",
+      "ink": false,
+      "file": null,
+      "hue": 45
+    },
+    "minPilotVersion": "1.10.0",
+    "runtimes": [
+      "go"
+    ],
+    "publishedAt": "2026-07-30",
+    "updatedAt": "2026-07-30",
+    "productDemo": {
+      "skill": "io.pilot.kinetic",
+      "title": "Full usage demo",
+      "metered": true,
+      "when_to_use": "When you need to know what to charge and want it grounded in your own customers' answers: a price range, a specific price point, or which features carry the value.",
+      "quickstart": {
+        "goal": "Find out which study answers your question",
+        "command": "pilotctl appstore call io.pilot.kinetic kinetic.method_recommend '{\"decision\":\"What should we charge for our Pro tier?\"}'",
+        "expect": "{\"study_type\":\"van_westendorp\",\"reason\":\"You need a price RANGE, not specific points.\"}",
+        "note": "Free. The two methods answer different questions, and the wrong one gives a confident useless number.",
+        "cost": "$0.00 (read)"
+      },
+      "examples": [
+        {
+          "title": "Draft a study and preview it",
+          "goal": "Everything up to launch is free",
+          "command": "pilotctl appstore call io.pilot.kinetic kinetic.study_create '{\"Idempotency-Key\":\"<uuid>\",\"name\":\"Pro tier\",\"product_desc\":\"SaaS analytics for small teams\",\"segment_desc\":\"Founders at 5-50 person startups\",\"decision_type\":\"first_time\",\"currency\":\"USD\"}'",
+          "expect": "{\"id\":\"3572c965-...\",\"methodology\":\"van_westendorp\",\"status\":\"draft\",\"price_cents\":14900}",
+          "note": "decision_type picks the methodology for you. Every mutating call needs an Idempotency-Key.",
+          "cost": "$0.00 (draft, free)"
+        },
+        {
+          "title": "Check the price before spending",
+          "command": "pilotctl appstore call io.pilot.kinetic kinetic.offer_list '{}'",
+          "expect": "{\"offers\":[{\"study_type\":\"van_westendorp\",\"price_cents\":14900}]}",
+          "note": "Launching costs $149-$199, far above the $5 budget, so a human pays on Stripe.",
+          "cost": "$0.00 (read)"
+        },
+        {
+          "title": "Read computed results, not guesses",
+          "command": "pilotctl appstore call io.pilot.kinetic kinetic.results_get '{\"id\":\"stu_abc123\"}'",
+          "expect": "{\"optimal_price_point\":42,\"acceptable_range\":{\"low\":34,\"high\":58},\"n\":31}",
+          "note": "Call study_quality_get first: speeders make a clean number worthless.",
+          "cost": "$0.00 (read)"
+        }
+      ],
+      "cost": {
+        "unit": "micro-USD (1000000 = $1.00)",
+        "free_budget": "$5.00 per Pilot user",
+        "hard_cap_usd": 5,
+        "operations": [
+          {
+            "op": "all research methods",
+            "price": "free",
+            "note": "discovery, drafting, preview, progress, quality, results, evidence, narrative, export and teardowns cost nothing against the Pilot budget"
+          },
+          {
+            "op": "kinetic.study_checkout_create",
+            "price": "free",
+            "note": "returns a Stripe link; the $149-$199 charge happens on Stripe and is paid by the human who opens it, not from your Pilot budget"
+          }
+        ],
+        "worked_total": "$0.00 against the Pilot budget. The research loop is free; the study fee is paid by a human on Stripe."
+      },
+      "gotchas": [
+        "Everything except launching is free. The $149-$199 fee is paid by a human on Stripe, not your budget.",
+        "Every mutating call needs an Idempotency-Key header; a retry with the same key is safe.",
+        "study_checkout_create returns a link and does NOT pay. Hand the URL to your human and stop.",
+        "Preview before launch — once live, questions are fixed.",
+        "You supply the respondents; Kinetic has no panel.",
+        "Check study_quality_get and progress before trusting a result."
+      ],
+      "next": [
+        "io.pilot.kinetic kinetic.balance '{}'",
+        "io.pilot.kinetic kinetic.help '{}'"
+      ]
+    },
+    "limits": null
+  },
+  {
+    "id": "io.pilot.rentahuman",
+    "name": "Rent A Human",
+    "tagline": "Hire a real person for a physical-world task, in plain language, and talk to ops until it is done",
+    "description": "Rent A Human gives an agent hands in the physical world. Describe a task the way a person would — \"deep clean a 2-bedroom apartment in the Mission by Friday, budget $150\" — and a human ops coordinator at RentAHuman sources and vets a real person to do it. Everything after that happens on a message thread your agent polls.\n\n**This is the Partner API, not the marketplace.** There is no account for your user to create, no profile to browse, and no escrow for your agent to manage. One call creates a request; ops does the sourcing, vetting and scheduling; your agent reads status and messages and answers questions. When work is priced, a payment link comes back for your agent to relay.\n\n**Your agent is the only channel.** RentAHuman never contacts your end customer. Quotes, questions, status changes and payment links are all addressed to your agent, even when the wording reads like \"tell the customer…\". You decide whether, when and how to relay each one. Nothing reaches your customer unless your agent sends it.\n\n**The loop.** `create_request` returns a `requestId`. Poll `get_request` and branch on `status`: `received` means ops has not replied yet; `needs_info` means they asked a question and progress is **blocked** until you answer with `send_message`; `quoted` means a price and usually a payment link are waiting to be relayed; then `scheduled`, `in_progress`, `completed`. `list_requests` shows everything in flight.\n\n**Edge cases.** `task` and `details` are moderated, so rejected text returns 400 with an explanation and should be rewritten rather than retried. `requesterPhoneNumber` must be E.164 and is customer PII. `budgetUsd` is the budget before fees. A `requestId` you do not own returns 404, exactly like one that does not exist, so ids cannot be enumerated. `list_bounties` needs the referrals capability and otherwise returns 403.",
+    "categories": [
+      "work"
+    ],
+    "primaryCategory": "work",
+    "keywords": [
+      "humans",
+      "real-world tasks",
+      "errands",
+      "cleaning",
+      "on-site",
+      "human-in-the-loop",
+      "concierge",
+      "physical world",
+      "ops"
+    ],
+    "version": "0.2.0",
+    "vendor": "Rent A Human",
+    "vendorUrl": "https://rentahuman.ai",
+    "license": "Proprietary",
+    "sourceUrl": "https://rentahuman.ai/docs/partners",
+    "homepage": "https://rentahuman.ai",
+    "methods": [
+      {
+        "name": "rentahuman.create_request",
+        "summary": "START HERE. Ask for a human to do something in the physical world, in plain language. A real ops coordinator reads it, sources and vets a person, and replies on a message thread you poll with get_request. Returns {requestId, status:\"received\", request}. Keep the requestId — every other method hangs off it. task and details pass a content-moderation check; rejected text returns 400 with an explanation, so rewrite rather than retry. The more context you give (access notes, preferences, constraints) the fewer needs_info round-trips.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "rentahuman.get_request",
+        "summary": "Read one request: its current status and the full message thread with the ops coordinator. THIS IS THE POLL TARGET after create_request. Branch on status, not on success: received (logged, ops has not replied — tell the customer it is in, nothing else) | needs_info (ops asked a question and progress is BLOCKED until you answer via send_message) | quoted (a price, usually with paymentLinks[].url, is waiting — relay it verbatim) | scheduled (booked) | in_progress (someone is on it) | completed (terminal) | cancelled (terminal, read the final message for the reason). A requestId you do not own returns 404, identical to one that does not exist.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "rentahuman.send_message",
+        "summary": "Send a follow-up message to the ops coordinator on a request — answer their question, or relay your customer's decision. This is the way out of a needs_info status. The message goes to OPS, not to your customer: nothing here is seen by the person who asked. Max 5,000 characters, moderated.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "rentahuman.list_requests",
+        "summary": "List your requests, newest first, so an agent can see everything in flight at once. Cursor-paginated: pass the previous response's nextCursor, which is null on the last page. There is no server-side status filter — read the status field on each item and act on the ones that block, which are needs_info and quoted.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "rentahuman.list_bounties",
+        "summary": "List open marketplace bounties, each with a tracked referral URL, for agents that want to surface paid real-world work rather than commission it. Requires the referrals capability on the account; without it this returns 403, which is a permission fact rather than a transient error.",
+        "example": null,
+        "gated": null
+      }
+    ],
+    "changelog": [
+      {
+        "version": "0.2.0",
+        "notes": [
+          "First release on the Pilot app store."
+        ]
+      }
+    ],
+    "grants": [
+      "fs.read:$APP/config.json",
+      "key.sign:self",
+      "net.dial:broker.pilotprotocol.network",
+      "audit.log:*"
+    ],
+    "bundles": [
+      {
+        "platform": "darwin-arm64",
+        "bytes": null
+      },
+      {
+        "platform": "darwin-amd64",
+        "bytes": null
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": null
+      },
+      {
+        "platform": "linux-amd64",
+        "bytes": null
+      }
+    ],
+    "installedBytes": null,
+    "depends": [],
+    "protection": "shareable",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "image",
+      "img": "/appicons/io.pilot.rentahuman.png",
+      "fit": "cover",
+      "pos": "center",
+      "color": "#f2f0eb",
+      "ink": false,
+      "file": null,
+      "hue": 45
+    },
+    "minPilotVersion": "1.10.0",
+    "runtimes": [
+      "go"
+    ],
+    "publishedAt": "2026-07-27",
+    "updatedAt": "2026-07-27",
+    "productDemo": {
+      "skill": "io.pilot.rentahuman",
+      "title": "Full usage demo",
+      "when_to_use": "When a task needs hands in the physical world — a clean, a pickup, an errand, an on-site check — and your agent needs a real person to do it and report back.",
+      "metered": false,
+      "quickstart": {
+        "goal": "Ask for a human to do something, in plain language",
+        "command": "pilotctl appstore call io.pilot.rentahuman rentahuman.create_request '{\"task\":\"Deep clean a 2-bedroom apartment\",\"externalChatId\":\"thread-9f2a41c7\",\"requesterPhoneNumber\":\"+14155550100\",\"budgetUsd\":150,\"location\":\"Mission District, San Francisco, CA\"}'",
+        "expect": "{\"success\":true,\"requestId\":\"8FQxJ0N2VvR5aYc31TZk\",\"status\":\"received\",\"request\":{...}}",
+        "note": "A human ops coordinator picks this up and sources a vetted person. Keep the requestId — everything else hangs off it."
+      },
+      "examples": [
+        {
+          "title": "Poll the request and read the thread",
+          "goal": "status is the branch point, not success",
+          "command": "pilotctl appstore call io.pilot.rentahuman rentahuman.get_request '{\"requestId\":\"8FQxJ0N2VvR5aYc31TZk\"}'",
+          "expect": "{\"success\":true,\"request\":{\"status\":\"quoted\",\"paymentLinks\":[{\"url\":\"https://...\"}]}}",
+          "note": "received -> needs_info -> quoted -> scheduled -> in_progress -> completed. needs_info BLOCKS until you answer; quoted means relay the price and payment link."
+        },
+        {
+          "title": "Answer an ops question",
+          "goal": "Unblock a needs_info request by relaying your customer's answer",
+          "command": "pilotctl appstore call io.pilot.rentahuman rentahuman.send_message '{\"requestId\":\"8FQxJ0N2VvR5aYc31TZk\",\"message\":\"Customer confirms 8pm tomorrow works, and there is a cat.\"}'",
+          "expect": "{\"success\":true,\"messageId\":\"3NcVb8sDf1gHj6kQw0Pz\"}",
+          "note": "This goes to the ops coordinator, not to your customer. Nothing you send here reaches them."
+        },
+        {
+          "title": "See everything in flight",
+          "command": "pilotctl appstore call io.pilot.rentahuman rentahuman.list_requests '{\"limit\":20}'",
+          "expect": "{\"success\":true,\"requests\":[{\"requestId\":\"...\",\"status\":\"quoted\"}],\"nextCursor\":null}",
+          "note": "Newest first, cursor-paginated. No server-side status filter — read status per item."
+        }
+      ],
+      "gotchas": [
+        "Nothing reaches your customer unless YOU send it. Ops replies, quotes and payment links are all addressed to your agent.",
+        "Branch on status, not success. needs_info blocks progress until you answer; quoted means a price and link are waiting.",
+        "requesterPhoneNumber is customer PII — keep it server-side, out of logs and URLs.",
+        "task and details are moderated. A 400 means rewrite, not retry.",
+        "budgetUsd is before fees (1-100000). Always pass dueBy if the customer gave a deadline."
+      ],
+      "next": [
+        "io.pilot.rentahuman rentahuman.help '{}'"
+      ]
+    },
+    "limits": null
+  },
+  {
+    "id": "io.pilot.upfile",
+    "name": "Upfile",
+    "tagline": "Upload a file, get a permanent URL. One call to sign up, one to upload",
+    "description": "Upfile turns a file on the host into a URL an agent can hand to a human or another service. There is no dashboard and no browser step anywhere in the loop: `upfile.signup` creates an account and saves the key locally, and from then on `upfile.upload` returns a live, permanent link.\n\n**Everything returns JSON.** The upload methods emit `{id, url, visibility, size, type, expires_at, storage_used, storage_limit}`, so an agent reads `.url` rather than scraping console output.\n\n**Three shapes of link.** A plain upload is public and permanent — an unauthenticated URL that keeps working. `upload_private` puts it behind authentication. `upload_expiring` gives it a TTL in seconds, which is the right choice for build logs, debug dumps, and anything you would rather not leave permanently reachable.\n\n**Housekeeping.** `status` shows tier and quota, `list` enumerates what is stored with each file's id, and `remove` deletes one by id and reclaims the space. The free tier is 1GB total across all files.\n\nThe CLI ships with the app as a per-platform binary verified by sha256 at install, so there is no Node install and no package manager involved on the host.",
+    "categories": [
+      "infra"
+    ],
+    "primaryCategory": "infra",
+    "keywords": [
+      "upload",
+      "file-sharing",
+      "cli",
+      "cdn",
+      "permanent url",
+      "expiring link",
+      "artifacts",
+      "agents"
+    ],
+    "version": "0.2.3",
+    "vendor": "Upfile",
+    "vendorUrl": "https://upfile.sh",
+    "license": "MIT",
+    "sourceUrl": "https://github.com/upfilesh/cli",
+    "homepage": "https://upfile.sh",
+    "methods": [
+      {
+        "name": "upfile.signup",
+        "summary": "START HERE if this host has no API key. Creates an Upfile account and saves the key to the local CLI config, so every later call authenticates automatically. No browser, no dashboard, no verification step. The account starts on the free tier: 1GB of storage. Everything else fails with No API key until this has been run.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "upfile.upload",
+        "summary": "Upload a file from this host and get back a permanent, immediately-live URL. Returns JSON: {id, url, visibility, size, type, originalName, expires_at, created_at, storage_used, storage_limit}. Read .url. Public by default, which means an unauthenticated permanent link, so use upfile.upload_private or upfile.upload_expiring for anything you would not want to stay reachable.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "upfile.upload_private",
+        "summary": "Upload a file as private, so the returned URL requires authentication rather than being open to anyone holding the link. Same JSON shape as upfile.upload, with visibility private.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "upfile.upload_expiring",
+        "summary": "Upload a file with a time-to-live, so the link stops working on its own. Use this for build logs, debug dumps, and anything you would rather not have permanently indexed. Same JSON shape as upfile.upload, with expires_at set.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "upfile.status",
+        "summary": "Show the account tier and how much of the storage quota is used, e.g. Tier: free  Storage: 0.01GB / 1GB. Also the quickest way to tell whether this host has a key at all: without one it prints No API key, which means run upfile.signup first.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "upfile.list",
+        "summary": "List the files stored on this account as JSON, newest first, with each file's id and URL. The ids are what upfile.remove takes.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "upfile.remove",
+        "summary": "Delete one stored file by its id, reclaiming its space against the quota. IRREVERSIBLE: the URL stops resolving immediately.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "upfile.version",
+        "summary": "Print the Upfile CLI version bundled with this app.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "upfile.cli_help",
+        "summary": "The Upfile CLI's own full help text, listing every subcommand and flag including any not curated as a named method here.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "upfile.run",
+        "summary": "Escape hatch: run the Upfile CLI with an arbitrary argv array, for anything the named methods do not cover such as config set/get, upgrade, or stdin uploads. Payload is {args:[...]}. Prefer the named methods when one fits, because they return JSON.",
+        "example": null,
+        "gated": null
+      }
+    ],
+    "changelog": [
+      {
+        "version": "0.2.3",
+        "notes": [
+          "First release on the Pilot app store."
+        ]
+      }
+    ],
+    "grants": [
+      "fs.read:$APP/install.json",
+      "fs.write:$APP",
+      "proc.exec:upfile",
+      "net.dial:pub-f09f9a4ea848491198d48e329ba030e3.r2.dev",
+      "audit.log:*"
+    ],
+    "bundles": [
+      {
+        "platform": "darwin-arm64",
+        "bytes": null
+      },
+      {
+        "platform": "darwin-amd64",
+        "bytes": null
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": null
+      },
+      {
+        "platform": "linux-amd64",
+        "bytes": null
+      }
+    ],
+    "installedBytes": null,
+    "depends": [],
+    "protection": "shareable",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "image",
+      "img": "/appicons/io.pilot.upfile.png",
+      "fit": "cover",
+      "pos": "center",
+      "color": "#1c2023",
+      "ink": false,
+      "file": null,
+      "hue": 30
+    },
+    "minPilotVersion": "1.10.0",
+    "runtimes": [
+      "go"
+    ],
+    "publishedAt": "2026-07-27",
+    "updatedAt": "2026-07-27",
+    "productDemo": {
+      "skill": "io.pilot.upfile",
+      "title": "Full usage demo",
+      "metered": false,
+      "when_to_use": "When your agent has produced a file — a render, a report, a screenshot, a log — and needs a URL it can paste somewhere a human or another service will open.",
+      "quickstart": {
+        "goal": "Get an account and an API key with one call",
+        "command": "pilotctl appstore call io.pilot.upfile upfile.signup '{\"email\":\"you@example.com\"}'",
+        "expect": "Account created. API key: upf_... Tier: free (1GB). Key saved.",
+        "note": "The key is written to the CLI config on this host, so every later call just works. No dashboard, no browser."
+      },
+      "examples": [
+        {
+          "title": "Upload a file and get a permanent URL",
+          "goal": "The core loop, in one call",
+          "command": "pilotctl appstore call io.pilot.upfile upfile.upload '{\"path\":\"/tmp/report.pdf\"}'",
+          "expect": "{\"id\":\"tRbBqIyEiB\",\"url\":\"https://cdn.upfile.sh/tRbBqIyEiB.pdf\",\"visibility\":\"public\",\"size\":6941}",
+          "note": "The URL is live immediately and permanent. Always JSON, so read .url straight out of it."
+        },
+        {
+          "title": "Upload something that should not live forever",
+          "goal": "A link that expires on its own",
+          "command": "pilotctl appstore call io.pilot.upfile upfile.upload_expiring '{\"path\":\"/tmp/build.log\",\"expiry\":3600}'",
+          "expect": "{\"id\":\"...\",\"url\":\"https://cdn.upfile.sh/....log\",\"expires_at\":\"2026-08-06T17:00:00.000Z\"}",
+          "note": "expiry is seconds. Use it for anything you would not want indexed a year from now."
+        },
+        {
+          "title": "Check what you have stored",
+          "command": "pilotctl appstore call io.pilot.upfile upfile.status '{}'",
+          "expect": "Tier: free  Storage: 0.01GB / 1GB",
+          "note": "Free tier is 1GB. upfile.list shows individual files; upfile.remove deletes one by id."
+        }
+      ],
+      "gotchas": [
+        "Run upfile.signup once per host if there is no key. Everything else fails with No API key until you do.",
+        "Read .url from the JSON — the human-readable output is not stable.",
+        "A plain upload is a permanent, unauthenticated URL. Use upload_private or upload_expiring for anything sensitive.",
+        "expiry is in SECONDS, not minutes. 3600 is an hour.",
+        "Free tier is 1GB total, not per file. Use upfile.remove to reclaim space."
+      ],
+      "next": [
+        "io.pilot.upfile upfile.help '{}'"
+      ]
+    },
+    "limits": null
+  },
   {
     "id": "io.pilot.primitive",
     "name": "Primitive",
