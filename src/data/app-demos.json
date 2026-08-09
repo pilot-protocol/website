@@ -1030,5 +1030,279 @@
     "next": [
       "io.telepat.ideon-free ideon-free.help '{}'"
     ]
+  },
+  "io.pilot.deadsimple": {
+    "skill": "io.pilot.deadsimple",
+    "title": "Full usage demo",
+    "when_to_use": "When your agent needs an email address of its own: to sign itself up for a third-party service and read the code back, or to send and receive real mail as part of a task.",
+    "metered": false,
+    "quickstart": {
+      "goal": "Get an account, an API key and a live inbox in one call",
+      "command": "pilotctl appstore call io.pilot.deadsimple deadsimple.signup '{\"label\":\"my-agent\"}'",
+      "expect": "{\"data\":{\"account_id\":\"...\",\"api_key\":\"dse_...\",\"inbox\":{\"inbox_id\":\"...\",\"email\":\"...@box1.deadsimple.email\"},\"plan\":{\"plan\":\"trial\",\"inbox_limit\":1,\"sends_per_hour\":10}}}",
+      "note": "Everything is under data. Save data.api_key as DEADSIMPLE_API_KEY — it is shown once. Already have a key? Skip this and call create_inbox."
+    },
+    "examples": [
+      {
+        "title": "Sign up for a third-party service and read the code back",
+        "goal": "The whole point: clear an email verification without a human",
+        "command": "pilotctl appstore call io.pilot.deadsimple deadsimple.get_verification_code '{\"inbox_id\":\"<id>\",\"since\":\"2026-08-06T12:00:00Z\",\"from_contains\":\"stripe.com\"}'",
+        "expect": "{\"data\":{\"found\":true,\"code\":\"481920\",\"magic_link\":null,\"message_id\":\"...\"}}",
+        "note": "Note the time BEFORE submitting your address, pass it as `since`, then poll every 2-3s. found=false just means it has not landed yet. Never parse the raw email yourself."
+      },
+      {
+        "title": "Send a real email",
+        "command": "pilotctl appstore call io.pilot.deadsimple deadsimple.send_email '{\"inbox_id\":\"<id>\",\"to\":\"someone@example.com\",\"subject\":\"Report ready\",\"text_body\":\"The run finished.\"}'",
+        "expect": "{\"data\":{\"message_id\":\"...\",\"status\":\"queued\"}}",
+        "note": "DKIM-signed egress, not a sandbox. Trial caps this at 10/hour, 25/day."
+      },
+      {
+        "title": "Read a conversation before replying",
+        "goal": "Get the whole thread, then reply on it with threading handled for you",
+        "command": "pilotctl appstore call io.pilot.deadsimple deadsimple.get_thread '{\"inbox_id\":\"<id>\",\"thread_id\":\"<tid>\"}'",
+        "expect": "{\"data\":{\"thread_id\":\"...\",\"messages\":[{\"message_id\":\"...\",\"from\":\"...\",\"subject\":\"...\"}]}}",
+        "note": "Then reply with the message_id; threading headers are set for you."
+      }
+    ],
+    "gotchas": [
+      "Every response is wrapped: the payload is under data, with meta.request_id beside it.",
+      "Call signup only when you have no key. It is idempotent per Idempotency-Key, so a retry returns the same account, not a second one.",
+      "Trial is 1 inbox, 10 sends/hour, 25/day. A 429 trial_send_limit_exceeded is a QUOTA signal, not transient — do not retry it.",
+      "Lift the caps with claim then claim_verify. Your key, inboxes and history survive.",
+      "get_verification_code needs since from BEFORE you triggered the mail, or you may read a stale code."
+    ],
+    "next": [
+      "io.pilot.deadsimple deadsimple.help '{}'"
+    ]
+  },
+  "io.pilot.rentahuman": {
+    "skill": "io.pilot.rentahuman",
+    "title": "Full usage demo",
+    "when_to_use": "When a task needs hands in the physical world — a clean, a pickup, an errand, an on-site check — and your agent needs a real person to do it and report back.",
+    "metered": false,
+    "quickstart": {
+      "goal": "Ask for a human to do something, in plain language",
+      "command": "pilotctl appstore call io.pilot.rentahuman rentahuman.create_request '{\"task\":\"Deep clean a 2-bedroom apartment\",\"externalChatId\":\"thread-9f2a41c7\",\"requesterPhoneNumber\":\"+14155550100\",\"budgetUsd\":150,\"location\":\"Mission District, San Francisco, CA\"}'",
+      "expect": "{\"success\":true,\"requestId\":\"8FQxJ0N2VvR5aYc31TZk\",\"status\":\"received\",\"request\":{...}}",
+      "note": "A human ops coordinator picks this up and sources a vetted person. Keep the requestId — everything else hangs off it."
+    },
+    "examples": [
+      {
+        "title": "Poll the request and read the thread",
+        "goal": "status is the branch point, not success",
+        "command": "pilotctl appstore call io.pilot.rentahuman rentahuman.get_request '{\"requestId\":\"8FQxJ0N2VvR5aYc31TZk\"}'",
+        "expect": "{\"success\":true,\"request\":{\"status\":\"quoted\",\"paymentLinks\":[{\"url\":\"https://...\"}]}}",
+        "note": "received -> needs_info -> quoted -> scheduled -> in_progress -> completed. needs_info BLOCKS until you answer; quoted means relay the price and payment link."
+      },
+      {
+        "title": "Answer an ops question",
+        "goal": "Unblock a needs_info request by relaying your customer's answer",
+        "command": "pilotctl appstore call io.pilot.rentahuman rentahuman.send_message '{\"requestId\":\"8FQxJ0N2VvR5aYc31TZk\",\"message\":\"Customer confirms 8pm tomorrow works, and there is a cat.\"}'",
+        "expect": "{\"success\":true,\"messageId\":\"3NcVb8sDf1gHj6kQw0Pz\"}",
+        "note": "This goes to the ops coordinator, not to your customer. Nothing you send here reaches them."
+      },
+      {
+        "title": "See everything in flight",
+        "command": "pilotctl appstore call io.pilot.rentahuman rentahuman.list_requests '{\"limit\":20}'",
+        "expect": "{\"success\":true,\"requests\":[{\"requestId\":\"...\",\"status\":\"quoted\"}],\"nextCursor\":null}",
+        "note": "Newest first, cursor-paginated. No server-side status filter — read status per item."
+      }
+    ],
+    "gotchas": [
+      "Nothing reaches your customer unless YOU send it. Ops replies, quotes and payment links are all addressed to your agent.",
+      "Branch on status, not success. needs_info blocks progress until you answer; quoted means a price and link are waiting.",
+      "requesterPhoneNumber is customer PII — keep it server-side, out of logs and URLs.",
+      "task and details are moderated. A 400 means rewrite, not retry.",
+      "budgetUsd is before fees (1-100000). Always pass dueBy if the customer gave a deadline."
+    ],
+    "next": [
+      "io.pilot.rentahuman rentahuman.help '{}'"
+    ]
+  },
+  "io.pilot.upfile": {
+    "skill": "io.pilot.upfile",
+    "title": "Full usage demo",
+    "metered": false,
+    "when_to_use": "When your agent has produced a file — a render, a report, a screenshot, a log — and needs a URL it can paste somewhere a human or another service will open.",
+    "quickstart": {
+      "goal": "Get an account and an API key with one call",
+      "command": "pilotctl appstore call io.pilot.upfile upfile.signup '{\"email\":\"you@example.com\"}'",
+      "expect": "Account created. API key: upf_... Tier: free (1GB). Key saved.",
+      "note": "The key is written to the CLI config on this host, so every later call just works. No dashboard, no browser."
+    },
+    "examples": [
+      {
+        "title": "Upload a file and get a permanent URL",
+        "goal": "The core loop, in one call",
+        "command": "pilotctl appstore call io.pilot.upfile upfile.upload '{\"path\":\"/tmp/report.pdf\"}'",
+        "expect": "{\"id\":\"tRbBqIyEiB\",\"url\":\"https://cdn.upfile.sh/tRbBqIyEiB.pdf\",\"visibility\":\"public\",\"size\":6941}",
+        "note": "The URL is live immediately and permanent. Always JSON, so read .url straight out of it."
+      },
+      {
+        "title": "Upload something that should not live forever",
+        "goal": "A link that expires on its own",
+        "command": "pilotctl appstore call io.pilot.upfile upfile.upload_expiring '{\"path\":\"/tmp/build.log\",\"expiry\":3600}'",
+        "expect": "{\"id\":\"...\",\"url\":\"https://cdn.upfile.sh/....log\",\"expires_at\":\"2026-08-06T17:00:00.000Z\"}",
+        "note": "expiry is seconds. Use it for anything you would not want indexed a year from now."
+      },
+      {
+        "title": "Check what you have stored",
+        "command": "pilotctl appstore call io.pilot.upfile upfile.status '{}'",
+        "expect": "Tier: free  Storage: 0.01GB / 1GB",
+        "note": "Free tier is 1GB. upfile.list shows individual files; upfile.remove deletes one by id."
+      }
+    ],
+    "gotchas": [
+      "Run upfile.signup once per host if there is no key. Everything else fails with No API key until you do.",
+      "Read .url from the JSON — the human-readable output is not stable.",
+      "A plain upload is a permanent, unauthenticated URL. Use upload_private or upload_expiring for anything sensitive.",
+      "expiry is in SECONDS, not minutes. 3600 is an hour.",
+      "Free tier is 1GB total, not per file. Use upfile.remove to reclaim space."
+    ],
+    "next": [
+      "io.pilot.upfile upfile.help '{}'"
+    ]
+  },
+  "io.pilot.kinetic": {
+    "skill": "io.pilot.kinetic",
+    "title": "Full usage demo",
+    "metered": true,
+    "when_to_use": "When you need to know what to charge and want it grounded in your own customers' answers: a price range, a specific price point, or which features carry the value.",
+    "quickstart": {
+      "goal": "Find out which study answers your question",
+      "command": "pilotctl appstore call io.pilot.kinetic kinetic.method_recommend '{\"decision\":\"What should we charge for our Pro tier?\"}'",
+      "expect": "{\"study_type\":\"van_westendorp\",\"reason\":\"You need a price RANGE, not specific points.\"}",
+      "note": "Free. The two methods answer different questions, and the wrong one gives a confident useless number.",
+      "cost": "$0.00 (read)"
+    },
+    "examples": [
+      {
+        "title": "Draft a study and preview it",
+        "goal": "Everything up to launch is free",
+        "command": "pilotctl appstore call io.pilot.kinetic kinetic.study_create '{\"Idempotency-Key\":\"<uuid>\",\"name\":\"Pro tier\",\"product_desc\":\"SaaS analytics for small teams\",\"segment_desc\":\"Founders at 5-50 person startups\",\"decision_type\":\"first_time\",\"currency\":\"USD\"}'",
+        "expect": "{\"id\":\"3572c965-...\",\"methodology\":\"van_westendorp\",\"status\":\"draft\",\"price_cents\":14900}",
+        "note": "decision_type picks the methodology for you. Every mutating call needs an Idempotency-Key.",
+        "cost": "$0.00 (draft, free)"
+      },
+      {
+        "title": "Check the price before spending",
+        "command": "pilotctl appstore call io.pilot.kinetic kinetic.offer_list '{}'",
+        "expect": "{\"offers\":[{\"study_type\":\"van_westendorp\",\"price_cents\":14900}]}",
+        "note": "Launching costs $149-$199, far above the $5 budget, so a human pays on Stripe.",
+        "cost": "$0.00 (read)"
+      },
+      {
+        "title": "Read computed results, not guesses",
+        "command": "pilotctl appstore call io.pilot.kinetic kinetic.results_get '{\"id\":\"stu_abc123\"}'",
+        "expect": "{\"optimal_price_point\":42,\"acceptable_range\":{\"low\":34,\"high\":58},\"n\":31}",
+        "note": "Call study_quality_get first: speeders make a clean number worthless.",
+        "cost": "$0.00 (read)"
+      }
+    ],
+    "cost": {
+      "unit": "micro-USD (1000000 = $1.00)",
+      "free_budget": "$5.00 per Pilot user",
+      "hard_cap_usd": 5.0,
+      "operations": [
+        {
+          "op": "all research methods",
+          "price": "free",
+          "note": "discovery, drafting, preview, progress, quality, results, evidence, narrative, export and teardowns cost nothing against the Pilot budget"
+        },
+        {
+          "op": "kinetic.study_checkout_create",
+          "price": "free",
+          "note": "returns a Stripe link; the $149-$199 charge happens on Stripe and is paid by the human who opens it, not from your Pilot budget"
+        }
+      ],
+      "worked_total": "$0.00 against the Pilot budget. The research loop is free; the study fee is paid by a human on Stripe."
+    },
+    "gotchas": [
+      "Everything except launching is free. The $149-$199 fee is paid by a human on Stripe, not your budget.",
+      "Every mutating call needs an Idempotency-Key header; a retry with the same key is safe.",
+      "study_checkout_create returns a link and does NOT pay. Hand the URL to your human and stop.",
+      "Preview before launch — once live, questions are fixed.",
+      "You supply the respondents; Kinetic has no panel.",
+      "Check study_quality_get and progress before trusting a result."
+    ],
+    "next": [
+      "io.pilot.kinetic kinetic.balance '{}'",
+      "io.pilot.kinetic kinetic.help '{}'"
+    ]
+  },
+  "io.pilot.dial": {
+    "skill": "io.pilot.dial",
+    "title": "Full usage demo",
+    "metered": true,
+    "when_to_use": "When a task needs a phone: call a business and sit through the hold queue, text someone and wait for the reply, or receive a 2FA code on a real US number.",
+    "quickstart": {
+      "goal": "See your credit and the limits in force before spending anything",
+      "command": "pilotctl appstore call io.pilot.dial dial.status '{}'",
+      "expect": "{\"credit\":\"$5.00\",\"plan\":\"free\",\"maxCallDurationSeconds\":300,\"maxConcurrentCalls\":2}",
+      "cost": "$0.00 (read)",
+      "note": "Free. A new account starts with $5 and no card. No key yet? dial.signup emails a code and dial.verify exchanges it for one."
+    },
+    "examples": [
+      {
+        "title": "Get a number, then text someone",
+        "goal": "A number is the prerequisite for everything else",
+        "command": "pilotctl appstore call io.pilot.dial dial.buy_number '{\"areaCode\":\"415\",\"explicitProgrammaticConsent\":\"yes\"}'",
+        "expect": "{\"id\":\"num_...\",\"phoneNumber\":\"+14155550123\"}",
+        "cost": "$3.00/month",
+        "note": "Spends money, so it requires an explicit consent attestation — confirm with your human first. Then dial.send_message delivers over iMessage when the recipient supports it, else SMS."
+      },
+      {
+        "title": "Place a call and let it wait out the IVR",
+        "goal": "The thing an agent genuinely cannot do itself",
+        "command": "pilotctl appstore call io.pilot.dial dial.place_call '{\"to\":\"+14155550199\",\"fromNumber\":\"+14155550123\",\"outboundInstruction\":\"Ask if they take reservations for 4 at 8pm Friday\",\"transferTo\":\"+14155550100\"}'",
+        "expect": "{\"id\":\"call_...\",\"status\":\"queued\"}",
+        "cost": "$0.22/min",
+        "note": "transferTo hands the live call to your human the moment a real person answers — never to a recording. Poll dial.get_call for the transcript."
+      },
+      {
+        "title": "Block until the reply arrives, instead of polling",
+        "command": "pilotctl appstore call io.pilot.dial dial.wait_for_event '{\"eventType\":\"message.received\",\"timeout\":120}'",
+        "expect": "{\"event\":\"message.received\",\"message\":{\"body\":\"Your code is 481920\"}}",
+        "cost": "$0.00 (read)",
+        "note": "A 408 means try again, not an error. This is how you catch a 2FA code without spinning."
+      }
+    ],
+    "cost": {
+      "unit": "USD",
+      "free_budget": "$5.00 signup credit, no card",
+      "hard_cap_usd": 5.0,
+      "operations": [
+        {
+          "op": "reads (status, usage, list_*, get_call, wait_for_event)",
+          "price": "free"
+        },
+        {
+          "op": "dial.buy_number",
+          "price": "$3.00/month",
+          "note": "requires an explicit consent attestation"
+        },
+        {
+          "op": "dial.send_message",
+          "price": "$0.02 per SMS segment",
+          "note": "iMessage delivery where supported"
+        },
+        {
+          "op": "dial.place_call",
+          "price": "$0.22/min",
+          "note": "$0.13/min self-hosted if you bring your own LLM"
+        }
+      ],
+      "worked_total": "$3.44 — one number for a month ($3.00), one 2-minute call ($0.44), reads free. Inside the $5 signup credit."
+    },
+    "gotchas": [
+      "Reads are free; buying a number, texting and calling cost money. Check dial.status first.",
+      "dial.buy_number needs an explicit consent attestation because it spends — confirm with your human.",
+      "A new account is capped at 5-minute calls and 2 concurrent until the first top-up.",
+      "Always pass numbers in E.164, e.g. +14155551234. Emergency and crisis numbers are blocked.",
+      "Prefer dial.wait_for_event over polling; a 408 means retry, not failure."
+    ],
+    "next": [
+      "io.pilot.dial dial.help '{}'"
+    ]
   }
 }

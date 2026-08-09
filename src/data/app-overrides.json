@@ -1141,5 +1141,235 @@
     "publishedAt": null,
     "grants": [],
     "inCatalogue": true
+  },
+  "io.pilot.deadsimple": {
+    "name": "Dead Simple Email",
+    "tagline": "An email identity your agent provisions for itself, then uses to send, receive, and read its own signup codes.",
+    "description": "Dead Simple Email gives an agent a real, deliverable email identity — not a sandbox — and it can get one entirely on its own. A single call to `deadsimple.signup` returns an account, an API key and a live inbox. No dashboard, no verification email, no human in the loop.\n\n**The method agents reach for most is `deadsimple.get_verification_code`.** It pulls the one-time code or magic link straight out of the newest inbound message, so an agent can sign itself up for a third-party service or clear a 2FA prompt without ever parsing an email body. Filter by sender and by timestamp so a stale code is never returned. This is what turns \"the provider emails you a code\" from a dead end into a step.\n\nFrom there the agent sends, replies on-thread, reply-alls, forwards, reads full messages with headers and attachments, and walks whole conversation threads over one REST API.\n\nUnderneath is real sending infrastructure: DKIM-signed egress through a dedicated MTA, bounce and complaint handling, suppression lists, and optional open and click tracking. Inbound mail can be pushed to HMAC-SHA256 signed webhooks that retry on exponential backoff. A supervisor agent can watch every inbox in a workspace at once with `list_all_messages`, and inboxes can be created in bulk, tagged, and torn down when a throwaway identity is finished.\n\n**Tiers.** A self-provisioned agent account starts on trial: 1 inbox, 10 sends an hour, 25 a day. Calling `deadsimple.claim` with an email a human controls, then `deadsimple.claim_verify`, moves it to the Free plan — 5 inboxes and 5,000 emails a month — keeping the same API key, inboxes and history. Paid plans scale to 500 inboxes, 25 custom domains, and 1,000 requests a minute.\n\n**Edge cases.** A 429 with code `trial_send_limit_exceeded` is a quota signal, not a transient failure — do not blindly retry, claim the account instead. Pagination is cursor-based. Spam is excluded from `list_messages` unless `include_spam` is true. Delete throwaway inboxes when finished so they stop counting against the quota.",
+    "version": "0.1.0",
+    "vendor": "Dead Simple Email",
+    "vendorUrl": "https://deadsimple.email",
+    "homepage": "https://deadsimple.email",
+    "sourceUrl": "https://deadsimple.email",
+    "license": "Proprietary",
+    "categoriesRaw": [
+      "comms"
+    ],
+    "keywords": [
+      "email",
+      "inbox",
+      "otp",
+      "verification code",
+      "magic link",
+      "agent onboarding",
+      "transactional email",
+      "threads",
+      "attachments",
+      "webhooks"
+    ],
+    "grants": [
+      "fs.read:$APP/config.json",
+      "fs.read:$APP/secrets.json",
+      "key.sign:self",
+      "audit.log:*"
+    ],
+    "protection": "shareable",
+    "runtimes": [
+      "go"
+    ],
+    "minPilotVersion": "1.10.0",
+    "inCatalogue": true,
+    "publishedAt": "2026-07-27",
+    "changelog": [
+      {
+        "version": "0.1.0",
+        "notes": [
+          "First release on the Pilot app store."
+        ]
+      }
+    ]
+  },
+  "io.pilot.rentahuman": {
+    "name": "Rent A Human",
+    "tagline": "Hire a real person for a physical-world task, in plain language, and talk to ops until it is done.",
+    "description": "Rent A Human gives an agent hands in the physical world. Describe a task the way a person would — \"deep clean a 2-bedroom apartment in the Mission by Friday, budget $150\" — and a human ops coordinator at RentAHuman sources and vets a real person to do it. Everything after that happens on a message thread your agent polls.\n\n**This is the Partner API, not the marketplace.** There is no account for your user to create, no profile to browse, and no escrow for your agent to manage. One call creates a request; ops does the sourcing, vetting and scheduling; your agent reads status and messages and answers questions. When work is priced, a payment link comes back for your agent to relay.\n\n**Your agent is the only channel.** RentAHuman never contacts your end customer. Quotes, questions, status changes and payment links are all addressed to your agent, even when the wording reads like \"tell the customer…\". You decide whether, when and how to relay each one. Nothing reaches your customer unless your agent sends it.\n\n**The loop.** `create_request` returns a `requestId`. Poll `get_request` and branch on `status`: `received` means ops has not replied yet; `needs_info` means they asked a question and progress is **blocked** until you answer with `send_message`; `quoted` means a price and usually a payment link are waiting to be relayed; then `scheduled`, `in_progress`, `completed`. `list_requests` shows everything in flight.\n\n**Edge cases.** `task` and `details` are moderated, so rejected text returns 400 with an explanation and should be rewritten rather than retried. `requesterPhoneNumber` must be E.164 and is customer PII. `budgetUsd` is the budget before fees. A `requestId` you do not own returns 404, exactly like one that does not exist, so ids cannot be enumerated. `list_bounties` needs the referrals capability and otherwise returns 403.",
+    "version": "0.2.0",
+    "vendor": "Rent A Human",
+    "vendorUrl": "https://rentahuman.ai",
+    "homepage": "https://rentahuman.ai",
+    "sourceUrl": "https://rentahuman.ai/docs/partners",
+    "license": "Proprietary",
+    "categoriesRaw": [
+      "automation"
+    ],
+    "keywords": [
+      "humans",
+      "real-world tasks",
+      "errands",
+      "cleaning",
+      "on-site",
+      "human-in-the-loop",
+      "concierge",
+      "physical world",
+      "ops"
+    ],
+    "grants": [
+      "fs.read:$APP/config.json",
+      "key.sign:self",
+      "net.dial:broker.pilotprotocol.network",
+      "audit.log:*"
+    ],
+    "protection": "shareable",
+    "runtimes": [
+      "go"
+    ],
+    "minPilotVersion": "1.10.0",
+    "inCatalogue": true,
+    "publishedAt": "2026-07-27",
+    "changelog": [
+      {
+        "version": "0.2.0",
+        "notes": [
+          "First release on the Pilot app store."
+        ]
+      }
+    ]
+  },
+  "io.pilot.upfile": {
+    "name": "Upfile",
+    "tagline": "Upload a file, get a permanent URL. One call to sign up, one to upload.",
+    "description": "Upfile turns a file on the host into a URL an agent can hand to a human or another service. There is no dashboard and no browser step anywhere in the loop: `upfile.signup` creates an account and saves the key locally, and from then on `upfile.upload` returns a live, permanent link.\n\n**Everything returns JSON.** The upload methods emit `{id, url, visibility, size, type, expires_at, storage_used, storage_limit}`, so an agent reads `.url` rather than scraping console output.\n\n**Three shapes of link.** A plain upload is public and permanent — an unauthenticated URL that keeps working. `upload_private` puts it behind authentication. `upload_expiring` gives it a TTL in seconds, which is the right choice for build logs, debug dumps, and anything you would rather not leave permanently reachable.\n\n**Housekeeping.** `status` shows tier and quota, `list` enumerates what is stored with each file's id, and `remove` deletes one by id and reclaims the space. The free tier is 1GB total across all files.\n\nThe CLI ships with the app as a per-platform binary verified by sha256 at install, so there is no Node install and no package manager involved on the host.",
+    "version": "0.2.3",
+    "vendor": "Upfile",
+    "vendorUrl": "https://upfile.sh",
+    "homepage": "https://upfile.sh",
+    "sourceUrl": "https://github.com/upfilesh/cli",
+    "license": "MIT",
+    "categoriesRaw": [
+      "devtools"
+    ],
+    "keywords": [
+      "upload",
+      "file-sharing",
+      "cli",
+      "cdn",
+      "permanent url",
+      "expiring link",
+      "artifacts",
+      "agents"
+    ],
+    "grants": [
+      "fs.read:$APP/install.json",
+      "fs.write:$APP",
+      "proc.exec:upfile",
+      "net.dial:pub-f09f9a4ea848491198d48e329ba030e3.r2.dev",
+      "audit.log:*"
+    ],
+    "protection": "shareable",
+    "runtimes": [
+      "go"
+    ],
+    "minPilotVersion": "1.10.0",
+    "inCatalogue": true,
+    "publishedAt": "2026-07-27",
+    "changelog": [
+      {
+        "version": "0.2.3",
+        "notes": [
+          "First release on the Pilot app store."
+        ]
+      }
+    ]
+  },
+  "io.pilot.kinetic": {
+    "name": "Kinetic Pricing",
+    "tagline": "Decide what to charge, using answers from your own customers rather than a guess.",
+    "description": "Kinetic Pricing runs real pricing research end to end: choose the method that fits the decision, draft and preview the survey, send a link to your own customers, and read results computed by an analysis engine rather than asserted by a model.\n\n**Pick the right method or the answer is worthless.** `method_recommend` takes the decision in plain language and returns the method that answers it. Van Westendorp finds an acceptable price *range*; Gabor-Granger tests specific price *points* and produces a demand curve; MaxDiff ranks which features carry value; choice-based conjoint models trade-offs. Asking the wrong one produces a confident, useless number.\n\n**Everything up to launch is free.** Drafting, editing, regenerating the survey and previewing it cost nothing, and preview stores no respondent evidence. Launching costs $149-$199 depending on method, and that fee is paid by a human on Stripe's hosted page rather than out of an agent's budget. `study_checkout_create` returns the link and explicitly does not complete the purchase.\n\n**You supply the respondents.** Kinetic has no panel. `respondent_link_get` gives a link to send to your own customers or prospects, so the quality of the answer depends on who you send it to.\n\n**The numbers are computed, not narrated.** `results_get` returns what the analysis engine calculated, `evidence_get` traces a number back to the answers behind it, and `narrative_generate` writes an explanation *from* those results. Check `study_quality_get` before believing any of it, since speeders and straight-liners produce clean-looking nonsense, and check `study_progress_get` against the method's recommended minimum sample.\n\nAlso included: pricing-page teardowns, Kinetic's published research, and CSV export.",
+    "version": "1.0.0",
+    "vendor": "Kinetic Pricing",
+    "vendorUrl": "https://kineticpricing.com",
+    "homepage": "https://kineticpricing.com",
+    "sourceUrl": "https://kineticpricing.com",
+    "license": "Proprietary",
+    "categoriesRaw": [
+      "ai"
+    ],
+    "keywords": [
+      "pricing",
+      "willingness to pay",
+      "van westendorp",
+      "gabor granger",
+      "maxdiff",
+      "conjoint",
+      "market research",
+      "saas pricing"
+    ],
+    "grants": [
+      "fs.read:$APP/config.json",
+      "key.sign:self",
+      "net.dial:broker.pilotprotocol.network",
+      "audit.log:*"
+    ],
+    "protection": "shareable",
+    "runtimes": [
+      "go"
+    ],
+    "minPilotVersion": "1.10.0",
+    "inCatalogue": true,
+    "publishedAt": "2026-07-30",
+    "changelog": [
+      {
+        "version": "1.0.0",
+        "notes": [
+          "First release on the Pilot app store."
+        ]
+      }
+    ]
+  },
+  "io.pilot.dial": {
+    "name": "Dial",
+    "tagline": "A complete phone identity for your agent — voice calls, SMS and iMessage on a real US number, provisioned in one call.",
+    "description": "Dial gives your agent its own real phone number: place and receive AI voice calls, send and receive SMS and iMessage, and wait on inbound events without polling. Bring your Dial API key at install time and every method authenticates as your own account. The account is yours, works outside Pilot too, and starts with $5 of credit and no credit card. No key yet? dial.signup emails a 6-digit code and dial.verify exchanges it for one. What you can do - Call people. dial.place_call runs an autonomous AI voice call from your number: book a table, chase a delivery, return a missed call. Pass transferTo and it waits out hold music and IVR menus, then cold-transfers to your human the moment a real person answers — never to a recording. Poll dial.get_call for the transcript, or block on dial.wait_for_event. - Give the call your tools. Connect a Context MCP and your MCP server tools become available to the voice agent DURING the call, so it can look something up or take an action mid-conversation. Dial runs the OAuth 2.1 flow and keeps the token fresh in the background. - Text people. dial.send_message delivers over iMessage when the recipient supports it and falls back to SMS otherwise, same call either way. Show a typing indicator first with dial.typing. - Wait, do not poll. dial.wait_for_event blocks until an inbound reply, a 2FA code, or a finished call shows up. A 408 means try again, not an error. - Own the identity. Set each number inbound behavior, voice and language, and on iMessage numbers the display name and avatar recipients see in Messages. Cost Reads are free. $3/month per number. US SMS $0.02 per segment. Managed voice $0.22/min all-in; self-hosted voice $0.13/min if you bring your own LLM over a WebSocket. Your $5 signup credit covers the first usage and spend pauses at $0 rather than surprising you. Good to know A brand-new account is on the free tier until it is topped up, which caps calls at 5 minutes and 2 concurrent calls. Both lift permanently on the first top-up. Emergency and crisis numbers are blocked. Always pass numbers in E.164, e.g. +14155551234. Every method, its parameters and latency class are discoverable at runtime via dial.help.",
+    "version": "0.1.0",
+    "vendor": "GetDial AI",
+    "vendorUrl": "https://getdial.ai",
+    "homepage": "https://getdial.ai",
+    "sourceUrl": "https://github.com/GetDial-AI/cli",
+    "license": "MIT",
+    "categoriesRaw": [
+      "comms",
+      "automation"
+    ],
+    "keywords": [
+      "phone",
+      "sms",
+      "imessage",
+      "voice",
+      "calls",
+      "telephony",
+      "agent",
+      "webhooks"
+    ],
+    "grants": [
+      "fs.read:$APP/config.json",
+      "fs.read:$APP/secrets.json",
+      "key.sign:self",
+      "audit.log:*"
+    ],
+    "protection": "shareable",
+    "runtimes": [
+      "go"
+    ],
+    "minPilotVersion": "1.10.0",
+    "inCatalogue": true,
+    "publishedAt": "2026-08-05",
+    "changelog": [
+      {
+        "version": "0.1.0",
+        "notes": [
+          "First release on the Pilot app store."
+        ]
+      }
+    ]
   }
 }
