@@ -1,0 +1,106 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `
+<p>If you have been reading about Pilot Protocol and saw the name <strong>Artemii Amelin</strong> attached to the project, you are probably trying to figure out who he is. The short answer: Artemii Amelin is the designer credited on the Pilot Protocol press page for the project's brand identity. This page collects what is documented about him and the project he is part of, so the next search does not end in a dead end.</p>
+
+<p>The longer answer involves the brand kit itself, the design language behind it, and the open-source network the brand belongs to. That is what this page covers.</p>
+
+<h2 id="who-is-artemii-amelin">Who Is Artemii Amelin?</h2>
+
+<p>Artemii Amelin's name appears on the <a href="https://pilotprotocol.network/press">Pilot Protocol press page</a> as the <strong>Design</strong> credit for the brand kit (v1.0, 2026). In other words, he is the person responsible for the visual identity of Pilot Protocol — the logo suite, the color system, the typography, and the layout rules that every page of the site follows.</p>
+
+<p>That is the documented fact, and it is worth being precise about it. Search results for a person's name often outpace what any single page says about them. If you came here from a news article or a social post, this page exists to give you the verifiable record: the credit on the official press page, what the brand kit contains, and what the project itself is.</p>
+
+<h2 id="what-he-designed">What He Designed: The Pilot Protocol Brand Kit</h2>
+
+<p>The brand kit is published in full at <a href="https://pilotprotocol.network/press">pilotprotocol.network/press</a>, with a downloadable PDF and a reference page. It documents a deliberate, restrained system:</p>
+
+<ul>
+  <li><strong>Dark mode as the default.</strong> The palette is built around a near-black background (<code>#0b0b0a</code>) with a lime accent (<code>#C5F000</code> in dark mode, <code>#82AA14</code> in light mode). The guidelines are explicit: dark mode is the default, never use pure white, use the accent sparingly for CTAs and highlights.</li>
+  <li><strong>A terminal-native type system.</strong> Inter Tight for UI and body, JetBrains Mono for code and labels, Instrument Serif for editorial. Mono is reserved for the labels, eyebrows, and nav — the parts of the interface that read like a command line.</li>
+  <li><strong>An 8pt grid.</strong> Every measurement is a multiple of 4px: 24px component padding, 80px section padding, 1440px max width. The spacing rules read like code conventions.</li>
+  <li><strong>A complete logo suite.</strong> The mark ships in 1x, 2x, 3x, and source variants, with explicit rules for clear space and a prohibition on recoloring, stretching, or rotating the logo.</li>
+  <li><strong>Strict color discipline.</strong> The kit forbids introducing blues, purples, or reds. The entire visual system stays within a single accent color on a dark neutral ground.</li>
+</ul>
+
+<p>The kit is worth reading even if you never ship a logo. It is a complete specification — colors, type, spacing, usage rules, and anti-patterns — which is an unusual level of rigor for a project this size, and it matches how the rest of the project is documented.</p>
+
+<h2 id="designing-for-agents">Designing for Agents, Not Just People</h2>
+
+<p>The design choices in the kit line up with the project's audience. Pilot Protocol is built for AI agents, and the site ships a plain-text version at <code>/plain</code> so agents can read the documentation without a browser. The brand system fits the same philosophy: dark mode by default reads like a terminal, mono labels read like a CLI, and the whole identity is machine-readable friendly rather than marketing-heavy.</p>
+
+<p>That is a reasonable reading of the documented choices, not an official statement of intent — the press page publishes the kit, and the kit speaks for itself.</p>
+
+<h2 id="what-is-pilot-protocol">What Is Pilot Protocol?</h2>
+
+<p>Artemii Amelin's design work exists because of the project underneath it. <strong>Pilot Protocol</strong> is an open-source overlay network that gives AI agents first-class network citizenship: a permanent virtual address, encrypted peer-to-peer tunnels, NAT traversal, and a built-in trust model — plus an app store of installable, agent-native capabilities.</p>
+
+<ul>
+  <li><strong>Permanent virtual addresses.</strong> Every agent gets an address that survives restarts, IP changes, and moves between clouds. Agents are identified by who they are, not where they happen to be running.</li>
+  <li><strong>Encrypted tunnels.</strong> Communication runs over encrypted UDP tunnels using X25519 key exchange and AES-GCM, with reliability handled in userspace.</li>
+  <li><strong>NAT traversal.</strong> STUN discovery, UDP hole-punching, and relay fallback mean agents behind residential routers, corporate firewalls, and container networks can reach each other — no port forwarding, no public IP required.</li>
+  <li><strong>Explicit trust.</strong> Agents approve each other through a mutual handshake. Membership and trust are decoupled: joining the network does not make an agent trusted, and an agent is invisible until it explicitly trusts another.</li>
+  <li><strong>Discovery.</strong> A rendezvous registry and nameserver let agents find each other and their capabilities by name or tag, not by IP address.</li>
+  <li><strong>An app store.</strong> Capability apps install with a single command and run locally on the daemon as typed IPC services — JSON in, JSON out. The loop is discover, install, call.</li>
+</ul>
+
+<p>The daemon is a single Go binary with zero external dependencies — standard library only — licensed AGPL-3.0, with the source at <a href="https://github.com/pilot-protocol">github.com/pilot-protocol</a>. SDKs ship for Go, Python, Node, and Swift, and an MCP server (<code>pilot-mcp</code>) is available. More than <strong>243k+</strong> agents and users are on the network.</p>
+
+<h2 id="getting-started">Getting Started with Pilot Protocol</h2>
+
+<p>If this page brought you from "who designed the brand" to "what would I do with this," installation is a single command:</p>
+
+<pre><code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></pre>
+
+<p>From there the daemon generates an identity, registers with the network, and your agent is online with its own address. The app store is the fastest way to see what the network does:</p>
+
+<pre><code><span class="comment"># Browse available apps</span>
+<span class="cmd">pilotctl appstore catalogue</span>
+
+<span class="comment"># Install one</span>
+<span class="cmd">pilotctl appstore install io.pilot.cosift --force</span>
+
+<span class="comment"># Call it — JSON in, JSON out</span>
+<span class="cmd">pilotctl appstore call io.pilot.cosift cosift.search '{"q":"agent networking","k":"8"}'</span></code></pre>
+
+<p>Each app is signature-verified (its manifest pins a sha256 hash and an Ed25519 signature, re-checked on every spawn), grant-scoped (permissions are accepted at install time, not ambient), and auto-spawned by the daemon. For a deeper walkthrough of the architecture, see <a href="/learn/what-is-pilot-protocol">what Pilot Protocol is</a> or the <a href="https://pilotprotocol.network/docs">documentation</a>.</p>
+
+<h2 id="summary">Summary</h2>
+
+<p>Artemii Amelin is the designer credited on the official Pilot Protocol press page for the project's brand identity — a dark, terminal-native, single-accent system documented in a downloadable brand kit. The project that brand belongs to is an open-source overlay network for AI agents, and both the brand kit and the network remain publicly documented and open for anyone to inspect.</p>
+`;
+
+const faqItems = [
+  {
+    question: "Who is Artemii Amelin?",
+    answer: "Artemii Amelin is the designer credited on the Pilot Protocol press page for the project's brand identity. His name appears as the Design credit on the brand kit (v1.0, 2026) at pilotprotocol.network/press."
+  },
+  {
+    question: "What did Artemii Amelin design?",
+    answer: "He designed the Pilot Protocol brand kit: the logo suite, the dark-mode-first color system (near-black background with a single lime accent), the typography (Inter Tight, JetBrains Mono, Instrument Serif), and the 8pt spacing grid documented in the kit."
+  },
+  {
+    question: "Is Artemii Amelin a founder of Pilot Protocol?",
+    answer: "The official Pilot Protocol press page credits Artemii Amelin as the designer of the brand identity; that is the role documented on the site. Pilot Protocol is an open-source project under AGPL-3.0, and its full public history is visible in the repositories at github.com/pilot-protocol."
+  },
+  {
+    question: "What is Pilot Protocol?",
+    answer: "Pilot Protocol is an open-source overlay network for AI agents. It gives every agent a permanent virtual address, encrypted peer-to-peer tunnels, NAT traversal, a mutual trust model, and an app store of installable agent capabilities. The daemon is a single Go binary with zero external dependencies."
+  },
+  {
+    question: "How do I get started with Pilot Protocol?",
+    answer: "Install with a single command: curl -fsSL https://pilotprotocol.network/install.sh | sh. The daemon generates an identity, registers with the network, and your agent is online. The app store is browsable with pilotctl appstore catalogue."
+  }
+];
+---
+<BlogLayout
+  title="Artemii Amelin — Designer of the Pilot Protocol Brand"
+  description="Artemii Amelin is the designer behind Pilot Protocol's brand. Learn who he is, what he designed, and what the open-source network is."
+  date="August 10, 2026"
+  tags={["artemii-amelin", "pilot-protocol", "brand", "design", "open-source"]}
+  canonicalPath="/learn/artemii-amelin"
+  faqItems={faqItems}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
