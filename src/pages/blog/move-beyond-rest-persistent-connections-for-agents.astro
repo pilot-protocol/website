@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p><strong>Persistent connections for AI agents</strong> eliminate the waste of REST polling and the complexity of WebSocket scaling. This article compares REST, WebSocket, gRPC streaming, MQTT, and persistent encrypted UDP tunnels — with code examples and a migration path that runs alongside your existing APIs.</p>
+const bodyContent = `<p><strong>Persistent connections for AI agents</strong> eliminate the waste of REST polling and the complexity of WebSocket scaling. This article compares REST, WebSocket, gRPC streaming, MQTT, and persistent encrypted UDP tunnels — and shows where application-layer protocol debates like <strong>MCP vs A2A vs ACP vs ANP</strong> sit on top of the transport question — with code examples and a migration path that runs alongside your existing APIs.</p>
 
   <p><a href="https://en.wikipedia.org/wiki/REST" target="_blank" rel="noopener">REST</a> APIs are fundamentally unidirectional. The client asks, the server responds. If the server has new information for the client, it cannot push it. The client must ask again. And again. Studies on real-world polling systems show that <strong>only 1.5% of HTTP polls find new data</strong>. The other 98.5% are wasted requests -- burning bandwidth, CPU cycles, and money to learn that nothing changed.</p>
 
@@ -54,6 +54,23 @@ while True:
   </ul>
 
   <p>No single existing protocol hits all five. REST misses bidirectional and persistent. WebSocket misses NAT-traversing and lightweight. gRPC streaming misses NAT-traversing. MQTT hits most but requires a broker (not lightweight for small deployments) and does not do NAT traversal.</p>
+  </section>
+
+  <section>
+  <h2>MCP vs A2A vs ACP vs ANP: Application Protocols, Not Transports</h2>
+
+  <p>When developers compare <strong>MCP vs A2A vs ACP vs ANP</strong>, the useful distinction is not which one wins — it is which layer each one operates on. All four are application-layer protocols. They define what agents say and how they find each other, but none answers the transport question this article is about: how two agents stay reachable to each other in the first place.</p>
+
+  <ul>
+    <li><strong>MCP (Model Context Protocol)</strong> connects a model to tools and resources over a client-server RPC bridge using JSON-RPC 2.0.</li>
+    <li><strong>A2A (Agent-to-Agent Protocol)</strong> defines application-layer agent-to-agent communication: agents publish Agent Cards describing capabilities and task endpoints, and other agents fetch the card and POST task requests.</li>
+    <li><strong>ACP (Agent Communication Protocol)</strong> is a Linux Foundation / BeeAI open standard for REST-based agent interoperability, supporting synchronous and asynchronous messaging over HTTP.</li>
+    <li><strong>ANP (Agent Network Protocol)</strong> anchors agent identity in decentralized identifiers (DIDs) and defines discovery and communication across organizational boundaries without a shared registry.</li>
+  </ul>
+
+  <p>Each of the four assumes the endpoints already exist. MCP servers, Agent Cards, and ACP endpoints live at URLs; ANP's discovery runs over HTTP. None provisions a stable address, crosses NAT, or establishes per-peer trust on the wire — exactly the properties an agent needs before any application-layer protocol becomes usable. That is the gap a persistent tunnel layer fills: it gives MCP, A2A, ACP, and ANP something to run on, without replacing any of them.</p>
+
+  <p>Pilot Protocol is that transport: a stable virtual address that survives restarts and IP changes, encrypted UDP tunnels that traverse NAT so a self-hosted MCP server or Agent Card endpoint needs no public IP, and per-peer handshakes so traffic travels only between agents that agreed to talk. For the protocol-by-protocol comparison, see <a href="/blog/direct-communication-protocols-ai-agents-guide">AI agent communication protocols: Pilot vs MCP vs A2A vs ACP vs ANP</a>; for composition in practice, see <a href="/blog/mcp-plus-pilot-tools-and-network">MCP plus Pilot: tools and network</a> and <a href="/blog/a2a-agent-cards-over-pilot-tunnels">A2A Agent Cards over Pilot tunnels</a>.</p>
   </section>
 
   <section>
@@ -341,14 +358,18 @@ const faqItems = [
     answer: "The migration runs alongside your existing REST API. Install the Pilot daemon on your agents, keep your HTTP servers running, and selectively replace polling loops with event subscriptions. Start with one polling loop, replace it with a persistent subscription, measure improvement, then migrate the next pattern. No all-or-nothing cutover is needed."
   },
   {
-    question: "What are the memory costs of persistent agent connections at scale?",
-    answer: "Each TCP-based connection (WebSocket, gRPC) requires a separate socket and TLS session, consuming roughly 8 KB per connection plus server-side overhead. A UDP overlay like Pilot shares a single encrypted tunnel across all peers, adding only ~2 KB per peer for connection state. At 100 peers, that difference matters — see our <a href=\"/blog/benchmarking-http-vs-udp-overlay\">full benchmarking comparison</a>."
+    question: "What is the difference between MCP, A2A, ACP, and ANP?",
+    answer: "MCP (Model Context Protocol) connects a model to tools over a JSON-RPC client-server bridge. A2A (Agent-to-Agent Protocol) handles application-layer agent-to-agent communication using Agent Cards and task endpoints. ACP (Agent Communication Protocol) is a Linux Foundation / BeeAI open standard for REST-based agent interoperability over HTTP. ANP (Agent Network Protocol) uses decentralized identifiers for discovery and communication across organizations. All four operate at the application layer — none of them provides the transport underneath. See our <a href=\"/blog/direct-communication-protocols-ai-agents-guide\">protocol comparison</a> for the full breakdown."
+  },
+  {
+    question: "Does Pilot Protocol replace MCP or A2A?",
+    answer: "No. MCP, A2A, ACP, and ANP define application-layer contracts; Pilot Protocol is the network layer underneath them. It gives agents a permanent virtual address, encrypted tunnels, NAT traversal, and per-peer trust — the reachability those protocols assume. MCP servers and Agent Cards can run over Pilot tunnels without changing the protocol. See <a href=\"/blog/mcp-plus-pilot-tools-and-network\">MCP plus Pilot</a> and <a href=\"/blog/a2a-agent-cards-over-pilot-tunnels\">A2A Agent Cards over Pilot tunnels</a> for worked examples."
   }
 ];
 ---
 <BlogLayout
   title="Persistent Connections for AI Agents: REST Polling vs WebSocket vs Encrypted UDP Tunnels"
-  description="REST polling wastes 98% of requests. Compare REST, WebSocket, gRPC, and persistent UDP tunnels for AI agent communication — with code examples and a migration path."
+  description="Compare MCP vs A2A vs ACP vs ANP and the transport beneath: REST, WebSocket, gRPC, and persistent UDP tunnels for AI agents — code + migration path."
   date="February 26, 2026"
   tags={["architecture", "real-time", "networking"]}
   canonicalPath="/blog/move-beyond-rest-persistent-connections-for-agents"
