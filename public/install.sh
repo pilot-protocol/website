@@ -9,7 +9,8 @@ set -e
 #   Install:        curl -fsSL https://pilotprotocol.network/install.sh | sh
 #   Pin a version:  curl -fsSL https://pilotprotocol.network/install.sh | sh -s -- --version v1.13.6
 #   Beta channel:   curl -fsSL https://pilotprotocol.network/install.sh | sh -s -- --channel beta
-#   Managed node:   curl -fsSL https://pilotprotocol.network/install.sh | PILOT_ENROLLMENT_TOKEN=... sh -s -- --managed-url https://management.pilotprotocol.network
+#   Managed node:   export PILOT_ENROLLMENT_TOKEN   # enter it without putting it in shell history
+#                   sh install.sh --managed-url https://management.pilotprotocol.network
 #   Uninstall:      curl -fsSL https://pilotprotocol.network/install.sh | sh -s uninstall
 #
 # Flags:
@@ -274,6 +275,47 @@ if [ "${1:-}" != "uninstall" ] && [ "$(id -u)" = "0" ] && [ -z "${PILOT_ALLOW_RO
     echo "       Run as a regular user; the installer uses sudo only when needed."
     echo "       Set PILOT_ALLOW_ROOT=1 to override (not recommended)."
     exit 1
+fi
+
+# A managed identity is per node, but the CLI links, service label and daemon
+# socket are machine-wide. A different HOME therefore does not make a second
+# installation safe. Refuse before downloading, stopping services, replacing
+# links or consuming the enrollment token. An existing attachment in this
+# same PILOT_DIR remains the ordinary repair/update path handled above.
+if [ "$PILOT_MANAGED_MODE" = "1" ] && [ ! -e "$MANAGED_CONTROL_PATH" ] \
+   && [ "${PILOT_REPLACE_EXISTING_NODE:-}" != "1" ]; then
+    _pilot_collision=""
+    for _pilot_link in /usr/local/bin/pilotctl /usr/local/bin/pilot-daemon; do
+        if [ -L "$_pilot_link" ]; then
+            _pilot_target=$(readlink "$_pilot_link" 2>/dev/null || true)
+            case "$_pilot_target" in
+                "$BIN_DIR"/*) ;;
+                */.pilot/bin/*) _pilot_collision="${_pilot_collision}${_pilot_collision:+, }$_pilot_link -> $_pilot_target" ;;
+            esac
+        fi
+    done
+    _pilot_os=$(uname -s | tr '[:upper:]' '[:lower:]')
+    if [ "$_pilot_os" = "darwin" ] && command -v launchctl >/dev/null 2>&1; then
+        _pilot_service=$(launchctl print "gui/$(id -u)/network.pilotprotocol.pilot-daemon" 2>/dev/null || true)
+        if [ -n "$_pilot_service" ] && ! printf '%s\n' "$_pilot_service" | grep -Fq "$BIN_DIR/pilot-daemon"; then
+            _pilot_collision="${_pilot_collision}${_pilot_collision:+, }LaunchAgent network.pilotprotocol.pilot-daemon"
+        fi
+    elif [ "$_pilot_os" = "linux" ] && command -v systemctl >/dev/null 2>&1; then
+        _pilot_service=$(systemctl cat pilot-daemon 2>/dev/null || true)
+        if [ -n "$_pilot_service" ] && ! printf '%s\n' "$_pilot_service" | grep -Fq "$BIN_DIR/pilot-daemon"; then
+            _pilot_collision="${_pilot_collision}${_pilot_collision:+, }systemd pilot-daemon"
+        fi
+    fi
+    if [ -n "$_pilot_collision" ]; then
+        MANAGED_TOKEN=""
+        unset MANAGED_TOKEN
+        echo "Error: another Pilot node installation already owns machine-wide resources." >&2
+        echo "       Detected: $_pilot_collision" >&2
+        echo "       This enrollment token was not consumed and nothing was changed." >&2
+        echo "       Manage or remove the existing node first; do not run two node identities under one service label." >&2
+        exit 1
+    fi
+    _pilot_collision=""; _pilot_target=""; _pilot_service=""; _pilot_os=""
 fi
 
 # --- Manifest + version helpers ---
