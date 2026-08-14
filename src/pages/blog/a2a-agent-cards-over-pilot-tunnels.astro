@@ -1,9 +1,9 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>Google's <a href="https://a2a-protocol.org/" target="_blank" rel="noopener">Agent-to-Agent (A2A) protocol</a> is the first serious attempt at standardizing how AI agents communicate at the application layer. It defines Agent Cards for capability advertisement, a task lifecycle with streaming support, and <a href="https://www.jsonrpc.org" target="_blank" rel="noopener">JSON-RPC 2.0</a> as the wire format. It answers the question: what do agents say to each other?</p>
+const bodyContent = `<p>An A2A Agent Card is the JSON document that tells other agents what yours can do: its name, description, skills, and the URL where tasks can be submitted. In standard A2A that URL must be a publicly reachable HTTPS endpoint — which locks out agents behind NAT, in containers, or on laptops.</p>
 
-  <p>What it does not answer is: how do they reach each other?</p>
+  <p>Google's <a href="https://a2a-protocol.org/" target="_blank" rel="noopener">Agent-to-Agent (A2A) protocol</a> is the first serious attempt at standardizing how AI agents communicate at the application layer. It defines Agent Cards for capability advertisement, a task lifecycle with streaming support, and <a href="https://www.jsonrpc.org" target="_blank" rel="noopener">JSON-RPC 2.0</a> as the wire format. It answers the question: what do agents say to each other? What it does not answer is: how do they reach each other?</p>
 
   <p>A2A assumes HTTP. Agent Cards are served at <code>/.well-known/agent-card.json</code>. Task requests are POST payloads. Streaming uses Server-Sent Events. This works when both agents have publicly routable URLs. It breaks when either agent is behind NAT, inside a container, on a laptop, or anywhere without a stable domain name. And that describes the vast majority of real agent deployments.</p>
 
@@ -68,7 +68,7 @@ const bodyContent = `<p>Google's <a href="https://a2a-protocol.org/" target="_bl
 
   <p>With Pilot, the <code>url</code> becomes a Pilot address. Instead of <code>https://research-agent.example.com</code>, the agent is reachable at its 48-bit virtual address, say <code>1:0000.0042.00A1</code>, on port 80 (Pilot's HTTP port). The Agent Card is served by a lightweight HTTP server running over the Pilot tunnel. Any peer that can resolve the agent's address can fetch the card and submit tasks.</p>
 
-  <p>Pilot's registry stores each agent's hostname and tags, and peer discovery matches on node-ID/hostname substring. Name your task-serving agents with a recognizable prefix and any trusted peer can find them. The A2A Agent Card adds richer semantic detail -- skill descriptions, examples, content types -- on top of Pilot's structural presence. The two systems reinforce each other: Pilot tells you which agents exist and are reachable; the Agent Card tells you what those tasks should look like.</p>
+  <p>Pilot's registry stores each agent's hostname and tags, and peer discovery matches on node-ID/hostname substring. For a broader map of agent protocol terminology — A2A, MCP, ANP — see <a href="/blog/ai-networking-terminology-a2a-mcp-anp-protocols">AI networking terminology explained</a>. Name your task-serving agents with a recognizable prefix and any trusted peer can find them. The A2A Agent Card adds richer semantic detail -- skill descriptions, examples, content types -- on top of Pilot's structural presence. The two systems reinforce each other: Pilot tells you which agents exist and are reachable; the Agent Card tells you what those tasks should look like.</p>
   </section>
 
   <section>
@@ -172,7 +172,7 @@ func main() {
     http.Serve(ln, http.DefaultServeMux)
 }</code></pre>
 
-  <p>Any peer agent on the Pilot network can now fetch this agent's capabilities by requesting <code>/.well-known/agent-card.json</code> over a Pilot HTTP connection. The entire exchange -- the Agent Card fetch, the task submission, the result delivery -- travels over Pilot's encrypted UDP tunnel. No public IP required. No DNS. No TLS certificate management. The encryption is handled by Pilot's X25519 + AES-256-GCM layer, which is negotiated automatically during the tunnel handshake.</p>
+  <p>Any peer agent on the Pilot network can now fetch this agent's capabilities by requesting <code>/.well-known/agent-card.json</code> over a Pilot HTTP connection. The same integration pattern applies to tool access: see <a href="/blog/connecting-mcp-servers-across-agents">Connecting MCP Servers to Agents Across Any Network</a> for the MCP counterpart. The entire exchange -- the Agent Card fetch, the task submission, the result delivery -- travels over Pilot's encrypted UDP tunnel. No public IP required. No DNS. No TLS certificate management. The encryption is handled by Pilot's X25519 + AES-256-GCM layer, which is negotiated automatically during the tunnel handshake.</p>
   </section>
 
   <section>
@@ -268,17 +268,50 @@ func main() {
 
   <div class="cta">
     <h3>Run A2A Over Encrypted Tunnels</h3>
-    <p>Give your A2A agents a network that handles NAT, encryption, and trust. Start with the Pilot daemon and serve Agent Cards in minutes.</p>
+    <p>Give your A2A agents a network that handles NAT, encryption, and trust. Start with the Pilot daemon and serve Agent Cards in minutes. Then pair them with installable capabilities from the <a href="/blog/ai-agent-app-store">Pilot app store</a>.</p>
+    <pre><code><span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span></code></pre>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
+
+const faqItems = [
+  {
+    question: "What is an A2A Agent Card?",
+    answer: "An A2A Agent Card is a JSON document that describes what an agent can do: its name, description, supported skills, input/output content types, and the URL where tasks can be submitted. In standard A2A it is served at <code>/.well-known/agent-card.json</code>.",
+  },
+  {
+    question: "Do A2A Agent Cards require a public URL?",
+    answer: "In standard A2A, yes — the <code>url</code> field must be a publicly reachable HTTPS endpoint. Served over Pilot Protocol, the URL becomes a Pilot virtual address and the card is fetched over an encrypted tunnel, so no public IP, DNS, or TLS certificates are needed.",
+  },
+  {
+    question: "Can I see a sample A2A Agent Card?",
+    answer: "Yes. This article includes a minimal Agent Card JSON example, plus a Go implementation that serves it at <code>/.well-known/agent-card.json</code> and handles A2A JSON-RPC task requests over a Pilot tunnel.",
+  },
+  {
+    question: "Can A2A Agent Cards be private?",
+    answer: "Yes. Pilot's trust model makes Agent Cards private by default: a peer must complete a signed handshake before it can open a connection and fetch the card. Public, private, and semi-private (redacted card) serving are all possible.",
+  },
+  {
+    question: "How do A2A and MCP compare?",
+    answer: "A2A defines how agents talk to each other — Agent Cards, task lifecycle, JSON-RPC — while MCP defines how agents access tools. Both operate at the application layer; Pilot Protocol supplies the network layer underneath: addressing, NAT traversal, encrypted tunnels, and trust.",
+  },
+  {
+    question: "How do A2A and ACP compare?",
+    answer: "A2A defines how agents collaborate on tasks — Agent Cards, a JSON-RPC task lifecycle, streaming. ACP (Agent Communication Protocol) is a Linux Foundation / BeeAI open standard for REST-based agent interoperability with multi-modal content and async messaging over HTTP. Neither includes an overlay network — Pilot Protocol supplies the network layer underneath: addressing, NAT traversal, encrypted tunnels, and trust.",
+  },
+  {
+    question: "What is the difference between A2A, MCP, ACP, and ANP?",
+    answer: "MCP handles tool access for LLMs. A2A, ACP, and ANP define application-layer messaging between agents over HTTP: A2A uses Agent Cards and a task lifecycle, ACP is a Linux Foundation / BeeAI REST standard for agent interoperability, and ANP focuses on decentralized agent identity and discovery over HTTP. Pilot Protocol operates at the network layer beneath them all — persistent addresses, encrypted UDP tunnels, NAT traversal, and per-peer trust.",
+  },
+];
 ---
 <BlogLayout
-  title="A2A Agent Cards Over Pilot Tunnels"
-  description="Run Google's A2A protocol over Pilot Protocol's encrypted tunnels. Application-layer interop meets network-layer infrastructure."
+  title="A2A Agent Cards: Sample JSON Served Over Encrypted Tunnels"
+  description="A2A Agent Cards need a public HTTPS URL — until you serve them over Pilot tunnels. See a sample card + Go server for NAT, no DNS or certs."
   date="February 13, 2026"
   tags={["integration", "a2a", "google"]}
   canonicalPath="/blog/a2a-agent-cards-over-pilot-tunnels"
   bannerImage="/blog/banners/a2a-agent-cards-over-pilot-tunnels.webp"
+  faqItems={faqItems}
 >
   <Fragment set:html={bodyContent} />
 </BlogLayout>
