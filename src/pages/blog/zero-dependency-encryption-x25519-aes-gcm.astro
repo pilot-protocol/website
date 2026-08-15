@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>Pilot Protocol implements its entire encryption stack -- X25519 key exchange plus AES-256-GCM authenticated encryption -- using nothing but Go's standard library. No OpenSSL, no libsodium, no third-party crypto module. This article shows exactly how that implementation works: the key exchange code, the wire format, nonce handling, and the security properties you get as a result.</p>
+const bodyContent = `<p>AES-256-GCM encryption is the authenticated-encryption mode that protects every message in transit on Pilot Protocol -- implemented, together with X25519 key exchange, using nothing but Go's standard library. No OpenSSL, no libsodium, no third-party crypto module. This article shows exactly how that AES-256-GCM encryption works end to end: the key exchange code, the wire format, nonce handling, and the security properties you get as a result.</p>
 
   <p>Every encryption library is a dependency. Every dependency is an attack surface. When OpenSSL disclosed Heartbleed in 2014, it affected a large share of TLS servers on the internet -- not because of a flaw in the cryptographic algorithms, but because of a buffer over-read in a library that virtually every project imported without auditing. The xz Utils backdoor in 2024 demonstrated that even compression libraries can become supply chain weapons when a determined attacker gains commit access.</p>
 
@@ -84,9 +84,13 @@ Agent A                                          Agent B
 
   <p>The X25519 computation itself is sub-millisecond; the dominant setup cost is the one network round-trip for the handshake, which is bounded by the peers' RTT. The crypto cost is paid once per tunnel, not per packet.</p>
 
-  <h2 id="aes-gcm-encryption">AES-256-GCM: Authenticated Encryption</h2>
+  <h2 id="aes-gcm-encryption">AES-256-GCM Encryption: How the Mode Works</h2>
 
   <p>After key exchange, all tunnel frames are encrypted with <a href="https://www.rfc-editor.org/rfc/rfc5288.html" target="_blank" rel="noopener">AES-256-GCM (RFC 5288)</a>. GCM (Galois/Counter Mode) is an authenticated encryption mode that provides both <strong>confidentiality</strong> (the data is encrypted) and <strong>integrity</strong> (any modification is detected). It is the same cipher suite used by TLS 1.3 for HTTPS traffic worldwide.</p>
+
+  <p>GCM is built from two operations. The first is AES in counter mode (CTR): the block cipher encrypts an incrementing counter, and the resulting keystream is XORed with the plaintext. That is how a block cipher encrypts arbitrary-length data. The second is GHASH, a universal hash function computed over the ciphertext that produces the authentication tag. Because the tag is a function of the ciphertext, an attacker who flips a single bit in transit must also forge a valid tag for the modified message. Without the key, that forgery is detected and the packet is rejected before any plaintext is released. This is what makes GCM "authenticated": confidentiality and integrity arrive in one pass, with one key, from one <code>Seal</code> call.</p>
+
+  <p>The construction also explains the two invariants an implementation must enforce. First, a nonce must never be reused under the same key -- the counter mode makes the keystream identical for identical nonces, which is why Pilot uses the two-part nonce construction described below. Second, the authentication tag must be verified before the plaintext is trusted. Go's <code>Open</code> function does both atomically: it returns an error on tag mismatch and never yields unauthenticated plaintext.</p>
 
   <h3>Encryption in Go</h3>
 
@@ -323,11 +327,19 @@ const faqItems = [
     question: "Why not just use TLS for AI agent encryption?",
     answer: "Standard TLS runs over TCP and commonly depends on X.509 certificate issuance and revocation. Pilot Protocol runs over UDP and derives tunnel secrets with X25519 without requiring X.509 at this layer, avoiding that certificate lifecycle and the larger dependency surface that crypto/tls brings in.",
   },
+  {
+    question: "What is AES-256-GCM encryption?",
+    answer: "AES-256-GCM is the Galois/Counter Mode of the AES block cipher with a 256-bit key. It is an authenticated encryption (AEAD) mode: AES in counter mode encrypts the data, and the GHASH universal hash produces an authentication tag over the ciphertext, so confidentiality and integrity are provided in one pass with one key. It is the mode TLS 1.3 uses for HTTPS and the mode Pilot Protocol uses for its tunnel encryption.",
+  },
+  {
+    question: "AES-256-GCM vs ChaCha20-Poly1305: which should you use?",
+    answer: "Both are authenticated encryption schemes with the same security goals. AES-256-GCM is the more widely deployed option and benefits from hardware acceleration (AES-NI on x86, the crypto extensions on ARMv8), which is why it is the default in TLS 1.3 and in Pilot Protocol's tunnels. ChaCha20-Poly1305 is a strong alternative designed for software implementations without AES hardware support, which is why WireGuard uses it. The practical choice depends on your deployment: where AES hardware acceleration is available, AES-256-GCM is the pragmatic default.",
+  },
 ];
 ---
 <BlogLayout
-  title="X25519 + AES-GCM Encryption: Zero-Dependency Go Implementation Guide"
-  description="How to implement X25519 key exchange and AES-256-GCM encryption in Go with zero external dependencies -- full code, wire format, and security guarantees."
+  title="AES-256-GCM Encryption: Zero-Dependency Go Implementation Guide"
+  description="AES-256-GCM encryption explained with code: X25519 key exchange, GCM authenticated encryption, nonce handling, and wire format in zero-dependency Go."
   date="February 12, 2026"
   tags={["cryptography", "security", "go"]}
   canonicalPath="/blog/zero-dependency-encryption-x25519-aes-gcm"
