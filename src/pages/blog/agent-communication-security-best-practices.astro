@@ -36,7 +36,7 @@ const bodyContent = `<script type="application/ld+json">
 </ul>
 </blockquote>
 <hr>
-<p>Securing agent-to-agent communication in decentralized systems is one of the most underestimated engineering challenges in AI infrastructure today. As multi-agent architectures grow more complex, attack surfaces expand across every message exchange, trust handshake, and data stream. Replay attacks, identity spoofing, man-in-the-middle interception, and model-level data leakage are not theoretical risks. They are active threats that target the seams between agents, protocols, and infrastructure. This article gives you a clear, prioritized set of techniques to address those risks directly, with actionable guidance you can apply to your stack right now.</p>
+<p>Best practices for secure AI agent communication start with the threats every message exchange faces: replay attacks, identity spoofing, man-in-the-middle interception, and model-level data leakage. This article gives you a clear, prioritized set of techniques to address those risks directly — freshness controls against replay, MLS for group messaging, mTLS for authentication, and leakage audits for the model layer — with actionable guidance you can apply to your stack right now.</p>
 <h2 id="table-of-contents" tabindex="-1">Table of Contents</h2>
 <ul>
 <li><a href="#establishing-secure-criteria-for-agent-communication">Establishing secure criteria for agent communication</a></li>
@@ -219,20 +219,9 @@ const bodyContent = `<script type="application/ld+json">
 <p>Holistic security means aligning three things simultaneously: your protocol design, your infrastructure configuration, and your model behavior. Most teams are strong on one or two of these. Few are consistent across all three. The mismatched assumptions between agents and the protocols they run on are consistently one of the most common failure points we observe in deployed systems.</p>
 <p>The most overlooked pitfall is not the sophisticated attack. It is the gradual erosion of controls that were working fine at launch. Review your <a href="https://pilotprotocol.network/blog/secure-network-infrastructure-ai-agents-practical-guide">practical network security</a> posture on a defined cadence, not only when something breaks. Build protocol review into your standard release process. Treat agent communication security as a living system requirement, not a one-time implementation task.</p>
 <h2 id="next-steps-deploy-peer-to-peer-security-with-pilot-protocol" tabindex="-1">Next steps: Deploy peer-to-peer security with Pilot Protocol</h2>
-<p>The techniques in this article, replay prevention, MLS group messaging, mTLS authentication, and model-level leakage controls, require solid infrastructure to implement reliably at scale.</p>
+<p>The techniques in this article, replay prevention, MLS group messaging, mTLS authentication, and model-level leakage controls, require solid infrastructure to implement reliably at scale. For the transport layer underneath these controls — permanent addresses, encrypted tunnels, and NAT traversal — see <a href="https://pilotprotocol.network/blog/why-ai-agents-need-network-stack">why AI agents need their own network stack</a>.</p>
 <p><img src="https://csuxjmfbwmkxiegfpljm.supabase.co/storage/v1/object/public/blog-images/organization-24002/1774647725213_pilotprotocol.jpg" alt="https://pilotprotocol.network"></p>
 <p><a href="https://pilotprotocol.network">Pilot Protocol</a> is built to support exactly these requirements. The platform provides encrypted peer-to-peer tunnels, mutual trust establishment, and persistent virtual addresses for your agent fleet, removing the need for centralized message brokers that create single points of failure or interception. With X25519-encrypted tunnels, NAT traversal, and cross-cloud connectivity, you get the infrastructure layer your security controls actually need. Start with the <a href="https://pilotprotocol.network/for/p2p">peer-to-peer agent security</a> overview to see how Pilot Protocol maps to the defense layers covered here, then connect your first secure agent pair in minutes using the Python or Go SDK.</p>
-<h2 id="frequently-asked-questions" tabindex="-1">Frequently asked questions</h2>
-<h3 id="what-is-the-most-effective-way-to-prevent-replay-attacks-in-agent-communication" tabindex="-1">What is the most effective way to prevent replay attacks in agent communication?</h3>
-<p>The best approach is to combine nonces and timestamps with digital signatures, ensuring each message carries a unique, time-bounded proof that cannot be reused.</p>
-<h3 id="how-does-messaging-layer-security-mls-help-secure-group-communication" tabindex="-1">How does Messaging Layer Security (MLS) help secure group communication?</h3>
-<p>MLS provides confidentiality, integrity, authentication, forward secrecy, and post-compromise security, making it the strongest available standard for multi-agent group messaging.</p>
-<h3 id="why-is-authentication-important-between-ai-agents" tabindex="-1">Why is authentication important between AI agents?</h3>
-<p>Agent identity risks including spoofing and MitM attacks are among the top threats in decentralized systems. Strong authentication ensures every message comes from a verified source.</p>
-<h3 id="can-encrypted-channels-fully-prevent-sensitive-data-leakage-between-agents" tabindex="-1">Can encrypted channels fully prevent sensitive data leakage between agents?</h3>
-<p>No. Models can leak sensitive information through message content itself, even on fully encrypted channels. Protocol security and model behavior auditing must be implemented independently.</p>
-<h3 id="what-protocols-provide-both-confidentiality-and-forward-secrecy-for-agent-messaging" tabindex="-1">What protocols provide both confidentiality and forward secrecy for agent messaging?</h3>
-<p>MLS is specifically designed for confidential, authenticated, and forward-secret group communication, making it the recommended choice for production multi-agent environments.</p>
 <h2 id="recommended" tabindex="-1">Recommended</h2>
 <ul>
 <li><a href="https://pilotprotocol.network/blog/ai-networking-best-practices-secure-scalable-systems">AI networking best practices for secure, scalable systems</a></li>
@@ -243,12 +232,19 @@ const bodyContent = `<script type="application/ld+json">
 </ul>`;
 ---
 <BlogLayout
-  title="Agent communication security: best practices for AI developers"
-  description="Unlock essential agent communication security tips for AI developers. Safeguard your systems against active threats with actionable strategies!"
+  title="Best Practices for Secure AI Agent Communication: MLS & mTLS"
+  description="Secure AI agent communication against replay, spoofing, and data leakage: nonces, MLS group messaging, mTLS auth, and model-level audits."
   date="May 8, 2026"
   tags={["blog"]}
   canonicalPath="/blog/agent-communication-security-best-practices"
   bannerImage="/blog/banners/agent-communication-security-best-practices.jpg"
+  faqItems={[
+    {question: "What is the most effective way to prevent replay attacks in agent communication?", answer: "The best approach is to combine nonces and timestamps with digital signatures, ensuring each message carries a unique, time-bounded proof that cannot be reused."},
+    {question: "How does Messaging Layer Security (MLS) help secure group communication?", answer: "MLS provides confidentiality, integrity, authentication, forward secrecy, and post-compromise security, making it the strongest available standard for multi-agent group messaging."},
+    {question: "Why is authentication important between AI agents?", answer: "Agent identity risks including spoofing and MitM attacks are among the top threats in decentralized systems. Strong authentication ensures every message comes from a verified source."},
+    {question: "Can encrypted channels fully prevent sensitive data leakage between agents?", answer: "No. Models can leak sensitive information through message content itself, even on fully encrypted channels. Protocol security and model behavior auditing must be implemented independently."},
+    {question: "What protocols provide both confidentiality and forward secrecy for agent messaging?", answer: "MLS is specifically designed for confidential, authenticated, and forward-secret group communication, making it the recommended choice for production multi-agent environments."}
+  ]}
 >
   <Fragment set:html={bodyContent} />
 </BlogLayout>
