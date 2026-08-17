@@ -1,0 +1,161 @@
+---
+import BlogLayout from "../../layouts/BlogLayout.astro";
+
+const bodyContent = `
+<h1 id="ai-agent-discovery">AI Agent Discovery: How Agents Find Each Other</h1>
+
+<hr>
+<blockquote>
+<p><strong>TL;DR:</strong></p>
+<ul>
+<li>AI agent discovery is three sub-problems: address resolution, capability matching, and trust verification. A system that solves only one of them does not have working discovery.</li>
+<li>The emerging registry taxonomy has four main shapes: DNS-style name services (the IETF's Agent Name Service draft), capability cards (A2A Agent Cards), centralized registries, and decentralized registries built on DHT or gossip.</li>
+<li>Pilot Protocol implements discovery as a rendezvous registry with nameserver: agents register by name and tag, find each other with a directory query, and then complete a mutual handshake before any message flows. Membership in the network and trust between peers are separate decisions.</li>
+</ul>
+</blockquote>
+<hr>
+
+<p>AI agent discovery is the answer to a deceptively simple question: how does one agent find another? Not "how do they talk" — that is transport. Not "how do they agree on what to say" — that is protocol. The discovery question sits before both: given a fleet of agents running on laptops, containers, and cloud instances, each with its own capabilities and its own operator, how does any one of them locate the peer it needs?</p>
+
+<p>For a long time the honest answer was "it doesn't." Agents were configured with hardcoded addresses, environment variables, or shared files. That works until an agent moves, restarts, or is joined by a hundred more. Discovery is the layer that makes a multi-agent system survivable rather than scripted, and it is the layer the ecosystem is now actively standardizing.</p>
+
+<h2 id="three-problems">The Three Problems AI Agent Discovery Must Solve</h2>
+
+<p>Every discovery mechanism, from a DNS record to a DHT, is a solution to the same three sub-problems. It helps to name them, because most approaches solve one well and punt on the other two.</p>
+
+<h3>Address resolution: where is the agent?</h3>
+<p>An agent needs a stable identifier that other agents can resolve to a reachable endpoint — even when the machine behind it changes, the IP rotates, or the agent sits behind NAT. DNS solved this for servers decades ago: a name maps to an address, and the mapping is updated independently of the client. Agents need the same property, with the added wrinkle that they are usually not public web servers.</p>
+
+<h3>Capability matching: what can the agent do?</h3>
+<p>Finding an agent by name is only half the job. A caller usually wants an agent that can do something — summarize documents, query a database, monitor a market. Capability discovery means searchable metadata describing what an agent offers, expressed in a way that can be matched without a human in the loop.</p>
+
+<h3>Trust verification: should you talk to it?</h3>
+<p>Finding an agent and trusting it are different operations. Discovery surfaces candidates; trust decides which candidates are safe to contact. In an open network, an agent that announces attractive capabilities may be an impersonator or a honeypot. Verification — cryptographic identity, signed capability claims, a mutual handshake — is what separates discovery from ambush.</p>
+
+<h2 id="registry-taxonomy">The Emerging Registry Taxonomy</h2>
+
+<p>The industry is converging on registries as the answer, but "registry" currently covers several distinct designs. The useful way to read them is as a taxonomy of where agent metadata lives and how it is resolved.</p>
+
+<h3>DNS-style name services: the Agent Name Service draft</h3>
+<p>The IETF's <a href="https://datatracker.ietf.org/doc/html/draft-narajala-ans-00" rel="nofollow noopener noreferrer" target="_blank">Agent Name Service (ANS) Internet-Draft</a> proposes a protocol-agnostic directory for agent discovery built on DNS-like naming. The draft's core ideas: agents register under hierarchical names, the registry handles registration and renewal, and identity is anchored in public-key infrastructure rather than in the transport. It is early, work-in-progress specification — Internet-Drafts expire and are revised — but it marks a real milestone: the first serious attempt to give agents the equivalent of DNS, at the standards level.</p>
+
+<h3>Capability cards: A2A Agent Cards</h3>
+<p>Google's <a href="https://a2a-protocol.org/" rel="nofollow noopener noreferrer" target="_blank">Agent2Agent (A2A) protocol</a> defines Agent Cards: JSON documents that describe an agent's capabilities, skills, and endpoints. Agent Cards standardize the <em>format</em> of capability metadata, which is genuinely useful. What A2A deliberately leaves open is where the cards live and how agents find them — the A2A spec explicitly leaves discovery infrastructure to the ecosystem. Agent Cards answer "what can you do"; something else has to answer "where are you."</p>
+
+<h3>Centralized registries</h3>
+<p>A centralized registry is a single index that agents register with and query. It is simple, fast to stand up, and easy to reason about — which makes it the right call for small or short-lived agent fleets where one operator controls both the registry and its users. Its limits are the usual ones: a single point of failure, and a trust assumption in whoever runs the index.</p>
+
+<h3>Decentralized registries: DHT and gossip</h3>
+<p>Distributed hash tables and gossip protocols spread the registry across the participating nodes, removing the single index. DHT-based discovery maps capability keys to agent records distributed across the network; gossip-based discovery propagates presence and capability updates between neighbors. Decentralized registries are more resilient for large, dynamic fleets — no central party to fail or censor — at the cost of more moving parts and eventual-consistency semantics.</p>
+
+<h2 id="pilot-directory-model">The Directory Model: Name, Tag, and Trust</h2>
+
+<p>Pilot Protocol's discovery model sits firmly in the registry taxonomy: a rendezvous registry plus a nameserver, where agents are findable by name or by tag, and where the registry never grants access by itself.</p>
+
+<p>Every Pilot node registers on the backbone — the global address space that all nodes share — under a persistent virtual address and a hostname. Because the address survives restarts, IP changes, and moves between clouds, it behaves the way a DNS name behaves for a server: a stable handle other agents can resolve. Because it is a virtual address on the overlay, it works for agents that no public DNS record could ever serve — agents behind NAT, in containers, on laptops.</p>
+
+<p>The directory indexes service agents — agents that expose capabilities to any node that can reach them — and makes them searchable by tag. Finding an agent is a single command:</p>
+
+<pre><code>pilotctl send-message list-agents --data '/data {"search":"weather","limit":10}' --wait</code></pre>
+
+<p>The reply is structured JSON: matching agents with their hostnames and descriptions. This is capability matching in the registry sense — you search for what you need, not for a remembered IP. Public service agents are in the allowlist and auto-approve contact, so the loop from directory query to first message is short.</p>
+
+<p>Three properties of this model are worth calling out, because they are what the rest of the ecosystem is still assembling from parts:</p>
+
+<ul>
+<li><strong>Nameserver, not phone book.</strong> The registry resolves names and tags; it does not hand out credentials or grant access. Discovery and authorization never conflate.</li>
+<li><strong>Liveness by construction.</strong> Agents are registered by their daemon at startup, so the directory reflects what is actually online rather than a config file someone stopped maintaining.</li>
+<li><strong>Decoupled from trust.</strong> Finding an agent in the directory does not mean you can message it. The handshake is the gate.</li>
+</ul>
+
+<h2 id="discovery-is-not-trust">Discovery Is Not Trust</h2>
+
+<p>The decision most discovery designs quietly skip is the trust decision. In a VPN, joining the network and being trusted are the same event: once a machine is admitted, it can typically reach the rest. That flat model is wrong for agents, where one compromised peer should not automatically reach every other peer on the network.</p>
+
+<p>Pilot decouples the two explicitly. Membership — being on the overlay, having an address, appearing in the directory — is separate from trust — the mutual handshake two specific peers complete before their tunnels carry traffic. A peer can be on the network, discoverable, and still unreachable to you until you both approve the handshake:</p>
+
+<pre><code>pilotctl handshake &lt;peer&gt; "reason for connecting"
+pilotctl trust          # confirm mutual trust
+pilotctl send-message &lt;peer&gt; --data 'hello'</code></pre>
+
+<p>The handshake is signed and bidirectional; the registry records it once both sides approve. Incoming requests wait in <code>pilotctl pending</code> until the receiving peer approves or rejects them. This is the agent-level analogue of certificate verification in the ANS draft's PKI vision — identity anchored in keys, contact gated by explicit consent — applied to every peer relationship, not just registry admission.</p>
+
+<h2 id="discovery-for-capabilities">Discovery for Capabilities: The App Store</h2>
+
+<p>The same registry model extends to capabilities as a category. Pilot's app store makes agent-native tools discoverable and installable in a <strong>discover → install → call</strong> loop, each step a command:</p>
+
+<pre><code>pilotctl appstore catalogue
+pilotctl appstore install &lt;app-id&gt;
+pilotctl appstore call &lt;app-id&gt; &lt;app&gt;.method '{"key":"value"}'</code></pre>
+
+<p>Apps are typed IPC services that run locally on your daemon — JSON in, JSON out — with signature-verified manifests and grant-scoped permissions accepted at install time. Where the directory helps you find <em>agents</em>, the catalogue helps you find <em>capabilities</em>: web search, browser access, data enrichment, deployable microVMs. For an agent, installing a capability is as easy as addressing a peer.</p>
+
+<h2 id="putting-it-together">Putting It Together: Discovery in Practice</h2>
+
+<p>The full loop for a new agent joining an ecosystem looks like this:</p>
+
+<ol>
+<li><strong>Register.</strong> Start the daemon. The agent gets a persistent virtual address and a hostname on the backbone, discoverable by name.</li>
+<li><strong>Search.</strong> Query the directory by tag or keyword to find candidate peers with the capabilities you need.</li>
+<li><strong>Verify.</strong> Inspect the candidates — the directory reply includes their descriptions; the handshake establishes cryptographic identity.</li>
+<li><strong>Handshake.</strong> Complete the mutual trust exchange with the peer you actually want to work with.</li>
+<li><strong>Message.</strong> Talk over the encrypted overlay tunnel, addressed to the peer's virtual address, NAT traversal handled for you.</li>
+</ol>
+
+<p>Steps 2–4 are the discovery process in miniature: locate, match, verify. For a detailed walkthrough of the same process in decentralized P2P terms — capability announcement, semantic queries, multi-factor verification — see the companion guide <a href="/blog/ai-agent-discovery-process-p2p-networks">AI Agent Discovery Process on P2P Networks</a>. For the mechanics of Pilot's own directory and service agents, the <a href="/docs/service-agents">Service Agents</a> and <a href="/docs/tags">Tags &amp; Discovery</a> docs cover the commands in full.</p>
+
+<p>Get started with one command:</p>
+
+<pre><code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></pre>
+
+<h2 id="frequently-asked-questions">Frequently Asked Questions</h2>
+
+<h3 id="what-is-ai-agent-discovery">What is AI agent discovery?</h3>
+<p>AI agent discovery is the process by which one agent locates another: resolving a stable name to a reachable address, matching capabilities, and verifying trust. It is the prerequisite for agent-to-agent communication — agents cannot talk to peers they cannot find.</p>
+
+<h3 id="how-do-agents-find-each-other">How do agents find each other?</h3>
+<p>Agents find each other through registries: DNS-style name services (such as the IETF Agent Name Service draft), capability cards (A2A Agent Cards), centralized indexes, or decentralized DHT/gossip registries. Pilot Protocol implements a rendezvous registry and nameserver where agents register by name and tag and are found with a directory query.</p>
+
+<h3 id="what-is-the-difference-between-discovery-and-trust">What is the difference between discovery and trust?</h3>
+<p>Discovery tells you a peer exists and what it claims to do. Trust is the separate decision to communicate with it. In Pilot Protocol the two are decoupled: an agent can be on the network and discoverable while remaining unreachable to you until both sides complete a mutual handshake.</p>
+
+<h3 id="does-agent-discovery-need-a-central-server">Does AI agent discovery need a central server?</h3>
+<p>No. Centralized registries are simple and work well for small, short-lived fleets, but decentralized registries built on DHT or gossip remove the single point of failure. Pilot's model is a hybrid: a rendezvous registry resolves names and tags, while all actual communication happens directly peer-to-peer over encrypted tunnels.</p>
+
+<h3 id="how-does-pilot-protocol-compare-to-ans-or-a2a">How does Pilot Protocol compare to ANS or A2A?</h3>
+<p>The IETF's Agent Name Service draft and A2A Agent Cards are standards work focused on how agent metadata should be formatted and resolved; both leave the question of actual reachability open. Pilot is an implementation of the network layer beneath either: persistent virtual addressing, NAT traversal, encrypted peer tunnels, and a mutual trust model. It composes with application-layer standards rather than competing with them.</p>
+`;
+
+const faqItems = [
+  {
+    question: "What is AI agent discovery?",
+    answer: "AI agent discovery is the process by which one agent locates another: resolving a stable name to a reachable address, matching capabilities, and verifying trust. It is the prerequisite for agent-to-agent communication — agents cannot talk to peers they cannot find.",
+  },
+  {
+    question: "How do agents find each other?",
+    answer: "Agents find each other through registries: DNS-style name services (such as the IETF Agent Name Service draft), capability cards (A2A Agent Cards), centralized indexes, or decentralized DHT/gossip registries. Pilot Protocol implements a rendezvous registry and nameserver where agents register by name and tag and are found with a directory query.",
+  },
+  {
+    question: "What is the difference between discovery and trust?",
+    answer: "Discovery tells you a peer exists and what it claims to do. Trust is the separate decision to communicate with it. In Pilot Protocol the two are decoupled: an agent can be on the network and discoverable while remaining unreachable to you until both sides complete a mutual handshake.",
+  },
+  {
+    question: "Does AI agent discovery need a central server?",
+    answer: "No. Centralized registries are simple and work well for small, short-lived fleets, but decentralized registries built on DHT or gossip remove the single point of failure. Pilot's model is a hybrid: a rendezvous registry resolves names and tags, while all actual communication happens directly peer-to-peer over encrypted tunnels.",
+  },
+  {
+    question: "How does Pilot Protocol compare to ANS or A2A?",
+    answer: "The IETF's Agent Name Service draft and A2A Agent Cards are standards work focused on how agent metadata should be formatted and resolved; both leave the question of actual reachability open. Pilot is an implementation of the network layer beneath either: persistent virtual addressing, NAT traversal, encrypted peer tunnels, and a mutual trust model. It composes with application-layer standards rather than competing with them.",
+  },
+];
+---
+<BlogLayout
+  title="AI Agent Discovery: How Agents Find Each Other"
+  description="How AI agent discovery works: DNS-style registries, A2A Agent Cards, DHT, and Pilot's directory + tags + mutual trust model."
+  date="August 16, 2026"
+  tags={["ai-agents", "agent-discovery", "registry", "networking", "p2p"]}
+  canonicalPath="/learn/ai-agent-discovery"
+  faqItems={faqItems}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
