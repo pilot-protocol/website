@@ -7,6 +7,10 @@ const bodyContent = `<p>AI agents need their own network stack because HTTP was 
 
   <p>So the first agent connectivity best practice is this: <strong>treat the network as a first-class part of your agent architecture, not as plumbing you can bolt on later.</strong> We are repeating the mistake the internet made in the 1990s, when every application built its own networking layer because TCP/IP was not yet universal. The agent ecosystem needs its own TCP/IP moment: a shared network layer that handles addressing, reachability, encryption, and trust, so that application-layer protocols can focus on semantics instead of plumbing.</p>
 
+  <div class="callout">
+    <p><strong>How are network agent tokens different?</strong> Traditional network tokens -- API keys, JWTs, and OAuth bearer tokens -- are credentials issued by a central authority: they expire, can leak, and identify an account rather than a specific agent. Pilot Protocol agents do not use tokens: each agent generates its own permanent Ed25519 key pair during <code>pilotctl init</code>, keeps the private key on the node, and proves identity by signing handshake messages that peers verify against its registered public key. No shared secrets, no central issuer, nothing to rotate. See <a href="/learn/how-are-network-agent-tokens-different">how network agent tokens are different</a> for the full comparison.</p>
+  </div>
+
   <figure class="video-embed">
     <div class="video-embed__frame">
       <iframe
@@ -189,10 +193,10 @@ const bodyContent = `<p>AI agents need their own network stack because HTTP was 
   </div>`;
 ---
 <BlogLayout
-  title="Agent Connectivity Best Practices: Why AI Agents Need a Network Stack"
-  description="Agent connectivity best practices for reliable multi-agent systems: durable addresses, NAT traversal, encrypted tunnels, and per-peer trust."
+  title="Agent Connectivity Best Practices: AI Agent Network Stack"
+  description="How are network agent tokens different? Agent connectivity best practices: durable addresses, NAT traversal, encrypted tunnels, and per-peer trust."
   date="February 17, 2026"
-  dateModified="August 15, 2026"
+  dateModified="August 17, 2026"
   tags={["analysis", "opinion", "ai-agents", "networking", "best-practices"]}
   canonicalPath="/blog/why-ai-agents-need-network-stack"
   bannerImage="/blog/banners/why-ai-agents-need-network-stack.webp"
@@ -202,7 +206,11 @@ const bodyContent = `<p>AI agents need their own network stack because HTTP was 
     { question: "Why can't AI agents just use HTTP for communication?", answer: "HTTP assumes publicly reachable servers. But NAT is the default condition of the real internet, making agents behind home routers or corporate firewalls invisible to HTTP-based protocols like A2A and MCP. HTTP also requires one TCP+TLS connection per agent pair, which grows quadratically as the mesh grows. And HTTP's request-response model forces agents to re-transmit context on every call, creating a token tax that can rival the cost of the task itself." },
     { question: "How does NAT affect AI agent communication?", answer: "NAT (Network Address Translation) makes agents behind firewalls and routers invisible to incoming connections. An agent behind a home router cannot receive A2A task delegations or MCP tool requests because there is no publicly reachable HTTP endpoint. Standard workarounds like reverse proxies, ngrok, or Cloudflare Tunnels add complexity and cost. A network stack with built-in NAT traversal solves this automatically through STUN, hole-punching, and relay fallback." },
     { question: "What problems does a network stack solve for multi-agent systems?", answer: "A network stack solves five problems simultaneously: <strong>permanent addresses</strong> that survive IP changes, <strong>NAT traversal</strong> for agents behind firewalls, <strong>tunnel encryption</strong> without certificate management, <strong>connectivity controls</strong> based on peer trust or network membership, and <strong>port-based services</strong> that replace custom message-passing code with well-known service ports." },
-    { question: "How do permanent addresses help AI agents?", answer: "Every agent gets a 48-bit virtual address that never changes — even when the agent moves between machines, changes cloud providers, or reconnects after a restart. Other agents always reach it at the same address. This makes long-running multi-agent systems practical because agents can cache addresses, maintain persistent connections, and route messages without re-discovery on every interaction." }
+    { question: "How do permanent addresses help AI agents?", answer: "Every agent gets a 48-bit virtual address that never changes — even when the agent moves between machines, changes cloud providers, or reconnects after a restart. Other agents always reach it at the same address. This makes long-running multi-agent systems practical because agents can cache addresses, maintain persistent connections, and route messages without re-discovery on every interaction." },
+    { question: "How are network agent tokens different?", answer: "Traditional network tokens — API keys, JWTs, and OAuth bearer tokens — are credentials issued by a central authority: they expire, can leak, and identify an account rather than a specific agent. Pilot Protocol agents do not use tokens: each agent generates its own permanent Ed25519 key pair during <code>pilotctl init</code>, keeps the private key on the node, and proves identity by signing handshake messages that peers verify against its registered public key. No shared secrets, no central issuer, nothing to rotate. See <a href=\"/learn/how-are-network-agent-tokens-different\">how network agent tokens are different</a> for the full comparison." },
+    { question: "What does a production AI transport layer need to support?", answer: "A production AI transport layer needs to support permanent addressing that survives restarts and migrations, NAT traversal so agents behind firewalls are reachable, encrypted tunnels without certificate management, per-peer trust that can be revoked, and stateful connections so agents send deltas instead of re-transmitting full context on every call. Pilot Protocol implements all five in its core." },
+    { question: "When should I move beyond HTTP streaming for my AI agents?", answer: "Move beyond HTTP streaming when your agents are behind NAT and cannot receive inbound connections, when request-response re-transmission of full context inflates token spend, or when you need bidirectional, stateful, long-lived sessions for realtime coordination. A network stack with NAT traversal and stateful tunnels removes the need for public HTTP endpoints entirely." },
+    { question: "What is the difference between persistent and non-persistent agent networking?", answer: "Non-persistent networking (HTTP request-response) forces agents to re-establish connections and re-transmit context on every call. Persistent networking keeps a stateful connection open between peers — the transport maintains sequence numbers, acknowledgment state, and flow control, so agents send small deltas instead of re-serializing the entire context. Persistent connections also survive NAT mapping changes and agent restarts." }
   ]}
 >
   <Fragment set:html={bodyContent} />
