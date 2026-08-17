@@ -1,0 +1,126 @@
+---
+import BlogLayout from "../../layouts/BlogLayout.astro";
+
+const bodyContent = `
+<p><strong>Pilot Protocol has an IETF Internet-Draft on file.</strong> Two documents — a problem statement and a full protocol specification — are live on the IETF Datatracker, the formal record for internet protocol proposals. Together they make a claim no other draft currently makes: that autonomous agents need network-layer infrastructure, and that the gap can be specified in standards form. Here is what each document covers and what filing actually means.</p>
+
+<p><span class="tag accent">draft-teodor-pilot-protocol-01</span></p>
+
+<h2 id="what-we-submitted">What We Submitted</h2>
+
+<p>Two Internet-Drafts are live on the IETF Datatracker:</p>
+
+<ul>
+  <li><strong><a href="https://www.ietf.org/archive/id/draft-teodor-pilot-problem-statement-01.html">Problem Statement</a></strong> — why agents need network-layer infrastructure (intended status: Informational)</li>
+  <li><strong><a href="https://www.ietf.org/archive/id/draft-teodor-pilot-protocol-01.html">Protocol Specification</a></strong> — the full wire spec in IETF format (intended status: Experimental)</li>
+</ul>
+
+<p>This is an individual submission on the independent stream. It does not (yet) carry IETF consensus — it is a formal public statement that this problem exists and here is one solution.</p>
+
+<h2 id="why-now">Why This Draft Exists: the Agent-Standards Moment</h2>
+
+<p>Agent protocols are having their standards moment. A2A (Agent2Agent) reached version 1.0 and moved into the Linux Foundation, which formed the Agentic AI Foundation to house open agent-interoperability projects. New Internet-Drafts keep arriving at the IETF: a draft for an <a href="https://datatracker.ietf.org/doc/draft-narajala-courtney-ansv2/">Agent Name Service</a> proposes domain-anchored identity for agents, and drafts such as <a href="https://datatracker.ietf.org/doc/draft-rosenberg-aiproto-framework/">aiproto-framework</a>, <a href="https://datatracker.ietf.org/doc/draft-zyyhl-agent-networks-framework/">agent-networks-framework</a>, and <a href="https://datatracker.ietf.org/doc/draft-narvaneni-agent-uri/">agent-uri</a> keep the conversation moving.</p>
+
+<p>Nearly all of this work operates at the application layer. It defines what agents say to tools, what agents say to each other, and how agents are named and found — over HTTP. What no draft addresses is the layer underneath: network-layer identity, addressing, and transport for agents. That is the space Pilot Protocol occupies.</p>
+
+<p>To be clear, the application-layer work is doing its job. A2A gives agents a common task lifecycle and Agent Cards; MCP gives models a uniform tool interface; the naming and directory drafts attack discoverability. Those protocols simply assume the endpoints exist. The network layer Pilot specifies is what makes endpoints exist for agents that have no public address — which is most of them.</p>
+
+<p>The positioning is simple: A2A defines <em>what</em> agents say to each other. Pilot defines <em>how they reach each other</em>. See how this plays out concretely in <a href="/blog/a2a-agent-cards-over-pilot-tunnels">running A2A Agent Cards over Pilot tunnels</a> and in our <a href="/blog/pilot-vs-tcp-grpc-nats-comparison">comparison of Pilot against TCP, gRPC, and NATS</a>.</p>
+
+<h2 id="problem-statement">The Problem Statement</h2>
+
+<p>Modeled after <a href="https://www.rfc-editor.org/rfc/rfc7364.html">RFC 7364</a> — the NVO3 problem statement that led to VXLAN and GENEVE — our problem statement identifies the gaps:</p>
+
+<ol>
+  <li><strong>Agent identity is coupled to infrastructure.</strong> Agents are identified by URLs and DNS names — tied to servers, not to the agent itself. When an agent migrates, its identity breaks.</li>
+  <li><strong>No P2P communication without web infrastructure.</strong> MCP and A2A require HTTP endpoints. Agents behind NAT and firewalls simply cannot participate.</li>
+  <li><strong>No agent-native trust model.</strong> TLS trusts CAs. SSH trusts on first use (with a human verifying). Neither fits autonomous entities that need bilateral consent.</li>
+  <li><strong>No lightweight transport for agent streams.</strong> TCP and QUIC are designed for web traffic patterns. Agents need long-lived streams, port-based service multiplexing, and low connection overhead.</li>
+  <li><strong>Privacy gaps in discovery.</strong> A2A Agent Cards are designed to be publicly discoverable. For agents, the default should be invisible.</li>
+</ol>
+
+<p>The document defines a set of formal requirements spanning virtual addressing, NAT traversal, a bilateral trust model, lightweight encrypted transport, privacy-by-default discovery, multi-tenant isolation, and audit and compliance — and it analyzes the gaps in existing approaches: MCP, A2A, WebRTC, QUIC, libp2p, WireGuard, and LISP.</p>
+
+<p>The requirements are written to be implementation-neutral: an agent needs a stable identity that survives migration, reachability without public endpoints, consent-based trust between peers, a transport that suits long-lived agent streams, discovery that defaults to private, isolation between tenants on shared infrastructure, and audit trails where compliance demands them. Taken together, they read as an outline for the protocol specification that follows.</p>
+
+<h2 id="protocol-spec">The Protocol Specification</h2>
+
+<p>The spec converts our <a href="https://www.ietf.org/archive/id/draft-teodor-pilot-protocol-01.html">wire specification</a> and <a href="/research/WHITEPAPER.pdf">whitepaper</a> into IETF format. It covers:</p>
+
+<ul>
+  <li><strong>Addressing</strong> — virtual addresses with network and node parts, text representation, special addresses</li>
+  <li><strong>Ports</strong> — port-based service multiplexing on a single address</li>
+  <li><strong>Packet format</strong> — fixed header, field definitions, protocol types, flag definitions</li>
+  <li><strong>Tunnel encapsulation</strong> — four frame types (PILT plaintext, PILS encrypted, PILK key exchange, PILA authenticated key exchange)</li>
+  <li><strong>Session layer</strong> — connection state machine, three-way handshake, reliable delivery with sliding window, SACK, congestion control, flow control</li>
+  <li><strong>NAT traversal</strong> — STUN-based discovery, hole punching, transparent relay fallback</li>
+  <li><strong>Security</strong> — Ed25519 identities, X25519 + AES-256-GCM tunnel encryption, authenticated key exchange, bilateral trust handshake, privacy-by-default discovery</li>
+  <li><strong>Nonce management</strong> — random prefix + monotonic counter construction, session lifecycle, counter exhaustion analysis</li>
+  <li><strong>Version negotiation</strong> — SYN version handshake, unknown version handling, future extensibility</li>
+  <li><strong>Path MTU considerations</strong> — encapsulation overhead calculation, effective payload analysis, MSS recommendations</li>
+  <li><strong>Built-in services, gateway, and IPC</strong> — native services on well-known ports, an HTTP gateway bridge, and the daemon IPC protocol</li>
+  <li><strong>IANA considerations</strong> — requested registries for tunnel magic values, protocol types, and well-known ports</li>
+  <li><strong>Implementation status</strong> — a Go reference implementation with zero external dependencies, plus Python and Node.js SDKs</li>
+</ul>
+
+<p>In prose, the design is straightforward. Each agent holds a permanent virtual address and exposes services on ports, like a machine on a private network. Two agents establish a session with a three-way handshake, then exchange encapsulated frames — plaintext frames for control, encrypted frames for payload, with key-exchange frames to negotiate and rotate session keys. When both sides sit behind NAT, STUN discovery and hole punching open a direct path, and a relay steps in when a direct path is impossible. Trust is established by an explicit bilateral handshake: both sides approve, and membership stays decoupled from trust, unlike a VPN where joining the network means trusting everyone on it.</p>
+
+<p>For the mechanics behind the transport, see our <a href="/blog/nat-traversal-ai-agents-deep-dive">NAT traversal deep dive</a> and the <a href="/blog/how-pilot-protocol-works">full architecture walkthrough</a>.</p>
+
+<h2 id="what-this-means">What This Means</h2>
+
+<p>Filing an Internet-Draft does not make Pilot an IETF standard. The path from I-D to RFC is long — it requires external reviews, IESG conflict review, and typically multiple revisions over months to years. Drafts expire and must be revised to stay live; the point of filing is to enter the conversation, not to claim a status.</p>
+
+<p>What it does:</p>
+
+<ul>
+  <li><strong>Public record.</strong> The problem and the solution are now on the IETF Datatracker, with formal document names that can be cited by other drafts and papers.</li>
+  <li><strong>Visibility.</strong> Anyone working on AI agent protocols at the IETF will find these documents. The problem statement frames why a network-layer solution is needed — which no other draft has articulated.</li>
+  <li><strong>Foundation.</strong> If the conversation gains traction, the drafts could lead to a BoF (Birds of a Feather) session at an IETF meeting, potentially a working group, and eventually an RFC.</li>
+</ul>
+
+<h2 id="review">Review and Feedback</h2>
+
+<p>Both drafts are in active IETF review cycles. Technical review is welcome — particularly on the security considerations, the relationship to QUIC, and whether the problem statement adequately motivates the need for a network-layer solution. The working source of truth for the protocol remains <a href="https://github.com/pilot-protocol">github.com/pilot-protocol</a>.</p>
+
+<div class="cta">
+  <h3>Read the Drafts</h3>
+  <p>Both Internet-Drafts are live on the IETF archive. The protocol spec is the definitive reference for Pilot Protocol in standards-track format.</p>
+  <a href="https://www.ietf.org/archive/id/draft-teodor-pilot-protocol-01.html">Protocol Specification</a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://www.ietf.org/archive/id/draft-teodor-pilot-problem-statement-01.html">Problem Statement</a>
+</div>
+
+<p>Running an agent? The one-command install is <code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code>, then <code>pilotctl appstore catalogue</code> to see what agent apps are available.</p>`;
+---
+<BlogLayout
+  title="IETF Internet-Draft: Pilot Protocol's Agent Network Layer Spec"
+  description="No IETF draft covers the agent network layer. Pilot Protocol filed two — a problem statement and full protocol spec — live on the Datatracker."
+  date="August 17, 2026"
+  tags={["ietf", "standards", "internet-draft"]}
+  canonicalPath="/blog/ietf-internet-draft-pilot-protocol"
+  faqItems={[
+    {
+      question: "What is an IETF Internet-Draft?",
+      answer: "An Internet-Draft (I-D) is a working document submitted to the Internet Engineering Task Force for review and discussion. It is the standard mechanism for proposing new internet protocols and a prerequisite for eventual publication as an RFC (Request for Comments)."
+    },
+    {
+      question: "Does an IETF Internet-Draft make Pilot Protocol a standard?",
+      answer: "No. Filing an Internet-Draft does not make Pilot an IETF standard. The path from I-D to RFC is long — it requires external reviews, IESG conflict review, and typically multiple revisions over months to years."
+    },
+    {
+      question: "What do the two Pilot Protocol drafts cover?",
+      answer: "The Problem Statement (Informational) explains why agents need network-layer infrastructure, modeled after RFC 7364. The Protocol Specification (Experimental) is the full wire spec — addressing, ports, packet format, tunnel encapsulation, session layer, NAT traversal, and security — in IETF format."
+    },
+    {
+      question: "How does Pilot's draft differ from other IETF agent protocol drafts?",
+      answer: "The agent-protocol drafts arriving at the IETF operate at the application layer over HTTP — they define what agents say to tools and to each other, and how agents are named and found. Pilot Protocol's drafts address the network and transport layer: virtual addresses, encrypted UDP tunnels, NAT traversal, and a bilateral trust model, below where MCP and A2A operate."
+    },
+    {
+      question: "Where can I read the Pilot Protocol Internet-Drafts?",
+      answer: "Both are live on the IETF archive: the Protocol Specification at draft-teodor-pilot-protocol-01 and the Problem Statement at draft-teodor-pilot-problem-statement-01."
+    }
+  ]}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
