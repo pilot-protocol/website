@@ -1,0 +1,201 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `
+<p>Email is the last un-automated step in most agent workflows. An agent can spin up a VM, write code, and deploy it, and still get stuck on a signup form that sends a one-time code to an inbox it doesn't have. What an autonomous agent needs is <strong>dead simple email</strong>: a real, deliverable inbox it can provision, read, and send from entirely on its own — no dashboard, no SMTP server, no human in the loop. Dead Simple Email, an app on the Pilot Protocol app store, is built for exactly that: one call provisions an account, an API key, and a live inbox, and the agent goes from zero to sending mail in the same session.</p>
+
+<p>This page walks through why email is a wall for autonomous agents, what Dead Simple Email provides, and how to wire it into an agent loop — including the method agents reach for most: reading their own verification codes.</p>
+
+<section>
+<h2 id="why-email-is-a-wall">Why Email Is a Wall for Autonomous Agents</h2>
+
+<p>Modern software assumes email is a human medium. Every third-party service your agent might want to join — an API provider, a marketplace, a SaaS dashboard, a domain registrar — verifies accounts by emailing a one-time code or magic link. The signup flow is designed for a person sitting at a browser.</p>
+
+<p>An agent has no browser session to check. Give an agent a throwaway mailbox from a testing service and it hits the next wall: deliverability. Providers silently drop mail from known test domains, so the code never arrives, or arrives hours later, or lands in spam. Stand up a real SMTP stack and you own DNS, SPF, DKIM, bounce handling, and rate limits — infrastructure that has nothing to do with the task the agent was built for.</p>
+
+<p>The result is a signature failure mode: an agent that can do everything else in its workflow gets to the "the provider emails you a code" step and stops. That single step turns an autonomous pipeline into one that needs a human.</p>
+</section>
+
+<section>
+<h2 id="dead-simple-email">Dead Simple Email: An Inbox an Agent Can Provision Itself</h2>
+
+<p>Dead Simple Email is an installable app on the <a href="/app-store">Pilot Protocol app store</a>. It gives an agent a real, deliverable email identity — not a sandbox — and the agent can get one entirely on its own. A single call to <code>deadsimple.signup</code> returns an account, an API key, and a live inbox. No dashboard, no verification email, no human in the loop.</p>
+
+<p>Underneath is real sending infrastructure: DKIM-signed egress through a dedicated MTA, bounce and complaint handling, suppression lists, and optional open and click tracking. Inbound mail can be pushed to HMAC-SHA256 signed webhooks that retry on exponential backoff. This is production mail, not a test harness — which is exactly what an agent needs when the address it sends from has to survive a provider's deliverability checks.</p>
+
+<p>The app is published by Dead Simple Email, a third-party vendor on the store; the app's page under <code>/apps/deadsimple</code> has the full details.</p>
+</section>
+
+<section>
+<h2 id="discover-install-call">The Discover → Install → Call Loop</h2>
+
+<p>Like every app on the store, Dead Simple Email follows the same loop: <strong>discover → install → call</strong>. Install Pilot Protocol first if you haven't:</p>
+
+<pre><code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></pre>
+
+<p>Then the app:</p>
+
+<pre><code># Browse the catalogue
+pilotctl appstore catalogue
+
+# Inspect before installing
+pilotctl appstore view io.pilot.deadsimple
+
+# Install — the daemon spawns it automatically
+pilotctl appstore install io.pilot.deadsimple
+
+# Confirm it's ready
+pilotctl appstore list
+
+# Discover its methods
+pilotctl appstore call io.pilot.deadsimple deadsimple.help '{}'</code></pre>
+
+<p>The <code>deadsimple.help</code> call returns every method with its parameters and expected latency class. Every app on the store exposes the same <code>&lt;app&gt;.help</code> convention, so the method surface is discoverable at runtime — no documentation archaeology.</p>
+</section>
+
+<section>
+<h2 id="signup">Signing Up in One Call</h2>
+
+<p>With the app installed, provisioning an identity is a single call. The account starts on a trial tier; it has a real inbox and real egress from the first message.</p>
+
+<pre><code>pilotctl appstore call io.pilot.deadsimple deadsimple.signup '{}'</code></pre>
+
+<pre><code>{
+  "account_id": "acct_...",
+  "api_key": "ds_...",
+  "inbox": {
+    "inbox_id": "inb_...",
+    "address": "agent-7f3a@inbox.deadsimple.email"
+  }
+}</code></pre>
+
+<p>Save the API key as the <code>DEADSIMPLE_API_KEY</code> secret — every other method authenticates with it. The call is idempotent per <code>Idempotency-Key</code>: if a connection drops and your agent retries, it gets the same account back rather than a second one. No state to reconcile, no duplicates to clean up.</p>
+</section>
+
+<section>
+<h2 id="verification-codes">Reading Verification Codes Without Parsing Email</h2>
+
+<p>The method agents reach for most is <code>deadsimple.get_verification_code</code>. It pulls the one-time code or magic link straight out of the newest inbound message, so an agent can sign itself up for a third-party service or clear a 2FA prompt without ever parsing an email body.</p>
+
+<p>Two filters make it reliable. Set <code>since</code> to a timestamp taken <em>before</em> you triggered the mail, and set <code>from_contains</code> to the sender's domain — a stale code from an earlier signup attempt is never returned. The call is non-blocking: it returns <code>found: false</code> if nothing has arrived yet, so the agent polls every few seconds for up to a minute after triggering the mail.</p>
+
+<pre><code># 1. Record the timestamp BEFORE triggering the signup
+# 2. Trigger the signup on the third-party service
+# 3. Poll until the code arrives
+pilotctl appstore call io.pilot.deadsimple deadsimple.get_verification_code '{
+  "since": "2026-08-18T10:00:00Z",
+  "from_contains": "acmecorp.com"
+}'
+
+# → { "found": true, "code": "483920", "message_id": "msg_..." }</code></pre>
+
+<p>This is what turns "the provider emails you a code" from a dead end into a step. The agent triggers the signup, polls for the code, and completes the flow — the same way a human would, minus the inbox tab.</p>
+</section>
+
+<section>
+<h2 id="send-reply-threads">Sending, Replying, and Following Threads</h2>
+
+<p>From there the app covers the full lifecycle of an email identity:</p>
+
+<ul>
+  <li><strong>Send.</strong> <code>deadsimple.send_email</code> sends plain text or HTML with cc/bcc, base64 attachments, and scheduled send, with optional open and click tracking. Egress is DKIM-signed through a dedicated MTA.</li>
+  <li><strong>Reply on-thread.</strong> <code>deadsimple.reply</code> and <code>deadsimple.reply_all</code> set threading headers automatically, so replies land in the same conversation — the agent never hand-builds <code>In-Reply-To</code>.</li>
+  <li><strong>Forward.</strong> <code>deadsimple.forward</code> forwards a message, with its attachments, to new recipients.</li>
+  <li><strong>Read.</strong> <code>deadsimple.get_message</code> returns full headers, plain-text and HTML bodies, and attachment metadata. <code>deadsimple.get_attachment</code> returns a time-limited signed download URL.</li>
+  <li><strong>Follow threads.</strong> <code>deadsimple.list_threads</code> and <code>deadsimple.get_thread</code> track ongoing exchanges instead of loose messages — the context an agent needs before replying.</li>
+  <li><strong>Push, don't poll.</strong> <code>deadsimple.create_webhook</code> registers an HMAC-SHA256 signed webhook for inbound mail, bounces, and complaints, with exponential-backoff retries, so long-running work does not have to poll in a loop.</li>
+</ul>
+</section>
+
+<section>
+<h2 id="recipe">A Recipe: An Agent That Signs Itself Up</h2>
+
+<p>Put together, here is a complete onboarding flow an agent can run unattended:</p>
+
+<ol>
+  <li>Install Pilot Protocol and the Dead Simple Email app.</li>
+  <li>Call <code>deadsimple.signup</code> to get an account, API key, and inbox.</li>
+  <li>Hit the third-party service's signup endpoint with the inbox address as the contact email.</li>
+  <li>Record the current timestamp, then poll <code>deadsimple.get_verification_code</code> with <code>since</code> and <code>from_contains</code> until the code arrives.</li>
+  <li>Submit the code and finish the signup. The agent now has an account on a service it joined on its own.</li>
+  <li>Send a confirmation or welcome email from the same inbox if the service expects one.</li>
+  <li>When the identity has served its purpose, delete it with <code>deadsimple.delete_inbox</code> so it stops counting against the quota.</li>
+</ol>
+
+<p>For production workloads, a human can lift the trial caps once: <code>deadsimple.claim</code> sends a code to an email address a human controls, and <code>deadsimple.claim_verify</code> confirms it. The account moves to the free plan while keeping the same API key, inboxes, and history — no migration, no re-provisioning.</p>
+</section>
+
+<section>
+<h2 id="many-identities">Managing Many Identities</h2>
+
+<p>Agents rarely need one inbox. A research agent might want a throwaway identity per vendor it evaluates; a supervisor agent might watch inboxes for a whole fleet of workers. Dead Simple Email supports both patterns: <code>deadsimple.create_inbox</code> provisions another real, deliverable inbox in one call — no SMTP setup, no DNS, no mailbox provisioning — and inboxes can be tagged and managed in bulk. <code>deadsimple.list_all_messages</code> lists messages across every inbox a key can see, so a supervisor agent can watch an entire workspace at once instead of iterating inboxes.</p>
+
+<p>Two details keep larger fleets sane. Pagination is cursor-based, so list calls page cleanly at any volume. And spam is excluded from <code>list_messages</code> unless <code>include_spam</code> is true — an agent reading its own signup codes is not a spam-filtering job.</p>
+</section>
+
+<section>
+<h2 id="quotas">When a 429 Is a Quota, Not a Failure</h2>
+
+<p>The one error agents hit on the trial tier is a 429 with the code <code>trial_send_limit_exceeded</code>. It is a quota signal, not a transient failure — blindly retrying makes it worse. The correct response is to claim the account (moving it to the free plan) and continue. That distinction matters for agent reliability: treating a quota as a retryable error turns a simple state change into an infinite loop.</p>
+</section>
+
+<section>
+<h2 id="agent-native">What Makes It Agent-Native</h2>
+
+<p>It is fair to ask why an agent would install this app rather than talk to SMTP directly or use an MCP email server. The difference is the distribution and runtime model. Every app on the Pilot app store runs locally on your daemon as a typed IPC service — JSON in, JSON out — with no browser, no REST plumbing, and no per-tool glue code. The manifest pins the app's sha256 and ed25519 signature, re-checked on every spawn, so you know what you're running. Permissions are grant-scoped, accepted at install time rather than ambient. The daemon auto-spawns and supervises the app process.</p>
+
+<p>MCP gives a single agent a standard way to reach tools it is configured to use; the app store is a distributed catalogue of signed, permission-scoped apps that any agent on the overlay can discover and install with one command — discoverable by the 243k+ agents on the network. Many teams use both: an MCP server for the tools already wired into a framework, and the app store for capabilities the agent should be able to pick up on its own. The <a href="/blog/ai-agent-app-store">app store explained</a> goes deeper into the model.</p>
+
+<p>If you maintain an email API or service, the same store is how you would distribute it to agents — see <a href="/blog/build-agent-app-turn-api-into-tool">how to turn an existing API into an agent app</a>.</p>
+</section>
+
+<section>
+<h2 id="get-started">Get Started</h2>
+
+<p>Install Pilot Protocol, then the app:</p>
+
+<pre><code>curl -fsSL https://pilotprotocol.network/install.sh | sh
+pilotctl appstore install io.pilot.deadsimple
+pilotctl appstore call io.pilot.deadsimple deadsimple.help '{}'</code></pre>
+
+<p>Browse the full catalogue with <code>pilotctl appstore catalogue</code>. The pattern you'll see repeated — discover, install, call — is the same for every capability on the store.</p>
+</section>
+`;
+
+const faqItems = [
+  {
+    question: "What is dead simple email for AI agents?",
+    answer: "Dead simple email for AI agents is an inbox an agent can provision, read, and send from entirely on its own — no dashboard, no SMTP server, and no human in the loop. Dead Simple Email is an app on the Pilot Protocol app store that provides exactly this: one call returns an account, an API key, and a live, deliverable inbox."
+  },
+  {
+    question: "Can an AI agent sign up for an email account by itself?",
+    answer: "Yes. Dead Simple Email's deadsimple.signup method provisions an account, API key, and live inbox in a single call, with no verification email and no human. The account starts on a trial tier; deadsimple.claim and deadsimple.claim_verify move it to the free plan using an email address a human controls."
+  },
+  {
+    question: "How does an agent read a verification code from email?",
+    answer: "With deadsimple.get_verification_code, which pulls the one-time code or magic link out of the newest inbound message without parsing the email body. Agents set the since timestamp before triggering a signup and from_contains to the sender's domain, so a stale code is never returned."
+  },
+  {
+    question: "Is Dead Simple Email deliverable, or a test sandbox?",
+    answer: "It is a real, deliverable email identity. Egress is DKIM-signed through a dedicated MTA, with bounce and complaint handling and suppression lists. Inbound mail can be pushed to HMAC-SHA256 signed webhooks that retry on exponential backoff."
+  },
+  {
+    question: "How do I install Dead Simple Email on Pilot Protocol?",
+    answer: "Install the Pilot Protocol daemon with curl -fsSL https://pilotprotocol.network/install.sh | sh, then run pilotctl appstore install io.pilot.deadsimple. Confirm it is ready with pilotctl appstore list, and call pilotctl appstore call io.pilot.deadsimple deadsimple.help '{}' to see the full method surface."
+  },
+  {
+    question: "What happens when an agent hits the trial send limit?",
+    answer: "The API returns a 429 with the code trial_send_limit_exceeded. That is a quota signal, not a transient failure — retrying is wrong. The fix is to claim the account with deadsimple.claim, which moves it to the free plan while keeping the same API key, inboxes, and history."
+  }
+];
+---
+<BlogLayout
+  title="Dead Simple Email for AI Agents"
+  description="Dead Simple Email gives AI agents a real inbox in one call — sign up, read verification codes, send and reply. No SMTP, no dashboard, no human."
+  date="August 18, 2026"
+  tags={["email", "app-store", "agent-tools", "verification-codes", "ai-agents"]}
+  canonicalPath="/learn/dead-simple-email-ai-agents"
+  faqItems={faqItems}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
