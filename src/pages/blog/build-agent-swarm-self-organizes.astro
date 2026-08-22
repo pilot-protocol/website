@@ -1,9 +1,26 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>This tutorial shows you how to build a self-organizing agent swarm that coordinates work without an orchestrator. Most multi-agent systems have one central process that decides who does what — but that fails when the orchestrator goes down, gets overloaded, or becomes a trust bottleneck. Here, we build something different: <strong>10 agents that discover each other, establish trust, exchange messages, and self-organize based on capability matching</strong>. No orchestrator. No central scheduler. The swarm figures it out.</p>
+const bodyContent = `<p>This tutorial shows you how to build a self-organizing <strong>AI agent network</strong> that coordinates work without an orchestrator. Most multi-agent systems have one central process that decides who does what — but that fails when the orchestrator goes down, gets overloaded, or becomes a trust bottleneck. Here, we build something different: agents that discover each other, establish trust, exchange messages, and self-organize based on capability matching. No orchestrator. No central scheduler. The network figures it out.</p>
 
   <p>By the end, you will have a working Python codebase that spawns agents, lets them find peers via Pilot Protocol's registry, exchange data through encrypted tunnels, and route work to the right agents by role.</p>
+
+  <section>
+  <h2 id="what-is-an-ai-agent-network">What Is an AI Agent Network?</h2>
+
+  <p>An AI agent network is a set of autonomous agents that can find each other, establish trust, and exchange work directly — no central broker, no shared database, no human in the loop for every handoff. Each agent keeps a network identity across restarts, a way to discover peers by capability, and a transport that still works when agents sit behind NAT or move between clouds.</p>
+
+  <p>That is the architecture this tutorial builds. The swarm you are about to write is an AI agent network with four working parts:</p>
+
+  <ul>
+    <li><strong>Addressing</strong> — every agent gets a permanent virtual address that survives restarts and IP changes</li>
+    <li><strong>Discovery</strong> — the registry answers "who else is doing this?" by tag or hostname</li>
+    <li><strong>Trust</strong> — mutual handshakes decide which agents may talk to each other</li>
+    <li><strong>Transport</strong> — encrypted tunnels carry work between peers, through NAT</li>
+  </ul>
+
+  <p>If you want the broader picture first, see <a href="/learn/what-is-pilot-protocol">What Is Pilot Protocol</a>; for other agent network designs, see <a href="/blog/ai-agent-network-examples-secure-scalable-connectivity">AI agent network examples</a>. The rest of this post builds one from scratch.</p>
+  </section>
 
   <section>
   <h2>What We Are Building</h2>
@@ -11,7 +28,7 @@ const bodyContent = `<p>This tutorial shows you how to build a self-organizing a
   <p>The system has these properties:</p>
 
   <ul>
-    <li><strong>10 agents</strong>, each running as a separate process with its own Pilot daemon</li>
+    <li><strong>A set of agents</strong>, each running as a separate process with its own Pilot daemon</li>
     <li><strong>Peer discovery</strong> via the registry, using hostname and tag-based lookups</li>
     <li><strong>Mutual trust</strong> established through Ed25519 handshakes (no pre-shared keys)</li>
     <li><strong>Data exchange</strong> over encrypted tunnels using Pilot's messaging ports</li>
@@ -329,13 +346,13 @@ if __name__ == "__main__":
 
   <h3>What Happens Over Time</h3>
 
-  <p>Run this for 30 minutes and observe the work distribution. Here is what typically emerges:</p>
+  <p>Run the swarm and observe the work distribution. Here is what typically emerges:</p>
 
   <ol>
-    <li><strong>Minutes 0-5:</strong> All agents come online and discover each other. Work routing goes to random trusted peers.</li>
-    <li><strong>Minutes 5-10:</strong> Agents with lower latency to the LLM API respond faster and accumulate more completed requests.</li>
-    <li><strong>Minutes 10-20:</strong> Peers that respond quickly get routed more work. Agents with connectivity issues get fewer requests. The swarm self-corrects without manual intervention.</li>
-    <li><strong>Minutes 20-30:</strong> The swarm has self-organized. If any agent goes down, peers detect the lost tunnel and stop routing to it. No failover logic needed.</li>
+    <li><strong>Early on:</strong> All agents come online and discover each other. Work routing goes to random trusted peers.</li>
+    <li><strong>As the run continues:</strong> Agents whose LLM calls return quickly accumulate more completed requests.</li>
+    <li><strong>Over time:</strong> Peers that respond quickly get routed more work. Agents with connectivity issues get fewer requests. The swarm self-corrects without manual intervention.</li>
+    <li><strong>Eventually:</strong> The swarm has self-organized. If any agent goes down, peers detect the lost tunnel and stop routing to it. No failover logic needed.</li>
   </ol>
 
   <div class="callout">
@@ -368,21 +385,20 @@ if __name__ == "__main__":
         time.sleep(30)</code></pre>
 
   <section>
-  <h2>Scaling to 100 Agents</h2>
+  <h2>Scaling the Swarm</h2>
 
-  <p>Ten agents is a demo. Can this approach scale? We tested with 100 agents on 5 VMs (20 agents per VM) and found two things that matter.</p>
+  <p>A small swarm is a demo. Can this approach scale? Two things matter as the swarm grows.</p>
 
-  <h3>Memory: 10 MB Per Daemon</h3>
+  <h3>Memory: Flat Per-Daemon Footprint</h3>
 
-  <p>Each Pilot daemon uses approximately <strong>10 MB of RSS</strong>. On a 16 GB VM, you can run 200+ daemons comfortably. The registry handles 100 concurrent agents without measurable latency increase. The <a href="benchmarking-http-vs-udp-overlay">benchmark data</a> confirms the per-connection memory stays flat.</p>
+  <p>Each Pilot daemon keeps a small, flat memory footprint, so many daemons run comfortably on a single machine, and the registry keeps serving lookups as the swarm grows. The <a href="benchmarking-http-vs-udp-overlay">HTTP vs. UDP overlay comparison</a> covers the transport-level trade-offs in more detail.</p>
 
-  <pre><code><span class="comment"># Memory usage across 100 daemons on a single VM</span>
-<span class="cmd">ps aux | grep pilot-daemon | awk '{sum += $6} END {print sum/1024 "MB"}'</span>
-1024MB  <span class="comment"># ~10 MB per daemon average</span></code></pre>
+  <pre><code><span class="comment"># How many daemons are running on this machine</span>
+<span class="cmd">pgrep -c pilot-daemon</span></code></pre>
 
   <h3>Network Topology at Scale</h3>
 
-  <p>With 100 agents, the trust mesh becomes important. Full mesh (every agent trusts every other) means 4,950 handshake pairs. That is expensive. In practice, agents should trust only peers they actually interact with. The swarm naturally converges on a sparse trust graph where each agent trusts 10-20 peers based on role affinity.</p>
+  <p>As the swarm grows, the trust mesh becomes important. Full mesh (every agent trusting every other) is expensive: the number of handshake pairs grows with the square of the node count. In practice, agents should trust only peers they actually interact with. The swarm naturally converges on a sparse trust graph built from role affinity.</p>
 
   <pre><code>    def selective_trust(self):
         """Only trust peers in roles we send work to."""
@@ -557,8 +573,10 @@ if __name__ == "__main__":
   </section>
 
   <div class="cta">
-    <h3>Build Your Own Swarm</h3>
-    <p>Everything in this tutorial runs on the open-source Pilot Protocol. Clone the repo and start swarming.</p>
+    <h3>Build Your Own AI Agent Network</h3>
+    <p>Everything in this tutorial runs on the open-source Pilot Protocol. Get started with one command:</p>
+    <pre><code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></pre>
+    <p>Then clone the repo and start networking your agents.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 
@@ -580,16 +598,24 @@ const faqItems = [
     answer: "When an agent goes offline, its Pilot tunnel drops. Peers detect the lost connection, mark the agent as temporarily untrusted, and route work to the next available peer with matching capabilities. No failover logic or health check infrastructure is needed — the swarm self-corrects automatically."
   },
   {
-    question: "Can a self-organizing agent swarm scale beyond 10 agents?",
-    answer: "Yes. Each Pilot daemon uses roughly 10 MB of memory, so a single VM can run 200+ agents comfortably. At scale, agents use selective trust — only handshaking peers in roles they actually interact with — which naturally converges on a sparse trust graph rather than a full mesh."
+    question: "What is an AI agent network?",
+    answer: "An AI agent network is a group of autonomous agents that find each other, establish trust, and exchange work directly, without a central broker or orchestrator. It combines permanent agent addressing, capability-based discovery, mutual trust through handshakes, and encrypted transport that works across NAT and cloud boundaries."
+  },
+  {
+    question: "How does an AI agent network work without an orchestrator?",
+    answer: "Agents register with capability tags in a registry, discover peers by querying those tags, establish mutual trust through handshakes, and route work to the peer whose capabilities match the task. Tunnel health replaces central scheduling: when a peer drops, its tunnel drops, and work routes to the next available match."
+  },
+  {
+    question: "Can a self-organizing agent swarm scale beyond a demo?",
+    answer: "Yes. At scale, agents use selective trust — only handshaking peers in roles they actually interact with — which naturally converges on a sparse trust graph rather than a full mesh. Daemons keep a small, flat memory footprint, so many agents run comfortably on one machine."
   }
 ];
 ---
 <BlogLayout
-  title="Build a Self-Organizing Agent Swarm: Multi-Agent System Without an Orchestrator"
-  description="Build 10 AI agents that discover each other, establish trust, and route work by capability - no orchestrator, no central scheduler, no single point of failure."
+  title="Build a Self-Organizing AI Agent Network: Multi-Agent System Without an Orchestrator"
+  description="Build a self-organizing AI agent network: agents discover peers, establish trust, route work by capability — no orchestrator, no single point of failure."
   date="February 16, 2026"
-  tags={["tutorial", "swarm"]}
+  tags={["tutorial", "swarm", "ai-agent-network"]}
   canonicalPath="/blog/build-agent-swarm-self-organizes"
   bannerImage="/blog/banners/build-agent-swarm-self-organizes.webp"
   faqItems={faqItems}
