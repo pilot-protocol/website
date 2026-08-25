@@ -39,7 +39,15 @@ function inline(s) {
 let descBlocks = app.description.split('\n\n').map((b) => b.trim()).filter(Boolean);
 // drop a leading level-1 header (redundant with the page title)
 if (descBlocks.length && /^#\s+/.test(descBlocks[0])) descBlocks = descBlocks.slice(1);
-const paragraphs = descBlocks.map((p) => {
+// A discriminated union, so `p.type === 'ul'` narrows to the shape that
+// actually has items. Inferred as one optional-field object it did not, and
+// `p.items.map` type-checked as possibly-undefined.
+type DescBlock =
+  | { type: 'h'; html: string }
+  | { type: 'p'; html: string }
+  | { type: 'ul'; items: string[] };
+
+const paragraphs: DescBlock[] = descBlocks.map((p): DescBlock => {
   const lines = p.split('\n');
   const h = /^(#{1,6})\s+(.*)$/.exec(lines[0]);
   if (lines.length === 1 && h) return { type: 'h', html: inline(h[2]) };
@@ -288,32 +296,6 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
             <ul class="demo-list demo-next">{demo.next.map((n) => <li><code>{n}</code></li>)}</ul>
           </div>
           )}
-        </section>
-        )}
-
-        {app.pricing && (
-        <section>
-          <h2 class="sec-h">Pricing</h2>
-          <p style="font-size:14.5px;color:var(--ink-dim);line-height:1.65;margin:0 0 18px;">{app.pricing.model}</p>
-          <div class="pricing-wrap">
-            <div class="pricing-free">
-              <div class="pf-amt">{app.pricing.freeCredit}</div>
-              <div class="pf-lbl">free credit — then billed by real usage</div>
-            </div>
-            <div class="pricing-chart">
-              {app.pricing.rateCard.map((r) => {
-                const max = Math.max(...app.pricing!.rateCard.map((x) => x.value));
-                const pct = Math.max(5, Math.round((r.value / max) * 100));
-                return (
-                  <div class="pc-row">
-                    <span class="pc-label">{r.label}</span>
-                    <span class="pc-track"><span class="pc-bar" style={`width:${pct}%`}></span></span>
-                    <span class="pc-rate">{r.rate}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
         </section>
         )}
 
