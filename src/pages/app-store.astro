@@ -6,6 +6,7 @@ import AppIcon from '../components/AppIcon.astro';
 import AppCard from '../components/AppCard.astro';
 import Shelf from '../components/Shelf.astro';
 import { apps, categories, featuredApps, newApps, appsByCategory } from '../data/apps';
+import type { App } from '../data/apps';
 import { osSummary } from '../data/format';
 import '../styles/system.css';
 import '../styles/appstore.css';
@@ -19,8 +20,17 @@ const hero = featured[0];
 const sideFeatured = featured.slice(1, 4);
 const freshPinned = ['io.pilot.dial', 'io.pilot.deadsimple', 'io.pilot.kinetic', 'io.pilot.rentahuman', 'io.pilot.upfile', 'io.pilot.bowmark', 'io.pilot.primitive', 'io.pilot.didit', 'io.pilot.agentphone', 'io.pilot.orthogonal', 'io.pilot.miren', 'io.pilot.smol', 'io.pilot.wallet', 'io.pilot.slipstream'];
 const freshExclude = new Set(['io.pilot.postgres', 'io.pilot.docker']);
+// The pinned ids are curated here, but the app list is served by the
+// app-store metadata API — so an id can now disappear from under this list.
+// Narrow properly instead of leaning on filter(Boolean), which strips the
+// undefined at runtime but leaves the type a lie, and say so at build time
+// rather than letting the shelf quietly shrink.
+const freshMissing = freshPinned.filter((id) => !apps.some((a) => a.id === id));
+if (freshMissing.length > 0) {
+  console.warn(`WARN  app-store: freshPinned names ${freshMissing.length} app(s) absent from the catalogue: ${freshMissing.join(', ')}`);
+}
 const fresh = [
-  ...freshPinned.map((id) => apps.find((a) => a.id === id)).filter(Boolean),
+  ...freshPinned.map((id) => apps.find((a) => a.id === id)).filter((a): a is App => a !== undefined),
   ...[...apps]
     .filter((a) => a.publishedAt && !freshPinned.includes(a.id) && !freshExclude.has(a.id))
     .sort((a, b) => (b.publishedAt || '').localeCompare(a.publishedAt || '')),

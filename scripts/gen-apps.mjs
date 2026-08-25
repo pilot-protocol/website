@@ -89,22 +89,33 @@ function copyMark(id, mark) {
 
 const emptyToNull = (value) => (value === '' || value === undefined ? null : value);
 
+// A step is always a whole object. The app page dereferences
+// `demo.quickstart.command` directly — the TypeScript shape says quickstart is
+// non-nullable — so emitting null here would crash the build rather than drop
+// a section.
 function toStep(step) {
-  if (!step) return null;
+  const s = step || {};
   return {
-    title: emptyToNull(step.title), goal: emptyToNull(step.goal),
-    command: step.command || '', expect: emptyToNull(step.expect),
-    cost: emptyToNull(step.cost), note: emptyToNull(step.note),
+    title: emptyToNull(s.title), goal: emptyToNull(s.goal),
+    command: s.command || '', expect: emptyToNull(s.expect),
+    cost: emptyToNull(s.cost), note: emptyToNull(s.note),
   };
 }
 
-function toDemo(demo) {
+function toDemo(demo, id) {
   if (!demo) return null;
+  // A demo whose quickstart has no command has nothing to show and would
+  // render an empty <code> block. Drop it, loudly.
+  if (!demo.quickstart || !demo.quickstart.command) {
+    console.warn(`WARN  ${id}: product_demo has no quickstart command; dropping the demo`);
+    return null;
+  }
   return {
     skill: demo.skill || '', title: demo.title || '', when_to_use: demo.when_to_use || '',
     metered: !!demo.metered,
     quickstart: toStep(demo.quickstart),
-    examples: (demo.examples || []).map(toStep),
+    // A step with no command renders an empty block on both surfaces.
+    examples: (demo.examples || []).filter((e) => e && e.command).map(toStep),
     cost: demo.cost ? {
       unit: demo.cost.unit || '', free_budget: demo.cost.free_budget || '',
       hard_cap_usd: demo.cost.hard_cap_usd ?? null,
@@ -162,7 +173,7 @@ function toApp(app) {
     runtimes: app.runtimes || ['go'],
     publishedAt: emptyToNull(app.published_at),
     updatedAt: emptyToNull(app.updated_at),
-    productDemo: toDemo(app.product_demo),
+    productDemo: toDemo(app.product_demo, app.id),
     limits: (app.limits || []).length ? app.limits.map((limit) => ({ label: limit.label, value: limit.value })) : null,
   };
 }
