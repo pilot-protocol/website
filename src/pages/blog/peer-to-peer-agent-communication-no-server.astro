@@ -1,14 +1,14 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>Many agent communication patterns put an application server in the middle. API gateways, message brokers, cloud pub/sub, and webhook relays forward every payload. This article explains the trade-offs and walks through Pilot Protocol's direct-preferred model, including its encrypted relay fallback.</p>
+const bodyContent = `<p>Peer-to-peer agent communication without a server is possible: agents connect directly through NAT traversal and encrypted tunnels, with no application broker in the data path. API gateways, message brokers, cloud pub/sub, and webhook relays are the middlemen this model removes. This article explains the trade-offs and walks through Pilot Protocol's direct-preferred model, including its encrypted relay fallback.</p>
 
   <section>
   <h2 id="the-problem-with-middlemen">The Problem With Middlemen</h2>
 
   <p>Hub-and-spoke architectures are the default for agent communication. Agent A sends a message to a central service. The central service forwards it to Agent B. This pattern has three systemic problems:</p>
 
-  <p><strong>1. Latency doubles.</strong> Every message takes two hops: agent → server → agent. For real-time agent coordination, this latency compounds with every exchange in a conversation.</p>
+  <p><strong>1. Extra latency.</strong> Every message travels agent → server → agent. For real-time agent coordination, the added latency compounds with every exchange in a conversation.</p>
 
   <p><strong>2. Single point of failure.</strong> If the broker goes down, all agent communication stops. Your agents might be healthy, but they cannot talk. The failure mode is total, not graceful.</p>
 
@@ -32,7 +32,7 @@ const bodyContent = `<p>Many agent communication patterns put an application ser
     <li><strong>Tunnel selection.</strong> UDP packets flow directly when possible; otherwise the beacon relays opaque encrypted packets.</li>
   </ol>
 
-  <p>The registry handles identity and discovery, while the beacon assists with STUN, hole-punching, and relay fallback. Neither service receives tunnel plaintext; a relay can still observe transport metadata such as timing and volume.</p>
+  <p>The registry handles identity and discovery, while the beacon assists with STUN, hole-punching, and relay fallback. Neither service receives tunnel plaintext; a relay can still observe transport metadata such as timing and volume. For a closer look at what encrypted tunnels protect, see <a href="/blog/encrypted-tunnel-advantages-peer-to-peer-ai-networks">encrypted tunnel advantages for peer-to-peer AI networks</a>.</p>
   </section>
 
   <section>
@@ -57,7 +57,7 @@ Strategy:  direct (STUN endpoint reachable by all peers)</code></pre>
 Discovering NAT type... port-restricted cone
 Requesting hole-punch via beacon...
 ✓ Punch sent → peer punched back
-✓ Direct tunnel established. RTT: 34ms</code></pre>
+✓ Direct tunnel established.</code></pre>
 
   <p><strong>Tier 3: Relay (Symmetric NAT)</strong></p>
   <p>Symmetric NAT assigns a different port for every destination - hole-punching cannot work. Pilot automatically falls back to relay through the beacon. The relay forwards opaque encrypted packets. It cannot read, modify, or log the content.</p>
@@ -65,7 +65,7 @@ Requesting hole-punch via beacon...
   <pre><code>$ pilotctl connect agent-c
 Discovering NAT type... symmetric
 Hole-punch not possible. Switching to relay...
-✓ Relay tunnel via beacon. RTT: 68ms (relay adds ~30ms)
+✓ Relay tunnel via beacon.
 ✓ All data encrypted end-to-end. Relay cannot decrypt.</code></pre>
 
   <p>The key insight: your application code is identical regardless of NAT type. You dial a hostname, Pilot figures out the traversal.</p>
@@ -97,7 +97,7 @@ pilotctl handshake agent-a
 pilotctl untrust agent-b
 # ✓ Agent A is now invisible to Agent B again.</code></pre>
 
-  <p>This model means agents choose who they talk to. No platform, no admin, no configuration file decides on their behalf. This is critical for autonomous agents that may interact with untrusted peers.</p>
+  <p>This model means agents choose who they talk to. No platform, no admin, no configuration file decides on their behalf. This is critical for autonomous agents that may interact with untrusted peers. See <a href="/blog/why-direct-p2p-connections-power-secure-ai-networking">why direct P2P connections power secure AI networking</a> for the bigger picture.</p>
   </section>
 
   <section>
@@ -107,7 +107,7 @@ pilotctl untrust agent-b
 
   <p><strong>Machine A (your laptop, behind home NAT):</strong></p>
 
-  <pre><code># 1. Install (30 seconds)
+  <pre><code># 1. Install
 curl -fsSL https://pilotprotocol.network/install.sh | sh
 
 # 2. Start daemon with a hostname
@@ -141,9 +141,9 @@ pilotctl handshake agent-a
 pilotctl connect agent-b --message '{"task":"analyze","payload":"data..."}'
 
 # Output:
-# ✓ Connected to agent-b (hole-punch, RTT: 42ms)
+# ✓ Connected to agent-b (hole-punch)
 # ✓ X25519 + AES-256-GCM
-# → Sent 1 message (247 bytes)
+# → Sent encrypted message
 # ← ACK received</code></pre>
 
   <p><strong>Or programmatically in Go:</strong></p>
@@ -193,7 +193,7 @@ with pilot.Driver() as d:
       <tr><th></th><th>API Gateway / Broker</th><th>Pilot (Direct P2P)</th></tr>
     </thead>
     <tbody>
-      <tr><td><strong>Data path</strong></td><td>Agent → Server → Agent (2 hops)</td><td>Agent → Agent (1 hop)</td></tr>
+      <tr><td><strong>Data path</strong></td><td>Agent → Server → Agent</td><td>Agent → Agent (direct)</td></tr>
       <tr><td><strong>Latency overhead</strong></td><td>Server processing + extra hop</td><td>Zero (just network RTT)</td></tr>
       <tr><td><strong>Encryption</strong></td><td>TLS to server, server decrypts</td><td>End-to-end, no decryption point</td></tr>
       <tr><td><strong>Single point of failure</strong></td><td>Server down = all comms down</td><td>Only affected agent's connections</td></tr>
@@ -218,13 +218,13 @@ with pilot.Driver() as d:
     <li><strong>Autonomous agents:</strong> Agents that need to choose their own peers without platform-level access control.</li>
   </ul>
 
-  <p>Hub-and-spoke still makes sense for broadcast patterns (one-to-many notifications), when you need message persistence (guaranteed delivery over days), or when all agents are in the same cloud VPC with millisecond latency requirements.</p>
+  <p>Hub-and-spoke still makes sense for broadcast patterns (one-to-many notifications), when you need message persistence (guaranteed delivery over days), or when all agents are in the same cloud VPC with millisecond latency requirements. Deciding between the two? The <a href="/blog/direct-communication-protocols-ai-agents-guide">AI agent communication protocols guide</a> compares transport, discovery, and trust across the major protocols.</p>
   </section>
 
   <section>
   <h2 id="get-started">Get Started</h2>
 
-  <pre><code># Install (30 seconds)
+  <pre><code># Install
 curl -fsSL https://pilotprotocol.network/install.sh | sh
 
 # Or with Python
@@ -236,12 +236,19 @@ pip install pilotprotocol</code></pre>
   </section>`;
 ---
 <BlogLayout
-  title="Peer-to-Peer Agent Communication Without an Application Broker"
-  description="A step-by-step guide to direct-preferred agent communication with STUN, hole-punching, encrypted relay fallback, and trust controls."
+  title="Peer-to-Peer Agent Communication: No Server Required"
+  description="Talking through a central server? Learn peer-to-peer agent communication — NAT traversal, encrypted relay fallback, and trust — in a full walkthrough."
   date="Mar 30"
   tags={["p2p", "architecture", "networking"]}
   canonicalPath="/blog/peer-to-peer-agent-communication-no-server"
   bannerImage="/blog/banners/peer-to-peer-agent-communication-no-server.webp"
+  faqItems={[
+    { question: 'What is peer-to-peer agent communication?', answer: 'Peer-to-peer agent communication means agents talk directly to each other instead of routing every message through a central application server. Pilot Protocol gives every agent a permanent virtual address and a hostname; a registry handles identity and discovery, and agents establish direct encrypted tunnels when the network permits, falling back to an encrypted relay when NAT blocks a direct path.' },
+    { question: 'How can agents communicate without a server?', answer: 'Agents communicate without an application server by combining hostname resolution, NAT traversal, and direct encrypted tunnels. When a direct path is unavailable, a beacon relays end-to-end encrypted packets without ever seeing plaintext — no application-layer broker sits in the data path.' },
+    { question: 'How is peer-to-peer AI coordination different from a centralized cloud model?', answer: 'In a centralized cloud model, every message passes through a hub-and-spoke broker: messages travel agent to server to agent, the broker is a single point of failure, and it terminates encryption. Peer-to-peer coordination connects agents directly — no broker to deploy or maintain, and encryption is end-to-end with no intermediary that can read the content.' },
+    { question: 'What are the benefits of peer-to-peer zero-trust networking for AI agents?', answer: 'Peer-to-peer networking with a mutual-trust model keeps agents private by default: no platform or admin decides who an agent talks to. Trust is established by explicit handshakes on both sides, so communication only flows between peers that both agreed, and revoking trust drops the connection.' },
+    { question: 'How does NAT traversal work for agent-to-agent connections?', answer: 'Pilot tries a path ladder: STUN-assisted direct reachability, coordinated UDP hole-punching, then relay fallback through the beacon. Your application code is identical regardless of NAT type — you dial a hostname and Pilot handles the traversal.' },
+  ]}
 >
   <Fragment set:html={bodyContent} />
 </BlogLayout>
