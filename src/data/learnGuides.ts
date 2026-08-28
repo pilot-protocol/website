@@ -50,6 +50,13 @@ export const learnGuides: LearnGuide[] = [
     track: 'Transport',
   },
   {
+    slug: 'ai-transport-layer-for-reliable-multi-device-conversational-agents',
+    title: 'AI Transport Layer for Reliable Multi-Device Conversational Agents',
+    description: 'The transport requirements for agents that span phones, laptops, and background workers: stable addressing, NAT traversal, encryption, and discovery.',
+    date: 'August 28, 2026',
+    track: 'Transport',
+  },
+  {
     slug: 'how-are-network-agent-tokens-different',
     title: 'How Network Agent Tokens Differ',
     description: 'Compare an agent cryptographic identity with API keys, bearer tokens, and application-level credentials without collapsing the layers.',

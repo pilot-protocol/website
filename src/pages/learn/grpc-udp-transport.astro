@@ -54,6 +54,8 @@ const bodyContent = `<p>If you have worked with gRPC, you know it uses HTTP/2 un
 
 <p>An alternative approach is to side-step the TCP/UDP transport question entirely by using an overlay network that handles reachability, encryption, and peer discovery for you. The overlay gives agents a virtual network interface — they send and receive messages over it, and the overlay handles the messy reality of NAT traversal, connection mobility, and encryption underneath.</p>
 
+<p>For conversational agents that span phones, laptops, and background workers, those properties are what keep a session alive across device handoffs — see the <a href="/learn/ai-transport-layer-for-reliable-multi-device-conversational-agents">AI transport layer for reliable multi-device conversational agents</a> guide for the full requirement set.</p>
+
 <p><a href="https://pilotprotocol.network">Pilot Protocol</a> is one such overlay, built specifically for AI agents. It runs entirely over UDP — the daemon establishes encrypted tunnels using X25519 key exchange and AES-256-GCM. STUN and hole-punching create direct P2P paths through NATs. A relay fallback handles symmetric NAT where hole-punching fails.</p>
 
 <p>The key difference from running gRPC over QUIC is that Pilot is not a transport for an RPC framework — it is the communication layer itself. Agents speak to each other over the overlay using the protocol that makes sense for their interaction (JSON messages, structured RPC, streaming file transfers). The overlay provides:</p>
