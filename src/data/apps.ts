@@ -90,7 +90,7 @@ export const apps: App[] = [
     "id": "io.pilot.generallegal",
     "name": "General Legal",
     "tagline": "Attorney-backed contract review and Delaware company formation — flat-fee legal work from a licensed US law firm",
-    "description": "General Legal is a Y Combinator-backed law firm. This app puts a licensed\nattorney and a Delaware filing desk behind your agent — contract review and\ncompany formation, in one namespace.\n\n**A General Legal account is required for both halves.** Sign up at\nhttps://portal.general.legal/signup. The two halves then authenticate\ndifferently; both are covered below.\n\n### Contract review — bring your own API key\n\n1. Sign up at https://portal.general.legal/signup\n2. Open the account menu and choose **API keys**\n   (https://portal.general.legal/api-keys)\n3. Create a key and copy it — the full value is shown **once**\n4. Import it into the app:\n\n```\nprintf '{\"GENERAL_LEGAL_API_KEY\":\"glk_YOUR_KEY\"}' > ~/.pilot/apps/io.pilot.generallegal/secrets.json\nchmod 600 ~/.pilot/apps/io.pilot.generallegal/secrets.json\npilotctl appstore restart io.pilot.generallegal\n```\n\nThe restart matters: the key is read at startup. Verify with\n`pilotctl appstore call io.pilot.generallegal generallegal.deals_list '{}'`.\nThe key stays on your machine, is never sent to the formation service, and\nscopes you to your own General Legal organization.\n\n### Company formation — nothing to import\n\nFormation needs the same General Legal account but **no key and no secret**\non your side. Call `generallegal.formation_options` and it works. The founder\npays at the link the app returns — use the same email as your account so the\nfiling lands in it.\n\n### What it costs\n\nContract review is flat-fee, with no hourly billing and no minimums. The fee\ncovers every turn through signature, including negotiation with the\ncounterparty.\n\n| Work | Price |\n| --- | --- |\n| Contract, 3 pages or fewer | $250 |\n| Contract, 3-50 pages | $500 |\n| Contract, 50+ pages | $10 per page |\n| Drafting from scratch | $2,000 |\n| Delaware LLC | $190 instant / $210 standard / $260 next-day / $310 same-day |\n| Delaware C-corp | $218 standard / $268 next-day / $318 same-day |\n\n### What the app does\n\n**Company formation** — `formation_options` (free), `formation_start_llc`\n(**paid**), `formation_start_c_corp` (**paid**), `formation_status`,\n`formation_update`, `formation_documents` (free).\n\n**Contract review** — `deal_open` (**paid**), `document_upload` (**paid**),\n`thread_post` (**paid**, covered by the matter's flat fee), plus\n`deals_list`, `deal_get`, `thread_get`, `contracts_list`, `contract_get`,\n`version_download_link` (free) and `upload_begin`, `upload_chunk`,\n`upload_abort` (free — a document is staged in chunks because a single call\ncannot carry a file).\n\n### What costs money\n\nFive methods spend real money and will not warn you first:\n`formation_start_llc`, `formation_start_c_corp`, `deal_open`,\n`document_upload` and `thread_post`. Every other method is free.\n`generallegal.help` lists them under `billable_methods` with the price.",
+    "description": "General Legal is a Y Combinator-backed law firm. This app puts a licensed\nattorney and a Delaware filing desk behind your agent — contract review and\ncompany formation, in one namespace.\n\nThe two halves have different requirements. Formation works the moment you\ninstall. Contract review needs a General Legal account and an API key.\n\n### Company formation — nothing to set up\n\nNo account, no key, no configuration. Call\n`generallegal.formation_options` and it works on a fresh install.\n\nYou will still need to pay: `formation_start_llc` and\n`formation_start_c_corp` return a payment link, and the founder pays there.\nUse the founder's real details — this files an actual Delaware company.\n\n### Contract review — bring your own API key\n\n1. Sign up at https://portal.general.legal/signup\n2. Open the account menu and choose **API keys**\n   (https://portal.general.legal/api-keys)\n3. Create a key and copy it — the full value is shown **once**\n4. Import it into the app:\n\n```\nprintf '{\"GENERAL_LEGAL_API_KEY\":\"glk_YOUR_KEY\"}' > ~/.pilot/apps/io.pilot.generallegal/secrets.json\nchmod 600 ~/.pilot/apps/io.pilot.generallegal/secrets.json\npilotctl appstore restart io.pilot.generallegal\n```\n\nThe restart matters: the key is read at startup. Verify with\n`pilotctl appstore call io.pilot.generallegal generallegal.deals_list '{}'`.\nThe key stays on your machine, is never sent to the formation service, and\nscopes you to your own General Legal organization.\n\n### What it costs\n\nContract review is flat-fee, with no hourly billing and no minimums. The fee\ncovers every turn through signature, including negotiation with the\ncounterparty.\n\n| Work | Price |\n| --- | --- |\n| Contract, 3 pages or fewer | $250 |\n| Contract, 3-50 pages | $500 |\n| Contract, 50+ pages | $10 per page |\n| Drafting from scratch | $2,000 |\n| Delaware LLC | $190 instant / $210 standard / $260 next-day / $310 same-day |\n| Delaware C-corp | $218 standard / $268 next-day / $318 same-day |\n\n### What the app does\n\n**Company formation** — `formation_options` (free), `formation_start_llc`\n(**paid**), `formation_start_c_corp` (**paid**), `formation_status`,\n`formation_update`, `formation_documents` (free).\n\n**Contract review** — `deal_open` (**paid**), `document_upload` (**paid**),\n`thread_post` (**paid**, covered by the matter's flat fee), plus\n`deals_list`, `deal_get`, `thread_get`, `contracts_list`, `contract_get`,\n`version_download_link` (free) and `upload_begin`, `upload_chunk`,\n`upload_abort` (free — a document is staged in chunks because a single call\ncannot carry a file).\n\n### What costs money\n\nFive methods spend real money and will not warn you first:\n`formation_start_llc`, `formation_start_c_corp`, `deal_open`,\n`document_upload` and `thread_post`. Every other method is free.\n`generallegal.help` lists them under `billable_methods` with the price.",
     "categories": [
       "work"
     ],
@@ -116,42 +116,42 @@ export const apps: App[] = [
     "methods": [
       {
         "name": "generallegal.formation_options",
-        "summary": "Itemised pricing for every Delaware entity type and filing speed. Needs a General Legal account; no key or secret to import.",
+        "summary": "Itemised pricing for every Delaware entity type and filing speed. No account or credentials needed to call it.",
         "example": null,
         "gated": null,
         "billable": null
       },
       {
         "name": "generallegal.formation_start_llc",
-        "summary": "File a sole-member Delaware LLC and get back a payment link plus a formation_id. Needs a General Legal account; no key or secret to import. 'instant' hands over a pre-formed shelf company; the other speeds file under a name you choose.",
+        "summary": "File a sole-member Delaware LLC and get back a payment link plus a formation_id. No account or credentials needed to call it. 'instant' hands over a pre-formed shelf company; the other speeds file under a name you choose.",
         "example": null,
         "gated": null,
         "billable": "Paid — files a real Delaware LLC. $190 instant / $210 standard / $260 next-day / $310 same-day, paid by the founder at the returned link."
       },
       {
         "name": "generallegal.formation_start_c_corp",
-        "summary": "File a Delaware C-corp and get back a payment link plus a formation_id. Needs a General Legal account; no key or secret to import. The founder acts as sole incorporator.",
+        "summary": "File a Delaware C-corp and get back a payment link plus a formation_id. No account or credentials needed to call it. The founder acts as sole incorporator.",
         "example": null,
         "gated": null,
         "billable": "Paid — files a real Delaware C-corp. $218 standard / $268 next-day / $318 same-day, paid by the founder at the returned link."
       },
       {
         "name": "generallegal.formation_status",
-        "summary": "Poll a filing's progress. Needs a General Legal account; no key or secret to import. Repeat after poll_after_seconds while it keeps coming back.",
+        "summary": "Poll a filing's progress. No account or credentials needed to call it. Repeat after poll_after_seconds while it keeps coming back.",
         "example": null,
         "gated": null,
         "billable": null
       },
       {
         "name": "generallegal.formation_update",
-        "summary": "Change the company name before the documents are generated. Needs a General Legal account; no key or secret to import. Late changes are rejected.",
+        "summary": "Change the company name before the documents are generated. No account or credentials needed to call it. Late changes are rejected.",
         "example": null,
         "gated": null,
         "billable": null
       },
       {
         "name": "generallegal.formation_documents",
-        "summary": "Short-lived links to a completed formation's documents. Needs a General Legal account; no key or secret to import.",
+        "summary": "Short-lived links to a completed formation's documents. No account or credentials needed to call it.",
         "example": null,
         "gated": null,
         "billable": null
@@ -311,7 +311,7 @@ export const apps: App[] = [
     "productDemo": {
       "skill": "io.pilot.generallegal",
       "title": "Full usage demo",
-      "when_to_use": "When a contract needs a licensed attorney to review, redline or draft it, or when an agent needs its own Delaware company. A General Legal account is required for both.",
+      "when_to_use": "When a contract needs a licensed attorney to review, redline or draft it, or when an agent needs its own Delaware company. Formation works on a fresh install; contract review needs your own General Legal API key.",
       "metered": false,
       "quickstart": {
         "title": null,
@@ -319,7 +319,7 @@ export const apps: App[] = [
         "command": "pilotctl appstore call io.pilot.generallegal generallegal.formation_options '{\"entity_type\":\"llc\"}'",
         "expect": "{\"options\":[{\"filing_speed\":\"instant\",\"total_cents\":19000},{\"filing_speed\":\"standard\",\"total_cents\":21000}]}",
         "cost": null,
-        "note": "Free. Formation needs a General Legal account but no key or secret on your side. Contract review needs an API key imported - see the examples."
+        "note": "Free, and it needs no account or key at all — the fastest way to confirm the app works. Contract review is the half that needs a key; see the examples."
       },
       "examples": [
         {
@@ -328,7 +328,7 @@ export const apps: App[] = [
           "command": "pilotctl appstore call io.pilot.generallegal generallegal.formation_start_llc '{\"filing_speed\":\"standard\",\"company_name\":\"NewCo LLC\",\"founder\":{\"full_name\":\"Ada Lovelace\",\"email\":\"ada@example.com\"},\"principal_address\":{\"street\":\"1 Main St\",\"city\":\"Dover\",\"state\":\"DE\",\"postal_code\":\"19901\"},\"ai_agent_description\":\"Procurement agent\",\"authority_limits\":\"No commitments above $5,000 without sign-off\",\"contract_threshold\":\"$5,000\"}'",
           "expect": "{\"formation_id\":\"f-...\",\"payment_url\":\"https://...\",\"status\":\"awaiting_payment\"}",
           "cost": null,
-          "note": "BILLABLE - files a real company. $190 instant / $210 standard / $260 next-day / $310 same-day, paid by the founder at the returned link. Needs a General Legal account; nothing to import. formation_id is shown once."
+          "note": "BILLABLE - files a real company. $190 instant / $210 standard / $260 next-day / $310 same-day, paid by the founder at the returned link. No account or key needed to call it. formation_id is shown once."
         },
         {
           "title": "Track the filing and collect the paperwork",
@@ -344,7 +344,7 @@ export const apps: App[] = [
           "command": "pilotctl appstore call io.pilot.generallegal generallegal.deals_list '{\"page\":1,\"page_size\":5}'",
           "expect": "{\"items\":[...],\"total\":n} once the key is in place; 401 until then",
           "cost": null,
-          "note": "Sign up at https://portal.general.legal/signup, then account menu -> API keys (shown once). Import: printf '{\"GENERAL_LEGAL_API_KEY\":\"glk_YOUR_KEY\"}' > ~/.pilot/apps/io.pilot.generallegal/secrets.json && chmod 600 ~/.pilot/apps/io.pilot.generallegal/secrets.json && pilotctl appstore restart io.pilot.generallegal"
+          "note": "Contract review only. Sign up at https://portal.general.legal/signup, then account menu -> API keys (shown once). Import: printf '{\"GENERAL_LEGAL_API_KEY\":\"glk_YOUR_KEY\"}' > ~/.pilot/apps/io.pilot.generallegal/secrets.json && chmod 600 ~/.pilot/apps/io.pilot.generallegal/secrets.json && pilotctl appstore restart io.pilot.generallegal"
         },
         {
           "title": "Ask an attorney to review a contract",
@@ -373,12 +373,12 @@ export const apps: App[] = [
       ],
       "cost": null,
       "gotchas": [
-        "A General Legal account is required for both halves. Sign up at portal.general.legal/signup.",
-        "Contract review needs an API key imported: account menu -> API keys, write it to $APP/secrets.json, then restart the app - the key is read at startup.",
-        "Company formation needs no key or secret on your side; the service handles its own authentication. Just call formation_options.",
+        "Two halves, different requirements. Company formation needs no account and no key. Contract review needs a General Legal account and an API key imported.",
+        "For contract review: sign up at portal.general.legal/signup, mint a key under API keys, write it to $APP/secrets.json, then restart the app - the key is read at startup.",
         "Five methods spend money: deal_open and document_upload are flat-fee per contract ($250/$500/$10-per-page/$2,000); formation_start_llc and formation_start_c_corp file a real company ($190-$318); thread_post is covered by the matter's fee.",
         "A document cannot ride in one call. Use upload_begin then upload_chunk (<=512 KiB raw each) and pass the blob_id. A blob is single-use and dropped once sent.",
-        "Matters reach a real attorney and formations file a real company. Neither is a sandbox - confirm before calling a billable method."
+        "Matters reach a real attorney and formations file a real company. Neither is a sandbox - confirm before calling a billable method.",
+        "Contract-review limits are per organization: 120 reads/min, 25 new matters/day, 50 uploads/day. Honour Retry-After on a 429."
       ],
       "next": [
         "generallegal.formation_options to price a company, or generallegal.deals_list to see the matters your key can reach.",
