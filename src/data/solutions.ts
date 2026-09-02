@@ -346,7 +346,7 @@ export const solutions: SolutionProfile[] = [
       value: '40%',
       body: 'is the average share of a seller’s week spent selling, according to a survey of more than four thousand sales professionals.',
       source: 'Salesforce State of Sales 2026',
-      href: 'https://www.salesforce.com/news/stories/state-of-sales-report-announcement-2026/',
+      href: 'https://www.salesforce.com/sales/state-of-sales/',
     },
     problemTitle: 'Prospecting work is spread across too many disconnected tools.',
     problemBody: 'A useful account brief can require company enrichment, people data, public web research, internal context, drafting, and channel follow-up. Each handoff adds another copy-and-paste boundary. Pilot lets a team compose these steps through typed apps while retaining the option to substitute a capability as the workflow evolves.',

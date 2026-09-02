@@ -12,7 +12,9 @@ export interface BlogPost {
  iso_date?: string;
 }
 
-export const allPosts: BlogPost[] = data as BlogPost[];
+export const allPosts: BlogPost[] = [...(data as BlogPost[])].sort(
+ (a, b) => (b.iso_date || '').localeCompare(a.iso_date || ''),
+);
 
 export const companyNews = allPosts.filter((post) => post.category === 'Company');
 export const blogPosts = allPosts.filter((post) => post.category !== 'Company');
