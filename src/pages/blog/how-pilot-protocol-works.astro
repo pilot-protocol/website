@@ -168,9 +168,9 @@ const bodyContent = `<p><strong>How Pilot Protocol works:</strong> it is a UDP o
   <pre><code><span class="comment"># MsgRelay format: [0x05][senderNodeID(4)][destNodeID(4)][payload...]</span>
 <span class="cmd">Agent A</span> --[relay]--> <span class="cmd">Beacon</span> --[relay]--> <span class="cmd">Agent B</span></code></pre>
 
-  <p>Relay mode is detected automatically. When an agent sends a <code>DialConnection</code>, it first attempts <strong>3 direct retries</strong>. If those fail, it automatically switches to relay mode and attempts <strong>4 relay retries</strong> through the beacon (7 total dial attempts). The application layer never knows the difference -- it gets the same <code>net.Conn</code> interface either way.</p>
+  <p>Relay mode is selected automatically after direct attempts fail. The application receives the same <code>net.Conn</code>-style interface, while diagnostics can still show whether the active path is direct or relayed.</p>
 
-  <p>The tradeoff is latency: relay adds one extra hop through the beacon. But it guarantees connectivity for agents behind the most restrictive NATs, including carriers that use CGNAT (Carrier-Grade NAT) for mobile networks. For a deeper treatment of the NAT traversal mechanics, see <a href="/blog/nat-traversal-ai-agents-deep-dive">NAT Traversal for AI Agents: A Technical Deep Dive</a>.</p>
+  <p>The tradeoff is an additional hop and reliance on relay availability. Relay fallback improves reachability when direct traversal fails, including many CGNAT environments, but deployment firewall policy can still block traffic. For a deeper treatment of the NAT traversal mechanics, see <a href="/blog/nat-traversal-ai-agents-deep-dive">NAT Traversal for AI Agents: A Technical Deep Dive</a>.</p>
 
   <h2 id="tunnel">The Tunnel Layer</h2>
 
@@ -181,9 +181,9 @@ const bodyContent = `<p><strong>How Pilot Protocol works:</strong> it is a UDP o
 <span class="cmd">XX XX</span>          <span class="comment"># Frame length (2 bytes)</span>
 <span class="cmd">[pilot packet]</span> <span class="comment"># 34-byte header + payload</span></code></pre>
 
-  <p>The magic bytes serve as a frame delimiter. When reading from a UDP socket, the tunnel layer scans for <code>0x50494C54</code> ("PILT") to identify valid frames and discard noise. This makes the protocol robust against packet corruption and injection attempts.</p>
+  <p>The magic bytes identify the frame family so the receiver can reject unrelated or malformed datagrams early. Cryptographic authentication, rather than the marker itself, is what protects secure frames from undetected modification.</p>
 
-  <p>Each agent maintains a single UDP socket for all tunnel traffic. Multiplexing happens at the Pilot layer -- the virtual source and destination addresses in the packet header determine which connection a packet belongs to. This means an agent can maintain thousands of connections to different peers over a single UDP port.</p>
+  <p>Each agent can use one UDP socket for multiple tunnel relationships. Multiplexing happens at the Pilot layer: virtual source and destination addresses in the packet header identify the relevant connection without assigning a public port per peer.</p>
 
   <h2 id="encryption">Encryption: X25519 + AES-256-GCM</h2>
 
@@ -217,7 +217,7 @@ const bodyContent = `<p><strong>How Pilot Protocol works:</strong> it is a UDP o
 
   <h3>Replay Prevention</h3>
 
-  <p>Each secure connection uses a <strong>random nonce prefix</strong> that is unique per peer pair. The nonce is constructed as: <code>[4-byte random prefix][8-byte counter]</code>. The random prefix ensures that even if two connections use the same counter value, they produce different nonces. The counter is incremented for every packet, preventing replay attacks.</p>
+  <p>Each secure connection uses a <strong>random nonce prefix</strong> with a counter: <code>[4-byte random prefix][8-byte counter]</code>. This construction is intended to keep AES-GCM nonces unique for a key. Replay resistance additionally depends on receiver-side validation of packet state; nonce uniqueness alone does not reject a previously captured valid ciphertext.</p>
 
   <h3>Authentication Frames</h3>
 
@@ -260,7 +260,7 @@ const bodyContent = `<p><strong>How Pilot Protocol works:</strong> it is a UDP o
 
   <h3>Revocation</h3>
 
-  <p>Trust can be revoked instantly with <code>pilotctl untrust</code>. This removes the trust pair, tears down any active tunnels, and notifies the peer. The revoked agent can no longer resolve the revoker's endpoint or establish new connections.</p>
+  <p><code>pilotctl untrust</code> removes the local trust grant and tears down associated tunnels. Once revocation has propagated through the relevant state, the peer can no longer use that grant to resolve the endpoint or establish a new connection.</p>
 
   <p>For a deeper exploration of the trust model, see <a href="trust-model-agents-invisible-by-default">Why Agents Should Be Invisible by Default</a>.</p>
 
@@ -314,7 +314,7 @@ http.Serve(listener, myHandler)</code></pre>
     <li><strong>Receive</strong> -- Bob's application reads the message from the <code>net.Conn</code> interface, exactly as if it were a regular TCP connection</li>
   </ol>
 
-  <p>All of this happens in milliseconds. The agent developer writes standard Go networking code. The Pilot daemon handles everything else: address resolution, NAT traversal, encryption, flow control, and reliable delivery.</p>
+  <p>The time required depends on registry latency, NAT behavior, trust state, and whether the path is already warm. The application uses familiar networking interfaces while the Pilot daemon handles address resolution, traversal attempts, encryption, flow control, and reliable delivery.</p>
 
   <div class="callout">
     <p>Automated tests cover the stack from packet serialization through NAT traversal. The core daemon is implemented in pure Go with no external runtime dependencies. See the <a href="/docs/concepts">Core Concepts documentation</a> for the technical reference.</p>
@@ -328,7 +328,7 @@ http.Serve(listener, myHandler)</code></pre>
 ---
 <BlogLayout
   title="How Pilot Protocol Works: P2P Overlay Networking Architecture for AI Agents"
-  description="Learn how Pilot Protocol's overlay network gives AI agents virtual addresses, encrypted tunnels through NAT, direct-path preference, relay fallback, and a cryptographic trust model."
+  description="See how Pilot separates agent identity and coordination from encrypted payload paths, including discovery, traversal, direct connections, and relay fallback."
   date="May 21, 2026"
   tags={["architecture", "deep-dive", "networking"]}
   canonicalPath="/blog/how-pilot-protocol-works"

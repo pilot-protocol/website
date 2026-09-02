@@ -1,5 +1,7 @@
 const MIN_TITLE_LENGTH = 50;
 const MAX_TITLE_LENGTH = 60;
+const MIN_DESCRIPTION_LENGTH = 120;
+const MAX_DESCRIPTION_LENGTH = 160;
 
 // Search titles are intentionally separate from visible H1s. The H1 can be
 // editorial; the browser/search title should be concise, descriptive, and
@@ -28,6 +30,15 @@ const ROUTE_TITLES = new Map([
   ['/security/disclosure', 'Report a Security Vulnerability or Bug | Pilot Protocol'],
   ['/terms', 'Terms of Service and User Agreement | Pilot Protocol'],
   ['/trust', 'Pilot Protocol Trust Center: Security and Architecture'],
+  ['/blog/direct-communication-protocols-ai-agents-guide', 'AI Agent Communication Protocols Compared | Pilot Protocol'],
+  ['/blog/ai-networking-terminology-a2a-mcp-anp-protocols', 'AI Networking Glossary: A2A, MCP and ANP | Pilot Protocol'],
+  ['/blog/overlay-networking-secure-ai-agent-communication-explained', 'Overlay Networking Explained for AI Systems | Pilot Protocol'],
+  ['/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents', 'Nebula vs Tailscale vs ZeroTier for Agents | Pilot Protocol'],
+  ['/blog/pilot-vs-tcp-grpc-nats-comparison', 'Where Pilot Fits with TCP, gRPC and NATS | Pilot Protocol'],
+  ['/blog/why-ai-agents-need-network-stack', 'AI Agent Connectivity Best Practices | Pilot Protocol'],
+  ['/blog/zero-dependency-encryption-x25519-aes-gcm', 'AES-256-GCM Encryption with X25519 | Pilot Protocol'],
+  ['/docs/comparison-networking', 'Pilot Network Architecture Comparison | Pilot Protocol Docs'],
+  ['/learn/nats-vs-grpc-agent-messaging', 'NATS vs gRPC: Agent Messaging Compared | Pilot Protocol'],
   ['/for/compatibility', 'Pilot Protocol Deployment Compatibility by Environment'],
   ['/for/networks', 'Managed Agent Networks for Organizations | Pilot Protocol'],
   ['/for/setups', 'Multi-Agent Fleet Blueprints and Setups | Pilot Protocol'],
@@ -60,7 +71,10 @@ function cleanSubject(value) {
 
 function cropWords(value, max) {
   if (value.length <= max) return value;
-  let cropped = value.slice(0, max + 1).replace(/\s+\S*$/, '').replace(/[,:;\-–—]+$/, '').trim();
+  const prefix = value.slice(0, max + 1);
+  const boundary = prefix.search(/\s+\S*$/);
+  if (boundary <= 0) return '';
+  let cropped = prefix.slice(0, boundary).replace(/[,:;\-–—]+$/, '').trim();
   const weakEnding = /\b(?:a|an|and|by|every|for|from|in|of|or|the|to|with|your)$/i;
   while (weakEnding.test(cropped)) {
     const next = cropped.replace(/\s+\S+$/, '').trim();
@@ -116,8 +130,10 @@ function fallbackTitle(subject, suffix) {
   const maxSubject = MAX_TITLE_LENGTH - suffix.length;
   const minSubject = MIN_TITLE_LENGTH - suffix.length;
   let fitted = cropWords(subject, maxSubject);
+  if (!fitted) fitted = `${subject.slice(0, Math.max(1, maxSubject - 1)).trim()}…`;
   if (fitted.length < minSubject) fitted = `${fitted}: Technical Guide`;
-  return `${cropWords(fitted, maxSubject)}${suffix}`;
+  const finalSubject = cropWords(fitted, maxSubject) || fitted.slice(0, maxSubject);
+  return `${finalSubject}${suffix}`;
 }
 
 export function formatPageTitle(title, pathname) {
@@ -193,4 +209,59 @@ export function formatPageTitle(title, pathname) {
   return supplied;
 }
 
-export { MAX_TITLE_LENGTH, MIN_TITLE_LENGTH, normalizedPath };
+function finishSentence(value) {
+  const clean = value.trim().replace(/[,:;\-–—]+$/, '');
+  return /[.!?]$/.test(clean) ? clean : `${clean}.`;
+}
+
+export function formatMetaDescription(description, pathname) {
+  const path = normalizedPath(pathname);
+  let clean = decodeTitle(description);
+
+  if (clean.length > MAX_DESCRIPTION_LENGTH) {
+    return finishSentence(cropWords(clean, MAX_DESCRIPTION_LENGTH - 1) || clean.slice(0, MAX_DESCRIPTION_LENGTH - 1));
+  }
+  if (clean.length >= MIN_DESCRIPTION_LENGTH) return clean;
+
+  const suffixes = path.startsWith('/apps/')
+    ? [
+        'See setup and usage details.',
+        'Review setup, usage, and operating details.',
+        'Review its methods, setup, runtime requirements, and typed agent interface.',
+      ]
+    : path.startsWith('/for/setups/')
+      ? [
+          'See the implementation blueprint.',
+          'Review the workflow, roles, and controls.',
+          'Review the workflow, roles, controls, and practical implementation blueprint.',
+        ]
+      : path.startsWith('/docs/')
+        ? [
+            'Read the implementation guide.',
+            'Read configuration and operating guidance.',
+            'Read implementation details, configuration, and operational guidance.',
+          ]
+        : [
+            'See the technical details.',
+            'Review the architecture and practical guidance.',
+            'Review the architecture, operating model, tradeoffs, and practical next steps.',
+          ];
+
+  clean = finishSentence(clean);
+  const candidate = suffixes
+    .map((suffix) => `${clean} ${suffix}`)
+    .find((value) => value.length >= MIN_DESCRIPTION_LENGTH && value.length <= MAX_DESCRIPTION_LENGTH)
+    || `${clean} ${suffixes[suffixes.length - 1]}`;
+
+  return candidate.length <= MAX_DESCRIPTION_LENGTH
+    ? candidate
+    : finishSentence(cropWords(candidate, MAX_DESCRIPTION_LENGTH - 1) || candidate.slice(0, MAX_DESCRIPTION_LENGTH - 1));
+}
+
+export {
+  MAX_DESCRIPTION_LENGTH,
+  MAX_TITLE_LENGTH,
+  MIN_DESCRIPTION_LENGTH,
+  MIN_TITLE_LENGTH,
+  normalizedPath,
+};

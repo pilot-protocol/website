@@ -76,6 +76,86 @@ const related = collectionPosts
   .sort((a, b) => b.shared - a.shared)
   .slice(0, 3);
 
+const funnelCtaGroups = [
+  {
+    slugs: new Set([
+      'why-ai-agents-need-network-stack',
+      'pilot-vs-tcp-grpc-nats-comparison',
+      'direct-communication-protocols-ai-agents-guide',
+      'ai-agent-discovery-process-p2p-networks',
+      'how-pilot-protocol-works',
+      'pilot-vs-tailscale-nebula-zerotier-ai-agents',
+      'connect-ai-agents-behind-nat-without-vpn',
+      'build-agent-swarm-self-organizes',
+      'peer-to-peer-agent-communication-no-server',
+      'overlay-networking-secure-ai-agent-communication-explained',
+    ]),
+    eyebrow: 'For agent platform teams',
+    title: 'Map the network your agents actually need',
+    body: 'Review addressing, private discovery, peer trust, direct paths, and encrypted relay fallback as one deployment model.',
+    href: '/solutions/private-agent-network',
+    label: 'Explore private agent networks',
+  },
+  {
+    slugs: new Set([
+      'zero-dependency-encryption-x25519-aes-gcm',
+      'secure-ai-agent-communication-zero-trust',
+      'agent-communication-security-best-practices',
+      'trust-model-agents-invisible-by-default',
+    ]),
+    eyebrow: 'For security reviewers',
+    title: 'Separate implemented controls from deployment policy',
+    body: 'Inspect the cryptographic boundary, trust lifecycle, metadata exposure, operational controls, and stated limitations.',
+    href: '/trust',
+    label: 'Open the Trust Center',
+  },
+  {
+    slugs: new Set([
+      'ai-agent-app-store',
+      'build-agent-app-turn-api-into-tool',
+      'mcp-plus-pilot-tools-and-network',
+    ]),
+    eyebrow: 'For API and tool publishers',
+    title: 'Turn one useful service into an agent capability',
+    body: 'Package typed methods, declare required authority, and make the capability discoverable without replacing the upstream product.',
+    href: '/solutions/agent-ready-apis',
+    label: 'See the publisher path',
+  },
+  {
+    slugs: new Set([
+      'distributed-rag-without-central-knowledge-base',
+      'scriptorium-replace-agentic-active-research-ready-intelligence',
+    ]),
+    eyebrow: 'For knowledge and research teams',
+    title: 'Evaluate grounded search on your own sources',
+    body: 'Compare lexical, dense, and hybrid retrieval while preserving citations and control over the index and model endpoints.',
+    href: '/solutions/grounded-agent-search',
+    label: 'Explore grounded agent search',
+  },
+  {
+    slugs: new Set(['claude-agent-teams-over-pilot']),
+    eyebrow: 'For engineering leaders',
+    title: 'Manage coding-agent settings and usage as a fleet',
+    body: 'Review the early-access control surface for inventory, signed settings, usage attribution, and audited remote operations.',
+    href: '/enterprise/claude-code-management',
+    label: 'Review enterprise management',
+  },
+  {
+    slugs: new Set([
+      'enterprise-identity-integration-pilot-protocol',
+      'enterprise-private-networks-roadmap',
+      'enterprise-phase-3-rbac-policies-audit-fleet',
+      'enterprise-production-complete-identity-directory-audit-export',
+    ]),
+    eyebrow: 'For enterprise AI teams',
+    title: 'Put autonomous agents inside an operating control loop',
+    body: 'Connect fleet state, signed policy, approvals, bounded remote operations, usage telemetry, and action evidence.',
+    href: '/enterprise/autonomous-ai-agents',
+    label: 'Explore the agent control plane',
+  },
+];
+const funnelCta = funnelCtaGroups.find((group) => group.slugs.has(currentSlug));
+
 // Imported article bodies historically included their own schema and page
 // title. The layout owns both, so remove only those first legacy elements.
 const renderedBody = await Astro.slots.render('default');
@@ -209,6 +289,16 @@ const faqSectionId = headingIds.has('frequently-asked-questions')
         {tags.map((tag) => <span class="tag">{tag}</span>)}
       </div>
       <Fragment set:html={articleBody} />
+      {funnelCta && (
+        <aside class="article-next-step" aria-label="Recommended next step" data-track-cta={`${currentSlug}:${funnelCta.href}`}>
+          <span>{funnelCta.eyebrow}</span>
+          <div>
+            <h2>{funnelCta.title}</h2>
+            <p>{funnelCta.body}</p>
+          </div>
+          <a href={funnelCta.href}>{funnelCta.label} <i aria-hidden="true">→</i></a>
+        </aside>
+      )}
       <footer class="article-provenance">
         <strong>About this article</strong>
         <p>Published by the Pilot Protocol team. Product claims are scoped to the availability labels and technical references linked in the article; deployment behavior can vary by version and environment.</p>
@@ -421,6 +511,47 @@ const faqSectionId = headingIds.has('frequently-asked-questions')
 </script>
 
 <style>
+  .article-next-step {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem 2rem;
+    align-items: end;
+    margin: 3rem 0 2rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
+    background: color-mix(in srgb, var(--accent) 6%, var(--bg));
+  }
+  .article-next-step > span {
+    grid-column: 1 / -1;
+    color: var(--accent-text);
+    font: 600 0.68rem/1.2 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .article-next-step h2 {
+    margin: 0 0 0.55rem;
+    font-size: clamp(1.35rem, 3vw, 1.9rem);
+    line-height: 1.08;
+  }
+  .article-next-step p { margin: 0; color: var(--ink-dim); }
+  .article-next-step > a {
+    display: inline-flex;
+    gap: 0.6rem;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    font: 600 0.72rem/1.2 var(--mono);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .article-next-step > a:hover { background: var(--ink); color: var(--bg); }
+  @media (max-width: 640px) {
+    .article-next-step { grid-template-columns: 1fr; align-items: start; }
+    .article-next-step > a { width: 100%; white-space: normal; }
+  }
   .article-faq {
     max-width: 760px;
     margin: 0 auto;
