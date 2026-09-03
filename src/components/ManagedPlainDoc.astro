@@ -1,0 +1,20 @@
+---
+import PlainLayout from '../layouts/PlainLayout.astro';
+import { managedDocs } from '../data/managedDocs';
+
+interface Props {
+  slug: string;
+}
+
+const { slug } = Astro.props;
+const doc = managedDocs[slug];
+if (!doc) throw new Error(`Unknown managed documentation slug: ${slug}`);
+---
+<PlainLayout
+  title={`${doc.title} — Pilot Protocol (plain)`}
+  description={doc.description}
+  canonical={`https://pilotprotocol.network/plain/docs/${slug}/`}
+>
+  <p><a href="/plain/docs/">&larr; Docs index</a></p>
+  <Fragment set:html={doc.body} />
+</PlainLayout>

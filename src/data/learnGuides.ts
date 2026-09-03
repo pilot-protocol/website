@@ -25,6 +25,14 @@ export const learnGuides: LearnGuide[] = [
     track: 'Foundations',
   },
   {
+    slug: 'grounding-ai-agents-web-search-retrieval',
+    title: 'Grounding AI Agents with Web Search',
+    description: 'Design a retrieval loop that reads full sources, preserves provenance, verifies consequential claims, and treats retrieved text as untrusted input.',
+    date: 'August 2, 2026',
+    isoDate: '2026-08-02',
+    track: 'Foundations',
+  },
+  {
     slug: 'ai-in-networking-for-multicloud',
     title: 'AI Networking Across Multiple Clouds',
     description: 'How agent connectivity changes when workloads span cloud accounts, edge devices, laptops, and organizational boundaries.',
@@ -54,6 +62,14 @@ export const learnGuides: LearnGuide[] = [
     description: 'Separate tool access, network reachability, identity, and authorization so similarly named approaches are evaluated on the right boundary.',
     date: 'July 25, 2026',
     isoDate: '2026-07-25',
+    track: 'Transport',
+  },
+  {
+    slug: 'webhooks-sse-streaming-long-running-jobs',
+    title: 'Webhooks and SSE for Long-Running Jobs',
+    description: 'Compare callbacks, event streams, polling, fan-in, retries, and stable agent delivery without promising connection permanence.',
+    date: 'August 20, 2026',
+    isoDate: '2026-08-20',
     track: 'Transport',
   },
   {

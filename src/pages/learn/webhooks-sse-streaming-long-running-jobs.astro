@@ -11,7 +11,7 @@ const bodyContent = `
 <li><strong>Webhooks</strong> deliver the finished result: the job runs asynchronously, then POSTs the result to a callback URL you registered when you started it. They are ideal for completion events, retries, and fan-in from parallel subtasks.</li>
 <li><strong>SSE (Server-Sent Events)</strong> streams progress: the server holds an HTTP connection open and pushes progress events and partial results down it as they appear. One-way, server to client, built for live updates.</li>
 <li><strong>Parallel research jobs</strong> combine them: a coordinator fans out subtasks, each worker streams progress over SSE, and results fan back in through a shared callback — or per-task callbacks with correlation IDs.</li>
-<li><strong>Both approaches assume the receiving end is publicly reachable.</strong> When the receiver is an AI agent behind NAT, that assumption is the fragile part — a persistent tunnel with a stable address removes it.</li>
+<li><strong>Both approaches require a reachable receiving path.</strong> A conventional webhook needs a public callback. When both endpoints are agents, a stable overlay address can replace that public-URL assumption; a conventional SaaS sender still needs an HTTP gateway or public receiver.</li>
 </ul>
 </blockquote>
 <hr>
@@ -93,9 +93,9 @@ const bodyContent = `
 
 <h2 id="the-alternative-deliver-results-to-a-stable-agent-address">The alternative: deliver results to a stable agent address</h2>
 
-<p>If the fragile part is public reachability, the fix is a delivery layer that does not require it. That is the problem an agent-native overlay network is built to solve. Pilot Protocol gives every agent a permanent virtual address that survives restarts, IP changes, and moves across clouds. Traffic travels over encrypted UDP tunnels — X25519 key exchange with AES-GCM — and NAT traversal (STUN with hole-punching and a relay fallback) means agents behind NAT are reachable without port forwarding or a public host.</p>
+<p>If both sides of the exchange are agents, an overlay can remove the need to expose the receiving agent as a public HTTP server. Pilot Protocol gives a node a persistent virtual address that remains its reconnection target across daemon restarts and network-path changes. Traffic uses encrypted UDP tunnels, with STUN discovery, hole-punching, and relay fallback when a direct path is unavailable.</p>
 
-<p>The research pipeline looks different on this layer. The coordinator agent registers its stable address. Workers connect to it — outbound, like a webhook client — and the tunnel stays up for the life of the job. Progress streams through the tunnel the way SSE events would, and the final result lands on the coordinator's address, which does not change when the process restarts. Trust is explicit: agents approve a mutual handshake before any traffic flows, so there is no open callback endpoint for an attacker to discover.</p>
+<p>The research pipeline looks different on this layer. The coordinator registers its stable address and workers resolve that address before connecting. Progress and results can travel over the agent channel without publishing a callback URL. The address is durable; an individual connection is not, so applications still need correlation IDs, idempotency, retry, and resume behavior when either process or path restarts. Admission is governed by bilateral trust or explicit network membership policy rather than possession of a public callback URL.</p>
 
 <p>Discovery is part of the same layer. A rendezvous registry lets agents find each other by name or tag, so the coordinator does not need to hand out URLs — workers resolve the agent they are working for. For builders, the <a href="/app-store">Pilot app store</a> adds installable capability apps — grounded search, web-to-markdown, runtime security — that run locally on the daemon, discovered and installed with a single command.</p>
 
@@ -120,7 +120,7 @@ const bodyContent = `
 <p>A webhook delivery is an inbound connection: the worker initiates a connection to your callback URL. Behind NAT, inbound connections cannot reach the agent unless port forwarding or a reverse proxy is configured. An agent-native overlay with NAT traversal removes this requirement — the tunnel is established from the agent's side and inbound traffic arrives through it.</p>
 
 <h3 id="does-pilot-protocol-replace-webhooks-and-sse">Does Pilot Protocol replace webhooks and SSE?</h3>
-<p>No. Webhooks and SSE are delivery patterns — they remain the right choice inside a trusted boundary with reachable endpoints. Pilot Protocol replaces the fragile assumption under them: it gives each agent a stable virtual address and an encrypted tunnel that works across NAT and survives restarts, so results can be delivered to the agent itself instead of to a public URL that may not exist anymore.</p>
+<p>No. Webhooks and SSE remain useful when an HTTP endpoint is reachable. For agent-to-agent delivery, Pilot provides a stable address and an encrypted path across NAT; after a restart the path is re-established rather than magically preserved. A conventional SaaS webhook sender still needs an HTTP gateway or public receiver.</p>
 
 <h3 id="what-is-a-fan-in-callback">What is a fan-in callback?</h3>
 <p>A fan-in callback is a single webhook posted after a parallel job completes: subtasks report their results to a coordinator inside the job, the coordinator aggregates them, and one POST carries the combined result to the callback URL. It reduces endpoint churn, makes ordering deterministic, and centralizes retry and idempotency logic.</p>
@@ -145,7 +145,7 @@ const faqItems = [
   },
   {
     question: "Does Pilot Protocol replace webhooks and SSE?",
-    answer: "No. Webhooks and SSE are delivery patterns — they remain the right choice inside a trusted boundary with reachable endpoints. Pilot Protocol replaces the fragile assumption under them: it gives each agent a stable virtual address and an encrypted tunnel that works across NAT and survives restarts, so results can be delivered to the agent itself instead of to a public URL that may not exist anymore.",
+    answer: "No. Webhooks and SSE remain useful when an HTTP endpoint is reachable. For agent-to-agent delivery, Pilot provides a stable address and an encrypted path across NAT; after a restart the path is re-established rather than magically preserved. A conventional SaaS webhook sender still needs an HTTP gateway or public receiver.",
   },
   {
     question: "What is a fan-in callback?",
@@ -154,8 +154,8 @@ const faqItems = [
 ];
 ---
 <BlogLayout
-  title="Parallel task webhooks and SSE streaming: how long-running research jobs deliver results"
-  description="How parallel task webhooks and SSE streaming work for long-running research jobs — and what to do when the callback endpoint is the fragile part."
+  title="Webhooks and SSE for Long-Running AI Research Jobs"
+  description="Compare webhooks, SSE, polling, retries, and fan-in for long-running AI research jobs, including delivery to agents behind NAT."
   date="August 20, 2026"
   tags={["webhooks", "sse", "streaming", "long-running-jobs", "ai-agents", "networking"]}
   canonicalPath="/learn/webhooks-sse-streaming-long-running-jobs"
