@@ -1,0 +1,165 @@
+---
+import BlogLayout from "../../layouts/BlogLayout.astro";
+
+const bodyContent = `
+<h1 id="parallel-task-webhooks-and-sse-streaming-for-long-running-research-jobs">Parallel task webhooks and SSE streaming: how long-running research jobs deliver results</h1>
+
+<hr>
+<blockquote>
+<p><strong>TL;DR:</strong></p>
+<ul>
+<li><strong>Webhooks</strong> deliver the finished result: the job runs asynchronously, then POSTs the result to a callback URL you registered when you started it. They are ideal for completion events, retries, and fan-in from parallel subtasks.</li>
+<li><strong>SSE (Server-Sent Events)</strong> streams progress: the server holds an HTTP connection open and pushes progress events and partial results down it as they appear. One-way, server to client, built for live updates.</li>
+<li><strong>Parallel research jobs</strong> combine them: a coordinator fans out subtasks, each worker streams progress over SSE, and results fan back in through a shared callback — or per-task callbacks with correlation IDs.</li>
+<li><strong>Both approaches require a reachable receiving path.</strong> A conventional webhook needs a public callback. When both endpoints are agents, a stable overlay address can replace that public-URL assumption; a conventional SaaS sender still needs an HTTP gateway or public receiver.</li>
+</ul>
+</blockquote>
+<hr>
+
+<p>If you are building a research system where jobs run for minutes to hours — deep research, document analysis, codebase investigation — you will eventually ask how parallel task webhooks and SSE streaming work for long-running research jobs. The short answer: webhooks deliver the finished result to a callback URL, SSE streams progress over a connection the server keeps open, and production systems usually combine both. The longer answer is about fan-out, retries, idempotency, and one requirement both approaches quietly share: something has to be reachable at the end of the call.</p>
+
+<p>This post walks through the mechanics of each pattern, how they behave under parallel task fan-out, where they break in agent-based systems, and what a persistent delivery layer changes.</p>
+
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#what-webhooks-do-for-long-running-jobs">What webhooks do for long-running jobs</a></li>
+<li><a href="#how-sse-streaming-works-for-long-running-research-jobs">How SSE streaming works for long-running research jobs</a></li>
+<li><a href="#webhooks-vs-sse-vs-polling-for-parallel-research-tasks">Webhooks vs SSE vs polling for parallel research tasks</a></li>
+<li><a href="#where-webhooks-and-sse-break-for-agent-based-research-systems">Where webhooks and SSE break for agent-based research systems</a></li>
+<li><a href="#the-alternative-deliver-results-to-a-stable-agent-address">The alternative: deliver results to a stable agent address</a></li>
+<li><a href="#frequently-asked-questions">Frequently asked questions</a></li>
+</ul>
+
+<h2 id="what-webhooks-do-for-long-running-jobs">What webhooks do for long-running jobs</h2>
+
+<p>A webhook is a callback over HTTP. The flow looks like this: your client submits a job to a worker or job API and gets back a job ID. The worker runs the job asynchronously — this is the part that takes minutes or hours. When the job finishes, the worker makes an outbound POST to the callback URL you supplied at submit time, with the result in the body. Your side acknowledges the POST, and the job is complete.</p>
+
+<p>Three details make webhooks work in practice:</p>
+<ul>
+<li><strong>Authentication.</strong> The callback URL carries a token, or the request includes a signature the receiver can verify. Without one, anyone who learns the URL can POST fake results.</li>
+<li><strong>Retries with backoff.</strong> Delivery is best-effort. If the POST fails, the worker retries with exponential backoff. The receiver must be idempotent — the same result arriving twice should be harmless, so results carry a job ID or idempotency key.</li>
+<li><strong>Timeout handling.</strong> The callback should complete quickly. If the receiver is slow, the worker may retry or give up; long processing belongs in the job, not in the callback handler.</li>
+</ul>
+
+<h3>Parallel tasks: per-task callbacks or fan-in</h3>
+
+<p>When a research job fans out into parallel subtasks, you have two designs. In <strong>per-task callbacks</strong>, each subtask POSTs its own result to the callback URL. The receiver correlates results by subtask ID and waits until the expected set arrives. This is simple but chatty, and results arrive out of order — ordering must be reconstructed by the receiver.</p>
+
+<p>In <strong>fan-in</strong>, subtasks report to a coordinator inside the job, and the coordinator POSTs one aggregate callback when the whole job completes. Fewer endpoints, deterministic ordering, one place to implement retries and idempotency. Most production research pipelines use fan-in with a per-subtask progress channel on top — which is where SSE enters.</p>
+
+<h2 id="how-sse-streaming-works-for-long-running-research-jobs">How SSE streaming works for long-running research jobs</h2>
+
+<p>Server-Sent Events is the standard way to stream one-way updates over plain HTTP. The client opens a GET request with <code>Accept: text/event-stream</code>. The server keeps the connection open and writes events as frames: <code>event:</code> names the event type, <code>data:</code> carries the payload, <code>id:</code> marks the position in the stream, and comment lines (starting with a colon) act as heartbeats to keep intermediaries from closing idle connections.</p>
+
+<p>Two properties make SSE attractive for research workloads:</p>
+<ul>
+<li><strong>Automatic reconnection.</strong> If the connection drops, the browser or client reconnects on its own and sends <code>Last-Event-ID</code>, letting the server resume from where the client left off.</li>
+<li><strong>No polling.</strong> Progress arrives when it happens — stage changes, sources found, tokens generated, partial results — without the client repeatedly asking.</li>
+</ul>
+
+<p>SSE is one-way by design: server to client. The client cannot push messages back over the same connection; it uses ordinary requests for that. And SSE is still HTTP — it runs through reverse proxies and load balancers, which means those layers must be configured for long-lived connections: buffering off, read and idle timeouts raised, and connection limits accounted for. Each open SSE connection occupies a socket on both ends for the entire job.</p>
+
+<p>In a parallel research job, SSE typically carries progress from each worker to the coordinator, while the final result arrives through the webhook path. The two patterns complement each other: SSE for the live view, webhook for the authoritative completion signal.</p>
+
+<h2 id="webhooks-vs-sse-vs-polling-for-parallel-research-tasks">Webhooks vs SSE vs polling for parallel research tasks</h2>
+
+<table>
+<thead>
+<tr><th>Mechanism</th><th>Best for</th><th>What it assumes</th></tr>
+</thead>
+<tbody>
+<tr><td>Polling</td><td>Short jobs, simple clients, no push infrastructure</td><td>The client can keep asking; wasted requests are acceptable</td></tr>
+<tr><td>Webhook</td><td>Completion of long jobs, fan-in from parallel subtasks</td><td>The callback receiver is publicly reachable and the URL survives the job</td></tr>
+<tr><td>SSE</td><td>Live progress, partial results, dashboards</td><td>The connection stays open; proxies and load balancers cooperate</td></tr>
+<tr><td>Hybrid (SSE + webhook)</td><td>Production research pipelines</td><td>Both of the above, plus a coordinator to join the two paths</td></tr>
+</tbody>
+</table>
+
+<p>The table makes the tradeoff visible: the more live feedback you want, the more infrastructure you need to keep connections and endpoints healthy. For long-running research jobs, the hybrid is the common answer — and its failure modes are almost never in the transport choice.</p>
+
+<h2 id="where-webhooks-and-sse-break-for-agent-based-research-systems">Where webhooks and SSE break for agent-based research systems</h2>
+
+<p>Every pattern above shares one assumption: the receiving end is reachable at a stable URL. That assumption fails in specific, predictable ways:</p>
+
+<ul>
+<li><strong>NAT and firewalls.</strong> A webhook is an inbound connection from the worker to your callback URL. An agent running on a laptop, behind a home router, or in a container with no public IP cannot accept that connection unless something — port forwarding, a reverse proxy, a public host — stands in front of it.</li>
+<li><strong>Restarts.</strong> The callback URL dies with the process that hosts it. If the receiver restarts mid-job, retries hit nothing until the endpoint is back — and a fresh process often means a fresh address.</li>
+<li><strong>Ephemeral addresses.</strong> VMs and containers get new IPs on every deployment. The URL you registered at submit time may not be yours by completion time.</li>
+<li><strong>Ordering and correlation.</strong> With per-task callbacks, results arrive out of order. Correlation IDs and idempotency keys are mandatory, and the receiver has to reconstruct the expected set.</li>
+<li><strong>Attack surface.</strong> A public callback endpoint is an open door. Anyone who learns the URL can POST fabricated results, so tokens or signatures are not optional.</li>
+</ul>
+
+<p>None of this is a criticism of webhooks or SSE — they are the right tools inside a trusted boundary with reachable endpoints. The problems start exactly where agent-based systems live: distributed, behind NAT, and restarted without ceremony.</p>
+
+<h2 id="the-alternative-deliver-results-to-a-stable-agent-address">The alternative: deliver results to a stable agent address</h2>
+
+<p>If both sides of the exchange are agents, an overlay can remove the need to expose the receiving agent as a public HTTP server. Pilot Protocol gives a node a persistent virtual address that remains its reconnection target across daemon restarts and network-path changes. Traffic uses encrypted UDP tunnels, with STUN discovery, hole-punching, and relay fallback when a direct path is unavailable.</p>
+
+<p>The research pipeline looks different on this layer. The coordinator registers its stable address and workers resolve that address before connecting. Progress and results can travel over the agent channel without publishing a callback URL. The address is durable; an individual connection is not, so applications still need correlation IDs, idempotency, retry, and resume behavior when either process or path restarts. Admission is governed by bilateral trust or explicit network membership policy rather than possession of a public callback URL.</p>
+
+<p>Discovery is part of the same layer. A rendezvous registry lets agents find each other by name or tag, so the coordinator does not need to hand out URLs — workers resolve the agent they are working for. For builders, the <a href="/app-store">Pilot app store</a> adds installable capability apps — grounded search, web-to-markdown, runtime security — that run locally on the daemon, discovered and installed with a single command.</p>
+
+<p>For a deeper look at when replacing webhooks with persistent tunnels makes sense, see <a href="/blog/network-tunnels-ai-secure-communication-autonomous-agents">network tunnels for AI agent communication</a>. For how this layer compares with the HTTP+SSE transport that MCP tunnels use, see <a href="/learn/mcp-tunnels-vs-vpn">MCP tunnels vs VPN for AI agents</a>.</p>
+
+<p>Get started with one command:</p>
+
+<pre><code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></pre>
+
+<h2 id="frequently-asked-questions">Frequently asked questions</h2>
+
+<h3 id="what-is-the-difference-between-a-webhook-and-sse">What is the difference between a webhook and SSE?</h3>
+<p>A webhook is a one-way HTTP POST sent by the server to a callback URL when something completes — one request, one response. SSE is a long-lived HTTP connection over which the server pushes many events over time. Webhooks answer "is it done?", SSE answers "what is happening right now?"</p>
+
+<h3 id="can-webhooks-handle-parallel-tasks">Can webhooks handle parallel tasks?</h3>
+<p>Yes, in two shapes: per-task callbacks (each subtask POSTs its own result, correlated by subtask ID) or fan-in (subtasks report to a coordinator that POSTs one aggregate callback when the whole job finishes). Fan-in is simpler to make idempotent and ordered.</p>
+
+<h3 id="is-sse-good-for-delivering-the-final-result-of-a-long-job">Is SSE good for delivering the final result of a long job?</h3>
+<p>SSE is designed for live progress and partial results. Delivering the authoritative final result over a long-lived connection is risky — proxies and load balancers can close idle or long-lived connections, and a dropped connection after an hour of work is a bad place to lose the result. Most systems stream progress over SSE and deliver the final result over a webhook or a dedicated fetch.</p>
+
+<h3 id="why-do-webhooks-fail-for-agents-behind-nat">Why do webhooks fail for agents behind NAT?</h3>
+<p>A webhook delivery is an inbound connection: the worker initiates a connection to your callback URL. Behind NAT, inbound connections cannot reach the agent unless port forwarding or a reverse proxy is configured. An agent-native overlay with NAT traversal removes this requirement — the tunnel is established from the agent's side and inbound traffic arrives through it.</p>
+
+<h3 id="does-pilot-protocol-replace-webhooks-and-sse">Does Pilot Protocol replace webhooks and SSE?</h3>
+<p>No. Webhooks and SSE remain useful when an HTTP endpoint is reachable. For agent-to-agent delivery, Pilot provides a stable address and an encrypted path across NAT; after a restart the path is re-established rather than magically preserved. A conventional SaaS webhook sender still needs an HTTP gateway or public receiver.</p>
+
+<h3 id="what-is-a-fan-in-callback">What is a fan-in callback?</h3>
+<p>A fan-in callback is a single webhook posted after a parallel job completes: subtasks report their results to a coordinator inside the job, the coordinator aggregates them, and one POST carries the combined result to the callback URL. It reduces endpoint churn, makes ordering deterministic, and centralizes retry and idempotency logic.</p>
+`;
+
+const faqItems = [
+  {
+    question: "What is the difference between a webhook and SSE?",
+    answer: "A webhook is a one-way HTTP POST sent by the server to a callback URL when something completes — one request, one response. SSE is a long-lived HTTP connection over which the server pushes many events over time. Webhooks answer \"is it done?\", SSE answers \"what is happening right now?\"",
+  },
+  {
+    question: "Can webhooks handle parallel tasks?",
+    answer: "Yes, in two shapes: per-task callbacks (each subtask POSTs its own result, correlated by subtask ID) or fan-in (subtasks report to a coordinator that POSTs one aggregate callback when the whole job finishes). Fan-in is simpler to make idempotent and ordered.",
+  },
+  {
+    question: "Is SSE good for delivering the final result of a long job?",
+    answer: "SSE is designed for live progress and partial results. Delivering the authoritative final result over a long-lived connection is risky — proxies and load balancers can close long-lived connections, and a dropped connection after an hour of work is a bad place to lose the result. Most systems stream progress over SSE and deliver the final result over a webhook or a dedicated fetch.",
+  },
+  {
+    question: "Why do webhooks fail for agents behind NAT?",
+    answer: "A webhook delivery is an inbound connection: the worker initiates a connection to your callback URL. Behind NAT, inbound connections cannot reach the agent unless port forwarding or a reverse proxy is configured. An agent-native overlay with NAT traversal removes this requirement — the tunnel is established from the agent's side and inbound traffic arrives through it.",
+  },
+  {
+    question: "Does Pilot Protocol replace webhooks and SSE?",
+    answer: "No. Webhooks and SSE remain useful when an HTTP endpoint is reachable. For agent-to-agent delivery, Pilot provides a stable address and an encrypted path across NAT; after a restart the path is re-established rather than magically preserved. A conventional SaaS webhook sender still needs an HTTP gateway or public receiver.",
+  },
+  {
+    question: "What is a fan-in callback?",
+    answer: "A fan-in callback is a single webhook posted after a parallel job completes: subtasks report their results to a coordinator inside the job, the coordinator aggregates them, and one POST carries the combined result to the callback URL. It reduces endpoint churn, makes ordering deterministic, and centralizes retry and idempotency logic.",
+  },
+];
+---
+<BlogLayout
+  title="Webhooks and SSE for Long-Running AI Research Jobs"
+  description="Compare webhooks, SSE, polling, retries, and fan-in for long-running AI research jobs, including delivery to agents behind NAT."
+  date="August 20, 2026"
+  tags={["webhooks", "sse", "streaming", "long-running-jobs", "ai-agents", "networking"]}
+  canonicalPath="/learn/webhooks-sse-streaming-long-running-jobs"
+  faqItems={faqItems}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>

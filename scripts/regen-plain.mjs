@@ -132,6 +132,11 @@ async function loadDocManifest() {
     const source = `src/pages/docs/${file}`;
     const dest = `src/pages/plain/docs/${file}`;
     const full = await readFile(join(REPO_ROOT, source), 'utf8');
+    // Managed documentation renders from src/data/managedDocs.ts on both the
+    // human and plain routes. Feeding the thin route wrapper to the prose
+    // generator loses the authoritative content and produces placeholders.
+    // Its plain wrapper is intentionally unstamped and data-driven.
+    if (full.includes("from '../../data/managedDocs'")) continue;
     const meta = readDocMeta(full);
     const isIndex = slugPart === 'index';
     const canonical = isIndex

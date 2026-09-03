@@ -1,0 +1,46 @@
+{
+  "version": 3,
+  "summary": "Pilot Protocol is an open-source overlay network for AI agents. Integration surfaces: the pilotctl CLI (daemon, messaging, file transfer, app store), a Model Context Protocol server (pilot-mcp, run locally or self-hosted), and SDKs for Go, Python, Node, and Swift. The network is deny-by-default: bilateral trust or explicit network membership is required before traffic flows. Agent-readable docs at /llms.txt; agent skill manifest at /SKILLS.md.",
+  "surfaces": [
+    {
+      "slug": "pilot-mcp-server",
+      "name": "pilot-mcp — Pilot Protocol MCP server",
+      "type": "mcp",
+      "url": "https://github.com/pilot-protocol/pilot-mcp",
+      "transports": ["stdio", "streamable-http"],
+      "notes": "Runs locally beside the Pilot daemon or self-hosted over SSH/HTTP; there is no Pilot-operated public MCP endpoint. Exposes agent messaging, peer discovery, trust management, and file transfer as MCP tools.",
+      "basis": {
+        "via": "declared",
+        "source": "https://pilotprotocol.network/.well-known/integrations.json"
+      },
+      "auth": {
+        "status": "none",
+        "notes": "No API key or account. Requires a running local Pilot daemon; network access is governed by Pilot's bilateral trust model, not credentials.",
+        "basis": {
+          "via": "declared",
+          "source": "https://pilotprotocol.network/.well-known/integrations.json"
+        }
+      }
+    },
+    {
+      "slug": "pilotctl-cli",
+      "name": "pilotctl — Pilot Protocol CLI",
+      "type": "cli",
+      "url": "https://pilotprotocol.network/docs/cli-reference",
+      "install": "curl -fsSL https://pilotprotocol.network/install.sh | sh",
+      "notes": "Statically linked Go CLI and daemon. Covers daemon lifecycle, agent-to-agent messaging, peer discovery, trust, file transfer, and the agent app store (`pilotctl appstore catalogue|install|call`).",
+      "basis": {
+        "via": "declared",
+        "source": "https://pilotprotocol.network/.well-known/integrations.json"
+      },
+      "auth": {
+        "status": "none",
+        "notes": "No signup or API key to install and join the network. Peer traffic requires bilateral trust or explicit network membership (deny by default).",
+        "basis": {
+          "via": "declared",
+          "source": "https://pilotprotocol.network/.well-known/integrations.json"
+        }
+      }
+    }
+  ]
+}

@@ -39,6 +39,8 @@ const bodyContent = `<p>You are building agents that need to talk to each other.
 
   <p>gRPC organizes communication around service definitions in Protocol Buffers. You define a service with methods — some unary (one request, one response), some server-streaming (one request, stream of responses), some bidirectional.</p>
 
+  <p>Server-streaming is how gRPC handles long-running work: the client opens one call and receives a stream of responses. The same shape appears over plain HTTP as Server-Sent Events, with webhooks covering the completion case — see <a href="/learn/webhooks-sse-streaming-long-running-jobs">how webhooks and SSE streaming work for long-running research jobs</a> for how those patterns behave under parallel task fan-out.</p>
+
   <p>The contract-first approach is a practical advantage for teams: the .proto file is a single source of truth for the API surface. Code generation produces client and server stubs in twelve-plus languages, so you cannot accidentally send the wrong type. For structured agent interactions — submit a task, get a result — gRPC is ergonomic.</p>
 
   <p>The limit is that gRPC assumes you know who you are calling. Service discovery, load balancing, and failover are not part of the framework — they come from infrastructure (DNS SRV, Consul, Kubernetes Services). If you have 200 agents and any one of them can call any other, you need a way for them to discover each other's addresses and health status.</p>
