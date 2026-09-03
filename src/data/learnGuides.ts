@@ -3,6 +3,7 @@ export interface LearnGuide {
   title: string;
   description: string;
   date: string;
+  isoDate: string;
   track: 'Foundations' | 'Transport' | 'Security';
 }
 
@@ -12,6 +13,7 @@ export const learnGuides: LearnGuide[] = [
     title: 'What Is Pilot Protocol?',
     description: 'A system-level introduction to persistent agent addresses, encrypted peer tunnels, discovery, trust, and installable capabilities.',
     date: 'July 30, 2026',
+    isoDate: '2026-07-30',
     track: 'Foundations',
   },
   {
@@ -19,6 +21,7 @@ export const learnGuides: LearnGuide[] = [
     title: 'What Makes a Pilot Agent?',
     description: 'The identity, daemon, address, trust relationship, and application boundary that turn an existing agent into a network participant.',
     date: 'July 22, 2026',
+    isoDate: '2026-07-22',
     track: 'Foundations',
   },
   {
@@ -26,6 +29,7 @@ export const learnGuides: LearnGuide[] = [
     title: 'AI Networking Across Multiple Clouds',
     description: 'How agent connectivity changes when workloads span cloud accounts, edge devices, laptops, and organizational boundaries.',
     date: 'July 24, 2026',
+    isoDate: '2026-07-24',
     track: 'Foundations',
   },
   {
@@ -33,6 +37,7 @@ export const learnGuides: LearnGuide[] = [
     title: 'gRPC and UDP Transport Options',
     description: 'A precise look at gRPC transport assumptions, UDP overlays, and where each layer belongs in an agent communication stack.',
     date: 'July 23, 2026',
+    isoDate: '2026-07-23',
     track: 'Transport',
   },
   {
@@ -40,6 +45,7 @@ export const learnGuides: LearnGuide[] = [
     title: 'NATS vs. gRPC for Agent Messaging',
     description: 'Compare connectivity models, messaging patterns, deployment requirements, and the role of an overlay beneath either option.',
     date: 'July 23, 2026',
+    isoDate: '2026-07-23',
     track: 'Transport',
   },
   {
@@ -47,6 +53,7 @@ export const learnGuides: LearnGuide[] = [
     title: 'MCP Tunnels vs. VPNs for Agents',
     description: 'Separate tool access, network reachability, identity, and authorization so similarly named approaches are evaluated on the right boundary.',
     date: 'July 25, 2026',
+    isoDate: '2026-07-25',
     track: 'Transport',
   },
   {
@@ -54,6 +61,7 @@ export const learnGuides: LearnGuide[] = [
     title: 'How Network Agent Tokens Differ',
     description: 'Compare an agent cryptographic identity with API keys, bearer tokens, and application-level credentials without collapsing the layers.',
     date: 'July 22, 2026',
+    isoDate: '2026-07-22',
     track: 'Security',
   },
   {
@@ -61,6 +69,7 @@ export const learnGuides: LearnGuide[] = [
     title: 'How X25519 Secures Agent Communication',
     description: 'Understand key agreement, tunnel secrets, authenticated encryption, and the limits of what transport cryptography can authorize.',
     date: 'July 24, 2026',
+    isoDate: '2026-07-24',
     track: 'Security',
   },
 ];

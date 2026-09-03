@@ -147,10 +147,10 @@ const bodyContent = `<script type="application/ld+json">
 <li><strong>Messaging privacy:</strong> Wrap application-layer messages inside encrypted transport to prevent traffic analysis and metadata leakage at the network level.</li>
 <li><strong>P2P file transfer:</strong> Enable direct, high-throughput data exchange between agents without routing through central servers. See <a href="https://pilotprotocol.network/blog/peer-to-peer-file-transfer-agents">P2P file transfer strategies</a> for implementation patterns.</li>
 </ul>
-<p>The performance differences between wrapping strategies are significant. <a href="https://pilotprotocol.network/blog/benchmarking-http-vs-udp-overlay">UDP overlays are 11x faster</a> for connections and use far less RAM than HTTP/2 for agent P2P, but NAT relays reduce throughput when direct paths fail.</p>
+<p>Wrapping overhead depends on path length, connection reuse, encryption, payload size, and implementation. Use the <a href="https://pilotprotocol.network/blog/benchmarking-http-vs-udp-overlay">agent transport benchmarking method</a> to compare direct, proxied, and relayed paths without attributing topology differences to the wrapper alone.</p>
 <p><img src="https://csuxjmfbwmkxiegfpljm.supabase.co/storage/v1/object/public/blog-images/organization-24002/1775375877063_Analyst-observing-peer-to-peer-benchmarks.jpeg" alt="Analyst observing peer-to-peer benchmarks"></p>
-<p>That 11x connection speed advantage is not marginal. For agent fleets that need to establish hundreds or thousands of connections per second, the difference between UDP overlay and HTTP/2 determines whether your system scales or stalls. Memory profile matters just as much. HTTP/2 connection state is expensive at scale. UDP overlays keep per-connection overhead low, which is critical when you are running thousands of agents on a single host.</p>
-<p>The relay fallback issue deserves attention. In real deployments, roughly 10 to 15 percent of direct P2P connections fail due to symmetric NAT or firewall policies. When that happens, traffic routes through a relay node, and throughput drops. Your protocol choice, relay capacity, and fallback strategy need to account for this from the start. Research into <a href="https://eprint.iacr.org/2025/1619.pdf" rel="nofollow noopener noreferrer" target="_blank">anonymity wrappers</a> shows that transport-layer wrapping decisions also affect privacy guarantees, not just speed.</p>
+<p>At fleet scale, measure connection state, buffers, CPU per useful byte, and recovery behavior rather than assuming one transport family has a fixed advantage. Direct and relayed overlay paths should be reported separately because the relay changes both topology and capacity planning.</p>
+<p>Relay fallback deserves explicit testing. Firewall policy and NAT behavior vary across environments, so teams should measure the direct-path rate in their own deployment and size relay capacity for the observed fallback load. Research into <a href="https://eprint.iacr.org/2025/1619.pdf" rel="nofollow noopener noreferrer" target="_blank">anonymity wrappers</a> also shows that transport-layer wrapping decisions affect privacy guarantees, not just speed.</p>
 <h2 id="privacy-security-and-extensibility-advanced-wrapping-strategies" tabindex="-1">Privacy, security, and extensibility: Advanced wrapping strategies</h2>
 <p>The real power of protocol wrapping appears when privacy, security, and future-proofing are top priorities. Metadata exposure is the most underestimated risk in overlay networking. Even when payload content is encrypted, the timing, size, and frequency of packets can reveal agent behavior, communication patterns, and network topology to an observer.</p>
 <p>Two approaches address this directly: Anonymity Wrappers (AW) and Sealed Sender. Here is how they compare:</p>
@@ -223,8 +223,8 @@ const bodyContent = `<script type="application/ld+json">
 ---
 <BlogLayout
   title="Protocol wrapping for secure peer-to-peer AI systems"
-  description="Learn how protocol wrapping powers secure P2P AI networks. Covers VXLAN, Geneve, UDP overlays, anonymity wrappers, and real-world benchmarks for distributed systems engineers."
-  date="April 5, 2026"
+  description="How encapsulation, metadata, encryption, direct paths, and relay fallback shape protocol-wrapping choices for distributed AI systems."
+  date="August 11, 2026"
   tags={["blog"]}
   canonicalPath="/blog/protocol-wrapping-secure-peer-to-peer-ai-systems"
   bannerImage="/blog/banners/protocol-wrapping-secure-peer-to-peer-ai-systems.jpg"

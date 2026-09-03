@@ -10,13 +10,43 @@ export async function getStaticPaths() {
     const res = await fetch("https://raw.githubusercontent.com/TeoSlayer/pilot-skills/main/setups.json");
     if (res.ok) catalog = await res.json();
   } catch {}
-  return catalog.setups.map((setup: any) => ({
-    params: { slug: setup.slug },
-    props: { setup },
-  }));
+  const setups = [...catalog.setups].sort((a: any, b: any) => a.name.localeCompare(b.name));
+  const terms = (value: string) => new Set(
+    value.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length > 3),
+  );
+
+  return setups.map((setup: any, index: number) => {
+    const setupSkills = new Set<string>(setup.skills_used || []);
+    const setupTerms = terms(`${setup.name} ${setup.description || ''}`);
+    const relatedSetups = setups
+      .filter((candidate: any) => candidate.slug !== setup.slug)
+      .map((candidate: any) => {
+        const sharedSkills = (candidate.skills_used || []).filter((skill: string) => setupSkills.has(skill)).length;
+        const sharedTerms = [...terms(`${candidate.name} ${candidate.description || ''}`)]
+          .filter((word) => setupTerms.has(word)).length;
+        return { ...candidate, relevance: (sharedSkills * 10) + sharedTerms };
+      })
+      .sort((a: any, b: any) => b.relevance - a.relevance || a.name.localeCompare(b.name))
+      .slice(0, 3);
+
+    return {
+      params: { slug: setup.slug },
+      props: {
+        setup,
+        relatedSetups,
+        previousSetup: setups[(index - 1 + setups.length) % setups.length],
+        nextSetup: setups[(index + 1) % setups.length],
+      },
+    };
+  });
 }
 
-const { setup } = Astro.props as { setup: any };
+const { setup, relatedSetups, previousSetup, nextSetup } = Astro.props as {
+  setup: any;
+  relatedSetups: any[];
+  previousSetup: any;
+  nextSetup: any;
+};
 
 const title = `${setup.name} - Orgs · Pilot Protocol`;
 // Meta description: clean word-boundary truncation of the full description
@@ -47,6 +77,32 @@ const canonicalUrl = `https://pilotprotocol.network/for/setups/${setup.slug}`;
       <a class="btn primary" href="/docs/getting-started">Getting started <span class="arr">→</span></a>
       <a class="btn" href="/for/setups">Back to orgs</a>
     </div>
+  </div>
+</section>
+
+<section class="section related-setups" aria-labelledby="related-setups-title">
+  <div class="wrap">
+    <div class="related-heading">
+      <div>
+        <div class="eyebrow">Explore adjacent patterns</div>
+        <h2 id="related-setups-title">Related agent organizations</h2>
+      </div>
+      <p>Compare setups that reuse similar skills, trust paths, and operating patterns.</p>
+    </div>
+    <div class="related-setup-grid">
+      {relatedSetups.map((related: any) => (
+        <a class="related-setup-card" href={`/for/setups/${related.slug}`}>
+          <span>{related.difficulty} · {related.agent_count} agents</span>
+          <h3>{related.name}</h3>
+          <p>{related.description}</p>
+          <i>View organization →</i>
+        </a>
+      ))}
+    </div>
+    <nav class="setup-pager" aria-label="More agent organizations">
+      <a href={`/for/setups/${previousSetup.slug}`}><span>← Previous</span><strong>{previousSetup.name}</strong></a>
+      <a href={`/for/setups/${nextSetup.slug}`}><span>Next →</span><strong>{nextSetup.name}</strong></a>
+    </nav>
   </div>
 </section>
 
@@ -229,6 +285,32 @@ const canonicalUrl = `https://pilotprotocol.network/for/setups/${setup.slug}`;
     border: 1px solid var(--line);
     overflow-x: auto;
     line-height: 1.7;
+  }
+
+  .related-setups { border-top: 1px solid var(--line); background: var(--bg-2); }
+  .related-heading { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, .7fr); gap: 48px; align-items: end; margin-bottom: 28px; }
+  .related-heading h2 { margin: 0; font-size: clamp(32px, 4vw, 52px); letter-spacing: -.035em; }
+  .related-heading p { margin: 0; color: var(--ink-dim); line-height: 1.6; }
+  .related-setup-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+  .related-setup-card { display: flex; min-height: 260px; flex-direction: column; padding: 24px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); color: inherit; }
+  .related-setup-card > span, .related-setup-card i, .setup-pager span { color: var(--ink-dim); font: 500 10px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+  .related-setup-card h3 { margin: 52px 0 10px; font-size: 23px; letter-spacing: -.02em; }
+  .related-setup-card p { display: -webkit-box; margin: 0; overflow: hidden; color: var(--ink-dim); font-size: 13px; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+  .related-setup-card i { margin-top: auto; padding-top: 24px; color: var(--accent-text); font-style: normal; }
+  .related-setup-card:hover h3 { color: var(--accent-text); }
+  .setup-pager { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 24px; border: 1px solid var(--line); }
+  .setup-pager a { display: grid; gap: 8px; padding: 18px 20px; color: inherit; }
+  .setup-pager a + a { border-left: 1px solid var(--line); text-align: right; }
+  .setup-pager strong { font-size: 14px; }
+
+  @media (max-width: 820px) {
+    .related-heading { grid-template-columns: 1fr; gap: 18px; }
+    .related-setup-grid { grid-template-columns: 1fr; }
+    .related-setup-card { min-height: 220px; }
+  }
+  @media (max-width: 560px) {
+    .setup-pager { grid-template-columns: 1fr; }
+    .setup-pager a + a { border-top: 1px solid var(--line); border-left: 0; text-align: left; }
   }
 </style>
 

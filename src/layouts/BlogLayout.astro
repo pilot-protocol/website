@@ -5,6 +5,7 @@ import Footer from '../components/Footer.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import articleImageManifest from '../data/articleImageManifest.json';
 import { allPosts, blogPosts, companyNews } from '../data/blogPosts';
+import { learnGuides } from '../data/learnGuides';
 import { getBlogImage } from '../lib/blogImages';
 import '../styles/global.css';
 import '../styles/system.css';
@@ -41,7 +42,15 @@ const pathParts = Astro.url.pathname.replace(/\/$/, '').split('/');
 const currentSlug = pathParts[pathParts.length - 1].replace('.html', '');
 const currentIndex = collectionPosts.findIndex(p => p.slug === currentSlug);
 const currentPost = allPosts.find(p => p.slug === currentSlug);
-const publishedAt = currentPost?.iso_date || date;
+const currentGuide = isLearn ? learnGuides.find((guide) => guide.slug === currentSlug) : undefined;
+const learnGuideIndex = currentGuide ? learnGuides.findIndex((guide) => guide.slug === currentSlug) : -1;
+const learnRelated = currentGuide
+  ? learnGuides
+      .filter((guide) => guide.slug !== currentSlug)
+      .sort((a, b) => Number(b.track === currentGuide.track) - Number(a.track === currentGuide.track))
+      .slice(0, 3)
+  : [];
+const publishedAt = currentPost?.iso_date || currentGuide?.isoDate || date;
 const modifiedAt = dateModified || publishedAt;
 const articleAuthor = author || {
   name: 'Pilot Protocol editorial team',
@@ -49,8 +58,12 @@ const articleAuthor = author || {
   type: 'Organization' as const,
 };
 
-const prevPost = currentIndex > 0 ? collectionPosts[currentIndex - 1] : null;
-const nextPost = currentIndex >= 0 && currentIndex < collectionPosts.length - 1 ? collectionPosts[currentIndex + 1] : null;
+const prevPost = isLearn
+  ? (learnGuideIndex >= 0 ? learnGuides[(learnGuideIndex - 1 + learnGuides.length) % learnGuides.length] : null)
+  : (currentIndex > 0 ? collectionPosts[currentIndex - 1] : null);
+const nextPost = isLearn
+  ? (learnGuideIndex >= 0 ? learnGuides[(learnGuideIndex + 1) % learnGuides.length] : null)
+  : (currentIndex >= 0 && currentIndex < collectionPosts.length - 1 ? collectionPosts[currentIndex + 1] : null);
 
 const currentTags = new Set(tags.map(t => t.toLowerCase()));
 const related = collectionPosts
@@ -62,6 +75,86 @@ const related = collectionPosts
   .filter(r => r.shared > 0)
   .sort((a, b) => b.shared - a.shared)
   .slice(0, 3);
+
+const funnelCtaGroups = [
+  {
+    slugs: new Set([
+      'why-ai-agents-need-network-stack',
+      'pilot-vs-tcp-grpc-nats-comparison',
+      'direct-communication-protocols-ai-agents-guide',
+      'ai-agent-discovery-process-p2p-networks',
+      'how-pilot-protocol-works',
+      'pilot-vs-tailscale-nebula-zerotier-ai-agents',
+      'connect-ai-agents-behind-nat-without-vpn',
+      'build-agent-swarm-self-organizes',
+      'peer-to-peer-agent-communication-no-server',
+      'overlay-networking-secure-ai-agent-communication-explained',
+    ]),
+    eyebrow: 'For agent platform teams',
+    title: 'Map the network your agents actually need',
+    body: 'Review addressing, private discovery, peer trust, direct paths, and encrypted relay fallback as one deployment model.',
+    href: '/solutions/private-agent-network',
+    label: 'Explore private agent networks',
+  },
+  {
+    slugs: new Set([
+      'zero-dependency-encryption-x25519-aes-gcm',
+      'secure-ai-agent-communication-zero-trust',
+      'agent-communication-security-best-practices',
+      'trust-model-agents-invisible-by-default',
+    ]),
+    eyebrow: 'For security reviewers',
+    title: 'Separate implemented controls from deployment policy',
+    body: 'Inspect the cryptographic boundary, trust lifecycle, metadata exposure, operational controls, and stated limitations.',
+    href: '/trust',
+    label: 'Open the Trust Center',
+  },
+  {
+    slugs: new Set([
+      'ai-agent-app-store',
+      'build-agent-app-turn-api-into-tool',
+      'mcp-plus-pilot-tools-and-network',
+    ]),
+    eyebrow: 'For API and tool publishers',
+    title: 'Turn one useful service into an agent capability',
+    body: 'Package typed methods, declare required authority, and make the capability discoverable without replacing the upstream product.',
+    href: '/solutions/agent-ready-apis',
+    label: 'See the publisher path',
+  },
+  {
+    slugs: new Set([
+      'distributed-rag-without-central-knowledge-base',
+      'scriptorium-replace-agentic-active-research-ready-intelligence',
+    ]),
+    eyebrow: 'For knowledge and research teams',
+    title: 'Evaluate grounded search on your own sources',
+    body: 'Compare lexical, dense, and hybrid retrieval while preserving citations and control over the index and model endpoints.',
+    href: '/solutions/grounded-agent-search',
+    label: 'Explore grounded agent search',
+  },
+  {
+    slugs: new Set(['claude-agent-teams-over-pilot']),
+    eyebrow: 'For engineering leaders',
+    title: 'Manage coding-agent settings and usage as a fleet',
+    body: 'Review the early-access control surface for inventory, signed settings, usage attribution, and audited remote operations.',
+    href: '/enterprise/claude-code-management',
+    label: 'Review enterprise management',
+  },
+  {
+    slugs: new Set([
+      'enterprise-identity-integration-pilot-protocol',
+      'enterprise-private-networks-roadmap',
+      'enterprise-phase-3-rbac-policies-audit-fleet',
+      'enterprise-production-complete-identity-directory-audit-export',
+    ]),
+    eyebrow: 'For enterprise AI teams',
+    title: 'Put autonomous agents inside an operating control loop',
+    body: 'Connect fleet state, signed policy, approvals, bounded remote operations, usage telemetry, and action evidence.',
+    href: '/enterprise/autonomous-ai-agents',
+    label: 'Explore the agent control plane',
+  },
+];
+const funnelCta = funnelCtaGroups.find((group) => group.slugs.has(currentSlug));
 
 // Imported article bodies historically included their own schema and page
 // title. The layout owns both, so remove only those first legacy elements.
@@ -191,11 +284,21 @@ const faqSectionId = headingIds.has('frequently-asked-questions')
       <h1>{title}</h1>
       <div class="article-meta">
         <a href={articleAuthor.url || '/about#publishing'}>By {articleAuthor.name}</a>
-        <span>{date}</span>
+        <time datetime={publishedAt}>{date}</time>
         <span class="reading-time" id="reading-time"></span>
         {tags.map((tag) => <span class="tag">{tag}</span>)}
       </div>
       <Fragment set:html={articleBody} />
+      {funnelCta && (
+        <aside class="article-next-step" aria-label="Recommended next step" data-track-cta={`${currentSlug}:${funnelCta.href}`}>
+          <span>{funnelCta.eyebrow}</span>
+          <div>
+            <h2>{funnelCta.title}</h2>
+            <p>{funnelCta.body}</p>
+          </div>
+          <a href={funnelCta.href}>{funnelCta.label} <i aria-hidden="true">→</i></a>
+        </aside>
+      )}
       <footer class="article-provenance">
         <strong>About this article</strong>
         <p>Published by the Pilot Protocol team. Product claims are scoped to the availability labels and technical references linked in the article; deployment behavior can vary by version and environment.</p>
@@ -236,11 +339,31 @@ const faqSectionId = headingIds.has('frequently-asked-questions')
                 <img src={image.src} srcset={image.srcset} sizes="(max-width: 720px) calc(100vw - 40px), 360px" alt={post.title} width={image.width} height={image.height} loading="lazy" decoding="async" />
                 <div class="related-body">
                   <h3>{post.title}</h3>
-                  <span class="related-meta">{post.date} &middot; {post.category}</span>
+                  <span class="related-meta"><time datetime={post.iso_date}>{post.date}{post.year || post.iso_date ? `, ${post.year || post.iso_date?.slice(0, 4)}` : ''}</time> &middot; {post.category}</span>
                 </div>
               </a>
             );
           })}
+        </div>
+      </div>
+    </section>
+  )}
+
+  {learnRelated.length > 0 && (
+    <section class="related-posts">
+      <div class="related-inner">
+        <h2>Continue learning</h2>
+        <div class="related-grid">
+          {learnRelated.map(guide => (
+            <a class="related-card" href={`/learn/${guide.slug}`}>
+              <div class="related-body">
+                <span class="related-meta">{guide.track}</span>
+                <h3>{guide.title}</h3>
+                <p>{guide.description}</p>
+                <span class="related-meta"><time datetime={guide.isoDate}>{guide.date}</time></span>
+              </div>
+            </a>
+          ))}
         </div>
       </div>
     </section>
@@ -254,13 +377,13 @@ const faqSectionId = headingIds.has('frequently-asked-questions')
             <span class="blog-nav-label">&larr; Previous</span>
             <span class="blog-nav-title">{prevPost.title}</span>
           </a>
-        ) : <div />}
+        ) : <div class="blog-nav-empty" />}
         {nextPost ? (
           <a class="blog-nav-link blog-nav-next" href={`${collectionPath}${nextPost.slug}`}>
             <span class="blog-nav-label">Next &rarr;</span>
             <span class="blog-nav-title">{nextPost.title}</span>
           </a>
-        ) : <div />}
+        ) : <div class="blog-nav-empty" />}
       </div>
     </nav>
   )}
@@ -388,6 +511,47 @@ const faqSectionId = headingIds.has('frequently-asked-questions')
 </script>
 
 <style>
+  .article-next-step {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem 2rem;
+    align-items: end;
+    margin: 3rem 0 2rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
+    background: color-mix(in srgb, var(--accent) 6%, var(--bg));
+  }
+  .article-next-step > span {
+    grid-column: 1 / -1;
+    color: var(--accent-text);
+    font: 600 0.68rem/1.2 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .article-next-step h2 {
+    margin: 0 0 0.55rem;
+    font-size: clamp(1.35rem, 3vw, 1.9rem);
+    line-height: 1.08;
+  }
+  .article-next-step p { margin: 0; color: var(--ink-dim); }
+  .article-next-step > a {
+    display: inline-flex;
+    gap: 0.6rem;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    font: 600 0.72rem/1.2 var(--mono);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .article-next-step > a:hover { background: var(--ink); color: var(--bg); }
+  @media (max-width: 640px) {
+    .article-next-step { grid-template-columns: 1fr; align-items: start; }
+    .article-next-step > a { width: 100%; white-space: normal; }
+  }
   .article-faq {
     max-width: 760px;
     margin: 0 auto;

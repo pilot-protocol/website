@@ -8,7 +8,7 @@ const faqItems = [
   },
   {
     question: "What is the difference between MCP and A2A?",
-    answer: "MCP (Model Context Protocol) is a client-server RPC bridge designed for LLMs to invoke tools and access resources. A2A (Agent-to-Agent) is a peer-to-peer HTTP protocol for direct agent-to-agent task delegation using Agent Cards. MCP is not a network protocol and has no NAT traversal; A2A requires publicly reachable HTTP endpoints."
+    answer: "MCP defines how AI applications exchange context with tool and resource servers. A2A defines how agents advertise capabilities and exchange tasks through application interfaces. Both rely on a reachable transport supplied by the deployment; neither is itself a NAT-traversal overlay."
   },
   {
     question: "Does Pilot Protocol replace MCP or A2A?",
@@ -16,7 +16,7 @@ const faqItems = [
   },
   {
     question: "Which protocol handles NAT traversal for AI agents?",
-    answer: "Of the five protocols compared here, only Pilot Protocol addresses NAT traversal directly — using STUN, hole-punching, and a relay fallback. MCP, A2A, ACP, and ANP all rely on HTTP/HTTPS and assume publicly reachable endpoints."
+    answer: "Pilot addresses cross-network reachability in this comparison through discovery, coordinated traversal, and encrypted relay fallback. The other application protocols rely on deployment-provided reachability, which may come from public ingress, a private network, a proxy, or another transport layer."
   },
   {
     question: "How does Pilot Protocol's trust model work?",
@@ -36,7 +36,7 @@ const bodyContent = `
 <h1 id="ai-agent-communication-protocols-comparison">AI agent communication protocols: Pilot vs MCP vs A2A vs ACP vs ANP</h1>
 
 <blockquote>
-<p><strong>TL;DR:</strong> Five AI agent communication protocols are competing for the stack. MCP handles tool access for LLMs. A2A, ACP, and ANP define application-layer messaging between agents over HTTP. Pilot Protocol operates at the network layer — persistent addresses, encrypted UDP tunnels, NAT traversal, and per-peer trust — and complements all four. This guide compares each protocol on transport, discovery, trust, and NAT traversal, then shows how to get started with Pilot's <code>discover → install → call</code> loop.</p>
+<p><strong>TL;DR:</strong> These protocols cover different parts of the stack. MCP handles tool and resource access. A2A, ACP, and ANP define application-level agent interaction or discovery. Pilot operates at the network layer with retained-identity addressing, encrypted UDP tunnels, traversal, and peer trust. This guide compares the layers and shows where they compose.</p>
 </blockquote>
 
 <hr />
@@ -67,7 +67,7 @@ const bodyContent = `
     <tr>
       <td><strong>MCP</strong></td>
       <td>Application</td>
-      <td>JSON-RPC 2.0 / SSE</td>
+      <td>JSON-RPC 2.0 over stdio or Streamable HTTP</td>
       <td>None (manual config)</td>
       <td>None</td>
       <td>API keys / OAuth</td>
@@ -77,7 +77,7 @@ const bodyContent = `
       <td><strong>A2A</strong></td>
       <td>Application</td>
       <td>HTTP / JSON-RPC</td>
-      <td>Agent Cards at <code>/.well-known/agent.json</code></td>
+      <td>Agent Cards and configured directories</td>
       <td>None (requires reachable endpoint)</td>
       <td>OAuth / auth headers</td>
       <td>Agent-to-agent task delegation</td>
@@ -116,7 +116,7 @@ const bodyContent = `
 
 <h2 id="mcp-model-context-protocol">MCP — Model Context Protocol</h2>
 
-<p>MCP is Anthropic's open standard for connecting LLMs to tools and resources via a client-server RPC bridge. Your model is the client; an MCP server exposes callable tools. The wire format is JSON-RPC 2.0 over standard I/O or SSE.</p>
+<p>MCP is an open protocol for connecting AI applications to tools and resources through a client-server interface. An MCP server can expose tools, resources, and prompts. Current standard transports include standard I/O and Streamable HTTP.</p>
 
 <p>MCP is excellent at what it targets: structured, schema-validated tool calls from a single model context. It is not a network protocol. It has no concept of agent addressing, NAT traversal, or agent-to-agent transport. Two MCP servers cannot discover or call each other natively.</p>
 
@@ -124,9 +124,9 @@ const bodyContent = `
 
 <h2 id="a2a-agent-to-agent-protocol">A2A — Agent-to-Agent Protocol</h2>
 
-<p>Google's A2A protocol defines how agents communicate at the application layer. Agents publish Agent Cards at <code>/.well-known/agent.json</code> describing their capabilities, skills, and task endpoint. Other agents fetch that card and POST JSON-RPC task requests directly.</p>
+<p>A2A defines how agents communicate at the application layer. Agent Cards can describe capabilities, skills, supported interfaces, and security requirements. Clients then use a supported interface to exchange tasks and messages.</p>
 
-<p>A2A handles the semantics of agent collaboration well: task lifecycle, streaming via SSE, skill advertisement. The constraint is that it requires publicly reachable HTTP endpoints. An agent behind NAT or inside a container with no stable domain has no <code>url</code> to publish in its Agent Card. Pilot solves this gap by giving every agent a permanent virtual address that survives restarts and IP changes.</p>
+<p>A2A handles collaboration semantics such as task lifecycle and capability advertisement. Its interfaces still need a reachable route, which may be public ingress, a private network, a proxy, or an overlay. Pilot can supply a retained-identity address and encrypted route when the existing deployment does not already provide one.</p>
 
 <h2 id="acp-agent-communication-protocol">ACP — Agent Communication Protocol</h2>
 
@@ -144,11 +144,11 @@ const bodyContent = `
 
 <p>Pilot Protocol operates at the network layer rather than the application layer. It gives every agent three things the HTTP-based protocols assume but do not provide: a permanent address, an encrypted tunnel, and a resolved trust relationship with each peer.</p>
 
-<p><strong>Addressing.</strong> Every agent gets a 48-bit virtual address that persists across restarts, IP changes, and cloud migrations. The address is stable; the physical location is irrelevant.</p>
+<p><strong>Addressing.</strong> Each agent uses a 48-bit virtual address that can remain stable across restarts and IP changes when its cryptographic identity is retained.</p>
 
 <p><strong>Transport.</strong> Connections use encrypted UDP tunnels with X25519 key exchange and AES-GCM encryption. Reliability is implemented in userspace over UDP, so the stack runs anywhere without kernel modules.</p>
 
-<p><strong>NAT traversal.</strong> Pilot uses a three-tier strategy: STUN for address discovery, UDP hole-punching for direct paths, and relay fallback when direct connection is not possible. Most agent-to-agent connections punch through NAT without a relay.</p>
+<p><strong>NAT traversal.</strong> Pilot uses STUN for endpoint discovery, coordinated UDP hole-punching for direct-path attempts, and encrypted relay fallback when a direct connection is not available.</p>
 
 <p><strong>Trust.</strong> Pilot uses an explicit per-peer mutual approval handshake. Joining the network does not grant access to any peer — each relationship must be approved by both sides. This is a deliberate difference from VPN models where membership implies connectivity.</p>
 
@@ -180,12 +180,12 @@ pilotctl appstore call io.pilot.plainweb plainweb.help '{}'
 
 <p>The protocols operate at different layers and are not mutually exclusive. A practical production stack often combines them:</p>
 
-|<ul>
-|  <li><strong>Use MCP</strong> when your primary need is giving an LLM access to structured tools and resources. Pair with <code>pilot-mcp</code> if those tools need to be reachable across NAT.</li>
-|  <li><strong>Use A2A</strong> when agents need to delegate tasks to each other using a standardized capability advertisement format. Pair with Pilot for the transport layer when agents are not behind stable public endpoints.</li>
-|  <li><strong>Use ACP</strong> when you need REST-based interop across agent frameworks with multi-modal content support.</li>
-|  <li><strong>Use ANP</strong> when cross-organizational agent identity and DID-based verifiable credentials are the primary concern.</li>
-|  <li><strong>Use Pilot Protocol</strong> when you need agents to maintain stable addresses, traverse NAT, and communicate over encrypted tunnels with explicit per-peer trust — regardless of which application-layer protocol sits on top. See <a href="/blog/ai-agent-discovery-process-p2p-networks">how P2P agent discovery works</a> for a deeper look at the discovery and trust side.</li>
+<ul>
+  <li><strong>Use MCP</strong> when your primary need is giving an LLM access to structured tools and resources. Pair with <code>pilot-mcp</code> if those tools need to be reachable across NAT.</li>
+  <li><strong>Use A2A</strong> when agents need to delegate tasks to each other using a standardized capability advertisement format. Pair with Pilot for the transport layer when agents are not behind stable public endpoints.</li>
+  <li><strong>Use ACP</strong> when you need REST-based interop across agent frameworks with multi-modal content support.</li>
+  <li><strong>Use ANP</strong> when cross-organizational agent identity and DID-based verifiable credentials are the primary concern.</li>
+  <li><strong>Use Pilot Protocol</strong> when you need agents to maintain stable addresses, traverse NAT, and communicate over encrypted tunnels with explicit per-peer trust — regardless of which application-layer protocol sits on top. See <a href="/blog/ai-agent-discovery-process-p2p-networks">how P2P agent discovery works</a> for a deeper look at the discovery and trust side.</li>
 </ul>
 
 <p>A practical cross-cloud deployment can run Pilot as the network layer with one or more application-layer protocols on top, while keeping application authorization and governance in the surrounding system.</p>
@@ -204,8 +204,8 @@ pilotctl appstore call io.pilot.plainweb plainweb.help '{}'
 ---
 <BlogLayout
   title="AI agent communication protocols compared: MCP vs A2A vs ACP vs ANP vs Pilot — which fits your stack?"
-  description="MCP, A2A, ACP, ANP, or Pilot? Compare five AI agent communication protocols on transport, discovery, trust, and NAT traversal. Pick the right stack for your agents."
-  date="June 30, 2026"
+  description="Compare five AI agent communication protocols across transport, discovery, trust, reachability, and application semantics to choose a complementary stack."
+  date="June 29, 2026"
   tags={["comparison", "mcp", "a2a", "acp", "anp", "protocols"]}
   canonicalPath="/blog/direct-communication-protocols-ai-agents-guide"
   bannerImage="/blog/banners/direct-communication-protocols-ai-agents-guide.svg"

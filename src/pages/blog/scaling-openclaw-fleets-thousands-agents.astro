@@ -12,18 +12,16 @@ const bodyContent = `<p>What happens when you deploy thousands of OpenClaw agent
   <section>
   <h2 id="daemon-resources">Per-Agent Resource Budget</h2>
 
-  <p>Each OpenClaw agent runs a Pilot daemon. The daemon's resource footprint depends on activity level:</p>
+  <p>Each OpenClaw host runs a Pilot daemon. Its resource footprint depends on peer fan-out, payload volume, buffering, relay use, logging, and the services enabled. Establish a budget from measurements on the host type you plan to operate:</p>
 
   <table>
-    <tr><th>State</th><th>Memory</th><th>CPU</th><th>Open FDs</th></tr>
-    <tr><td>Idle (registered, no connections)</td><td>~8 MB</td><td>&lt;0.1%</td><td>3</td></tr>
-    <tr><td>Active (3 tunnels, periodic keepalive)</td><td>~15 MB</td><td>~0.5%</td><td>6</td></tr>
-    <tr><td>Busy (10 tunnels, continuous data transfer)</td><td>~35 MB</td><td>~2%</td><td>13</td></tr>
+    <tr><th>State</th><th>Measure</th><th>Include</th></tr>
+    <tr><td>Idle</td><td>RSS, CPU, network wakeups</td><td>Registration, keepalive, logging</td></tr>
+    <tr><td>Steady state</td><td>Per-peer and per-service deltas</td><td>Active paths, buffers, event volume</td></tr>
+    <tr><td>Peak</td><td>Tail latency and saturation</td><td>Reconnect bursts, relay use, transfers</td></tr>
   </table>
 
-  <p>For a fleet of 100 agents on a single server (e.g., spawning agents for a batch processing job), the total daemon overhead is roughly 1.5 GB RAM and 50% CPU utilization. This leaves ample headroom for the agents' actual workloads on a standard cloud VM.</p>
-
-  <p>Memory grows linearly with tunnel count. Each encrypted tunnel holds a send buffer, receive buffer, sliding window state, and AES-GCM cipher state. Budget approximately 2-3 MB per active tunnel.</p>
+  <p>Do not extrapolate a single-agent sample into a fleet guarantee. Run the expected number of identities, peer relationships, and services on the intended machine class, then include recovery bursts and the agent workloads themselves in the capacity margin.</p>
   </section>
 
   <section>
@@ -105,37 +103,40 @@ done</span></code></pre>
   <section>
   <h2 id="bottlenecks">Bottlenecks at Scale</h2>
 
-  <p>From operating the public network and testing large private deployments, these are the bottlenecks that appear at each scale threshold:</p>
+  <p>Fleet bottlenecks depend on topology and workload, but the first places to test are predictable:</p>
 
-  <h3>1,000 Agents</h3>
-  <p><strong>Discovery latency.</strong> Tag search response time increases slightly as the fleet grows. At 1,000 agents this is negligible for individual queries but can become noticeable when many agents search simultaneously during startup. Stagger agent startups over 30-60 seconds to avoid thundering herd.</p>
+  <h3>Startup and Reconnect Bursts</h3>
+  <p>Many agents registering, resolving names, or rebuilding paths at once can create a thundering herd. Add jitter, bound retries, and test a coordinated restart before production.</p>
 
-  <h3>5,000+ Agents</h3>
-  <p><strong>Discovery latency.</strong> At very large fleet sizes, tag searches with many results can take longer. Use more specific tags to narrow results and stagger periodic discovery refreshes across the fleet.</p>
+  <h3>Discovery Result Size</h3>
+  <p>Broad tag searches become more expensive as the directory and result set grow. Use specific tags, pagination, caching, and staggered refresh intervals.</p>
+
+  <h3>Relay and Event Fan-Out</h3>
+  <p>Relay bandwidth and high-fan-out event streams can concentrate load. Measure direct-versus-relayed paths and size coordination, relay, and monitoring components independently.</p>
   </section>
 
   <section>
   <h2 id="fleet-patterns">Fleet Deployment Patterns</h2>
 
-  <p>Three patterns have emerged from real OpenClaw fleet deployments:</p>
+  <p>Three common fleet patterns are useful starting points:</p>
 
   <p><strong>Hub-and-spoke.</strong> One orchestrator agent with many worker agents. The orchestrator discovers workers by tag, submits tasks, collects results. Workers are stateless and interchangeable. This is the most common pattern for batch processing jobs.</p>
 
-  <p><strong>Mesh.</strong> Every agent connects to every other agent. Trust is established between all pairs. This works for small teams (under 20 agents) where any agent may need to communicate with any other. Becomes unwieldy at scale because trust relationships grow as O(n&sup2;).</p>
+  <p><strong>Mesh.</strong> Every agent may connect to every other agent. This can suit small teams, but pairwise relationships grow as O(n&sup2;) and become difficult to govern as the fleet expands.</p>
 
-  <p><strong>Hierarchical.</strong> Orchestrator agents manage clusters of workers. Sub-orchestrators manage sub-clusters. Trust flows down the hierarchy. This is the pattern for large-scale deployments where centralized orchestration would be a bottleneck. Each sub-orchestrator handles 50-100 workers, and the top-level orchestrator coordinates 10-20 sub-orchestrators.</p>
+  <p><strong>Hierarchical.</strong> Orchestrator agents manage bounded worker groups, and higher-level coordinators operate across those groups. Size each tier from measured task, event, and recovery load; do not assume organizational hierarchy automatically grants network trust.</p>
   </section>
 
   <div class="cta">
     <h3>Scale Your Fleet</h3>
-    <p>From 10 agents to thousands. Same protocol, same commands, same tunnels.</p>
+    <p>Model fan-out, startup bursts, discovery, relay capacity, and policy before setting a production fleet limit.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 ---
 <BlogLayout
   title="Scaling OpenClaw Fleets to Thousands of Agents"
-  description="Patterns and benchmarks for running thousands of OpenClaw agents on Pilot Protocol. Resource usage, discovery latency, and tips."
-  date="March 8, 2026"
+  description="Capacity-planning patterns for larger OpenClaw fleets: startup bursts, discovery, peer fan-out, relay load, monitoring, policy, and recovery testing."
+  date="March 15, 2026"
   tags={["openclaw", "scale", "operations"]}
   canonicalPath="/blog/scaling-openclaw-fleets-thousands-agents"
   bannerImage="/blog/banners/scaling-openclaw-fleets-thousands-agents.webp"

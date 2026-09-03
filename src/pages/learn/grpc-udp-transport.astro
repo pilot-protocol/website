@@ -8,11 +8,11 @@ const bodyContent = `<p>If you have worked with gRPC, you know it uses HTTP/2 un
 <section>
 <h2 id="grpc-transport">What Transport Does gRPC Use?</h2>
 
-<p>gRPC is Google's RPC framework, and at its core it is HTTP/2 over TCP with TLS. Every gRPC call — unary, server-streaming, client-streaming, bidirectional — is framed as HTTP/2 data frames over a single TCP connection. The Protocol Buffer serialization handles the payload format, but the transport is firmly in the TCP + TLS camp.</p>
+<p>Standard gRPC uses HTTP/2 over TCP, commonly protected with TLS. Unary and streaming calls are carried as HTTP/2 frames, while Protocol Buffers commonly define the payload contract.</p>
 
 <p>This matters for three reasons.</p>
 
-<p><strong>Connection establishment.</strong> A new gRPC connection requires a TCP three-way handshake (1 RTT), a TLS 1.3 handshake (1 RTT), and HTTP/2 SETTINGS frame exchange. That is two round trips, minimum, before any application data flows. For a workload that opens many short-lived connections — an orchestrator dispatching tasks to 50 agents, for example — this overhead adds up quickly. Our <a href="/blog/benchmarking-http-vs-udp-overlay">benchmarking post</a> measures this in detail, showing that connection setup dominates for small payloads.</p>
+<p><strong>Connection establishment.</strong> A cold connection may include TCP setup, a TLS handshake when configured, and HTTP/2 negotiation. Warm connection reuse changes the result substantially. Our <a href="/blog/benchmarking-http-vs-udp-overlay">benchmarking guide</a> shows how to measure cold and warm paths separately.</p>
 
 <p><strong>NAT traversal.</strong> TCP connections require a listener on one end. If an agent is behind a NAT or firewall, it cannot accept inbound TCP connections without a relay, a reverse proxy, or a VPN. gRPC has no built-in mechanism for this. Every gRPC deployment that spans NAT boundaries requires additional infrastructure — a service mesh, a Cloudflare Tunnel, an ngrok endpoint, or a relay proxy — each adding latency and operational complexity.</p>
 
@@ -24,17 +24,13 @@ const bodyContent = `<p>If you have worked with gRPC, you know it uses HTTP/2 un
 
 <p>QUIC is a transport protocol built on UDP. It was designed to fix TCP's head-of-line blocking problem and reduce connection establishment latency. HTTP/3 runs over QUIC. And gRPC can, in theory, run over HTTP/3 — which means it can run over QUIC, which means it runs over UDP.</p>
 
-<p>This is not hypothetical. The gRPC project has had an experimental HTTP/3 transport since 2022. Google's internal gRPC traffic increasingly uses QUIC. The <code>grpc-go</code> library has an <code>xds</code> credentials package that supports QUIC, and the <code>gRPC-Web</code> transport can negotiate HTTP/3 through a browser.</p>
+<p>Some implementations and adjacent proxies experiment with HTTP/3 or QUIC, but this is not the standard, portable gRPC deployment model across supported language runtimes. Verify the exact client, server, load balancer, and observability path before treating it as a production option.</p>
 
-<p>But the practical reality for agent communication today is more limited.</p>
-
-<p><strong>Ecosystem maturity.</strong> The HTTP/3 transport in gRPC is not the default and is not stable across all language runtimes. The C-core based gRPC implementations (C++, Python, Ruby, PHP, Objective-C) have QUIC support lagging behind gRPC-Go. If your agent fleet uses multiple languages — and most do — you will struggle to find a uniform QUIC transport that works everywhere.</p>
-
-<p><strong>NAT traversal still missing.</strong> QUIC eliminates TCP's head-of-line blocking and cuts connection setup to 0 RTT in the best case. What it does not do is solve the reachability problem. An agent behind a NAT still cannot accept inbound QUIC connections without a relay or STUN-based hole-punching. QUIC packets are just UDP packets — they still need a return path through the NAT mapping, and short of hole-punching, that mapping only exists if the agent initiated the outbound flow.</p>
+<p><strong>Reachability remains separate.</strong> QUIC changes transport behavior, but it does not automatically publish a route to a service behind NAT or a firewall. The deployment still needs an allowed path, proxy, tunnel, coordinated traversal, or relay.</p>
 
 <p><strong>Infrastructure requirements.</strong> Running gRPC over QUIC means your load balancers, ingress gateways, and service meshes must all support HTTP/3. Envoy has QUIC support. NGINX has experimental QUIC support. But the operational maturity of QUIC at the mesh layer is uneven, and most organizations running gRPC today are doing so over TCP with no plan to switch.</p>
 
-<p>The bottom line: gRPC over QUIC is technically feasible and will become more common over time. For the purpose of agent communication in 2026, it is not a practical alternative for most deployments.</p>
+<p>The bottom line: evaluate any gRPC-over-QUIC option as an implementation-specific choice. Standard gRPC interoperability remains centered on HTTP/2 over TCP.</p>
 </section>
 
 <section>
@@ -59,13 +55,13 @@ const bodyContent = `<p>If you have worked with gRPC, you know it uses HTTP/2 un
 <p>The key difference from running gRPC over QUIC is that Pilot is not a transport for an RPC framework — it is the communication layer itself. Agents speak to each other over the overlay using the protocol that makes sense for their interaction (JSON messages, structured RPC, streaming file transfers). The overlay provides:</p>
 
 <ul>
-  <li><strong>Virtual addressing:</strong> Every agent gets a permanent 48-bit address that survives restarts, IP changes, and cloud migrations. No DNS, no reconnection logic.</li>
+  <li><strong>Virtual addressing:</strong> An agent can retain its 48-bit address across restarts and IP changes when its identity is retained.</li>
   <li><strong>Encrypted by default:</strong> All tunnel traffic is encrypted at the overlay level. No per-service TLS configuration.</li>
   <li><strong>NAT traversal built in:</strong> The daemon handles STUN, hole-punching, and relay fallback automatically. Agents behind home routers, corporate firewalls, and cloud NAT gateways are all reachable with the same code.</li>
-  <li><strong>Shared tunnel, not per-connection:</strong> A single UDP tunnel carries traffic to all peers. Adding the 50th peer adds minimal memory — no new TCP sockets, no new TLS sessions.</li>
+  <li><strong>Socket multiplexing:</strong> The daemon can carry multiple peer relationships over one UDP socket instead of exposing a public listener per service.</li>
 </ul>
 
-<p>This is the approach benchmarked in depth in our <a href="/blog/benchmarking-http-vs-udp-overlay">HTTP vs. UDP overlay comparison</a>. The headline finding: for the payload sizes agents typically send (1 KB to 100 KB of JSON), the UDP overlay matches gRPC over TCP on raw latency while adding reachability that gRPC cannot provide without extra infrastructure.</p>
+<p>Our <a href="/blog/benchmarking-http-vs-udp-overlay">HTTP and UDP overlay benchmarking guide</a> explains how to compare these paths without confusing transport overhead with topology, connection reuse, or security settings.</p>
 </section>
 
 <section>
@@ -98,16 +94,16 @@ const bodyContent = `<p>If you have worked with gRPC, you know it uses HTTP/2 un
 <h2 id="faq">Frequently Asked Questions</h2>
 
 <h3>Does gRPC use UDP?</h3>
-<p>No, standard gRPC uses HTTP/2 over TCP. gRPC can experimentally run over HTTP/3 (which uses QUIC over UDP), but this is not the default configuration and has uneven support across language runtimes. Most gRPC deployments in production today use TCP.</p>
+<p>Standard gRPC uses HTTP/2 over TCP. Implementation-specific experiments may use HTTP/3 or QUIC, but teams should not assume portable support across runtimes and infrastructure.</p>
 
 <h3>Can gRPC run over QUIC?</h3>
-<p>Yes, gRPC can run over QUIC via HTTP/3, and Google uses this internally. The gRPC project has experimental HTTP/3 support, but it is not enabled by default. For multi-language agent fleets, QUIC support varies by runtime — gRPC-Go has the most mature support, while C-core based implementations lag behind.</p>
+<p>Some implementations and adjacent proxies experiment with HTTP/3 or QUIC, but it is not the standard portable gRPC deployment model. Verify support across the exact client, server, proxy, and observability path you intend to operate.</p>
 
 <h3>What is the difference between gRPC over QUIC and a UDP overlay?</h3>
 <p>QUIC is a transport protocol — it replaces TCP with a UDP-based reliable, encrypted stream. A UDP overlay like Pilot Protocol is a networking layer that provides virtual addressing, NAT traversal, and peer discovery, with the tunnel itself running over UDP. They operate at different levels of the stack: QUIC replaces TCP, while an overlay replaces the network topology. They can be complementary — you could run gRPC over QUIC over a UDP overlay tunnel, though the layered overhead would need to make sense for your workload.</p>
 
 <h3>Why does TCP cause problems for agent communication?</h3>
-<p>Two reasons. First, TCP requires a listener — an agent behind NAT cannot accept inbound TCP connections without additional infrastructure. Second, TCP connection overhead scales with the number of peers: each connection has its own socket, buffer, and TLS session. For agent swarms with dozens of peers, this memory cost adds up. Our <a href="/blog/benchmarking-http-vs-udp-overlay">benchmarking post</a> shows Pilot using 10 MB RSS for a single peer vs. 45 MB for an HTTP/2 server, and only 24 MB at 100 peers versus 240 MB.</p>
+<p>TCP services need a reachable listener, so deployments behind NAT or restrictive firewall policy need an allowed route or intermediary. Per-connection sockets, buffers, and optional TLS state also need to be included in capacity tests at the fleet's expected concurrency.</p>
 
 <h3>Is Pilot Protocol a replacement for gRPC?</h3>
 <p>No. Pilot Protocol is an overlay network that provides connectivity, encryption, and peer discovery. gRPC is an RPC framework that provides typed service definitions, code generation, and streaming semantics. They operate at different layers. You can use Pilot to connect agents and run gRPC (or any other protocol) over the tunnel. Pilot replaces the network infrastructure — VPNs, service meshes, reverse proxies — not the application protocol.</p>
@@ -124,11 +120,11 @@ pilotctl bench &lt;peer-address&gt;    # run your own benchmarks</code></pre>
 const faqItems = [
   {
     question: "Does gRPC use UDP?",
-    answer: "No, standard gRPC uses HTTP/2 over TCP. gRPC can experimentally run over HTTP/3 (which uses QUIC over UDP), but this is not the default configuration and has uneven support across language runtimes. Most gRPC deployments in production today use TCP.",
+    answer: "Standard gRPC uses HTTP/2 over TCP. Implementation-specific experiments may use HTTP/3 or QUIC, but teams should not assume portable support across runtimes and infrastructure.",
   },
   {
     question: "Can gRPC run over QUIC?",
-    answer: "Yes, gRPC can run over QUIC via HTTP/3, and Google uses this internally. The gRPC project has experimental HTTP/3 support, but it is not enabled by default. For multi-language agent fleets, QUIC support varies by runtime — gRPC-Go has the most mature support, while C-core based implementations lag behind.",
+    answer: "Some implementations and adjacent proxies experiment with HTTP/3 or QUIC, but it is not the standard portable gRPC deployment model. Verify support across the exact client, server, proxy, and observability path you intend to operate.",
   },
   {
     question: "What is the difference between gRPC over QUIC and a UDP overlay?",

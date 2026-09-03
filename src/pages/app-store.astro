@@ -6,21 +6,31 @@ import AppIcon from '../components/AppIcon.astro';
 import AppCard from '../components/AppCard.astro';
 import Shelf from '../components/Shelf.astro';
 import { apps, categories, featuredApps, newApps, appsByCategory } from '../data/apps';
+import type { App } from '../data/apps';
 import { osSummary } from '../data/format';
 import '../styles/system.css';
 import '../styles/appstore.css';
 
-const title = 'App Store — Agent Apps on Pilot Protocol';
-const description = 'Browse and install agent apps from the Pilot Protocol App Store. Databases, search, sandboxes, payments, and more — one command to install, one namespace to manage.';
+const title = 'Agent App Store — Install Agent Apps on Pilot Protocol';
+const description = 'Install agent apps on Pilot Protocol in one command — search, databases, sandboxes, payments, and more. Discover, install, and call as typed JSON services.';
 const canonicalUrl = 'https://pilotprotocol.network/app-store';
 
 const featured = featuredApps();
 const hero = featured[0];
 const sideFeatured = featured.slice(1, 4);
-const freshPinned = ['io.pilot.bowmark', 'io.pilot.primitive', 'io.pilot.didit', 'io.pilot.agentphone', 'io.pilot.orthogonal', 'io.pilot.miren', 'io.pilot.smol', 'io.pilot.wallet', 'io.pilot.slipstream'];
+const freshPinned = ['io.pilot.dial', 'io.pilot.deadsimple', 'io.pilot.kinetic', 'io.pilot.rentahuman', 'io.pilot.upfile', 'io.pilot.bowmark', 'io.pilot.primitive', 'io.pilot.didit', 'io.pilot.agentphone', 'io.pilot.orthogonal', 'io.pilot.miren', 'io.pilot.smol', 'io.pilot.wallet', 'io.pilot.slipstream'];
 const freshExclude = new Set(['io.pilot.postgres', 'io.pilot.docker']);
+// The pinned ids are curated here, but the app list is served by the
+// app-store metadata API — so an id can now disappear from under this list.
+// Narrow properly instead of leaning on filter(Boolean), which strips the
+// undefined at runtime but leaves the type a lie, and say so at build time
+// rather than letting the shelf quietly shrink.
+const freshMissing = freshPinned.filter((id) => !apps.some((a) => a.id === id));
+if (freshMissing.length > 0) {
+  console.warn(`WARN  app-store: freshPinned names ${freshMissing.length} app(s) absent from the catalogue: ${freshMissing.join(', ')}`);
+}
 const fresh = [
-  ...freshPinned.map((id) => apps.find((a) => a.id === id)).filter(Boolean),
+  ...freshPinned.map((id) => apps.find((a) => a.id === id)).filter((a): a is App => a !== undefined),
   ...[...apps]
     .filter((a) => a.publishedAt && !freshPinned.includes(a.id) && !freshExclude.has(a.id))
     .sort((a, b) => (b.publishedAt || '').localeCompare(a.publishedAt || '')),
@@ -62,6 +72,7 @@ const publishHref = '/publish';
         <div class="eyebrow" style="font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-text);">App Store</div>
         <h1>Agent apps.<br/><em>One command away.</em></h1>
         <p class="lede">Experiences built for agents, not browsers. Every app installs as a <b>sha256-pinned, signature-verified</b> native service — auto-spawned by the daemon, callable over typed IPC in seconds.</p>
+        <p class="lede" style="margin-top:0.5em;">An <b>agent app</b> is an installable capability — a database, a search backend, a sandbox, a payment rail — packaged as a typed JSON-in/JSON-out service that runs locally on your daemon. The loop is <b>discover → install → call</b>: browse the catalogue, install with one command, and call the app's methods from any agent on the network. New to the model? Read <a href="/blog/ai-agent-app-store">what an agent app store is</a> or jump to <a href="/blog/build-agent-app-turn-api-into-tool">turning your own API into an agent app</a>.</p>
         <div class="store-metrics">
           <div class="store-metric"><div class="v">{apps.length}</div><div class="l">Apps</div></div>
           <div class="store-metric"><div class="v">{categories.length}</div><div class="l">Categories</div></div>
@@ -172,7 +183,7 @@ const publishHref = '/publish';
       <div class="bc-copy">
         <div class="eyebrow" style="font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-text);">For builders</div>
         <h2>Ship an agent app.<br/><em>It’s just a manifest.</em></h2>
-        <p>Describe your app's methods in a guided submission — we build, sign, and review the adapter. Once approved, <code>pilotctl appstore install &lt;id&gt;</code> works everywhere on the overlay.</p>
+        <p>Describe your app's methods in a guided submission — we build, sign, and review the adapter. Once approved, <code>pilotctl appstore install &lt;id&gt;</code> works everywhere on the overlay. Wondering how agent apps fit next to MCP tools? See <a href="/blog/mcp-plus-pilot-tools-and-network">MCP + Pilot: tools and a network for AI agents</a>.</p>
       </div>
       <div class="bc-actions">
         <a class="pub-btn" href={publishHref}>Publish your app <span class="arr">→</span></a>

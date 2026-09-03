@@ -1,6 +1,7 @@
 import { allPosts } from '../data/blogPosts';
 import { apps } from '../data/apps';
 import { solutions } from '../data/solutions';
+import { learnGuides } from '../data/learnGuides';
 
 const site = 'https://pilotprotocol.network';
 const CAMPAIGN_LASTMOD = '2026-08-05';
@@ -49,6 +50,7 @@ export async function GET() {
   const postDates = new Map(
     allPosts.filter((post) => post.iso_date).map((post) => [post.slug, post.iso_date!]),
   );
+  const learnDates = new Map(learnGuides.map((guide) => [guide.slug, guide.isoDate]));
 
   const seen = new Set<string>();
   const urls: string[] = [];
@@ -69,8 +71,11 @@ export async function GET() {
       : loc.startsWith('/news/')
         ? loc.replace('/news/', '').replace(/\/$/, '')
         : '';
+    const learnSlug = loc.startsWith('/learn/') ? loc.replace('/learn/', '').replace(/\/$/, '') : '';
     const lastmod = datedPostSlug && postDates.has(datedPostSlug)
       ? postDates.get(datedPostSlug)!
+      : learnSlug && learnDates.has(learnSlug)
+        ? learnDates.get(learnSlug)!
       : loc.startsWith('/enterprise/')
         ? CAMPAIGN_LASTMOD
         : '';

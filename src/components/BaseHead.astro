@@ -1,6 +1,6 @@
 ---
 import '../styles/global.css';
-import { formatPageTitle } from '../lib/seo.mjs';
+import { formatMetaDescription, formatPageTitle } from '../lib/seo.mjs';
 
 interface Props {
   title: string;
@@ -23,6 +23,7 @@ const {
 } = Astro.props;
 
 const pageTitle = formatPageTitle(title, Astro.url.pathname);
+const pageDescription = formatMetaDescription(description, Astro.url.pathname);
 const canonical = canonicalUrl
   ? new URL(canonicalUrl, Astro.site ?? 'https://pilotprotocol.network')
   : !robots.toLowerCase().includes('noindex')
@@ -46,13 +47,13 @@ const TWITTER_PIXEL_ID =
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{pageTitle}</title>
-<meta name="description" content={description}>
+<meta name="description" content={pageDescription}>
 <meta name="robots" content={robots}>
 <meta name="author" content="Pilot Protocol">
 {resolvedCanonical && <link rel="canonical" href={resolvedCanonical}>}
 <meta property="og:type" content={ogType}>
 <meta property="og:title" content={pageTitle}>
-<meta property="og:description" content={description}>
+<meta property="og:description" content={pageDescription}>
 {resolvedCanonical && <meta property="og:url" content={resolvedCanonical}>}
 <meta property="og:image" content={ogImage}>
 <meta property="og:image:alt" content={ogImageAlt}>
@@ -61,7 +62,7 @@ const TWITTER_PIXEL_ID =
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@pilotprotocol_">
 <meta name="twitter:title" content={pageTitle}>
-<meta name="twitter:description" content={description}>
+<meta name="twitter:description" content={pageDescription}>
 <meta name="twitter:image" content={ogImage}>
 <meta name="twitter:image:alt" content={ogImageAlt}>
 <meta name="theme-color" content="#0b0b0a" media="(prefers-color-scheme: dark)">

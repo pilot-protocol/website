@@ -461,6 +461,42 @@ if (!existsSync(sitemapPath)) {
   }
 }
 
+const redirectsPath = join(DIST, '_redirects');
+if (!existsSync(redirectsPath)) {
+  errors.push('_redirects is missing from the build');
+} else {
+  const redirects = await readFile(redirectsPath, 'utf8');
+  for (const [index, rawLine] of redirects.split(/\r?\n/).entries()) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const [source, destination, status, ...extra] = line.split(/\s+/);
+    if (!source || !destination || !status || extra.length) {
+      errors.push(`_redirects:${index + 1}: expected “source destination status”`);
+      continue;
+    }
+    if (!/^3\d\d$/.test(status)) {
+      errors.push(`_redirects:${index + 1}: invalid redirect status “${status}”`);
+    }
+    if (/[:*]/.test(source) || /[:*]/.test(destination)) continue;
+
+    let target;
+    try { target = new URL(destination, ORIGIN); }
+    catch {
+      errors.push(`_redirects:${index + 1}: invalid destination “${destination}”`);
+      continue;
+    }
+    if (target.origin !== ORIGIN) continue;
+    const sourceUrl = new URL(source, ORIGIN);
+    if (sourceUrl.pathname === target.pathname && sourceUrl.search === target.search) {
+      errors.push(`_redirects:${index + 1}: source redirects to itself`);
+      continue;
+    }
+    if (!await targetFor(target.pathname)) {
+      errors.push(`_redirects:${index + 1}: destination “${destination}” is not a generated route`);
+    }
+  }
+}
+
 if (errors.length) {
   console.error(`✗ Site integrity check failed with ${errors.length} problem(s):\n`);
   for (const error of errors) console.error(`  - ${error}`);
