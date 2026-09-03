@@ -87,6 +87,500 @@ export const categories: Category[] = [
 
 export const apps: App[] = [
   {
+    "id": "io.pilot.generallegal",
+    "name": "General Legal",
+    "tagline": "Attorney-backed contract review and Delaware company formation — flat-fee legal work from a licensed US law firm",
+    "description": "General Legal is a Y Combinator-backed law firm. This app puts a licensed\nattorney and a Delaware filing desk behind your agent — contract review and\ncompany formation, in one namespace.\n\nThe two halves have different requirements. Formation works the moment you\ninstall. Contract review needs a General Legal account and an API key.\n\n### Company formation — nothing to set up\n\nNo account, no key, no configuration. Call\n`generallegal.formation_options` and it works on a fresh install.\n\nYou will still need to pay: `formation_start_llc` and\n`formation_start_c_corp` return a payment link, and the founder pays there.\nUse the founder's real details — this files an actual Delaware company.\n\n### Contract review — bring your own API key\n\n1. Sign up at https://portal.general.legal/signup\n2. Open the account menu and choose **API keys**\n   (https://portal.general.legal/api-keys)\n3. Create a key and copy it — the full value is shown **once**\n4. Import it into the app:\n\n```\nprintf '{\"GENERAL_LEGAL_API_KEY\":\"glk_YOUR_KEY\"}' > ~/.pilot/apps/io.pilot.generallegal/secrets.json\nchmod 600 ~/.pilot/apps/io.pilot.generallegal/secrets.json\npilotctl appstore restart io.pilot.generallegal\n```\n\nThe restart matters: the key is read at startup. Verify with\n`pilotctl appstore call io.pilot.generallegal generallegal.deals_list '{}'`.\nThe key stays on your machine, is never sent to the formation service, and\nscopes you to your own General Legal organization.\n\n### What it costs\n\nContract review is flat-fee, with no hourly billing and no minimums. The fee\ncovers every turn through signature, including negotiation with the\ncounterparty.\n\n| Work | Price |\n| --- | --- |\n| Contract, 3 pages or fewer | $250 |\n| Contract, 3-50 pages | $500 |\n| Contract, 50+ pages | $10 per page |\n| Drafting from scratch | $2,000 |\n| Delaware LLC | $190 instant / $210 standard / $260 next-day / $310 same-day |\n| Delaware C-corp | $218 standard / $268 next-day / $318 same-day |\n\n### What the app does\n\n**Company formation** — `formation_options` (free), `formation_start_llc`\n(**paid**), `formation_start_c_corp` (**paid**), `formation_status`,\n`formation_update`, `formation_documents` (free).\n\n**Contract review** — `deal_open` (**paid**), `document_upload` (**paid**),\n`thread_post` (**paid**, covered by the matter's flat fee), plus\n`deals_list`, `deal_get`, `thread_get`, `contracts_list`, `contract_get`,\n`version_download_link` (free) and `upload_begin`, `upload_chunk`,\n`upload_abort` (free — a document is staged in chunks because a single call\ncannot carry a file).\n\n### What costs money\n\nFive methods spend real money and will not warn you first:\n`formation_start_llc`, `formation_start_c_corp`, `deal_open`,\n`document_upload` and `thread_post`. Every other method is free.\n`generallegal.help` lists them under `billable_methods` with the price.",
+    "categories": [
+      "work"
+    ],
+    "primaryCategory": "work",
+    "keywords": [
+      "legal",
+      "contracts",
+      "attorney",
+      "review",
+      "nda",
+      "redline",
+      "incorporation",
+      "delaware",
+      "llc",
+      "c-corp"
+    ],
+    "version": "0.1.0",
+    "vendor": "General Legal",
+    "vendorUrl": "https://general.legal",
+    "license": "Apache-2.0",
+    "sourceUrl": "https://github.com/pilot-protocol/generallegal-app",
+    "homepage": "https://general.legal",
+    "methods": [
+      {
+        "name": "generallegal.formation_options",
+        "summary": "Itemised pricing for every Delaware entity type and filing speed. No account or credentials needed to call it.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.formation_start_llc",
+        "summary": "File a sole-member Delaware LLC and get back a payment link plus a formation_id. No account or credentials needed to call it. 'instant' hands over a pre-formed shelf company; the other speeds file under a name you choose.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.formation_start_c_corp",
+        "summary": "File a Delaware C-corp and get back a payment link plus a formation_id. No account or credentials needed to call it. The founder acts as sole incorporator.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.formation_status",
+        "summary": "Poll a filing's progress. No account or credentials needed to call it. Repeat after poll_after_seconds while it keeps coming back.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.formation_update",
+        "summary": "Change the company name before the documents are generated. No account or credentials needed to call it. Late changes are rejected.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.formation_documents",
+        "summary": "Short-lived links to a completed formation's documents. No account or credentials needed to call it.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.deals_list",
+        "summary": "List your matters, paginated, with an optional status filter. Free. Needs your General Legal API key.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.deal_open",
+        "summary": "Open a matter from a written request. It reaches a real attorney.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.deal_get",
+        "summary": "One matter with its documents and released versions. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.thread_get",
+        "summary": "Read the lawyer-client thread on a matter. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.thread_post",
+        "summary": "Reply to the attorney on a matter's thread.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.contracts_list",
+        "summary": "List your documents. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.contract_get",
+        "summary": "One document with its released versions; the version ids feed downloads. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.document_upload",
+        "summary": "Upload a DOCX, PDF, PNG, JPEG or Markdown document for AI + attorney review, up to 20 MiB. Stage the bytes with upload_begin/upload_chunk first.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.version_download_link",
+        "summary": "Issue a short-lived (~15 min) direct download URL for a released version. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.upload_begin",
+        "summary": "Start a staged upload and get a blob_id. Free — a document cannot cross in one call, so declare it here first.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.upload_chunk",
+        "summary": "Append the next chunk of a staged upload, at most 512 KiB of raw bytes per call. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.upload_abort",
+        "summary": "Discard a staged upload and its bytes. Free.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "generallegal.help",
+        "summary": "Every method with its parameters, duration class, and which calls cost money. Free, local, no backend call.",
+        "example": null,
+        "gated": null
+      }
+    ],
+    "changelog": [
+      {
+        "version": "0.1.0",
+        "date": "2026-08-29",
+        "notes": [
+          "Contract review: matters, lawyer thread, document upload and released-version downloads.",
+          "Delaware company formation: pricing, LLC and C-corp filing, status and documents — no account needed.",
+          "Bring your own General Legal API key for contract review; it never reaches the formation service."
+        ]
+      }
+    ],
+    "grants": [
+      "fs.read:$APP/config.json",
+      "fs.read:$APP/secrets.json",
+      "fs.read:$APP/blobs",
+      "fs.write:$APP/blobs",
+      "net.dial:api.general.legal",
+      "net.dial:incorp-mcp.general.legal",
+      "audit.log:*"
+    ],
+    "bundles": [
+      {
+        "platform": "linux-amd64",
+        "bytes": 5074207
+      }
+    ],
+    "installedBytes": null,
+    "depends": [],
+    "protection": "shareable",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "mask",
+      "img": null,
+      "fit": null,
+      "pos": null,
+      "color": "#0e1a2b",
+      "ink": false,
+      "file": "/appicons/io.pilot.generallegal.svg",
+      "hue": 45
+    },
+    "minPilotVersion": "1.0.0",
+    "runtimes": [
+      "go"
+    ],
+    "publishedAt": "2026-08-29",
+    "updatedAt": "2026-08-29",
+    "productDemo": {
+      "skill": "io.pilot.generallegal",
+      "title": "Full usage demo",
+      "when_to_use": "When a contract needs a licensed attorney to review, redline or draft it, or when an agent needs its own Delaware company. Formation works on a fresh install; contract review needs your own General Legal API key.",
+      "metered": false,
+      "quickstart": {
+        "title": null,
+        "goal": "Price a Delaware company — works on a fresh install, no account, no key",
+        "command": "pilotctl appstore call io.pilot.generallegal generallegal.formation_options '{\"entity_type\":\"llc\"}'",
+        "expect": "{\"options\":[{\"filing_speed\":\"instant\",\"total_cents\":19000},{\"filing_speed\":\"standard\",\"total_cents\":21000}]}",
+        "cost": null,
+        "note": "Free, and it needs no account or key at all — the fastest way to confirm the app works. Contract review is the half that needs a key; see the examples."
+      },
+      "examples": [
+        {
+          "title": "Form a Delaware company — no API key needed",
+          "goal": "Price it, file it, hand the founder a payment link",
+          "command": "pilotctl appstore call io.pilot.generallegal generallegal.formation_start_llc '{\"filing_speed\":\"standard\",\"company_name\":\"NewCo LLC\",\"founder\":{\"full_name\":\"Ada Lovelace\",\"email\":\"ada@example.com\"},\"principal_address\":{\"street\":\"1 Main St\",\"city\":\"Dover\",\"state\":\"DE\",\"postal_code\":\"19901\"},\"ai_agent_description\":\"Procurement agent\",\"authority_limits\":\"No commitments above $5,000 without sign-off\",\"contract_threshold\":\"$5,000\"}'",
+          "expect": "{\"formation_id\":\"f-...\",\"payment_url\":\"https://...\",\"status\":\"awaiting_payment\"}",
+          "cost": null,
+          "note": "BILLABLE - files a real company. $190 instant / $210 standard / $260 next-day / $310 same-day, paid by the founder at the returned link. No account or key needed to call it. formation_id is shown once."
+        },
+        {
+          "title": "Track the filing and collect the paperwork",
+          "goal": "Poll to completion, then pull the documents",
+          "command": "pilotctl appstore call io.pilot.generallegal generallegal.formation_status '{\"formation_id\":\"f-...\"}'",
+          "expect": "{\"status\":\"filed\",\"poll_after_seconds\":30} then {\"status\":\"complete\"}",
+          "cost": null,
+          "note": "Free. Repeat only after poll_after_seconds. When complete, generallegal.formation_documents returns short-lived links."
+        },
+        {
+          "title": "Bring your own key, then confirm it works",
+          "goal": "Authenticate as your own General Legal organization",
+          "command": "pilotctl appstore call io.pilot.generallegal generallegal.deals_list '{\"page\":1,\"page_size\":5}'",
+          "expect": "{\"items\":[...],\"total\":n} once the key is in place; 401 until then",
+          "cost": null,
+          "note": "Contract review only. Sign up at https://portal.general.legal/signup, then account menu -> API keys (shown once). Import: printf '{\"GENERAL_LEGAL_API_KEY\":\"glk_YOUR_KEY\"}' > ~/.pilot/apps/io.pilot.generallegal/secrets.json && chmod 600 ~/.pilot/apps/io.pilot.generallegal/secrets.json && pilotctl appstore restart io.pilot.generallegal"
+        },
+        {
+          "title": "Ask an attorney to review a contract",
+          "goal": "Open a matter a real lawyer picks up",
+          "command": "pilotctl appstore call io.pilot.generallegal generallegal.deal_open '{\"initial_request\":\"Please review this mutual NDA. We are the disclosing party; flag anything unusual in the confidentiality term.\",\"deal_name\":\"Acme mutual NDA\"}'",
+          "expect": "{\"deal_id\":\"d-9f3...\",\"status\":\"open\"}",
+          "cost": null,
+          "note": "BILLABLE - flat fee per contract: $250 (<=3 pages), $500 (3-50), $10/page (50+), $2,000 to draft. Covers every turn through signature. Keep the deal_id."
+        },
+        {
+          "title": "Stage the document, then send it",
+          "goal": "Push the bytes in chunks (a file cannot cross in one message), then upload",
+          "command": "pilotctl appstore call io.pilot.generallegal generallegal.upload_begin '{\"file_name\":\"nda.docx\",\"content_type\":\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\",\"total_bytes\":3145728,\"sha256\":\"<sha256 of the file>\"}'",
+          "expect": "{\"blob_id\":\"a1b2...\",\"max_chunk_bytes\":524288,\"next_seq\":0}",
+          "cost": null,
+          "note": "Then generallegal.upload_chunk with seq 0,1,2... and base64 of at most max_chunk_bytes raw bytes. The last returns complete:true. Finally generallegal.document_upload with the blob_id and deal_id (BILLABLE)."
+        },
+        {
+          "title": "Collect the released redline",
+          "goal": "Get a downloadable link to counsel's version",
+          "command": "pilotctl appstore call io.pilot.generallegal generallegal.version_download_link '{\"version_id\":\"v-07...\"}'",
+          "expect": "{\"file_name\":\"nda-redline.docx\",\"download_url\":\"https://...\",\"download_token_expires_at\":\"...\"}",
+          "cost": null,
+          "note": "Free. The URL needs no auth and expires in ~15 minutes - fetch it yourself. Find version ids via generallegal.deal_get or generallegal.contract_get."
+        }
+      ],
+      "cost": null,
+      "gotchas": [
+        "Two halves, different requirements. Company formation needs no account and no key. Contract review needs a General Legal account and an API key imported.",
+        "For contract review: sign up at portal.general.legal/signup, mint a key under API keys, write it to $APP/secrets.json, then restart the app - the key is read at startup.",
+        "Five methods spend money: deal_open and document_upload are flat-fee per contract ($250/$500/$10-per-page/$2,000); formation_start_llc and formation_start_c_corp file a real company ($190-$318); thread_post is covered by the matter's fee.",
+        "A document cannot ride in one call. Use upload_begin then upload_chunk (<=512 KiB raw each) and pass the blob_id. A blob is single-use and dropped once sent.",
+        "Matters reach a real attorney and formations file a real company. Neither is a sandbox - confirm before calling a billable method.",
+        "Contract-review limits are per organization: 120 reads/min, 25 new matters/day, 50 uploads/day. Honour Retry-After on a 429."
+      ],
+      "next": [
+        "generallegal.formation_options to price a company, or generallegal.deals_list to see the matters your key can reach.",
+        "generallegal.help lists every method and marks exactly which ones cost money."
+      ]
+    },
+    "limits": [
+      {
+        "label": "Contract review",
+        "value": "$250 / $500 / $10 per page — flat fee"
+      },
+      {
+        "label": "Delaware LLC",
+        "value": "$190–$310 depending on speed"
+      },
+      {
+        "label": "Delaware C-corp",
+        "value": "$218–$318 depending on speed"
+      },
+      {
+        "label": "New matters",
+        "value": "25 / day per organization"
+      }
+    ]
+  },
+  {
+    "id": "com.comos-federation.connector",
+    "name": "ComOS Federation",
+    "tagline": "Read the ComOS commerce network's public surfaces from Pilot",
+    "description": "ComOS Federation exposes public information about its commerce network through a remote gateway. This connector packages 12 of those tokenless, read-only surfaces as Pilot app methods: search and platform discovery, agent and reputation catalogues, pricing and latency information, solvency and governance disclosures, legal documents, and the vendor admission offer.\n\nThe connector is intentionally narrow. It holds no provider credential, keeps no local state, and does not create orders, admit vendors, or perform transactions. Its signed manifest permits audit emission and outbound connections to only mcp.comos-federation.com, with a 120-request-per-minute condition. It requests no filesystem capability.\n\nUse comos.search to route an intent to relevant ComOS platforms, or inspect the individual public surfaces when an agent needs source-provided network information. Responses come from ComOS Federation's gateway and may change independently of the connector. The broader usage guide returned by comos.help describes additional gateway capabilities; this Pilot connector exposes only the 12 comos.* methods listed on this page.",
+    "categories": [
+      "work",
+      "finance"
+    ],
+    "primaryCategory": "work",
+    "keywords": [
+      "comos",
+      "commerce",
+      "federation",
+      "marketplace",
+      "platform discovery",
+      "governance",
+      "solvency",
+      "pricing"
+    ],
+    "version": "0.1.0",
+    "vendor": "ComOS Federation, Inc.",
+    "vendorUrl": "https://comos-federation.com",
+    "license": "AGPL-3.0-or-later",
+    "sourceUrl": "https://github.com/ronrey/comos-pilot-connector",
+    "homepage": "https://comos-federation.com",
+    "methods": [
+      {
+        "name": "comos.help",
+        "summary": "Return ComOS Federation's current gateway usage guide.",
+        "example": "pilotctl appstore call com.comos-federation.connector comos.help '{}'",
+        "gated": null
+      },
+      {
+        "name": "comos.why",
+        "summary": "Return the federation operator's explanation of why the network exists.",
+        "example": "pilotctl appstore call com.comos-federation.connector comos.why '{}'",
+        "gated": null
+      },
+      {
+        "name": "comos.offer",
+        "summary": "Read the current vendor offer and gateway-managed application instructions.",
+        "example": "pilotctl appstore call com.comos-federation.connector comos.offer '{}'",
+        "gated": null
+      },
+      {
+        "name": "comos.search",
+        "summary": "Route a plain-language intent to relevant platforms on the federation.",
+        "example": "pilotctl appstore call com.comos-federation.connector comos.search '{\"intent\":\"shipping and order tracking\"}'",
+        "gated": null
+      },
+      {
+        "name": "comos.platforms",
+        "summary": "Return the federation's composable platform catalogue.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "comos.agents",
+        "summary": "Return the public agent-level catalogue.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "comos.arena",
+        "summary": "Read the federation's settlement-derived reputation leaderboard.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "comos.pricesheet",
+        "summary": "Read the current per-operation prices published by the gateway.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "comos.latency",
+        "summary": "Read recently measured gateway latency percentiles.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "comos.solvency",
+        "summary": "Read the gateway's aggregate solvency disclosure without tenant names.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "comos.governance",
+        "summary": "Read the federation's published model for agent autonomy, clamps, and standing.",
+        "example": "pilotctl appstore call com.comos-federation.connector comos.governance '{}'",
+        "gated": null
+      },
+      {
+        "name": "comos.legal",
+        "summary": "Return the gateway's served legal, privacy, data-processing, and retention material.",
+        "example": "pilotctl appstore call com.comos-federation.connector comos.legal '{}'",
+        "gated": null
+      }
+    ],
+    "changelog": [
+      {
+        "version": "0.1.0",
+        "date": "2026-08-28",
+        "notes": [
+          "Initial connector release with 12 public, read-only gateway methods."
+        ]
+      }
+    ],
+    "grants": [
+      "audit.log:*",
+      "net.dial:mcp.comos-federation.com (120/min)"
+    ],
+    "bundles": [
+      {
+        "platform": "darwin-amd64",
+        "bytes": 2565468
+      },
+      {
+        "platform": "darwin-arm64",
+        "bytes": 2371491
+      },
+      {
+        "platform": "linux-amd64",
+        "bytes": 2542631
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": 2300672
+      }
+    ],
+    "installedBytes": null,
+    "depends": [],
+    "protection": "shareable",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "mask",
+      "img": null,
+      "fit": null,
+      "pos": null,
+      "color": "#315cf5",
+      "ink": false,
+      "file": "/appicons/com.comos-federation.connector.svg",
+      "hue": 215
+    },
+    "minPilotVersion": "1.0.0",
+    "runtimes": [
+      "go"
+    ],
+    "publishedAt": "2026-08-28",
+    "updatedAt": "2026-09-03",
+    "productDemo": {
+      "skill": "com.comos-federation.connector",
+      "title": "Inspect the ComOS public federation surface",
+      "when_to_use": "When an agent needs source-provided information about ComOS platforms, public network disclosures, or vendor admission without granting transaction authority.",
+      "metered": false,
+      "quickstart": {
+        "title": "Read the public guide",
+        "goal": "Inspect the federation's current public overview",
+        "command": "pilotctl appstore call com.comos-federation.connector comos.help '{}'",
+        "expect": "A structured gateway response containing the current federation usage guide.",
+        "cost": null,
+        "note": "The guide may name gateway tools outside this connector. Only the comos.* methods on this page are exposed through Pilot."
+      },
+      "examples": [
+        {
+          "title": "Route a commerce intent",
+          "goal": "Find which platform families serve a need",
+          "command": "pilotctl appstore call com.comos-federation.connector comos.search '{\"intent\":\"bookings with customer messaging\"}'",
+          "expect": "A structured response identifying relevant ComOS platform families.",
+          "cost": null,
+          "note": null
+        },
+        {
+          "title": "Inspect governance",
+          "goal": "Read the federation operator's published controls",
+          "command": "pilotctl appstore call com.comos-federation.connector comos.governance '{}'",
+          "expect": "The current governance disclosure served by the ComOS gateway.",
+          "cost": null,
+          "note": null
+        }
+      ],
+      "cost": null,
+      "gotchas": [
+        "The connector exposes public reads only; it cannot create orders, perform settlement, or apply for vendor admission.",
+        "comos.help is upstream documentation and may describe gateway tools that this connector does not expose.",
+        "All response content is supplied by the ComOS Federation gateway and can change without a connector release."
+      ],
+      "next": [
+        "com.comos-federation.connector comos.platforms '{}'",
+        "com.comos-federation.connector comos.pricesheet '{}'",
+        "com.comos-federation.connector comos.solvency '{}'"
+      ]
+    },
+    "limits": [
+      {
+        "label": "Connector rate condition",
+        "value": "120 requests per minute"
+      },
+      {
+        "label": "Write methods",
+        "value": "None"
+      }
+    ]
+  },
+  {
     "id": "io.pilot.dial",
     "name": "Dial",
     "tagline": "A complete phone identity for your agent — voice calls, SMS and iMessage on a real US number, provisioned in one call",
@@ -6714,6 +7208,298 @@ export const apps: App[] = [
       ],
       "next": [
         "io.pilot.tldr tldr.help '{}'"
+      ]
+    },
+    "limits": null
+  },
+  {
+    "id": "io.pilot.insforge",
+    "name": "Insforge",
+    "tagline": "The agent-native cloud (an AWS for agents) as ONE Pilot app. insforge.signup provisions your OWN isolated InsForge backe",
+    "description": "The agent-native cloud (an AWS for agents) as ONE Pilot app. insforge.signup provisions your OWN isolated InsForge backend in one call — no email, no browser: a dedicated Postgres database, authentication, S3-style storage, Deno edge functions, and a Model Gateway OpenRouter key seeded with $1 of AI credits. Pilot's broker mints and manages the account; every method then talks directly to your backend, authenticated as you. Free to provision — pay only for what your backend uses.",
+    "categories": [
+      "infra",
+      "data"
+    ],
+    "primaryCategory": "infra",
+    "keywords": [
+      "backend",
+      "baas",
+      "database",
+      "postgres",
+      "auth",
+      "storage",
+      "edge functions",
+      "ai gateway",
+      "openrouter",
+      "agent-native",
+      "insforge"
+    ],
+    "version": "1.0.0",
+    "vendor": "InsForge",
+    "vendorUrl": "https://insforge.dev",
+    "license": "Apache-2.0",
+    "sourceUrl": "https://github.com/pilot-protocol/app-template/tree/main/submissions/io.pilot.insforge",
+    "homepage": "https://insforge.dev",
+    "methods": [
+      {
+        "name": "insforge.signup",
+        "summary": "Provision your OWN isolated InsForge backend in ONE call — no email, no browser, no human step. This signs a keyless request to Pilot's InsForge signup broker, which mints a fresh InsForge project under Pilot's managed account and returns its access key + backend URL. The adapter caches {api_key, backend_url} to $APP/secrets.json, and from then on EVERY other insforge.* method talks directly to YOUR backend, authenticated as you. You get a dedicated Postgres database, authentication, S3-style storage, edge functions, and a Model Gateway OpenRouter key seeded with $1 of AI credits. Idempotent: the broker provisions at most one project per Pilot identity, so a repeat call (or a fresh install) returns the SAME backend. Run this ONCE before any other method. FREE to provision — you pay only for the resources your backend actually uses (see per-method costs and insforge.help). Retrieve your backend URL + key any time via insforge.account. Takes no arguments.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.account",
+        "summary": "Retrieve your provisioned InsForge backend — its backend_url, your api_key, and project id — plus a signed_up flag. Local, instant, FREE (reads $APP/secrets.json; no backend call). Use it to confirm you're provisioned or to read your key/URL (e.g. to call the backend from your own code). If signed_up is false, call insforge.signup first.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.metadata",
+        "summary": "Get your backend's full configuration — auth providers/SMTP, database tables, storage buckets, edge functions, realtime, and AI models — in one call. FREE (control-plane / metadata).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.db_list_tables",
+        "summary": "List all database tables with their schemas (columns, types, constraints). FREE (control-plane / metadata).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.db_create_table",
+        "summary": "Create a Postgres table. Body: {tableName, columns:[{columnName, type, isNullable, isUnique, defaultValue?}]} — type is one of string, integer, float, boolean, datetime, date, uuid, json. An id (uuid) + createdAt/updatedAt are added automatically. Rows count toward Postgres storage (500 MB free, then $0.125/GB); reads toward bandwidth (5 GB free, then $0.09/GB).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.db_query",
+        "summary": "Query records from a table with PostgREST-style filtering, sorting, pagination. Path: table name. Query params: limit (1-1000, default 100), offset, order (e.g. createdAt.desc), select (comma columns), and any {field}=<op>.<value> filter (op: eq, neq, gt, gte, lt, lte, like, ilike, in, is). Counts toward bandwidth (5 GB free, then $0.09/GB).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.db_insert",
+        "summary": "Insert one or more records into a table. Path: table name. Body: a JSON array of row objects (e.g. [{\"title\":\"hi\"}]) — always an array, even for one row. Returns the inserted rows with generated ids. Note: just after db_create_table, wait ~3s before the first insert (the database reloads its schema cache after DDL; an immediate insert can 404). Rows count toward Postgres storage (500 MB free, then $0.125/GB); reads toward bandwidth (5 GB free, then $0.09/GB).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.db_update",
+        "summary": "Update records matching PostgREST filters. Path: table name. Pass filter(s) as query params ({field}=eq.<value>) and the new column values in the body. Returns the updated rows. Rows count toward Postgres storage (500 MB free, then $0.125/GB); reads toward bandwidth (5 GB free, then $0.09/GB).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.db_delete",
+        "summary": "Delete records matching PostgREST filters. Path: table name. Pass filter(s) as query params ({field}=eq.<value>). Returns the deleted rows. Rows count toward Postgres storage (500 MB free, then $0.125/GB); reads toward bandwidth (5 GB free, then $0.09/GB).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.db_sql",
+        "summary": "Run raw parameterized SQL against your Postgres database. Body: {query, params?}. Powerful — use for joins, aggregates, DDL, migrations. Rows count toward Postgres storage (500 MB free, then $0.125/GB); reads toward bandwidth (5 GB free, then $0.09/GB).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.storage_list_buckets",
+        "summary": "List your storage buckets. FREE (control-plane / metadata).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.storage_create_bucket",
+        "summary": "Create a storage bucket. Body: {bucketName, isPublic}. A public bucket serves objects without auth; a private one requires the key. FREE (control-plane / metadata).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.storage_list_objects",
+        "summary": "List objects in a bucket (paginated). Path: bucket name. Query: limit, offset, prefix. Counts toward bandwidth (5 GB free, then $0.09/GB).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.storage_download",
+        "summary": "Download an object (returns its content). Path: bucket + object key. Counts toward bandwidth (5 GB free, then $0.09/GB).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.storage_delete",
+        "summary": "Delete an object. Path: bucket + object key. FREE (control-plane / metadata).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.auth_config",
+        "summary": "Get your backend's auth configuration (enabled OAuth providers, JWT settings, SMTP). FREE (control-plane / metadata).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.auth_list_users",
+        "summary": "List the end-users registered in your backend's auth (paginated). Query: limit, offset. Auth users count toward MAU (50,000 free, then $0.00325 per monthly active user).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.functions_list",
+        "summary": "List your deployed edge functions (Deno/TypeScript) and the runtime status. FREE (control-plane / metadata).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.function_invoke",
+        "summary": "Invoke a deployed edge function by slug. Path: function slug. Body: the JSON payload passed to the function. Each invocation counts toward edge-function calls (100,000 free, then $0.01 per 1,000).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.ai_gateway_key",
+        "summary": "Get your project's Model Gateway OpenRouter API key (sk-or-...). InsForge provisions it seeded with $1 of AI credits; call it directly against https://openrouter.ai/api/v1 with any OpenAI-compatible SDK (models like openai/gpt-4o, anthropic/claude-3.5-haiku). Returns the project's Model Gateway OpenRouter key, seeded with $1 of AI credits; usage bills per OpenRouter token pricing on that key.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.secrets_list",
+        "summary": "List your backend's secrets/keys (names + metadata; values are not returned). FREE (control-plane / metadata).",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.get",
+        "summary": "Escape hatch: GET any backend API path under /api. Path param is the sub-path (e.g. \"database/tables\", \"storage/config\"); extra fields become query params. Covers endpoints not given a dedicated method. Cost depends on the endpoint — see insforge.help.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.post",
+        "summary": "Escape hatch: POST any backend API path under /api. Path param is the sub-path; the rest of the payload is sent as the JSON body. Covers endpoints not given a dedicated method. Cost depends on the endpoint.",
+        "example": null,
+        "gated": null
+      },
+      {
+        "name": "insforge.help",
+        "summary": "This document — methods grouped by plane (local vs cloud), with params, latency, and cost.",
+        "example": null,
+        "gated": null
+      }
+    ],
+    "changelog": [
+      {
+        "version": "1.0.0",
+        "date": null,
+        "notes": [
+          "Published v 1.0.0"
+        ]
+      }
+    ],
+    "grants": [],
+    "bundles": [
+      {
+        "platform": "darwin-amd64",
+        "bytes": 5270813
+      },
+      {
+        "platform": "darwin-arm64",
+        "bytes": 4937810
+      },
+      {
+        "platform": "linux-amd64",
+        "bytes": 5113957
+      },
+      {
+        "platform": "linux-arm64",
+        "bytes": 4683112
+      }
+    ],
+    "installedBytes": 9251815,
+    "depends": [],
+    "protection": "shareable",
+    "featured": false,
+    "real": true,
+    "inCatalogue": true,
+    "icon": {
+      "mode": "mask",
+      "img": null,
+      "fit": null,
+      "pos": null,
+      "color": "#0f172a",
+      "ink": false,
+      "file": "/appicons/io.pilot.insforge.svg",
+      "hue": 30
+    },
+    "minPilotVersion": "1.0.0",
+    "runtimes": [],
+    "publishedAt": null,
+    "updatedAt": null,
+    "productDemo": {
+      "skill": "io.pilot.insforge",
+      "title": "Full usage demo",
+      "when_to_use": "When your agent needs its own isolated cloud backend — Postgres, auth, S3-style storage, edge functions, and an AI gateway key — provisioned in a single call.",
+      "metered": false,
+      "quickstart": {
+        "title": null,
+        "goal": "Provision your own isolated backend in one call (no email, no browser)",
+        "command": "pilotctl appstore call io.pilot.insforge insforge.signup '{}'",
+        "expect": "{\"signed_up\":true,\"backend_url\":\"https://...insforge.dev\",\"api_key\":\"...\"}",
+        "cost": null,
+        "note": "Run this ONCE. It caches your backend URL + key; every other insforge.* call then talks directly to YOUR backend. Idempotent per Pilot identity."
+      },
+      "examples": [
+        {
+          "title": "Create a Postgres table",
+          "goal": null,
+          "command": "pilotctl appstore call io.pilot.insforge insforge.db_create_table '{\"tableName\":\"notes\",\"columns\":[{\"columnName\":\"title\",\"type\":\"string\",\"isNullable\":false}]}'",
+          "expect": "{\"tableName\":\"notes\",\"columns\":[...]}",
+          "cost": null,
+          "note": "id (uuid) + createdAt/updatedAt are added automatically. Wait ~3s before the first insert (schema cache reload)."
+        },
+        {
+          "title": "Insert rows (always a JSON array)",
+          "goal": null,
+          "command": "pilotctl appstore call io.pilot.insforge insforge.db_insert '{\"table\":\"notes\",\"records\":[{\"title\":\"hello\"}]}'",
+          "expect": "[{\"id\":\"...\",\"title\":\"hello\",\"createdAt\":\"...\"}]",
+          "cost": null,
+          "note": null
+        },
+        {
+          "title": "Query with filters + ordering",
+          "goal": null,
+          "command": "pilotctl appstore call io.pilot.insforge insforge.db_query '{\"table\":\"notes\",\"order\":\"createdAt.desc\",\"limit\":10}'",
+          "expect": "[{\"id\":\"...\",\"title\":\"hello\"}]",
+          "cost": null,
+          "note": null
+        },
+        {
+          "title": "Get your seeded AI Model Gateway key",
+          "goal": null,
+          "command": "pilotctl appstore call io.pilot.insforge insforge.ai_gateway_key '{}'",
+          "expect": "{\"api_key\":\"sk-or-...\"}",
+          "cost": null,
+          "note": "OpenRouter key seeded with $1 of credits — call it against https://openrouter.ai/api/v1 with any OpenAI-compatible SDK."
+        },
+        {
+          "title": "Inspect the whole backend config",
+          "goal": null,
+          "command": "pilotctl appstore call io.pilot.insforge insforge.metadata '{}'",
+          "expect": "{\"database\":{...},\"storage\":{...},\"functions\":{...},\"auth\":{...}}",
+          "cost": null,
+          "note": null
+        }
+      ],
+      "cost": null,
+      "gotchas": [
+        "Run insforge.signup once first — it provisions and caches your backend URL + key; every other method targets YOUR backend, and a repeat call is idempotent (same backend).",
+        "Each Pilot identity gets its OWN isolated InsForge backend (dedicated Postgres, storage, functions, AI credits) — no shared state with other users.",
+        "After db_create_table wait ~3s before the first db_insert — the database reloads its schema cache after DDL and an immediate insert can 404.",
+        "db_insert always takes a JSON array of row objects, even for a single row.",
+        "Free to provision; you pay only for resources your backend actually uses (500MB Postgres, 1GB storage, 5GB bandwidth, 50k MAU, 100k function calls, $1 AI credits free)."
+      ],
+      "next": [
+        "io.pilot.insforge insforge.help '{}'"
       ]
     },
     "limits": null
