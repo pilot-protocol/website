@@ -176,10 +176,16 @@ const htmlCache = new Map();
 const idsCache = new Map();
 const errors = [];
 let referencesChecked = 0;
-const publicHtmlFiles = htmlFiles.filter((file) => {
+const publicHtmlFiles = [];
+for (const file of htmlFiles) {
   const route = routeForFile(file);
-  return !route.startsWith('/plain/') && route !== '/404' && route !== '/500';
-});
+  if (route.startsWith('/plain/') || route === '/404' || route === '/500') continue;
+  const html = await readFile(file, 'utf8');
+  htmlCache.set(file, html);
+  const redirect = /<meta\b[^>]*http-equiv=["']refresh["']/i.test(html)
+    && /<meta\b[^>]*name=["']robots["'][^>]*content=["'][^"']*noindex/i.test(html);
+  if (!redirect) publicHtmlFiles.push(file);
+}
 const publicRoutes = new Set(publicHtmlFiles.map((file) => normalizedRoute(routeForFile(file))));
 const inlinks = new Map([...publicRoutes].map((route) => [route, new Set()]));
 
@@ -248,7 +254,7 @@ let publicPagesChecked = 0;
 for (const file of htmlFiles) {
   const label = sourceLabel(file);
   const route = routeForFile(file);
-  if (route.startsWith('/plain/') || route === '/404' || route === '/500') continue;
+  if (!publicRoutes.has(normalizedRoute(route))) continue;
 
   publicPagesChecked += 1;
   const html = await htmlFor(file);
