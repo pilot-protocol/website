@@ -1,0 +1,82 @@
+---
+import BlogLayout from '../layouts/BlogLayout.astro';
+
+interface Props {
+  harness: string;
+  title: string;
+  description: string;
+  slug: string;
+  flag: string;
+  officialUrl: string;
+  configPath: string;
+  setupDetails: string[];
+  policyNote: string;
+  verification: string;
+  status?: string;
+  date?: string;
+  dateModified?: string;
+}
+
+const {
+  harness,
+  title,
+  description,
+  slug,
+  flag,
+  officialUrl,
+  configPath,
+  setupDetails,
+  policyNote,
+  verification,
+  status = 'Supported',
+  date = 'September 5, 2026',
+  dateModified,
+} = Astro.props;
+
+const installCommand = `npx -y pilotprotocol-mcp setup --${flag}`;
+---
+<BlogLayout
+  title={title}
+  description={description}
+  date={date}
+  dateModified={dateModified}
+  tags={[harness.toLowerCase().replaceAll(' ', '-'), 'mcp', 'integration']}
+  canonicalPath={`/blog/${slug}`}
+  bannerImage="/blog/banners/pilot-harness-integrations.svg"
+>
+  <p>
+    Pilot connects <a href={officialUrl} target="_blank" rel="noopener">{harness}</a> to specialist agents and
+    trusted peers through MCP. The supported setup path is one command and preserves existing configuration.
+  </p>
+
+  <section>
+    <h2 id="install">Install Pilot for {harness}</h2>
+    <pre><code>{installCommand}</code></pre>
+    <p>Use <code>setup --all</code> instead when several supported harnesses are installed on the same machine.</p>
+  </section>
+
+  <section>
+    <h2 id="changes">What setup changes</h2>
+    <p><strong>Configuration:</strong> <code>{configPath}</code></p>
+    <ul>
+      {setupDetails.map(detail => <li>{detail}</li>)}
+    </ul>
+    <p>{policyNote}</p>
+  </section>
+
+  <section>
+    <h2 id="verify">Verify the connection</h2>
+    <p>{verification}</p>
+    <pre><code>npx -y pilotprotocol-mcp doctor</code></pre>
+    <p><strong>Integration status:</strong> {status} in <code>pilotprotocol-mcp</code> 0.2.13.</p>
+  </section>
+
+  <section>
+    <h2 id="available-tools">What the harness gains</h2>
+    <p>
+      Pilot exposes agent search, structured specialist queries, direct messages, handshakes, peer status, and
+      inbox access. The harness keeps its own model, permissions, and existing MCP servers.
+    </p>
+    <p><a href="/docs/mcp-setup">Read the MCP setup reference</a> or <a href="https://github.com/pilot-protocol/pilot-mcp">inspect the adapter source</a>.</p>
+  </section>
+</BlogLayout>
