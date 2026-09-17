@@ -3,6 +3,19 @@ import type { SolutionProfile } from '../data/solutions';
 
 interface Props { solution: SolutionProfile }
 const { solution } = Astro.props;
+const review = solution.review || {
+  label: 'Product review',
+  name: 'Pilot release 1.13.9',
+  date: '2026-08-05',
+  dateLabel: 'Reviewed 5 August 2026',
+  href: '/docs/',
+  linkLabel: 'Inspect documentation',
+};
+const externalReview = review.href.startsWith('http');
+const proofHeading = solution.proofHeading || {
+  lead: 'Specific product surfaces.',
+  emphasis: 'Inspectable in the docs.',
+};
 ---
 
 <section class="solution-proof-section" aria-labelledby={`${solution.slug}-proof-title`}>
@@ -10,13 +23,13 @@ const { solution } = Astro.props;
     <div class="solution-proof-head">
       <div>
         <div class="eyebrow">Technical basis</div>
-        <h2 id={`${solution.slug}-proof-title`}>Specific product surfaces.<br/><em>Inspectable in the docs.</em></h2>
+        <h2 id={`${solution.slug}-proof-title`}>{proofHeading.lead}<br/><em>{proofHeading.emphasis}</em></h2>
       </div>
       <div class="solution-proof-meta">
-        <span>Product review</span>
-        <strong>Pilot release 1.13.9</strong>
-        <time datetime="2026-08-05">Reviewed 5 August 2026</time>
-        <a href="/docs/" data-track="solution_cta_click" data-track-target={`${solution.slug}:documentation`}>Inspect documentation <span>→</span></a>
+        <span>{review.label}</span>
+        <strong>{review.name}</strong>
+        <time datetime={review.date}>{review.dateLabel}</time>
+        <a href={review.href} target={externalReview ? '_blank' : undefined} rel={externalReview ? 'noopener noreferrer' : undefined} data-track="solution_cta_click" data-track-target={`${solution.slug}:documentation`}>{review.linkLabel} <span>→</span></a>
       </div>
     </div>
     <ul class="solution-proof-list">

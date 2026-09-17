@@ -74,17 +74,18 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
     description: solution.description,
     url: canonicalUrl,
     inLanguage: 'en-US',
-    dateModified: '2026-08-05',
+    dateModified: solution.dateModified || '2026-08-05',
     isPartOf: { '@id': 'https://pilotprotocol.network/#website' },
     author: { '@id': 'https://pilotprotocol.network/#organization' },
     publisher: { '@id': 'https://pilotprotocol.network/#organization' },
     citation: solution.signal.href,
     mainEntity: {
       '@type': 'SoftwareApplication',
-      name: 'Pilot Protocol',
-      applicationCategory: 'DeveloperApplication',
+      name: solution.productName || 'Pilot Protocol',
+      applicationCategory: solution.productName ? 'SearchApplication' : 'DeveloperApplication',
       operatingSystem: 'Linux, macOS, Windows',
-      url: 'https://pilotprotocol.network/',
+      url: solution.productUrl || 'https://pilotprotocol.network/',
+      ...(solution.sourceUrl ? { codeRepository: solution.sourceUrl } : {}),
     },
   })}></script>
 </head>

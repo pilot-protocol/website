@@ -2,55 +2,255 @@
 import SolutionFunnel from '../SolutionFunnel.astro';
 import SolutionProof from '../SolutionProof.astro';
 import SolutionRelated from '../SolutionRelated.astro';
-import CampaignActions from './CampaignActions.astro';
 import type { SolutionExperienceProps } from './types';
 
 const { solution, story, funnel, turnstileSiteKey = '' } = Astro.props as SolutionExperienceProps;
+
+const installCommand = 'pilotctl appstore install io.pilot.cosift';
+const helpCommand = "pilotctl appstore call io.pilot.cosift cosift.help '{}'";
+const searchCommand = `pilotctl appstore call io.pilot.cosift cosift.search '{"q":"raft leader election","retriever":"hybrid","k":"3"}'`;
+
+const modes = [
+  {
+    speed: 'Fast',
+    method: 'cosift.search',
+    title: 'Return ranked evidence.',
+    body: 'Search the indexed corpus with BM25, dense, or hybrid retrieval. The response carries URLs, titles, excerpts, scores, and the retriever that actually ran.',
+    output: 'hits[] · retriever · warnings · took',
+  },
+  {
+    speed: 'Medium',
+    method: 'cosift.answer',
+    title: 'Answer one question with sources.',
+    body: 'Retrieve a bounded source set, synthesize a direct answer, and keep numeric citations attached to the documents supplied to the model.',
+    output: 'answer · sources[] · model · took',
+  },
+  {
+    speed: 'Slow',
+    method: 'cosift.research',
+    title: 'Plan a multi-step research run.',
+    body: 'Break a larger question into sub-queries, retrieve across them, fuse the evidence, and produce one cited report within explicit work limits.',
+    output: 'plan · answer · sources[] · took',
+  },
+];
+
+const methodGroups = [
+  {
+    label: 'Retrieve',
+    methods: [
+      { name: 'cosift.search', body: 'Rank documents with lexical, dense, or hybrid retrieval.' },
+      { name: 'cosift.find_similar', body: 'Find neighboring documents from an indexed URL or supplied text.' },
+      { name: 'cosift.contents', body: 'Return cleaned document text for one URL or a batch.' },
+    ],
+  },
+  {
+    label: 'Synthesize',
+    methods: [
+      { name: 'cosift.answer', body: 'Generate a single cited answer from retrieved sources.' },
+      { name: 'cosift.research', body: 'Run bounded planning, multi-retrieval, fusion, and synthesis.' },
+    ],
+  },
+  {
+    label: 'Inspect',
+    methods: [
+      { name: 'cosift.stats', body: 'Inspect corpus shape and available retrievers.' },
+      { name: 'cosift.health', body: 'Check whether the configured backend is reachable.' },
+      { name: 'cosift.help', body: 'Discover methods, parameters, kinds, and latency classes locally.' },
+    ],
+  },
+];
 ---
 
-<main class="campaign-page campaign-search" style={`--solution-hue:${solution.hue}`}>
-  <section class="search-hero" aria-labelledby={`${solution.slug}-title`}>
-    <div class="wrap search-hero-grid">
-      <header class="search-editorial">
-        <div class="search-issue"><span>Cosift field guide</span><span>No. 05</span></div>
-        <span class="search-kicker">Grounded private research</span>
-        <h1 id={`${solution.slug}-title`}>{story.heroLead}<br/><em>{story.heroEmphasis}</em></h1>
-        <p>{story.lede}</p>
-        <CampaignActions solution={solution} funnel={funnel} location="search_hero" />
-      </header>
+<main class="campaign-page campaign-search campaign-cosift" style={`--solution-hue:${solution.hue}`}>
+  <section class="cosift-hero" aria-labelledby={`${solution.slug}-title`}>
+    <div class="wrap">
+      <div class="cosift-product-bar">
+        <a class="cosift-wordmark" href="https://cosift.pilotprotocol.network/" target="_blank" rel="noopener noreferrer">
+          <span aria-hidden="true">c/</span>
+          <strong>cosift</strong>
+          <small>search + research infrastructure</small>
+        </a>
+        <div>
+          <span class="cosift-live"><i></i> Public corpus online</span>
+          <a href="https://github.com/pilot-protocol/cosift" target="_blank" rel="noopener noreferrer">Source ↗</a>
+        </div>
+      </div>
 
-      <article class="search-answer" aria-label="Example cited research answer">
-        <div class="search-query"><span>⌕</span><strong>What changed in the enterprise policy?</strong><kbd>↵</kbd></div>
-        <div class="search-answer-meta"><span>Research answer</span><span>4 sources · 0.91 grounding</span></div>
-        <h2>The policy now requires human approval before external transfers.</h2>
-        <p>The August revision adds a review checkpoint for transfers outside approved counterparties and records the reviewer identity in the audit export.<sup>1</sup> Existing internal transfers retain the prior threshold.<sup>2</sup></p>
-        <ol class="search-sources">
-          <li><span>01</span><div><strong>Enterprise policy · Aug 2026</strong><small>§4.2 External counterparties</small></div><b>92%</b></li>
-          <li><span>02</span><div><strong>Transfer controls handbook</strong><small>Threshold and exception matrix</small></div><b>87%</b></li>
-          <li><span>03</span><div><strong>Audit export reference</strong><small>Reviewer attribution fields</small></div><b>81%</b></li>
-        </ol>
-        <footer><span>Answer generated from the approved index</span><span>View retrieval trace ↗</span></footer>
-      </article>
+      <div class="cosift-hero-grid">
+        <header class="cosift-hero-copy">
+          <span class="cosift-eyebrow">Open-source search for agents</span>
+          <h1 id={`${solution.slug}-title`}>{story.heroLead}<br/><em>{story.heroEmphasis}</em></h1>
+          <p>{story.lede}</p>
+          <div class="campaign-actions cosift-actions">
+            <a
+              class="btn campaign-primary"
+              href="https://cosift.pilotprotocol.network/#try"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-track="solution_cta_click"
+              data-track-target="grounded-agent-search:live"
+              data-track-location="cosift_hero"
+            >Try Cosift live <span class="arr">→</span></a>
+            <a
+              class="btn campaign-secondary"
+              href={solution.primaryCta.href}
+              data-track="solution_cta_click"
+              data-track-target="grounded-agent-search:install"
+              data-track-location="cosift_hero"
+            >{solution.primaryCta.label}</a>
+          </div>
+          <ul class="cosift-traits" aria-label="Cosift product traits">
+            <li>Use the public corpus</li>
+            <li>Run your own backend</li>
+            <li>Structured JSON throughout</li>
+          </ul>
+        </header>
+
+        <article class="cosift-console" aria-label="Cosift search call and representative response shape">
+          <header>
+            <div class="cosift-window-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+            <strong>io.pilot.cosift</strong>
+            <span>ready</span>
+          </header>
+          <div class="cosift-console-tabs" aria-hidden="true">
+            <span class="is-active">Search</span><span>Answer</span><span>Research</span>
+          </div>
+          <div class="cosift-command">
+            <span>Call</span>
+            <button type="button" data-cosift-copy={searchCommand} aria-label="Copy Cosift search command">Copy</button>
+            <code>{searchCommand}</code>
+          </div>
+          <div class="cosift-response">
+            <span>Representative response shape</span>
+            <pre><code>{`{
+  "query": "raft leader election",
+  "retriever": "bm25+dense:rrf",
+  "hits": [
+    { "url": "…", "title": "…", "excerpt": "…" },
+    { "url": "…", "title": "…", "excerpt": "…" }
+  ],
+  "warnings": [],
+  "took": "…"
+}`}</code></pre>
+          </div>
+          <footer>
+            <span>JSON in · JSON out</span>
+            <span>No invented confidence score</span>
+          </footer>
+        </article>
+      </div>
     </div>
   </section>
 
-  <section class="search-quality" aria-labelledby="search-quality-title">
+  <section class="cosift-depth" aria-labelledby="cosift-depth-title">
     <div class="wrap">
-      <header><span>Retrieval is an engineering system</span><h2 id="search-quality-title">Measure the path<br/><em>from corpus to claim.</em></h2><p>{solution.problemBody}</p></header>
-      <div class="search-quality-table">
-        <div class="quality-head"><span>Stage</span><span>What Pilot contributes</span><span>Inspectable output</span></div>
-        {solution.capabilities.map((capability, index) => (
-          <article><span>0{index + 1} · {capability.label}</span><div><h3>{capability.title}</h3><p>{capability.body}</p></div><strong>{index === 0 ? 'Source inventory' : index === 1 ? 'Ranked passages' : 'Cited answer'}</strong></article>
+      <header class="cosift-section-head">
+        <span>Choose the work, not another integration</span>
+        <div>
+          <h2 id="cosift-depth-title">One product.<br/><em>Three research depths.</em></h2>
+          <p>Agents can choose a cheap retrieval call, a cited answer, or a bounded research run. <code>cosift.help</code> describes the choice at runtime.</p>
+        </div>
+      </header>
+      <div class="cosift-mode-grid">
+        {modes.map((mode, index) => (
+          <article>
+            <div class="cosift-mode-meta"><span>{String(index + 1).padStart(2, '0')}</span><b>{mode.speed}</b></div>
+            <code>{mode.method}</code>
+            <h3>{mode.title}</h3>
+            <p>{mode.body}</p>
+            <footer><span>Returns</span><strong>{mode.output}</strong></footer>
+          </article>
         ))}
       </div>
     </div>
   </section>
 
-  <section class="search-evaluation" aria-labelledby="search-evaluation-title">
-    <div class="wrap search-evaluation-grid">
-      <div class="search-evaluation-copy"><span>Evaluation loop</span><h2 id="search-evaluation-title">Fluency is not the acceptance test.</h2><p>{story.workflowHeading.body}</p><CampaignActions solution={solution} funnel={funnel} location="search_evaluation" /></div>
-      <ol>{solution.steps.map((step, index) => <li><span>{String(index + 1).padStart(2, '0')}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol>
-      <aside><strong>{solution.signal.value}</strong><p>{solution.signal.body}</p><a href={solution.signal.href} target="_blank" rel="noopener noreferrer">{solution.signal.source} ↗</a></aside>
+  <section class="cosift-architecture" aria-labelledby="cosift-architecture-title">
+    <div class="wrap cosift-architecture-grid">
+      <header>
+        <span>How Cosift reaches an agent</span>
+        <h2 id="cosift-architecture-title">A small front door.<br/><em>A complete search stack.</em></h2>
+        <p>The Pilot app is a thin local adapter. Crawling, indexing, retrieval, and synthesis stay in the Cosift backend—either the public instance or one you operate.</p>
+      </header>
+
+      <div class="cosift-system-map" role="img" aria-label="Agent call travels through the Pilot daemon and Cosift adapter to a public or self-hosted Cosift backend">
+        <div class="cosift-map-row">
+          <article><span>01</span><strong>Agent or harness</strong><small>structured method call</small></article>
+          <i aria-hidden="true">→</i>
+          <article><span>02</span><strong>Pilot daemon</strong><small>local app supervisor</small></article>
+          <i aria-hidden="true">→</i>
+          <article class="is-accent"><span>03</span><strong>Cosift app</strong><small>signed IPC → HTTP adapter</small></article>
+          <i aria-hidden="true">→</i>
+          <article><span>04</span><strong>Cosift backend</strong><small>public or self-hosted</small></article>
+        </div>
+        <div class="cosift-backend-stack">
+          <span>Crawl</span><i>→</i><span>Index</span><i>→</i><span>Retrieve</span><i>→</i><span>Answer / research</span>
+        </div>
+        <div class="cosift-boundaries">
+          <p><strong>Public corpus</strong>Install and call immediately. The public Cosift backend receives the query; no backend configuration is required.</p>
+          <p><strong>Your corpus</strong>Run the Go service and model endpoints on your infrastructure, then point the same adapter at that boundary.</p>
+        </div>
+      </div>
+
+      <div class="cosift-install-card" id="install">
+        <div>
+          <span>Install through Pilot</span>
+          <strong>Two commands to a discoverable research surface.</strong>
+        </div>
+        <ol>
+          <li><span>1</span><code>{installCommand}</code><button type="button" data-cosift-copy={installCommand} aria-label="Copy Cosift install command">Copy</button></li>
+          <li><span>2</span><code>{helpCommand}</code><button type="button" data-cosift-copy={helpCommand} aria-label="Copy Cosift help command">Copy</button></li>
+        </ol>
+        <p>The app declares its file, audit, and network grants. Pilot verifies the catalogue, bundle, manifest signature, and pinned binary before execution. The Pilot adapter buffers answer and research into one JSON reply today; direct Cosift HTTP supports SSE streaming.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="cosift-methods" aria-labelledby="cosift-methods-title">
+    <div class="wrap">
+      <header class="cosift-section-head">
+        <span>The published agent surface</span>
+        <div>
+          <h2 id="cosift-methods-title">Eight methods.<br/><em>No API archaeology.</em></h2>
+          <p>The current Pilot app exposes the useful product surface without copying the entire operator API into an agent’s tool list.</p>
+        </div>
+      </header>
+      <div class="cosift-method-groups">
+        {methodGroups.map((group) => (
+          <section aria-label={`${group.label} methods`}>
+            <h3>{group.label}</h3>
+            <div>
+              {group.methods.map((method) => (
+                <article><code>{method.name}</code><p>{method.body}</p></article>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="cosift-honesty" aria-labelledby="cosift-honesty-title">
+    <div class="wrap cosift-honesty-grid">
+      <header>
+        <span>Inspect what really happened</span>
+        <h2 id="cosift-honesty-title">Cosift does not turn retrieval into a mystery number.</h2>
+        <p>Source records stay attached to synthesized answers. Responses identify the effective retriever, report capability fallbacks as warnings, and do not pretend that an unfitted global confidence model is calibrated.</p>
+        <a href="https://github.com/pilot-protocol/cosift/blob/main/docs/API.md" target="_blank" rel="noopener noreferrer">Read the response contracts ↗</a>
+      </header>
+      <div class="cosift-trace">
+        <div><span>requested</span><code>retriever=hybrid</code></div>
+        <div><span>executed</span><code>bm25+dense:rrf</code></div>
+        <div><span>evidence</span><code>sources[]</code></div>
+        <div><span>confidence</span><code>calibrated: false</code></div>
+        <footer>When a configured capability is unavailable, the response includes a warning instead of quietly presenting the fallback as the requested path.</footer>
+      </div>
+      <aside class="cosift-live-proof">
+        <span>Public instance snapshot · 17 Sep 2026</span>
+        <strong>{solution.signal.value}</strong>
+        <p>{solution.signal.body}</p>
+        <a href={solution.signal.href} target="_blank" rel="noopener noreferrer">View live stats ↗</a>
+      </aside>
     </div>
   </section>
 
@@ -58,3 +258,19 @@ const { solution, story, funnel, turnstileSiteKey = '' } = Astro.props as Soluti
   <SolutionProof solution={solution} />
   <SolutionRelated solution={solution} story={story} />
 </main>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('[data-cosift-copy]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const value = button.dataset.cosiftCopy || '';
+      const original = button.textContent || 'Copy';
+      try {
+        await navigator.clipboard.writeText(value);
+        button.textContent = 'Copied';
+      } catch {
+        button.textContent = 'Select command';
+      }
+      window.setTimeout(() => { button.textContent = original; }, 1600);
+    });
+  });
+</script>

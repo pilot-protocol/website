@@ -25,6 +25,19 @@ export interface SolutionProfile {
   audience: string;
   primaryCta: { label: string; href: string };
   secondaryCta: { label: string; href: string };
+  productName?: string;
+  productUrl?: string;
+  sourceUrl?: string;
+  dateModified?: string;
+  review?: {
+    label: string;
+    name: string;
+    date: string;
+    dateLabel: string;
+    href: string;
+    linkLabel: string;
+  };
+  proofHeading?: { lead: string; emphasis: string };
   signal: {
     value: string;
     body: string;
@@ -186,38 +199,51 @@ export const solutions: SolutionProfile[] = [
   },
   {
     slug: 'grounded-agent-search',
-    footerLabel: 'Grounded private search',
+    footerLabel: 'Cosift search + research',
     group: 'Build',
-    hue: 205,
-    eyebrow: 'Search and research',
-    metaTitle: 'Grounded Private Search for AI Agents | Pilot Protocol',
-    description: 'Crawl, index, retrieve, and research private knowledge with Cosift using cited answers, hybrid retrieval, evaluation, and local-model support.',
-    heroLead: 'Search your knowledge.',
-    heroEmphasis: 'Show the evidence.',
-    lede: 'Cosift gives agents a self-hostable research surface: crawl the sources you choose, retrieve with lexical or hybrid search, generate answers with citations, and evaluate whether the result is actually grounded.',
-    audience: 'For research, knowledge, and engineering teams that need more than an untraceable model answer.',
-    primaryCta: { label: 'Explore Cosift', href: '/apps/io.pilot.cosift' },
-    secondaryCta: { label: 'Read the research guide', href: '/blog/web-search-api-for-ai-agents-grounded-research' },
-    signal: {
-      value: '78%',
-      body: 'of technology leaders surveyed cited data integration or data quality as a barrier to scaling AI initiatives.',
-      source: 'Adobe Digital Trends — CIO Perspectives',
-      href: 'https://business.adobe.com/uk/resources/reports/cio-digital-trends.html',
+    hue: 125,
+    eyebrow: 'Cosift',
+    metaTitle: 'Cosift: Agent Search, Answers and Research | Pilot',
+    description: 'Use Cosift for structured web search, clean retrieval, cited answers, and bounded multi-step research through one agent-callable API or self-hosted stack.',
+    heroLead: 'Cosift turns a web corpus into',
+    heroEmphasis: 'an agent-callable research surface.',
+    lede: 'Search ranked documents, fetch cleaned contents, generate answers with attached sources, or run bounded multi-step research. Use the live public corpus through Pilot, or operate the complete Cosift stack on your own infrastructure.',
+    audience: 'For agent builders who need retrieval, citations, and research as a callable product rather than another search pipeline to assemble.',
+    primaryCta: { label: 'Install through Pilot', href: '/apps/io.pilot.cosift' },
+    secondaryCta: { label: 'Read the Cosift API', href: 'https://cosift.pilotprotocol.network/docs' },
+    productName: 'Cosift',
+    productUrl: 'https://cosift.pilotprotocol.network/',
+    sourceUrl: 'https://github.com/pilot-protocol/cosift',
+    dateModified: '2026-09-17',
+    review: {
+      label: 'Product evidence',
+      name: 'Cosift source + live API',
+      date: '2026-09-17',
+      dateLabel: 'Reviewed 17 September 2026',
+      href: 'https://github.com/pilot-protocol/cosift',
+      linkLabel: 'Inspect Cosift source',
     },
-    problemTitle: 'Retrieval quality decides whether an answer can be trusted.',
-    problemBody: 'Private knowledge is fragmented across websites, documents, and application boundaries. Even after it is indexed, a plausible answer can outrun its evidence. Cosift keeps the retrieval path visible and supports evaluation alongside generation, so teams can test source coverage, ranking, and answer grounding rather than relying on fluency alone.',
+    proofHeading: { lead: 'Cosift ships as inspectable code.', emphasis: 'The details are not implied.' },
+    signal: {
+      value: '15M+',
+      body: 'documents are indexed by the live public Cosift instance, with BM25, dense, and hybrid retrieval available at the time of this snapshot.',
+      source: 'Cosift public instance stats',
+      href: 'https://cosift.pilotprotocol.network/stats',
+    },
+    problemTitle: 'Cosift packages the whole path from crawl to citation.',
+    problemBody: 'The product is a self-hostable Go service for crawling, indexing, retrieval, synthesis, and evaluation, plus a thin Pilot adapter for agent calls. Its public instance is ready to query, while a private deployment can keep the corpus, model endpoints, and query boundary under the operator’s control.',
     capabilities: [
-      { label: 'Collect', title: 'Self-hostable crawling and indexing', body: 'Choose the sources and retain control over the index, administration surface, and model endpoints.' },
-      { label: 'Retrieve', title: 'Lexical, dense, and hybrid search', body: 'Use BM25, optional embeddings, reranking, expansion, HyDE, and diversity controls for the query at hand.' },
-      { label: 'Answer', title: 'Cited research workflows', body: 'Query, answer, and multi-step research endpoints return source context instead of hiding the retrieval trace.' },
+      { label: 'Search', title: 'Ranked documents in structured JSON', body: 'BM25 works without model dependencies; dense HNSW and hybrid RRF add semantic retrieval when embeddings are configured.' },
+      { label: 'Answer', title: 'One synthesis with attached sources', body: 'Cosift retrieves a bounded evidence set and returns a direct, cited answer rather than an untraceable block of prose.' },
+      { label: 'Research', title: 'Bounded multi-step investigation', body: 'A research call plans sub-queries, retrieves and fuses evidence, then synthesizes a cited report within explicit limits.' },
     ],
     steps: [
-      { title: 'Define the source boundary', body: 'Crawl the approved public or private knowledge surfaces.' },
-      { title: 'Select a retrieval strategy', body: 'Start with BM25 or add dense retrieval and reranking where they improve measured quality.' },
-      { title: 'Ask for an answer or research run', body: 'The agent receives the response together with source references.' },
-      { title: 'Evaluate the result', body: 'Built-in retrieval and answer checks make quality a repeatable engineering concern.' },
+      { title: 'Install or self-host', body: 'Use the published public backend immediately, or run the crawler, index, and models in your own environment.' },
+      { title: 'Discover the method surface', body: 'cosift.help returns every agent method, parameter set, method kind, and expected latency class locally.' },
+      { title: 'Choose the required depth', body: 'Call search for ranked hits, answer for one cited synthesis, or research for a larger multi-step question.' },
+      { title: 'Inspect the effective path', body: 'Keep retriever labels, warnings, sources, and timing in the workflow instead of discarding them after generation.' },
     ],
-    proof: ['Self-hostable crawler and index', 'BM25 plus optional hybrid retrieval', 'Source-cited answer and research APIs', 'Offline retrieval and answer evaluation'],
+    proof: ['Single-binary crawler, index, and API', 'BM25, HNSW dense, hybrid RRF, and reranking', 'Cited answer and bounded research methods', 'SQLite or multi-million-document Pebble backend'],
     related: ['live-data-for-agents', 'web-access-for-agents', 'isolated-agent-compute'],
   },
   {
