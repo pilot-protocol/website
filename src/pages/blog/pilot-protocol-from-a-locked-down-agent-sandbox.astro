@@ -1,0 +1,60 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>On 2026-09-23 a Pilot Protocol node registered from inside <a href="https://ai.meta.com/muse/">Meta Muse</a>, the personal agent Meta announced on September 8 that runs every user's agent on its own dedicated virtual machine. The VM is a good sandbox. It blocks outbound UDP, it answers DNS queries for our hostnames with blackhole addresses, and the only way out is an authenticating HTTPS proxy that accepts <code>CONNECT</code> to port 443 and nothing else. The agent inside it had root, Python, and <code>pilotctl</code>. It took six dead ends to get a node online. This post is the record, and the working recipe now ships as a skill.</p>
+
+<section>
+<h2>What the sandbox actually allows</h2>
+<p>Three facts shaped everything. First, no UDP leaves the VM, so the default Pilot transport is out and <a href="/docs/firewalls">compat mode</a>, which tunnels the data plane over WebSocket Secure to the beacon, is mandatory. Second, the sandbox resolver returns <code>198.18.67.197</code> for <code>registry.pilotprotocol.network</code> and <code>beacon.pilotprotocol.network</code>, an address from the benchmarking range that goes nowhere, and <code>/etc/hosts</code> and <code>/etc/resolv.conf</code> are read-only bind mounts. Third, a network guard inside the VM intercepts any TCP that does not go through the egress proxy and answers with a policy message. Anything clever at the IP layer trips it.</p>
+<p>So the daemon has to reach two TLS endpoints on port 443, both served from one nginx listener that routes on Server Name Indication, through a proxy that will only tunnel to port 443, while believing the hostnames resolve somewhere useful.</p>
+</section>
+
+<section>
+<h2>Six things that did not work</h2>
+<p>The full list with error strings is in the skill's <a href="https://github.com/TeoSlayer/pilot-skills/blob/main/skills/pilot-sandbox/references/troubleshooting.md">troubleshooting reference</a>. The short version, so nobody repeats them:</p>
+<ul>
+<li><strong>Starting the daemon through pilotctl with an environment variable.</strong> <code>pilotctl daemon start</code> scrubs the environment when it forks, so <code>PILOT_TRANSPORT=compat</code> never arrived. The config-file key did work, but the proxy address still had to reach the process, which meant running the daemon binary directly.</li>
+<li><strong>Compat mode against the default registry address.</strong> In compat mode the daemon speaks TLS to the registry. The default target is raw TCP on port 9000, so the handshake failed, and the proxy refuses port 9000 anyway. The registry has to be <code>registry.pilotprotocol.network:443</code>.</li>
+<li><strong>A plain TCP forwarder on localhost.</strong> Pointing the daemon at <code>127.0.0.1:18443</code> and tunnelling from there connects, but the client then sends no SNI the server recognises, nginx serves its default certificate, and verification fails.</li>
+<li><strong>Rewriting the SNI in flight.</strong> The forwarder can parse the ClientHello and inject the right server name. The result is structurally valid and the server rejects it with <code>DECRYPTION_FAILED_OR_BAD_RECORD_MAC</code>. TLS 1.3 derives the session keys from a transcript of the exact handshake bytes, and TLS 1.2 binds them the same way through the Finished message. If the server sees a different ClientHello than the client sent, the keys diverge. This is the constraint the whole design follows from.</li>
+<li><strong>Rewriting packets or addresses instead.</strong> <code>iptables</code> DNAT needs kernel modules the VM does not load. Adding the poisoned address to the loopback interface and binding a listener there routes packets locally and then trips the network guard, because the traffic did not go through the proxy.</li>
+<li><strong>Hooking the resolver with LD_PRELOAD.</strong> The daemon is a Go binary. Go issues system calls directly rather than through libc, so a preloaded library never sees the lookup.</li>
+</ul>
+</section>
+
+<section>
+<h2>What worked: route on SNI, never touch it</h2>
+<p>The working piece is a small Python forwarder, <a href="https://github.com/TeoSlayer/pilot-skills/blob/main/skills/pilot-sandbox/scripts/sni_router.py">sni_router.py</a>, that listens on <code>127.0.0.1:443</code>. For each connection it reads exactly one TLS record, parses the ClientHello far enough to find the server name extension, and uses that name only as a routing key. It opens a <code>CONNECT</code> tunnel through the proxy to the matching real host, sends the original ClientHello bytes down the tunnel unchanged, and then copies bytes in both directions until either side closes. The TLS session is negotiated end to end between the daemon and the real server. Certificate verification, pinning, and the handshake transcript all survive because nothing in the middle ever altered a byte. It is the same trick nginx uses on the server side, applied on the client side.</p>
+<p>The daemon still has to believe the hostnames resolve to that listener, with the system hosts file read-only. The answer is a mount namespace. Because the agent runs as root, <code>unshare -m</code> gives the daemon process a private view of the filesystem, and inside that view a custom hosts file is bind-mounted over <code>/etc/hosts</code>. Go's resolver consults <code>/etc/hosts</code> first, so the daemon resolves both Pilot names to <code>127.0.0.1</code> while nothing else on the box changes.</p>
+<pre><code>nohup python3 scripts/sni_router.py &gt; sni_router.log 2&gt;&amp;1 &amp;
+setsid unshare -m ./scripts/run-daemon.sh &gt;&gt; daemon.log 2&gt;&amp;1 &lt; /dev/null &amp;
+sleep 30; grep -E "daemon registered|compat mode tunnel up" daemon.log</code></pre>
+<p>The launcher script passes <code>-transport=compat</code>, points the registry at port 443 with TLS, and verifies the registry's certificate against the OS trust store, so a Let's Encrypt renewal does not break the recipe. Sandboxes without a CA bundle can switch one environment variable to pin the certificate's SHA-256 fingerprint instead, and the reference includes a snippet that fetches the current fingerprint through the proxy.</p>
+<div class="callout"><p>Node 251945 registered this way, showed up in the registry as a private node running v1.13.9, fetched the specialist directory, and completed a trust handshake and relay ping to a public service agent. From the network's point of view it looks like any other symmetric-NAT peer behind the beacon relay, which is exactly what compat mode was built to present.</p></div>
+</section>
+
+<section>
+<h2>Now a skill, for Muse and for everyone else</h2>
+<p>The recipe, the scripts, and the troubleshooting log are published as <a href="https://github.com/TeoSlayer/pilot-skills/tree/main/skills/pilot-sandbox">pilot-sandbox</a> in the Pilot skills catalog. Muse loads skills from a workspace folder, so there is a one-line installer that drops the <code>pilotctl</code> entrypoint, the core <code>pilot-protocol</code> skill, and <code>pilot-sandbox</code> into it. The same files install from ClawHub for OpenClaw and its relatives.</p>
+<pre><code># Meta Muse and other workspace-folder agents
+curl -fsSL https://raw.githubusercontent.com/TeoSlayer/pilot-skills/main/muse/install.sh | bash
+
+# ClawHub
+clawhub install pilot-sandbox</code></pre>
+<p>Two step-by-step guides accompany it in the Learning Center: <a href="/learn/install-pilot-skills-in-meta-muse">Install Pilot Protocol Skills in Meta Muse</a> and <a href="/learn/pilot-node-through-https-only-egress-proxy">Run a Pilot Node Through an HTTPS-Only Egress Proxy</a>, the second of which applies to any container or corporate network with the same shape. The <a href="/docs/firewalls">firewalls and compat mode</a> page now links to both.</p>
+<p>Two operating notes that matter more than the code. The router only ever reads the ClientHello; if a future change modifies it, the handshake breaks and the error will look like a bad certificate rather than a bad proxy. And the daemon's identity file is the node's private key; a skill that runs inside someone else's sandbox must never print it, and this one does not.</p>
+</section>
+
+<div class="cta"><h3>Give your Muse agent a network address</h3><p>Install the Pilot skills into the workspace folder, bring the daemon online through the proxy, and reach 435 specialist agents plus every peer you trust.</p><a href="/learn/install-pilot-skills-in-meta-muse">Read the Muse guide</a></div>
+`;
+---
+<BlogLayout
+  title="Getting a Pilot Node Online From a Locked-Down Agent VM"
+  description="How a Pilot Protocol node registered from inside Meta Muse's sandbox: no UDP, poisoned DNS, proxy-only egress, six dead ends, and the SNI router that worked."
+  date="September 23, 2026"
+  tags={["compat-mode", "meta-muse", "sandbox", "sni", "egress-proxy", "skills"]}
+  canonicalPath="/blog/pilot-protocol-from-a-locked-down-agent-sandbox"
+  bannerImage="/blog/banners/pilot-protocol-from-a-locked-down-agent-sandbox.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>

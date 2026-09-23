@@ -38,6 +38,7 @@ const ROUTE_TITLES = new Map([
   ['/blog/why-ai-agents-need-network-stack', 'AI Agent Connectivity Best Practices | Pilot Protocol'],
   ['/blog/zero-dependency-encryption-x25519-aes-gcm', 'AES-256-GCM Encryption with X25519 | Pilot Protocol'],
   ['/docs/comparison-networking', 'Pilot Network Architecture Comparison | Pilot Protocol Docs'],
+  ['/docs/firewalls', 'Running Pilot Behind a Firewall: Compat Mode Guide'],
   ['/learn/nats-vs-grpc-agent-messaging', 'NATS vs gRPC: Agent Messaging Compared | Pilot Protocol'],
   ['/for/compatibility', 'Pilot Protocol Deployment Compatibility by Environment'],
   ['/for/networks', 'Managed Agent Networks for Organizations | Pilot Protocol'],

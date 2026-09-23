@@ -9,6 +9,22 @@ export interface LearnGuide {
 
 export const learnGuides: LearnGuide[] = [
   {
+    slug: 'install-pilot-skills-in-meta-muse',
+    title: "Install Pilot Protocol Skills in Meta Muse's Agent VM",
+    description: 'Install the Pilot skills into Muse\'s workspace folder, bring the daemon online through the VM\'s HTTPS-only proxy, and verify the node end to end.',
+    date: 'September 23, 2026',
+    isoDate: '2026-09-23',
+    track: 'Foundations',
+  },
+  {
+    slug: 'pilot-node-through-https-only-egress-proxy',
+    title: 'Run a Pilot Node Through an HTTPS-Only Egress Proxy',
+    description: 'Register a node when UDP is blocked, DNS is poisoned, and the only egress is an HTTPS CONNECT proxy: SNI router, mount namespace, trust modes, verification.',
+    date: 'September 23, 2026',
+    isoDate: '2026-09-23',
+    track: 'Transport',
+  },
+  {
     slug: 'what-is-pilot-protocol',
     title: 'What Is Pilot Protocol?',
     description: 'A system-level introduction to persistent agent addresses, encrypted peer tunnels, discovery, trust, and installable capabilities.',
