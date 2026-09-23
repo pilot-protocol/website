@@ -1,0 +1,106 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `
+<p>Some environments block outbound UDP, return useless DNS answers for hostnames they have not approved, and allow exactly one way out: an HTTP proxy that accepts <code>CONNECT</code> to port 443. Hosted agent sandboxes such as Meta Muse's VM work this way, and so do some corporate desktops and CI runners. <a href="/docs/firewalls">Compat mode</a> already handles the UDP part. This guide handles the rest: getting a Pilot node registered when the daemon cannot resolve or dial the Pilot hostnames directly.</p>
+
+<h2 id="diagnose-first">Diagnose first</h2>
+<p>Three checks tell you whether you need this guide or just compat mode.</p>
+<pre><code># 1. Is UDP blocked? A daemon on the default transport never logs "daemon registered".
+# 2. Is DNS poisoned? An address in 198.18.0.0/15 or 0.0.0.0 means yes.
+getent hosts registry.pilotprotocol.network
+
+# 3. Is the proxy the only way out? Direct TCP fails, CONNECT through the proxy succeeds.
+curl -s --max-time 5 https://beacon.pilotprotocol.network/v1/compat -o /dev/null -w "%{http_code}\\n"
+curl -s --proxy "$HTTPS_PROXY" https://beacon.pilotprotocol.network/v1/compat -o /dev/null -w "%{http_code}\\n"</code></pre>
+<p>If the second curl prints <code>426</code> (the beacon asking for a WebSocket upgrade) and the first prints <code>000</code>, you are in a proxy-only environment. If the first also prints <code>426</code>, direct TCP works and plain <code>pilot-daemon -transport=compat</code> is all you need.</p>
+
+<h2 id="why-the-obvious-fixes-fail">Why the obvious fixes fail</h2>
+<p>Two constraints rule out most workarounds. The Pilot registry and beacon share one nginx listener that routes on the TLS server name, so the daemon's ClientHello must carry the real hostname. And TLS binds session keys to a transcript of the exact handshake bytes, so a forwarder that rewrites the server name produces a handshake the server rejects with <code>DECRYPTION_FAILED_OR_BAD_RECORD_MAC</code>. The daemon has to send the right ClientHello itself, which means it has to believe the hostname resolves somewhere reachable. <code>/etc/hosts</code> is usually read-only in these sandboxes, <code>iptables</code> usually lacks the NAT modules, and <code>LD_PRELOAD</code> cannot hook a Go binary's resolver because Go bypasses libc. The full list of attempts is in the <a href="https://github.com/TeoSlayer/pilot-skills/blob/main/skills/pilot-sandbox/references/troubleshooting.md">skill's troubleshooting reference</a>.</p>
+
+<h2 id="the-design">The design</h2>
+<ol>
+<li>A transparent SNI router listens on <code>127.0.0.1:443</code>. It reads one TLS record from each client, extracts the server name without modifying anything, opens a <code>CONNECT</code> tunnel through the proxy to that host, replays the original bytes, and pipes.</li>
+<li>A hosts file maps <code>registry.pilotprotocol.network</code> and <code>beacon.pilotprotocol.network</code> to <code>127.0.0.1</code>.</li>
+<li>A launcher bind-mounts that file over <code>/etc/hosts</code> inside a private mount namespace (<code>unshare -m</code>, which needs root or <code>CAP_SYS_ADMIN</code>) and runs <code>pilot-daemon</code> in compat mode there. Only the daemon sees the override.</li>
+</ol>
+<p>All three pieces ship in the <a href="https://github.com/TeoSlayer/pilot-skills/tree/main/skills/pilot-sandbox">pilot-sandbox skill</a>. Install it with <code>clawhub install pilot-sandbox</code>, or copy the folder from the repository.</p>
+
+<h2 id="step-by-step">Step by step</h2>
+<pre><code>export PATH="$PATH:$HOME/.pilot/bin"
+cd pilot-sandbox
+
+# The router reads HTTPS_PROXY, e.g. http://user:pass@proxy.internal:3128
+nohup python3 scripts/sni_router.py &gt; sni_router.log 2&gt;&amp;1 &amp;
+grep listening sni_router.log
+
+# The daemon, in its own mount namespace. setsid keeps it alive after your shell exits.
+setsid unshare -m ./scripts/run-daemon.sh &gt;&gt; daemon.log 2&gt;&amp;1 &lt; /dev/null &amp;
+
+sleep 30; grep -E "daemon registered|compat mode tunnel up" daemon.log
+grep routed sni_router.log</code></pre>
+<p>The router log should show one <code>routed SNI=registry...</code> line and one <code>routed SNI=beacon...</code> line. The daemon log should show registration and the compat tunnel. If the router logs routes but the daemon logs a certificate error, read the trust section below.</p>
+<p>The launcher passes these flags, which you can also run by hand for a one-off:</p>
+<pre><code>pilot-daemon -transport=compat \\
+  -registry=registry.pilotprotocol.network:443 -registry-tls -registry-trust=system \\
+  -compat-beacon=wss://beacon.pilotprotocol.network/v1/compat \\
+  -socket=/tmp/pilot.sock -identity="$HOME/.pilot/identity.json"</code></pre>
+<p>Do not start it through <code>pilotctl daemon start</code>: that path forks with a scrubbed environment and does not forward every daemon flag.</p>
+
+<h2 id="verify">Verify</h2>
+<pre><code>pilotctl --json info
+pilotctl --json trusted list
+pilotctl --json ping 0:0000.0000.660F --count 2 --timeout 30s</code></pre>
+<p>Run <code>pilotctl</code> from your normal shell; it talks to the daemon over the Unix socket, which both namespaces share. A few <code>pilotctl</code> subcommands dial the registry themselves, <code>lookup</code> among them, and those fail outside the namespace. That is expected. The daemon's traffic is what matters, and <code>trusted list</code> and <code>ping</code> exercise both paths through it.</p>
+
+<h2 id="tls-trust">TLS trust: system or pinned</h2>
+<p>The registry presents a Let's Encrypt certificate. The launcher defaults to <code>-registry-trust=system</code>, which verifies it against the OS trust store and keeps working across renewals. Sandboxes that ship no CA bundle can pin instead:</p>
+<pre><code>export PILOT_REGISTRY_TRUST=pinned
+export PILOT_REGISTRY_FINGERPRINT=&lt;hex sha256 of the registry leaf&gt;</code></pre>
+<p>Fetch the fingerprint through the proxy with the Python snippet in the troubleshooting reference. Let's Encrypt renews about every 60 days, so a pinned fingerprint is a maintenance item; when the daemon reports a mismatch, re-fetch it. In both modes end-to-end Ed25519 signatures still protect peer identity and payload integrity; TLS trust only covers the hop to the Pilot servers.</p>
+
+<h2 id="when-something-breaks">When something breaks</h2>
+<table>
+<thead><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td><code>HTTPS_PROXY not set</code></td><td>The router needs the proxy URL</td><td>Export it before starting the router</td></tr>
+<tr><td><code>proxy refused CONNECT ... 407</code></td><td>Bad proxy credentials</td><td>Fix the <code>user:pass@</code> part of the URL</td></tr>
+<tr><td><code>mount --bind failed</code></td><td>Not inside <code>unshare -m</code>, or not root</td><td>Launch exactly as shown</td></tr>
+<tr><td>x509 unknown authority</td><td>No CA bundle</td><td>Switch to pinned trust</td></tr>
+<tr><td>Fingerprint mismatch</td><td>Certificate renewed</td><td>Re-fetch, or switch to system trust</td></tr>
+<tr><td>Routes logged, no registration</td><td>Proxy allows CONNECT but drops long-lived connections</td><td>Check the proxy's idle timeout; the beacon connection must persist</td></tr>
+</tbody>
+</table>
+
+<h2 id="frequently-asked-questions">Frequently asked questions</h2>
+`;
+
+const faqItems = [
+  {
+    question: "Does the router weaken TLS?",
+    answer: "No. It reads the server name from the ClientHello and forwards the original bytes unchanged, so the TLS session is negotiated end to end between the daemon and the Pilot servers. Certificate verification and pinning behave exactly as they would on a direct connection.",
+  },
+  {
+    question: "Why does the daemon need its own mount namespace?",
+    answer: "Because /etc/hosts is read-only in these sandboxes. A private mount namespace lets you bind-mount a custom hosts file over it for one process, and Go's resolver reads /etc/hosts first, so only the daemon sees the Pilot hostnames as 127.0.0.1.",
+  },
+  {
+    question: "Can I use this on a corporate network with a TLS-intercepting proxy?",
+    answer: "The router works with any CONNECT proxy, but an intercepting proxy presents its own certificate, so system trust must include the corporate CA and pinned trust will not work. Ed25519 still protects peer identity and payloads end to end.",
+  },
+  {
+    question: "What survives a restart?",
+    answer: "The identity file, so the node keeps its address. The router and daemon do not; re-run the start commands. There is no supervisor in most sandboxes, so put the recipe in whatever startup hook the environment provides.",
+  },
+];
+---
+<BlogLayout
+  title="Run a Pilot Node Through an HTTPS-Only Egress Proxy"
+  description="Register a Pilot Protocol node when UDP is blocked, DNS is poisoned, and the only egress is an HTTPS CONNECT proxy: SNI router, mount namespace, verification."
+  date="September 23, 2026"
+  tags={["compat-mode", "egress-proxy", "sni", "sandbox", "networking"]}
+  canonicalPath="/learn/pilot-node-through-https-only-egress-proxy"
+  faqItems={faqItems}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>

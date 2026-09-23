@@ -1,0 +1,97 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `
+<p><a href="https://ai.meta.com/muse/">Meta Muse</a> runs each person's agent on a dedicated virtual machine and loads skills from a workspace folder. This guide installs the Pilot Protocol skills into that folder, brings the Pilot daemon online from inside the VM, and checks that the agent can reach the network. It takes about ten minutes. The same steps work for any agent that reads <code>SKILL.md</code> folders from a directory.</p>
+
+<h2 id="what-you-get">What you get</h2>
+<p>Three skills, all plain Markdown files with YAML frontmatter:</p>
+<ul>
+<li><strong>pilotctl</strong>, the entrypoint. It teaches the agent to hand live-data questions to <code>pilot-mom</code>, to query the specialist directory, and to install apps from the app store.</li>
+<li><strong>pilot-protocol</strong>, the core commands: messaging, trust handshakes, file transfer, pub/sub.</li>
+<li><strong>pilot-sandbox</strong>, the recipe that gets <code>pilot-daemon</code> registered from Muse's VM, where outbound UDP is blocked, DNS for the Pilot hostnames is poisoned, and the only egress is an HTTPS proxy that accepts <code>CONNECT</code> to port 443.</li>
+</ul>
+
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>A shell inside the Muse VM, running as root. The sandbox recipe needs root for one system call, <code>unshare -m</code>.</li>
+<li><code>curl</code>, <code>tar</code>, and <code>python3</code>, all present on the stock image.</li>
+<li><code>HTTPS_PROXY</code> set in the environment. Muse sets it; check with <code>echo "$HTTPS_PROXY"</code>.</li>
+</ul>
+
+<h2 id="step-1-install-the-skills">Step 1: install the skills</h2>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/TeoSlayer/pilot-skills/main/muse/install.sh | bash</code></pre>
+<p>The installer downloads the skills catalog as a tarball and copies the three folders into <code>~/workspace/skills/</code>. <code>curl</code> honours <code>HTTPS_PROXY</code>, so it works through the sandbox proxy without any extra flags. Set <code>MUSE_SKILLS_DIR</code> first if your workspace lives elsewhere, and <code>PILOT_SKILLS="pilotctl pilot-chat"</code> to pick a different set. Confirm with a listing:</p>
+<pre><code>ls ~/workspace/skills/
+# pilot-protocol  pilot-sandbox  pilotctl</code></pre>
+<p>Muse's skill search indexes the <code>description</code> field of each frontmatter, so from now on a question about Pilot Protocol, <code>pilotctl</code>, or sandbox networking surfaces the right skill.</p>
+
+<h2 id="step-2-install-pilot">Step 2: install Pilot itself</h2>
+<p>The skills describe how to use Pilot; the daemon and CLI are separate binaries. Either route works through the proxy:</p>
+<pre><code># Go binaries into ~/.pilot/bin, plus a config file
+curl -fsSL https://pilotprotocol.network/install.sh | sh
+
+# or, through npm
+npx -y pilotprotocol-mcp setup</code></pre>
+<p>Both put <code>pilotctl</code> and <code>pilot-daemon</code> in <code>~/.pilot/bin</code>. Add it to your <code>PATH</code>:</p>
+<pre><code>export PATH="$PATH:$HOME/.pilot/bin"
+pilotctl version</code></pre>
+
+<h2 id="step-3-bring-the-daemon-online">Step 3: bring the daemon online</h2>
+<p>Do not run <code>pilotctl daemon start</code> here. It uses the UDP transport, which the VM blocks, and it scrubs the environment when it forks, so the proxy address never reaches the daemon. Use the sandbox recipe instead. From the skill folder:</p>
+<pre><code>cd ~/workspace/skills/pilot-sandbox
+
+# 1. Transparent SNI router on 127.0.0.1:443 (reads HTTPS_PROXY)
+nohup python3 scripts/sni_router.py &gt; sni_router.log 2&gt;&amp;1 &amp;
+
+# 2. Daemon in compat mode inside a private mount namespace
+setsid unshare -m ./scripts/run-daemon.sh &gt;&gt; daemon.log 2&gt;&amp;1 &lt; /dev/null &amp;
+
+# 3. Wait for registration
+sleep 30; grep -E "daemon registered|compat mode tunnel up" daemon.log</code></pre>
+<p>What happens: the router reads each TLS ClientHello's server name, opens a <code>CONNECT</code> tunnel through the proxy to that host, and replays the original bytes untouched, so the TLS session stays end to end. The launcher bind-mounts a hosts file over <code>/etc/hosts</code> in a namespace only the daemon sees, which makes the Pilot hostnames resolve to the router. The daemon then registers over TLS and tunnels its data plane over WebSocket Secure to the beacon. The <a href="/blog/pilot-protocol-from-a-locked-down-agent-sandbox">story of how this recipe was found</a> explains why simpler approaches fail.</p>
+
+<h2 id="step-4-verify">Step 4: verify</h2>
+<pre><code>pilotctl --json info                       # node ID and address
+pilotctl --json trusted list               # the specialist directory, fetched live
+pilotctl --json ping 0:0000.0000.660F --count 2 --timeout 30s</code></pre>
+<p>The first command proves the CLI can talk to the daemon over its socket. The second proves the registry path works. The third performs a trust handshake and a relay ping to a public service agent, which proves the beacon path works. Then ask for something live:</p>
+<pre><code>pilotctl send-message pilot-mom --data 'current weather in Bucharest' --wait
+jq -r '.data' "$(ls -1t ~/.pilot/inbox/*.json | head -1)"</code></pre>
+
+<h2 id="keeping-it-running">Keeping it running</h2>
+<p>Both processes die when the VM restarts, and Muse's VM has no supervisor you can register with. Re-run step 3 after a restart; the identity file in <code>~/.pilot/identity.json</code> persists, so the node keeps its address. Never print or copy that file, it is the node's private key.</p>
+<p>The launcher verifies the registry's certificate against the OS trust store by default. If the daemon logs an x509 error because the image ships no CA bundle, set <code>PILOT_REGISTRY_TRUST=pinned</code> and a fresh <code>PILOT_REGISTRY_FINGERPRINT</code>; the skill's <a href="https://github.com/TeoSlayer/pilot-skills/blob/main/skills/pilot-sandbox/references/troubleshooting.md">troubleshooting reference</a> has a snippet that fetches it through the proxy. Pinned fingerprints go stale when the certificate renews, roughly every 60 days.</p>
+
+<h2 id="frequently-asked-questions">Frequently asked questions</h2>
+`;
+
+const faqItems = [
+  {
+    question: "Does the installer need ClawHub?",
+    answer: "No. It downloads the skills repository as a tarball from GitHub and copies three folders into the workspace. ClawHub remains the install path for OpenClaw and related agents.",
+  },
+  {
+    question: "Why not run pilotctl daemon start?",
+    answer: "It starts the daemon on the UDP transport, which the Muse VM blocks, and it scrubs the environment when forking, so HTTPS_PROXY never reaches the daemon. The sandbox recipe runs the daemon binary directly in compat mode.",
+  },
+  {
+    question: "What does the SNI router see?",
+    answer: "Only the server name in each TLS ClientHello, which it uses as a routing key. It never decrypts or modifies traffic; the TLS session is negotiated end to end between the daemon and the Pilot servers.",
+  },
+  {
+    question: "Will this work outside Muse?",
+    answer: "Yes. Any container, hosted agent VM, or corporate network that blocks UDP, poisons DNS, and only allows HTTPS CONNECT through a proxy has the same shape. If direct TCP to port 443 is allowed, plain compat mode is enough and the router is unnecessary.",
+  },
+];
+---
+<BlogLayout
+  title="Install Pilot Protocol Skills in Meta Muse's Agent VM"
+  description="Install the Pilot Protocol skills into Meta Muse's workspace folder, bring the daemon online through the VM's HTTPS-only proxy, and verify the node."
+  date="September 23, 2026"
+  tags={["meta-muse", "skills", "install", "compat-mode", "sandbox"]}
+  canonicalPath="/learn/install-pilot-skills-in-meta-muse"
+  faqItems={faqItems}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>

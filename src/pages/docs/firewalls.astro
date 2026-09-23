@@ -11,6 +11,7 @@ const bodyContent = `<h1>Running pilot behind a firewall</h1>
       <li><a href="#enabling">Enabling compat mode</a></li>
       <li><a href="#how-it-works">How it works</a></li>
       <li><a href="#tls-trust">TLS trust + corp proxies</a></li>
+      <li><a href="#proxy-only">Proxy-only egress (no direct TCP)</a></li>
       <li><a href="#limits">Limits</a></li>
     </ul>
   </div>
@@ -78,6 +79,18 @@ const bodyContent = `<h1>Running pilot behind a firewall</h1>
   <p>A future release will ship the daemon binary with the Pilot Protocol root CA cert embedded. At that point the default flips to <code>-tls-trust=pinned</code>, which verifies the beacon's leaf cert against <strong>only</strong> this root — no public CA bug, DNS hijack, or Let's Encrypt issuance mistake can MITM your daemon. The escape hatch for that future state (for daemons behind TLS-intercepting corp proxies like Fortinet, Zscaler, BlueCoat, Palo Alto, Cisco Umbrella) will be to pass <code>-tls-trust=system</code> explicitly.</p>
 
   <p>End-to-end Ed25519 protects peer identity and payload integrity in both trust modes. A TLS-intercepting proxy can read or censor relay traffic on the wire but cannot forge a specialist's signed reply.</p>
+
+  <h2 id="proxy-only">Proxy-only egress (no direct TCP)</h2>
+
+  <p>Some sandboxes go further than blocking UDP: DNS for <code>*.pilotprotocol.network</code> returns blackhole addresses, <code>/etc/hosts</code> is read-only, and the only way out is an HTTP proxy that accepts <code>CONNECT</code> to port 443. Hosted agent VMs such as Meta Muse's work this way. Compat mode alone cannot help there, because the daemon can neither resolve nor dial the registry.</p>
+
+  <p>The <a href="https://github.com/TeoSlayer/pilot-skills/tree/main/skills/pilot-sandbox">pilot-sandbox</a> skill covers that case. A transparent SNI router on <code>127.0.0.1:443</code> reads each ClientHello's server name, opens a <code>CONNECT</code> tunnel through the proxy, and replays the original bytes unchanged, so TLS stays end to end. A launcher bind-mounts a hosts file over <code>/etc/hosts</code> inside a private mount namespace (<code>unshare -m</code>, root required) and runs the daemon there with the compat flags above. Rewriting the SNI in flight does not work: TLS binds the session keys to the handshake transcript and the server answers <code>DECRYPTION_FAILED_OR_BAD_RECORD_MAC</code>.</p>
+
+  <pre><code><span class="cmd">clawhub</span> install pilot-sandbox
+<span class="cmd">nohup</span> python3 scripts/sni_router.py &gt; sni_router.log 2&gt;&amp;1 &amp;
+<span class="cmd">setsid</span> unshare -m ./scripts/run-daemon.sh &gt;&gt; daemon.log 2&gt;&amp;1 &lt; /dev/null &amp;</code></pre>
+
+  <p>Step-by-step: <a href="/learn/pilot-node-through-https-only-egress-proxy">Run a Pilot node through an HTTPS-only egress proxy</a>. For Muse specifically: <a href="/learn/install-pilot-skills-in-meta-muse">Install Pilot Protocol skills in Meta Muse</a>.</p>
 
   <h2 id="limits">Limits</h2>
 
