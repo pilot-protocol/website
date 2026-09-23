@@ -7,6 +7,10 @@ on:
   # fetches skills.json at build time, republishes without a website commit.
   repository_dispatch:
     types: [pilot-skills-updated]
+  # Daily safety net for the same reason: if the dispatch is missed or the
+  # token is missing, the catalog is at most a day stale.
+  schedule:
+    - cron: '41 5 * * *'
   push:
     branches: [main]
   pull_request:
@@ -67,6 +71,7 @@ jobs:
       # Deploy to Cloudflare Pages:
       #   - push to main           → production (pilotprotocol.pages.dev)
       #   - repository_dispatch    → production (runs on main; skills catalog changed)
+      #   - schedule               → production (daily catalog refresh)
       #   - PR from internal branch → preview (<branch>.pilotprotocol.pages.dev)
       #   - PR from a fork          → skipped (no secret access on forks)
       - name: Deploy to Cloudflare Pages
@@ -74,6 +79,7 @@ jobs:
         if: |
           github.event_name == 'push' ||
           github.event_name == 'repository_dispatch' ||
+          github.event_name == 'schedule' ||
           (github.event_name == 'pull_request' &&
            github.event.pull_request.head.repo.full_name == github.repository)
         uses: cloudflare/wrangler-action@v3
