@@ -11,7 +11,7 @@ export const learnGuides: LearnGuide[] = [
   {
     slug: 'install-pilot-skills-in-meta-muse',
     title: "Install Pilot Protocol Skills in Meta Muse's Agent VM",
-    description: 'Install the Pilot skills into Muse\'s workspace folder, bring the daemon online through the VM\'s HTTPS-only proxy, and verify the node end to end.',
+    description: 'One command installs the Pilot skills and a Pilot node in Muse\'s agent VM, online through its HTTPS-only proxy with rotating credentials, no root needed.',
     date: 'September 23, 2026',
     isoDate: '2026-09-23',
     track: 'Foundations',
