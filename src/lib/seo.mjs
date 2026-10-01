@@ -16,8 +16,6 @@ const ROUTE_TITLES = new Map([
   ['/contact', 'Contact Pilot Protocol: Sales, Partnerships and Press'],
   ['/cookies', 'Cookie Policy and Tracking Controls | Pilot Protocol'],
   ['/docs', 'Pilot Protocol Documentation: Guides and API Reference'],
-  ['/enterprise/autonomous-ai-agents', 'Autonomous AI Agent Control Plane | Pilot Protocol'],
-  ['/enterprise/claude-code-management', 'Claude Code Management for Enterprise | Pilot Protocol'],
   ['/governance', 'Agent Network Governance and Controls | Pilot Protocol'],
   ['/learn', 'Pilot Protocol Learning Center: Guides and Concepts'],
   ['/news', 'Pilot Protocol Company News and Product Announcements'],
