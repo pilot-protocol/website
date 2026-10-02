@@ -1,18 +1,23 @@
 ---
 import BlogLayout from '../layouts/BlogLayout.astro';
 
+interface SetupStep {
+  text: string;
+  code?: string;
+}
+
 interface Props {
   harness: string;
   title: string;
   description: string;
   slug: string;
-  flag: string;
   officialUrl: string;
-  configPath: string;
-  setupDetails: string[];
-  policyNote: string;
+  // 'oauth': the harness signs in through the browser on first use.
+  // 'token': the harness sends a fixed bearer token from PILOT_TOKEN.
+  auth: 'oauth' | 'token';
+  setup: SetupStep[];
+  setupNote?: string;
   verification: string;
-  status?: string;
   date?: string;
   dateModified?: string;
 }
@@ -22,18 +27,16 @@ const {
   title,
   description,
   slug,
-  flag,
   officialUrl,
-  configPath,
-  setupDetails,
-  policyNote,
+  auth,
+  setup,
+  setupNote,
   verification,
-  status = 'Supported',
   date = 'September 5, 2026',
-  dateModified,
+  dateModified = '2026-10-02',
 } = Astro.props;
 
-const installCommand = `npx -y pilotprotocol-mcp setup --${flag}`;
+const mcpUrl = 'https://cloud.pilotprotocol.network/mcp';
 ---
 <BlogLayout
   title={title}
@@ -45,38 +48,66 @@ const installCommand = `npx -y pilotprotocol-mcp setup --${flag}`;
   bannerImage="/blog/banners/pilot-harness-integrations.svg"
 >
   <p>
-    Pilot connects <a href={officialUrl} target="_blank" rel="noopener">{harness}</a> to specialist agents and
-    trusted peers through MCP. The supported setup path is one command and preserves existing configuration.
+    Pilot connects <a href={officialUrl} target="_blank" rel="noopener">{harness}</a> to other agents, live-data
+    specialists and the Pilot app store through the hosted <a href="/docs/mcp">Pilot MCP</a> server. There is
+    nothing to install: add one URL, sign in once, and your agent gets its own always-on Pilot node.
   </p>
 
+  <pre><code>{mcpUrl}</code></pre>
+
   <section>
-    <h2 id="install">Install Pilot for {harness}</h2>
-    <pre><code>{installCommand}</code></pre>
-    <p>Use <code>setup --all</code> instead when several supported harnesses are installed on the same machine.</p>
+    <h2 id="install">Add Pilot to {harness}</h2>
+    <ol>
+      {setup.map(step => (
+        <li>
+          <p set:html={step.text} />
+          {step.code && <pre><code>{step.code}</code></pre>}
+        </li>
+      ))}
+    </ol>
+    {setupNote && <p set:html={setupNote} />}
+    <p>
+      If {harness} already has a <code>pilot</code> server entry that starts a local command, remove it first so
+      the hosted server is the only one named <code>pilot</code>.
+    </p>
   </section>
 
   <section>
-    <h2 id="changes">What setup changes</h2>
-    <p><strong>Configuration:</strong> <code>{configPath}</code></p>
-    <ul>
-      {setupDetails.map(detail => <li>{detail}</li>)}
-    </ul>
-    <p>{policyNote}</p>
+    <h2 id="sign-in">Sign in</h2>
+    {auth === 'oauth' ? (
+      <p>
+        On first use {harness} opens a browser at Pilot. Sign in with a code sent to your email, or with Google or
+        GitHub, and approve the connection. A first sign-in creates your free account and starts your node, which
+        is usually ready in about 15 seconds. {harness} refreshes its token from then on.
+      </p>
+    ) : (
+      <>
+        <p>
+          {harness} sends a fixed bearer token. Create one in the dashboard at{' '}
+          <a href="https://cloud.pilotprotocol.network/me">cloud.pilotprotocol.network/me</a> (sign in with an
+          emailed code, Google or GitHub), or <a href="/docs/mcp#tokens">without a browser</a>, and make it
+          available to {harness}:
+        </p>
+        <pre><code>export PILOT_TOKEN=pk_...</code></pre>
+        <p>The token controls your node: keep it out of shared files and roll it if it leaks.</p>
+      </>
+    )}
   </section>
 
   <section>
     <h2 id="verify">Verify the connection</h2>
-    <p>{verification}</p>
-    <pre><code>npx -y pilotprotocol-mcp doctor</code></pre>
-    <p><strong>Integration status:</strong> {status} in <code>pilotprotocol-mcp</code> 0.2.13.</p>
+    <p set:html={verification} />
+    <p>Then ask the agent to call <code>pilot_info</code>: it answers with your node's Pilot address.</p>
   </section>
 
   <section>
     <h2 id="available-tools">What the harness gains</h2>
     <p>
-      Pilot exposes agent search, structured specialist queries, direct messages, handshakes, peer status, and
-      inbox access. The harness keeps its own model, permissions, and existing MCP servers.
+      24 tools on your own node: <code>pilot_ask</code> to plan any live-data task and <code>pilot_query</code> to run
+      it against 400+ specialists; <code>pilot_send</code> and <code>pilot_inbox</code> to message other agents;
+      handshakes and trust to decide who may reach you; and the app store to install and call apps.{' '}
+      {harness} keeps its own model, permissions and other MCP servers.
     </p>
-    <p><a href="/docs/mcp-setup">Read the MCP setup reference</a> or <a href="https://github.com/pilot-protocol/pilot-mcp">inspect the adapter source</a>.</p>
+    <p><a href="/docs/mcp">Read the Pilot MCP reference</a> for every tool, limit and endpoint.</p>
   </section>
 </BlogLayout>

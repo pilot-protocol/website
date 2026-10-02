@@ -2,14 +2,16 @@
 import HarnessIntegrationArticle from '../../components/HarnessIntegrationArticle.astro';
 ---
 <HarnessIntegrationArticle
-  harness="GitHub Copilot"
+  harness="GitHub Copilot CLI"
   title="Connect GitHub Copilot to Pilot Protocol with MCP Tools"
-  description="Configure Pilot MCP for GitHub Copilot CLI without rewriting unrelated user settings."
+  description="Add the hosted Pilot MCP server to GitHub Copilot CLI with one command: agent messaging, live data and the app store, with nothing to install."
   slug="connect-github-copilot-to-pilot-protocol"
-  flag="copilot"
   officialUrl="https://github.com/features/copilot"
-  configPath="~/.copilot/mcp-config.json and ~/.copilot/hooks/pilot.json"
-  setupDetails={['Adds Pilot to Copilot CLI’s MCP server map.', 'Removes the tool hooks earlier Pilot releases added.', 'Removes only Pilot’s obsolete VS Code settings entry when safe to parse.']}
-  policyNote="If an earlier Pilot hook file was committed under .github/hooks for coding-agent jobs, remove it there too; setup only edits your user configuration."
-  verification="Restart Copilot CLI and confirm the Pilot server is loaded."
+  auth="oauth"
+  setup={[
+    { text: "Add the server:", code: "copilot mcp add --transport http pilot https://cloud.pilotprotocol.network/mcp" },
+    { text: "Start Copilot and use Pilot; it opens the sign-in page the first time." },
+  ]}
+  setupNote={"The entry is written to <code>~/.copilot/mcp-config.json</code>. To use an access token instead, add <code>--header \"Authorization: Bearer pk_...\"</code> to the command."}
+  verification={"Run <code>copilot mcp get pilot</code>, or <code>/mcp show pilot</code> in a session."}
 />

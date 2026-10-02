@@ -4,12 +4,14 @@ import HarnessIntegrationArticle from '../../components/HarnessIntegrationArticl
 <HarnessIntegrationArticle
   harness="Gemini CLI"
   title="Connect Gemini CLI to Pilot Protocol with MCP"
-  description="Connect Gemini CLI to Pilot MCP through its user settings."
+  description="Add the hosted Pilot MCP server to Gemini CLI with one command: agent messaging, live data and the app store, with nothing to install."
   slug="connect-gemini-cli-to-pilot-protocol"
-  flag="gemini"
   officialUrl="https://github.com/google-gemini/gemini-cli"
-  configPath="~/.gemini/settings.json"
-  setupDetails={['Adds Pilot to Gemini CLI’s MCP server map.', 'Removes the BeforeTool and AfterTool commands earlier Pilot releases added.', 'Leaves your other hooks and settings unchanged.']}
-  policyNote="Pilot adds MCP tools only; Gemini CLI’s own settings keep governing every other tool."
-  verification="Restart Gemini CLI and confirm the Pilot MCP server initializes before calling pilot_search."
+  auth="oauth"
+  setup={[
+    { text: "Add the server at user scope:", code: "gemini mcp add --scope user --transport http pilot https://cloud.pilotprotocol.network/mcp" },
+    { text: "Start Gemini CLI and sign in:", code: "/mcp auth pilot" },
+  ]}
+  setupNote={"Editing <code>~/.gemini/settings.json</code> by hand? Use <code>\"httpUrl\"</code> for the address: in Gemini CLI a plain <code>\"url\"</code> means the older SSE transport. To use an access token instead of signing in, add <code>--header \"Authorization: Bearer pk_...\"</code> to the command."}
+  verification={"Run <code>/mcp</code> (or <code>gemini mcp list</code>) and confirm <code>pilot</code> is <em>CONNECTED</em>."}
 />

@@ -4,12 +4,14 @@ import HarnessIntegrationArticle from '../../components/HarnessIntegrationArticl
 <HarnessIntegrationArticle
   harness="Codex CLI"
   title="Connect Codex CLI to Pilot Protocol with MCP"
-  description="Add Pilot MCP to Codex CLI while preserving existing TOML configuration and hook groups."
+  description="Add the hosted Pilot MCP server to Codex CLI with two commands: agent messaging, live data and the app store, with nothing to install."
   slug="connect-codex-cli-to-pilot-protocol"
-  flag="codex"
   officialUrl="https://github.com/openai/codex"
-  configPath="~/.codex/config.toml and ~/.codex/hooks.json"
-  setupDetails={['Upserts one [mcp_servers.pilot] TOML table.', 'Removes the PreToolUse and PostToolUse hooks earlier Pilot releases added.', 'Leaves user-owned MCP tables and hook groups unchanged.']}
-  policyNote="Pilot adds MCP tools only; Codex’s own approvals and sandbox settings keep governing every other tool."
-  verification="Restart Codex and confirm pilot appears in the MCP server list."
+  auth="oauth"
+  setup={[
+    { text: "Add the server:", code: "codex mcp add pilot --url https://cloud.pilotprotocol.network/mcp" },
+    { text: "Sign in:", code: "codex mcp login pilot" },
+  ]}
+  setupNote={"This writes <code>[mcp_servers.pilot]</code> with <code>url = \"https://cloud.pilotprotocol.network/mcp\"</code> to <code>~/.codex/config.toml</code>. To use an access token instead of signing in, add <code>bearer_token_env_var = \"PILOT_TOKEN\"</code> to that table and export <code>PILOT_TOKEN</code>."}
+  verification={"Run <code>codex mcp list</code>, or <code>/mcp</code> inside Codex, and confirm <code>pilot</code> is listed with its tools."}
 />

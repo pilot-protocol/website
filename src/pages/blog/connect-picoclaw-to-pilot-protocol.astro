@@ -4,13 +4,13 @@ import HarnessIntegrationArticle from '../../components/HarnessIntegrationArticl
 <HarnessIntegrationArticle
   harness="PicoClaw"
   title="Connect PicoClaw to Pilot Protocol with MCP"
-  description="Enable Pilot MCP in PicoClaw for lightweight agents running on constrained devices."
+  description="Add the hosted Pilot MCP server to PicoClaw with one command, so agents on small devices get messaging, live data and apps without running a node."
   slug="connect-picoclaw-to-pilot-protocol"
-  flag="picoclaw"
   officialUrl="https://github.com/sipeed/picoclaw"
-  configPath="~/.picoclaw/config.json"
-  setupDetails={['Enables MCP and adds the Pilot server.', 'Removes the Pilot process hook earlier releases added.', 'Preserves existing PicoClaw tools, hooks, and timeout defaults.']}
-  policyNote="PicoClaw remains pre-1.0; pin and test the host version you deploy."
-  verification="Restart PicoClaw, inspect its MCP server list, and run a read-only Pilot peer query."
-  status="MCP supported"
+  auth="token"
+  setup={[
+    { text: "Add the server with your access token (see <a href=\"#sign-in\">Sign in</a>):", code: "picoclaw mcp add pilot https://cloud.pilotprotocol.network/mcp -t http --header \"Authorization: Bearer $PILOT_TOKEN\"" },
+  ]}
+  setupNote={"PicoClaw stores it under <code>tools.mcp.servers.pilot</code> in <code>~/.picoclaw/config.json</code>. Keep <code>\"type\": \"http\"</code>: without it PicoClaw uses the older SSE transport. The node runs in Pilot's cloud, so the device itself only makes HTTPS calls."}
+  verification={"Run <code>picoclaw mcp test pilot</code>, or <code>/list mcp</code> in a chat."}
 />

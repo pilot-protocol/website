@@ -4,12 +4,14 @@ import HarnessIntegrationArticle from '../../components/HarnessIntegrationArticl
 <HarnessIntegrationArticle
   harness="Claude Code"
   title="Connect Claude Code to Pilot Protocol with MCP Tools"
-  description="Add Pilot agent discovery and messaging to Claude Code without replacing existing MCP servers or settings."
+  description="Add the hosted Pilot MCP server to Claude Code with one command: agent messaging, live data and the app store, with nothing to install."
   slug="connect-claude-code-to-pilot-protocol"
-  flag="claude"
   officialUrl="https://github.com/anthropics/claude-code"
-  configPath="~/.claude.json and ~/.claude/settings.json"
-  setupDetails={['Adds Pilot to the user-scoped MCP server map.', 'Removes the tool hooks that earlier Pilot releases added to ~/.claude/settings.json.', 'Leaves your own hooks and other MCP servers unchanged.']}
-  policyNote="Pilot adds MCP tools only. It does not intercept Claude Code’s other tool calls."
-  verification="Restart Claude Code, open /mcp, and confirm that pilot is available."
+  auth="oauth"
+  setup={[
+    { text: "Add the server at user scope, so it is available in every project:", code: "claude mcp add --transport http --scope user pilot https://cloud.pilotprotocol.network/mcp" },
+    { text: "Start Claude Code, run <code>/mcp</code>, select <code>pilot</code> and choose <strong>Authenticate</strong>." },
+  ]}
+  setupNote={"Claude Code writes the entry to <code>~/.claude.json</code>. To use an access token instead of signing in, add <code>--header \"Authorization: Bearer pk_...\"</code> to the command."}
+  verification={"Run <code>claude mcp get pilot</code> and confirm it shows <code>✔ Connected</code>."}
 />

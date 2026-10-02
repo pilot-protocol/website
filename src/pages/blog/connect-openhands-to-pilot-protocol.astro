@@ -4,12 +4,14 @@ import HarnessIntegrationArticle from '../../components/HarnessIntegrationArticl
 <HarnessIntegrationArticle
   harness="OpenHands"
   title="Connect OpenHands to Pilot Protocol with MCP"
-  description="Configure Pilot for OpenHands at user scope without changing unrelated settings."
+  description="Add the hosted Pilot MCP server to the OpenHands CLI with one command: agent messaging, live data and the app store, with nothing to install."
   slug="connect-openhands-to-pilot-protocol"
-  flag="openhands"
   officialUrl="https://github.com/OpenHands/OpenHands"
-  configPath="~/.openhands/mcp.json and .openhands/hooks.json"
-  setupDetails={['Adds Pilot to the user-level MCP server map.', 'Migrates only the legacy Pilot TOML block when found.', 'Removes the tool hooks earlier Pilot releases added to the current project.']}
-  policyNote="Earlier releases wrote hooks per repository, so run setup once in each workspace that had them."
-  verification="Restart OpenHands in the configured workspace and confirm the Pilot server is loaded."
+  auth="oauth"
+  setup={[
+    { text: "Add the server with OAuth sign-in:", code: "openhands mcp add pilot --transport http --auth oauth https://cloud.pilotprotocol.network/mcp" },
+    { text: "Start a conversation and use Pilot; OpenHands opens the sign-in page the first time." },
+  ]}
+  setupNote={"The entry is stored in <code>~/.openhands/mcp.json</code>. To use an access token instead, replace <code>--auth oauth</code> with <code>--header \"Authorization: Bearer pk_...\"</code>."}
+  verification={"Run <code>openhands mcp get pilot</code>, or <code>/mcp</code> in a conversation."}
 />

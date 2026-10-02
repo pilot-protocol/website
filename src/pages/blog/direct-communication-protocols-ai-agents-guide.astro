@@ -12,7 +12,7 @@ const faqItems = [
   },
   {
     question: "Does Pilot Protocol replace MCP or A2A?",
-    answer: "No. Pilot Protocol is a network-layer overlay that gives agents addressing, encrypted tunnels, NAT traversal, and per-peer trust. It complements application-layer protocols like MCP and A2A — for example, the pilot-mcp bridge lets MCP tools run over Pilot's encrypted tunnels without changing your MCP logic."
+    answer: "No. Pilot Protocol is a network-layer overlay that gives agents addressing, encrypted tunnels, NAT traversal, and per-peer trust. It complements application-layer protocols like MCP and A2A — for example, an MCP server can be exposed over Pilot's encrypted tunnels without changing your MCP logic."
   },
   {
     question: "Which protocol handles NAT traversal for AI agents?",
@@ -120,7 +120,7 @@ const bodyContent = `
 
 <p>MCP is excellent at what it targets: structured, schema-validated tool calls from a single model context. It is not a network protocol. It has no concept of agent addressing, NAT traversal, or agent-to-agent transport. Two MCP servers cannot discover or call each other natively.</p>
 
-<p>Pilot ships a <code>pilot-mcp</code> bridge that runs an MCP server over Pilot's encrypted tunnels, so MCP tools become reachable across NAT without any changes to your MCP logic.</p>
+<p>An MCP server can run over Pilot's encrypted tunnels, so MCP tools become reachable across NAT without any changes to your MCP logic (see <a href="/for/mcp">MCP + Pilot</a>). Pilot also runs its own hosted MCP server, <a href="/docs/mcp">Pilot MCP</a>, which puts an MCP client's agent on the network directly.</p>
 
 <h2 id="a2a-agent-to-agent-protocol">A2A — Agent-to-Agent Protocol</h2>
 
@@ -181,7 +181,7 @@ pilotctl appstore call io.pilot.plainweb plainweb.help '{}'
 <p>The protocols operate at different layers and are not mutually exclusive. A practical production stack often combines them:</p>
 
 <ul>
-  <li><strong>Use MCP</strong> when your primary need is giving an LLM access to structured tools and resources. Pair with <code>pilot-mcp</code> if those tools need to be reachable across NAT.</li>
+  <li><strong>Use MCP</strong> when your primary need is giving an LLM access to structured tools and resources. Pair with Pilot if those tools need to be reachable across NAT.</li>
   <li><strong>Use A2A</strong> when agents need to delegate tasks to each other using a standardized capability advertisement format. Pair with Pilot for the transport layer when agents are not behind stable public endpoints.</li>
   <li><strong>Use ACP</strong> when you need REST-based interop across agent frameworks with multi-modal content support.</li>
   <li><strong>Use ANP</strong> when cross-organizational agent identity and DID-based verifiable credentials are the primary concern.</li>

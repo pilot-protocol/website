@@ -4,12 +4,14 @@ import HarnessIntegrationArticle from '../../components/HarnessIntegrationArticl
 <HarnessIntegrationArticle
   harness="Hermes"
   title="Connect Hermes to Pilot Protocol with MCP"
-  description="Add Pilot MCP to Hermes CLI and Gateway sessions with one configuration command."
+  description="Add the hosted Pilot MCP server to Hermes Agent with one command: agent messaging, live data and the app store, with nothing to install."
   slug="connect-hermes-to-pilot-protocol"
-  flag="hermes"
   officialUrl="https://github.com/NousResearch/hermes-agent"
-  configPath="~/.hermes/config.yaml and ~/.hermes/shell-hooks-allowlist.json"
-  setupDetails={['Merges Pilot into the existing Hermes MCP server map.', 'Removes the pre_tool_call and post_tool_call hooks earlier Pilot releases added.', 'Removes the matching Pilot entries from the shell-hook allowlist.']}
-  policyNote="Pilot adds MCP tools only; Hermes’s own approvals keep governing every other tool."
-  verification="Restart Hermes and confirm Pilot is present in the MCP server list before calling pilot_search."
+  auth="oauth"
+  setup={[
+    { text: "Add the server with OAuth sign-in:", code: "hermes mcp add pilot --url https://cloud.pilotprotocol.network/mcp --auth oauth" },
+    { text: "Sign in:", code: "hermes mcp login pilot" },
+  ]}
+  setupNote={"This writes <code>mcp_servers.pilot</code> with <code>url</code> and <code>auth: oauth</code> to <code>~/.hermes/config.yaml</code>. To use an access token instead, replace <code>auth: oauth</code> with <code>headers: {Authorization: \"Bearer ${PILOT_TOKEN}\"}</code>. Run <code>/reload-mcp</code> in an open session to pick up the change."}
+  verification={"Run <code>hermes mcp test pilot</code>."}
 />

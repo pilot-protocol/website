@@ -4,12 +4,14 @@ import HarnessIntegrationArticle from '../../components/HarnessIntegrationArticl
 <HarnessIntegrationArticle
   harness="JetBrains Junie"
   title="Connect JetBrains Junie to Pilot Protocol with MCP"
-  description="Add Pilot MCP to Junie CLI and use the same standard server definition in JetBrains AI Assistant settings."
+  description="Add the hosted Pilot MCP server to JetBrains Junie: agent messaging, live data and the app store, with nothing to install."
   slug="connect-junie-to-pilot-protocol"
-  flag="junie"
   officialUrl="https://www.jetbrains.com/junie/"
-  configPath="~/.junie/mcp/mcp.json"
-  setupDetails={['Creates Junie’s MCP file when it does not exist.', 'Adds or updates only the named Pilot server entry.', 'Uses the same stdio command as other MCP-compatible harnesses.']}
-  policyNote="JetBrains AI Assistant stores its IDE-side MCP configuration in Settings → Tools → AI Assistant → MCP and requires manual confirmation."
-  verification="Restart Junie CLI and confirm Pilot is available. For the IDE, review the MCP entry in JetBrains settings."
+  auth="oauth"
+  setup={[
+    { text: "Add Pilot to <code>~/.junie/mcp/mcp.json</code> (or <code>.junie/mcp/mcp.json</code> in a project):", code: "{\n  \"mcpServers\": {\n    \"pilot\": { \"url\": \"https://cloud.pilotprotocol.network/mcp\" }\n  }\n}" },
+    { text: "Run <code>/mcp</code> in Junie. Pilot shows <em>Authorization required</em>; select it to sign in through the browser." },
+  ]}
+  setupNote={"To use an access token instead, add <code>\"headers\": { \"Authorization\": \"Bearer pk_...\" }</code> next to <code>url</code>."}
+  verification={"Run <code>/mcp</code> and confirm <code>pilot</code> is <em>Active</em>."}
 />

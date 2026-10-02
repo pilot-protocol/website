@@ -4,12 +4,14 @@ import HarnessIntegrationArticle from '../../components/HarnessIntegrationArticl
 <HarnessIntegrationArticle
   harness="Cline"
   title="Connect Cline to Pilot Protocol with MCP"
-  description="Connect Cline to Pilot MCP while preserving existing servers and user-owned hook scripts."
+  description="Add the hosted Pilot MCP server to Cline: agent messaging, live data and the app store, with nothing to install."
   slug="connect-cline-to-pilot-protocol"
-  flag="cline"
   officialUrl="https://cline.bot"
-  configPath="~/.cline/data/settings/cline_mcp_settings.json and ~/.cline/hooks"
-  setupDetails={['Adds Pilot to Cline’s current MCP settings file.', 'Migrates the Pilot entry in legacy VS Code storage when present.', 'Removes the hook scripts that earlier Pilot releases installed.']}
-  policyNote="Only Pilot’s own hook scripts are removed; a user-owned script at the same path is left untouched."
-  verification="Restart Cline, inspect MCP Servers, and confirm that the Pilot server starts without an API key."
+  auth="oauth"
+  setup={[
+    { text: "Run <code>cline mcp</code> and enter the URL when asked, or add Pilot to Cline's MCP settings file (<code>cline_mcp_settings.json</code>, opened from the MCP Servers panel):", code: "{\n  \"mcpServers\": {\n    \"pilot\": {\n      \"type\": \"streamableHttp\",\n      \"url\": \"https://cloud.pilotprotocol.network/mcp\",\n      \"disabled\": false\n    }\n  }\n}" },
+    { text: "Cline asks you to authorize on first connection; follow it to the sign-in page." },
+  ]}
+  setupNote={"Keep <code>\"type\": \"streamableHttp\"</code>: without it Cline uses the older SSE transport. To use an access token instead, add <code>\"headers\": { \"Authorization\": \"Bearer pk_...\" }</code>."}
+  verification={"Open the MCP Servers panel (or run <code>cline config mcp</code>) and confirm <code>pilot</code> is connected."}
 />

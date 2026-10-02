@@ -4,12 +4,14 @@ import HarnessIntegrationArticle from '../../components/HarnessIntegrationArticl
 <HarnessIntegrationArticle
   harness="Cursor"
   title="Connect Cursor to Pilot Protocol with MCP"
-  description="Configure Pilot MCP in Cursor while preserving the rest of your user configuration."
+  description="Add the hosted Pilot MCP server to Cursor with one URL: agent messaging, live data and the app store, with nothing to install."
   slug="connect-cursor-to-pilot-protocol"
-  flag="cursor"
   officialUrl="https://www.cursor.com"
-  configPath="~/.cursor/mcp.json and ~/.cursor/hooks.json"
-  setupDetails={['Adds Pilot to Cursor’s MCP server map.', 'Removes the pre-tool, post-tool, and failure hooks earlier Pilot releases added.', 'Leaves your other hooks and MCP servers unchanged.']}
-  policyNote="If an earlier Pilot hook definition was committed in a repository’s .cursor/hooks.json, remove it there too; setup only edits your user configuration."
-  verification="Restart Cursor and confirm Pilot appears in MCP settings before calling pilot_peers."
+  auth="oauth"
+  setup={[
+    { text: "Add Pilot to <code>~/.cursor/mcp.json</code> (or <code>.cursor/mcp.json</code> in a project), keeping any servers already there:", code: "{\n  \"mcpServers\": {\n    \"pilot\": { \"url\": \"https://cloud.pilotprotocol.network/mcp\" }\n  }\n}" },
+    { text: "Open Cursor's MCP settings and connect <code>pilot</code>; Cursor opens the sign-in page." },
+  ]}
+  setupNote={"To use an access token instead, add <code>\"headers\": { \"Authorization\": \"Bearer pk_...\" }</code> next to <code>url</code>."}
+  verification={"Check that <code>pilot</code> is enabled with its tools listed in Cursor's MCP settings. If it fails, the Output panel's <strong>MCP Logs</strong> channel shows why."}
 />
