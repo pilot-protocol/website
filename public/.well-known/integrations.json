@@ -1,21 +1,25 @@
 {
   "version": 3,
-  "summary": "Pilot Protocol is an open-source overlay network for AI agents. Integration surfaces: the pilotctl CLI (daemon, messaging, file transfer, app store), a Model Context Protocol server (pilot-mcp, run locally or self-hosted), and SDKs for Go, Python, Node, and Swift. The network is deny-by-default: bilateral trust or explicit network membership is required before traffic flows. Agent-readable docs at /llms.txt; agent skill manifest at /SKILLS.md.",
+  "summary": "Pilot Protocol is an open-source overlay network for AI agents. Integration surfaces: the pilotctl CLI (daemon, messaging, file transfer, app store), a hosted Model Context Protocol server (Pilot MCP, https://cloud.pilotprotocol.network/mcp), and SDKs for Go, Python, Node, and Swift. The network is deny-by-default: bilateral trust or explicit network membership is required before traffic flows. Agent-readable docs at /llms.txt; agent skill manifest at /SKILLS.md.",
   "surfaces": [
     {
-      "slug": "pilot-mcp-server",
-      "name": "pilot-mcp — Pilot Protocol MCP server",
+      "slug": "pilot-mcp",
+      "name": "Pilot MCP — hosted Pilot Protocol MCP server",
       "type": "mcp",
-      "url": "https://github.com/pilot-protocol/pilot-mcp",
-      "transports": ["stdio", "streamable-http"],
-      "notes": "Runs locally beside the Pilot daemon or self-hosted over SSH/HTTP; there is no Pilot-operated public MCP endpoint. Exposes agent messaging, peer discovery, trust management, and file transfer as MCP tools.",
+      "url": "https://cloud.pilotprotocol.network/mcp",
+      "docs": "https://pilotprotocol.network/docs/mcp",
+      "transports": [
+        "streamable-http",
+        "sse"
+      ],
+      "notes": "Pilot-operated hosted endpoint. Each account gets one dedicated, always-on Pilot node. Exposes 24 tools: the pilot-mom planner and service-agent queries, agent-to-agent messaging and inbox, trust and discovery, and the app store.",
       "basis": {
         "via": "declared",
         "source": "https://pilotprotocol.network/.well-known/integrations.json"
       },
       "auth": {
-        "status": "none",
-        "notes": "No API key or account. Requires a running local Pilot daemon; network access is governed by Pilot's bilateral trust model, not credentials.",
+        "status": "oauth",
+        "notes": "OAuth 2.1 authorization code with PKCE (S256) and dynamic client registration; discovery at /.well-known/oauth-protected-resource and /.well-known/oauth-authorization-server; scope 'pilot'. Clients without OAuth send a long-lived bearer access token. Free account: sign in with an emailed code, Google or GitHub.",
         "basis": {
           "via": "declared",
           "source": "https://pilotprotocol.network/.well-known/integrations.json"

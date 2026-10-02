@@ -7,6 +7,8 @@ export default defineConfig({
   },
   trailingSlash: 'ignore',
   redirects: {
-    '/blog/connect-continue-to-pilot-protocol': '/docs/mcp-setup',
+    '/blog/connect-continue-to-pilot-protocol': '/docs/mcp',
+    '/docs/mcp-setup': '/docs/mcp',
+    '/plain/docs/mcp-setup': '/plain/docs/mcp',
   },
 });
