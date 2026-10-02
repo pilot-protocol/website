@@ -1,0 +1,54 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>On September 29, Pillar Security published <a href="https://www.pillar.security/blog/look-dont-load-model-inspection-in-unsloth-studio-leads-to-critical-arbitrary-code-execution">its analysis of a code-execution flaw in Unsloth Studio</a>, the UI for the open-source Unsloth fine-tuning library. Selecting a model in the picker was enough to run Python from that model's repository on the machine hosting Studio. The fix shipped in version 2026.6.9. What stays relevant after the patch is where the code ran: under the developer's own account, next to the developer's keys. This post covers one way to give that kind of work a smaller home: a browser terminal for a Docker container, built on <span class="brand-shell">shell.online</span>, <a href="https://shell.online">our browser link for any terminal process</a>, that keeps one encrypted link across restarts and needs no SSH key to reach.</p>
+<section>
+<h2>The Unsloth Studio bug ran with the developer's own permissions</h2>
+<p>The mechanism is short. Per Pillar, Studio's backend probed a model's capabilities by loading its config.json through the Transformers AutoConfig loader, with trust_remote_code defaulting to true. A config.json can carry an auto_map field pointing at Python files in the same repository, and with that flag on, Transformers imports them. <a href="https://www.infoworld.com/article/4228904/unsloths-model-picker-had-a-code-execution-problem.html">InfoWorld's report</a> quotes Pillar researcher Ariel Fogel: "Reading the model's config.json was enough to trigger the exploit; the backend never loaded the weights or ran inference."</p>
+<p>Hugging Face documents the flag as an explicit opt-in. <a href="https://huggingface.co/docs/transformers/main/en/models#custom-models">The Transformers guide to loading custom models</a> says to "take extra precaution when loading a custom model" and recommends pinning a specific revision when you do. Studio made that choice on the user's behalf during what looked like a metadata read.</p>
+<p>Pillar's impact list is HuggingFace tokens, SSH keys, cloud credentials, proprietary training data, and model artifacts. That list is simply what any process started by a developer account can open, and nothing on it is specific to Unsloth. Upgrading closes this bug and leaves the general problem where it was: the next tool that executes something from a repository you only meant to inspect gets the same reach.</p>
+</section>
+<section>
+<h2>A browser terminal for a Docker container, from the Compose file in the repo</h2>
+<p>The <a href="https://github.com/TeoSlayer/shell.online">shell.online repository</a> carries a docker-compose.yml in its root that runs the CLI inside a container. It is a client of the hosted relay, a different deployment from the self-hosted relay under standalone/. <a href="https://shell.online/docker/">The Docker workspace guide</a> gives the whole setup:</p>
+<pre><code>git clone https://github.com/TeoSlayer/shell.online.git
+cd shell.online
+docker compose up --build -d
+docker compose logs shell-online</code></pre>
+<p>The first launch writes a link and a generated password to the container log. The guide warns that these logs contain credentials, so read them privately and keep them out of shared reports. Open the link in any browser, enter the password, and you get bash in /workspace as a non-root user named shellonline. Frames are encrypted by the CLI in the container and decrypted in the browser, and the relay forwards ciphertext. That is the same model as every other share, described in <a href="https://pilotprotocol.network/blog/shell-online-live-terminal-browser-link">our original walkthrough of the link-and-password design</a>.</p>
+<p>The service definition is short enough to read in full. These are the parts that decide what the container can touch:</p>
+<pre><code>restart: unless-stopped
+volumes:
+  - shell-online-state:/var/lib/shell-online
+  - shell-online-workspace:/workspace</code></pre>
+<p>Two named volumes, no ports section, no bind mount of the host filesystem. The container dials out to the relay and nothing listens for inbound connections. The runtime stage of the Dockerfile is Alpine 3.22 plus bash, ca-certificates, and tini, so there is no SSH daemon to configure. The common ways a remote dev container ends up holding host credentials (a mounted ~/.ssh, a forwarded agent, an authorized_keys file) have no job to do here. Code that runs in this container can read the workspace, the session's own state, and whatever you type or paste into it later.</p>
+<p>Two limits to know before planning around it. The image has no Python and no CUDA. A fine-tuning stack means editing the runtime stage yourself, since the root Dockerfile builds only the Alpine image. Also, the Compose file on main currently names image tag 0.22.0 and passes the same string as the build version, while the latest CLI release is v0.25.0. Check that tag against the release notes if you need a newer feature inside the container.</p>
+</section>
+<section>
+<h2>What a restart keeps and what it discards</h2>
+<p>The <a href="https://github.com/TeoSlayer/shell.online/blob/main/scripts/docker-entrypoint.sh">entrypoint script</a> ends with one line:</p>
+<pre><code>exec shell --foreground --persistent "$state_file" "$@"</code></pre>
+<p>The state file is /var/lib/shell-online/session.json on the state volume. It records a host token, the URL fragment carrying the key-derivation salt, the encryption key, the browser password, and whether the session is read-only and encrypted. The session ID is computed from the host token (SHA-256 over a fixed prefix and the token, truncated, base64url-encoded), which is why the URL comes out identical on every start. On resume the relay compares the stored hash of that token in constant time and requires the read-only and encryption flags to match the originals. A mismatch gets a 403.</p>
+<p>Docker's documentation defines <a href="https://docs.docker.com/engine/containers/start-containers-automatically/">the unless-stopped restart policy</a> as the always policy with one exception: a container you stopped stays stopped, even after the daemon restarts. So an orderly host reboot, a daemon restart, or typing exit in the browser shell all lead back to the entrypoint and the same state file. The URL and password are unchanged, and the people holding them do not need a new link. The relay keeps a persistent identity for up to 30 offline days, and the Docker guide notes that a saved identity can be revived from its state volume even after that retention expires. An ordinary disconnected share can recover its link for 12 hours.</p>
+<p>What does not come back is the process. Each start runs a new bash. The README puts it in one sentence: "A saved link is not a saved process." Files in /workspace survive because they sit on the second volume. A job that was running when the container stopped is gone. The CLI reference also flags the unclean case: a crash that leaves a local record or control socket blocks the resume until you review and recover it explicitly. Those records live under /tmp inside the container, separate from the state volume that holds the identity.</p>
+<p>Two more behaviors are fixed. Persistent sessions are always end-to-end encrypted, because --no-e2ee cannot be combined with --persistent. And if you set SHELL_ONLINE_E2EE_PASSWORD to something other than the stored password, the entrypoint exits with status 64 and tells you to restore the original, so a typo in an environment file cannot quietly break the existing URL.</p>
+</section>
+<section>
+<h2>The one credential that does live inside the container</h2>
+<p>The state volume is owned by the same user that runs your shell. A malicious auto_map module executed in this workspace would find no SSH key and no cloud CLI profile, but it could read session.json and the password file beside it, and with them the link to this very terminal. It could also read /workspace and any token you exported in that shell, and the container has outbound network access because it has to reach the relay. Docker narrows what a hostile process can reach. It does not make hostile code safe to run.</p>
+<div class="callout"><p>The URL and password together are a bearer credential. Anyone holding both can view this terminal and type in it as the container user. Send them through separate channels, and treat the state volume and its backups as secrets.</p></div>
+<p>If the link leaks, run shell list inside the container to get the session ID, then shell password rotate with that ID. Per the CLI help, rotation generates a fresh password and URL salt without restarting the process and disconnects current viewers, and the host rewrites session.json with the new salt, key, and password. Changing the environment variable alone does not rotate stored state. Rotation cannot erase output somebody already saw, a limit <a href="https://shell.online/security/">the security model page</a> states directly. For a clean break, a new state volume gives a new identity and a new URL.</p>
+</section>
+<div class="cta"><h3>Put the next unfamiliar repo in a container with a link</h3><p>Clone the repo, run docker compose up --build -d, and read the link and password from the container log. The workspace and the link survive restarts, and your SSH keys never enter the picture.</p><a href="https://shell.online/">Try shell.online</a></div>`;
+---
+<BlogLayout
+  title="A Browser Terminal for a Docker Container That Keeps One Link Across Restarts, After the Unsloth Studio RCE"
+  description="A browser terminal for a Docker container with shell.online: one encrypted link across restarts, no SSH keys inside, and why the Unsloth RCE makes that matter."
+  date="October 2, 2026"
+  tags={["shell-online", "docker", "terminal-sharing", "ml-security", "end-to-end-encryption"]}
+  canonicalPath="/blog/a-browser-terminal-for-a-docker-container-that-keeps-one-link-across-restarts-af"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/a-browser-terminal-for-a-docker-container-that-keeps-one-link-across-restarts-af.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
