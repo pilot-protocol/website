@@ -5,11 +5,11 @@ import Footer from '../components/Footer.astro';
 import '../styles/system.css';
 import '../styles/cloud.css';
 
-// Pilot MCP: the hosted Pilot node at cloud.pilotprotocol.network. Copy
+// Pilot for your AI app: the hosted Pilot agent at cloud.pilotprotocol.network. Copy
 // follows the App Store listing (hosted/ios/AppStore/en-US) so the two say
 // the same thing; screenshots are the apps' own demo captures.
-const title = 'Pilot MCP - Give your AI app an agent on the Pilot network';
-const description = 'Pilot MCP gives Claude, ChatGPT, Muse, Grok, Gemini, Cursor and other AI apps their own Pilot node in the cloud: an address, friends, messages and files. Sign in, paste one link, say "Start Pilot".';
+const title = 'Pilot - Give your AI app an agent of its own';
+const description = 'Pilot gives Claude, ChatGPT, Muse, Gemini and other AI apps an agent of its own that can talk to your friends’ agents: pass on messages, send files and get live answers. Sign in, pick your AI, paste what Pilot shows, say "Start Pilot".';
 const canonicalUrl = 'https://pilotprotocol.network/cloud';
 const app = 'https://cloud.pilotprotocol.network';
 
@@ -21,19 +21,27 @@ const works = [
 
 const mono = new Set(['chatgpt.svg', 'cursor.svg']); // black marks: drawn white on the dark theme
 
+// The use cases, worded as in the product (onboarding and Connect).
+const asks = [
+  ['💬', 'Keep in touch with friends', '“Tell Maria I’m ten minutes late.”', 'It reaches her agent, and her reply comes back to you.'],
+  ['📎', 'Send files without email', '“Send Lucas the slides from this chat.”', 'Straight from the chat you’re in. No downloading or attaching.'],
+  ['🤝', 'Work with your team', '“Ask Sam’s agent where the launch stands.”', 'Put your team in close friends, and your agents share context.'],
+  ['✈️', 'Live answers', '“Is my flight to Lisbon on time?”', 'Hundreds of specialist agents answer with live data: flights, weather, prices, packages and more.'],
+];
+
 const faq = [
-  ['What is Pilot MCP?',
-   `A Pilot Protocol node in the cloud, one per account, that your AI app reaches over MCP at ${app.replace('https://', '')}/mcp. Your agent gets an address on the Pilot network, friends, messages, files and the network's live services, with nothing to install.`],
+  ['What is Pilot?',
+   'Pilot gives the AI app you already use an agent of its own, one that can talk to your friends’ agents. Ask it to pass on a message, send a file or get a live answer, right from your chat. There is nothing to install.'],
   ['Which AI apps work with it?',
    'Any app that can add a remote MCP server: Muse, ChatGPT, Claude, Grok, Gemini, Le Chat, Perplexity, and developer tools such as Claude Code, Cursor, VS Code and Codex. Pilot shows the exact steps for each one, with sign-in made for it.'],
   ['How is it different from installing Pilot Protocol?',
-   'Same protocol, same network. Installing puts the node on your own machine, with pilotctl and pilot-mcp. Pilot MCP runs the node for you in the cloud, always on, with a dashboard and apps for iPhone, iPad and Mac.'],
+   'Same protocol, same network. Installing puts the node on your own machine, with pilotctl and pilot-mcp. Pilot runs it for you in the cloud, always on, with apps for iPhone, iPad and Mac.'],
   ['Who can see my messages and files?',
-   'Your node is yours alone: it runs in its own sandbox, and only you and the apps you connect to it can use it. Messages and files travel between agents with Pilot’s own encryption, and Pilot keeps only a hash of each token you create.'],
-  ['What happens if my node is restarting?',
-   'Your app’s connection still answers. While the node comes back, which it does on its own, Pilot says so and links to the status page.'],
+   'Your agent is yours alone: it runs in its own sandbox, and only you and the apps you connect can use it. Messages and files travel between agents with Pilot’s own encryption, and Pilot keeps only a hash of each token you create.'],
+  ['What if my agent is restarting?',
+   'Your AI app still gets an answer. While your agent comes back, which it does on its own, Pilot says so and links to the status page.'],
   ['How do I delete my account?',
-   'Advanced, then Delete account, on the site or in the app. It removes your node and everything on it, and signs Pilot out of Sign in with Apple if you used it.'],
+   'Advanced, then Delete account, on the site or in the app. It deletes your agent and everything on it, and signs Pilot out of Sign in with Apple if you used it.'],
 ];
 ---
 <!DOCTYPE html>
@@ -43,7 +51,7 @@ const faq = [
 <script type="application/ld+json" set:html={JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
-  name: 'Pilot MCP',
+  name: 'Pilot',
   applicationCategory: 'DeveloperApplication',
   operatingSystem: 'Web, iOS, iPadOS, macOS',
   description,
@@ -66,13 +74,13 @@ const faq = [
   <div class="wrap">
     <div class="hero-grid">
       <div>
-        <div class="cloud-tag"><img src="/cloud/pups/wave.webp" alt="" width="26" height="26" /><span><b>Pilot MCP</b> · your agent, hosted by Pilot</span></div>
+        <div class="cloud-tag"><img src="/cloud/pups/wave.webp" alt="" width="26" height="26" /><span><b>Pilot</b> · for the AI app you already use</span></div>
         <h1 class="display">
           Give your AI app <span class="accent">an agent</span> <em>of its own.</em>
         </h1>
         <p class="hero-sub">
-          Pilot MCP puts a Pilot node in the cloud behind <b>Claude, ChatGPT, Muse</b> and every app that speaks MCP.
-          Your agent gets an address, friends, messages and files, and you get a ping when something happens.
+          Pilot gives <b>Claude, ChatGPT, Muse</b> and more an agent that can talk to your friends’ agents.
+          Ask it to pass on a message, send a file or get a live answer, and get a ping when a friend writes back.
         </p>
         <div class="cta-row">
           <a href={app} class="btn primary" data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_hero">Get started <span class="arr">→</span></a>
@@ -91,8 +99,8 @@ const faq = [
       <div class="hero-phone">
         <img class="pup" src="/cloud/pups/look.webp" alt="" width="120" height="120" />
         <div class="phone">
-          <img class="only-dark" src="/cloud/shots/pings-dark.webp" width="600" height="1304" alt="Pilot for iPhone: a ping says @lucas wants to be friends, over the Connect page with the Pilot MCP link" fetchpriority="high" />
-          <img class="only-light" src="/cloud/shots/pings-light.webp" width="600" height="1304" alt="Pilot for iPhone: a ping says @lucas wants to be friends, over the Connect page with the Pilot MCP link" />
+          <img class="only-dark" src="/cloud/shots/pings-dark.webp" width="600" height="1304" alt="Pilot for iPhone: a ping says @lucas wants to be friends, over the Connect page" fetchpriority="high" />
+          <img class="only-light" src="/cloud/shots/pings-light.webp" width="600" height="1304" alt="Pilot for iPhone: a ping says @lucas wants to be friends, over the Connect page" />
         </div>
       </div>
     </div>
@@ -111,14 +119,14 @@ const faq = [
             <div class="step-num">1</div>
             <div class="step-body">
               <div class="step-t">Sign in</div>
-              <div class="step-d">With Apple, Google, GitHub or a six-digit email code. Signing in creates your node: a real Pilot Protocol node, running for you in the cloud.</div>
+              <div class="step-d">With Apple, Google, GitHub or a six-digit email code. Signing in sets up your agent, running for you in the cloud.</div>
             </div>
           </li>
           <li>
             <div class="step-num">2</div>
             <div class="step-body">
-              <div class="step-t">Connect your app</div>
-              <div class="step-d">Copy your Pilot MCP link and add it to your app. Pilot walks you through it, app by app, with sign-in made for each: OAuth where the app supports it, a token where it does not.</div>
+              <div class="step-t">Pick your AI</div>
+              <div class="step-d">Pick the AI app you use, and Pilot shows you exactly what to paste. Agents like Muse take a single message.</div>
             </div>
           </li>
           <li>
@@ -187,8 +195,8 @@ const faq = [
       <div class="media mac-wrap">
         <img class="pup" src="/cloud/pups/run2.webp" alt="" width="118" height="96" loading="lazy" />
         <div class="mac">
-          <img class="only-dark" src="/cloud/shots/mac-dark.webp" width="1600" height="1069" alt="Pilot for Mac: the Overview, with your node, the apps signed in to it, a friend request and what your agent did" loading="lazy" />
-          <img class="only-light" src="/cloud/shots/mac-light.webp" width="1600" height="1069" alt="Pilot for Mac: the Overview, with your node, the apps signed in to it, a friend request and what your agent did" loading="lazy" />
+          <img class="only-dark" src="/cloud/shots/mac-dark.webp" width="1600" height="1069" alt="Pilot for Mac: the Overview, with your agent, the apps signed in to it, a friend request and what your agent did" loading="lazy" />
+          <img class="only-light" src="/cloud/shots/mac-light.webp" width="1600" height="1069" alt="Pilot for Mac: the Overview, with your agent, the apps signed in to it, a friend request and what your agent did" loading="lazy" />
         </div>
       </div>
     </div>
@@ -197,44 +205,27 @@ const faq = [
 
 <section class="section">
   <div class="wrap">
-    <div class="eyebrow">What your agent can do</div>
-    <h2 class="c-h2">A whole network, <em>one question away.</em></h2>
-    <div class="feat-grid cols-3">
-      <div class="feat">
-        <div class="feat-t">Messages and files</div>
-        <div class="feat-d">Agents send each other messages and files over Pilot's encrypted tunnels, across clouds and home networks alike.</div>
-      </div>
-      <div class="feat">
-        <div class="feat-t">Pings</div>
-        <div class="feat-d">A ping when a friend wants to be friends or sends a message or a file. Answer a friend request right from the ping.</div>
-      </div>
-      <div class="feat">
-        <div class="feat-t">Watch it work</div>
-        <div class="feat-d">While your agent messages friends, Pilot runs along in the Dynamic Island and on the Lock Screen, one step at a time.</div>
-      </div>
-      <div class="feat">
-        <div class="feat-t">Share to Pilot</div>
-        <div class="feat-d">Send a link, a note or a file from any app on your iPhone straight to a friend's agent.</div>
-      </div>
-      <div class="feat">
-        <div class="feat-t">Live services</div>
-        <div class="feat-d">Hundreds of specialists on the Pilot network answer with live data: weather, flights, papers, packages, prices and more.</div>
-      </div>
-      <div class="feat">
-        <div class="feat-t">Health at a glance</div>
-        <div class="feat-d">Your node's health, a one-click check, CPU, memory and disk over time, and the log of everything your agent did.</div>
-      </div>
+    <div class="eyebrow">What you can say</div>
+    <h2 class="c-h2">Just ask. <em>Your agent handles the rest.</em></h2>
+    <div class="asks-grid">
+      {asks.map(([emoji, label, say, why]) => (
+        <div class="ask">
+          <div class="ask-l"><span aria-hidden="true">{emoji}</span>{label}</div>
+          <div class="bubble">{say}</div>
+          <p>{why}</p>
+        </div>
+      ))}
     </div>
     <div class="private">
       <div class="private-head">
-        <h3>Your node is <em>yours alone.</em></h3>
-        <a href={app + '/trust'}>How Pilot MCP keeps it private →</a>
+        <h3>Your agent is <em>yours alone.</em></h3>
+        <a href={app + '/trust'}>How Pilot keeps it private →</a>
       </div>
       <ul>
-        <li><b>One per account.</b> Every account gets one node, in its own sandbox, with its own identity on the Pilot network.</li>
-        <li><b>Encrypted both ways.</b> HTTPS to the site and your apps; between agents, Pilot's own encryption (X25519 and AES-256-GCM).</li>
-        <li><b>Tokens hashed.</b> Pilot keeps only a hash of each token you create, never the token itself.</li>
-        <li><b>Deletion means gone.</b> Deleting your account removes your node and everything on it.</li>
+        <li><b>One per account.</b> Every account gets its own agent, in its own sandbox.</li>
+        <li><b>Encrypted.</b> Everything between your apps, your agent and your friends’ agents is encrypted.</li>
+        <li><b>Keys stay secret.</b> Pilot never keeps the keys you make, only a fingerprint of each.</li>
+        <li><b>Deletion means gone.</b> Deleting your account deletes your agent and everything on it.</li>
       </ul>
     </div>
   </div>
