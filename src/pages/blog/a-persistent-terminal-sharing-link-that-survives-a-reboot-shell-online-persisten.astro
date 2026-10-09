@@ -1,0 +1,79 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>Canonical published <a href="https://ubuntu.com/security/notices/USN-8903-1">USN-8903-1</a> on 8 October 2026, a Linux kernel update for Ubuntu 24.04 LTS and 22.04 LTS covering a long list of subsystems, from Netfilter and ext4 to KVM and Bluetooth. The notice ends the way kernel notices always do: "After a standard system update you need to reboot your computer to make all the necessary changes." If that machine is the one running your coding agent or a long job you watch from your phone, the reboot also kills the terminal you were sharing. This post is about getting a persistent terminal sharing link back afterwards: same URL, same password, nothing new to send to anyone.</p>
+
+<p>The tool is <span class="brand-shell">shell.online</span>, which we build at Pilot Protocol. Its default behaviour is deliberately short-lived, and the flag that changes that, <strong>--persistent</strong>, has limits worth knowing before you plan a reboot around it.</p>
+
+<section>
+<h2>What an ordinary share does when the host goes down</h2>
+<p>Run <strong>shell claude</strong> and <a href="https://shell.online/">shell.online prints a browser link, a password and a QR code</a> for the process it just started. The process and its PTY stay on your machine. The relay forwards end-to-end encrypted frames, and by default the generated browser password is ten characters, held only by you and whoever you give it to.</p>
+<p>That share is tied to the task. The <a href="https://shell.online/reliability/">reliability guide</a> puts it in three sentences: an ordinary disconnected share can recover its link for 12 hours, a known task exit closes the ordinary share, and a persistent identity can be reused but is not a process checkpoint. A reboot ends the process, so the ordinary link ends with it. When you start the agent again you get a new URL and a new password, and every phone, laptop or teammate holding the old pair has to be told again.</p>
+</section>
+
+<section>
+<h2>Keep the same terminal sharing link with --persistent</h2>
+<p>Point the share at a state file:</p>
+<pre><code>shell --persistent ~/.config/shell-online/refactor.state --name "auth refactor" claude</code></pre>
+<p>On first run the CLI creates the file and a fresh identity. After a reboot, run the same command with the same file and it resumes that identity with the relay, so the printed URL and password match what you sent out before. You can read exactly what goes into that file in <a href="https://github.com/TeoSlayer/shell.online/blob/main/cmd/shell/persistent.go">persistent.go in the shell.online repository</a>: a session ID derived from a random host token, the host token itself, the read-only and encryption flags, the URL fragment (the #salt= value), the encryption key and the browser password.</p>
+<p>Notice what is not in that list: the command. The state file pins the identity, not the program, which matters for coding agents. Claude Code's <a href="https://code.claude.com/docs/en/cli-reference">CLI reference</a> documents <strong>claude --continue</strong> as loading the most recent conversation in the current directory, and <strong>claude --resume</strong> as resuming a session by ID or name. So the command you run after the reboot can be the resume form:</p>
+<pre><code>cd ~/src/api
+shell --persistent ~/.config/shell-online/refactor.state claude --continue</code></pre>
+<p>The viewer on the phone reconnects to the same link and sees the agent pick up its conversation. The name carries over too: per the CLI help, a persistent session that restarts without <strong>--name</strong> keeps the name it had, including one given in the web app.</p>
+<p>The relay holds on to a persistent identity for a while when the host is offline. In <a href="https://github.com/TeoSlayer/shell.online/blob/main/shared/session-lifetime.ts">session-lifetime.ts</a> the disconnected expiry is 12 hours for an ordinary session and 30 days for a persistent one. A reboot, or a machine left off over a long weekend, fits comfortably inside that.</p>
+</section>
+
+<section>
+<h2>What comes back after the reboot, and what does not</h2>
+<ul>
+<li><strong>Comes back:</strong> the URL, the password, the session name, and the access mode.</li>
+<li><strong>Does not come back:</strong> the process. Process memory, open file handles, a dev server the agent had started, a half-finished test run: all gone. The CLI reference puts it in one line: "Does not restore process memory." Whatever continuity you get beyond the link comes from the program you rerun, here Claude Code reading its own transcript from disk.</li>
+<li><strong>Does not restart itself:</strong> shell.online does not register anything to relaunch the command at boot. The help text says plainly that nothing restarts it automatically. You run the command again, by hand or from whatever init system you already use.</li>
+<li><strong>Not after a crash, automatically:</strong> a clean exit or an orderly machine restart resumes. A crash that leaves a local record or control socket behind blocks the resume until you review and recover it explicitly. The CLI refuses rather than guessing which run owns the identity.</li>
+</ul>
+<p>That last point is a deliberate trade. The code reads the state file, checks it, reserves local control, and only then contacts the relay; if the file changed during that window, it refuses to resume. Two launches racing for the same identity would be worse than one launch that stops and asks.</p>
+</section>
+
+<section>
+<h2>Unattended upgrades make this a scheduling question</h2>
+<p>On Ubuntu, kernel fixes like USN-8903-1 can arrive through unattended-upgrades. Ubuntu's <a href="https://ubuntu.com/server/docs/how-to/software/automatic-updates/">automatic updates documentation</a> lists <strong>Unattended-Upgrade::Automatic-Reboot</strong>, false by default; when set to true, the system reboots without confirmation at the end of an upgrade run if a reboot was requested. <strong>Automatic-Reboot-Time</strong> defaults to now, and accepts an hh:mm time or a minute offset.</p>
+<p>If a box is configured to reboot itself, a persistent share turns that reboot from "find the new link" into "rerun one command". If it is not, the reboot is still yours to schedule, and the persistent link means the people watching do not need to be in the loop when you do.</p>
+</section>
+
+<section>
+<h2>The state file is a credential, so treat it like one</h2>
+<p>Everything a browser needs to open the session, plus what the host needs to claim it, sits in one small JSON file. The CLI writes it with mode 0600 and refuses to load a file that group or other users can read, with the error "persistent state must not be accessible by group or other users". The repository's <a href="https://github.com/TeoSlayer/shell.online/blob/main/.github/SECURITY.md">security policy</a> is explicit that publishing, broadly mounting or backing up that state outside shell.online is a disclosure on your side, not a product vulnerability. Keep it out of dotfile repos and out of backups that other people can restore.</p>
+<p>A long-lived link also means a long-lived bearer credential. Anyone holding the URL and password can view the session and, unless it is read-only, type with the permissions of the wrapped process. That is true of any share, but a link that survives for weeks has more time to end up somewhere it should not be. The CLI help recommends a longer password for sensitive or long-lived work, and you can set one before the state file is created:</p>
+<pre><code>SHELL_ONLINE_E2EE_PASSWORD='a-long-unique-passphrase' \\
+  shell --persistent ~/.config/shell-online/train.state --read-only python train.py</code></pre>
+<p>After creation the file is authoritative. If that variable is set on a later run and does not match the saved password, the CLI stops with "persistent state password does not match SHELL_ONLINE_E2EE_PASSWORD" rather than silently switching.</p>
+<div class="callout"><p>The access mode is fixed when the file is created. Rerun a read-only state file without <strong>--read-only</strong>, or the reverse, and the CLI refuses: "persistent state access/encryption mode does not match the requested flags". A watched link cannot quietly become a typed one across a restart.</p></div>
+<p>Two more constraints follow from the same design. <strong>--no-e2ee</strong> cannot be combined with <strong>--persistent</strong>, so a persistent share is always end-to-end encrypted (the CLI help lists what the relay still sees: authenticated ciphertext plus routing, size, timing, IP and lifecycle metadata; the <a href="https://shell.online/e2ee/">encryption guide</a> goes into the key derivation). And when you need to cut someone off, <strong>shell password rotate &lt;ID&gt;</strong> works on a persistent session without restarting it: it changes the password and URL salt, disconnects current viewers, and updates the state file so the next restart keeps the new credentials. Rotation cannot erase output a viewer already received.</p>
+</section>
+
+<section>
+<h2>A short checklist before the next kernel update</h2>
+<ol>
+<li>Start long-running agents and jobs with <strong>--persistent</strong> and a state file under a private directory, one file per session.</li>
+<li>Use <strong>--read-only</strong> for anything people only need to watch; the mode is locked into the file.</li>
+<li>Note the resume form of the command you are running (for Claude Code, <strong>claude --continue</strong> in the same directory), because the link comes back but the process does not.</li>
+<li>After the reboot, rerun with the same state file and check <strong>shell list</strong>.</li>
+<li>If a crash blocked the resume, review the leftover local record before recovering; do not delete state files to make the error go away.</li>
+</ol>
+<p>The flags are listed in the <a href="https://shell.online/cli/">CLI reference</a>, and the full source, including the tests around persistent state, is <a href="https://github.com/TeoSlayer/shell.online">MIT-licensed on GitHub</a>. For the basics of how a share is put together, our earlier post on <a href="https://pilotprotocol.network/blog/shell-online-live-terminal-browser-link">a live browser link for any terminal</a> walks through the first run.</p>
+</section>
+
+<div class="cta"><h3>One link, through the next reboot</h3><p>Install the CLI, start your agent with --persistent, and the URL and password you send today still work after tonight's kernel update.</p><a href="https://shell.online/">Try shell.online</a></div>
+`;
+---
+<BlogLayout
+  title="A Persistent Terminal Sharing Link That Survives a Reboot: shell.online --persistent After Ubuntu's October Kernel Update"
+  description="Keep a persistent terminal sharing link through a reboot: what shell.online --persistent restores, what it does not, and how to guard the state file."
+  date="October 9, 2026"
+  tags={["shell-online", "terminal-sharing", "linux", "coding-agents", "security"]}
+  canonicalPath="/blog/a-persistent-terminal-sharing-link-that-survives-a-reboot-shell-online-persisten"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/a-persistent-terminal-sharing-link-that-survives-a-reboot-shell-online-persisten.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
