@@ -1,0 +1,68 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>On October 8 the Go team shipped go1.26.9 and go1.27.2, and both include security fixes to <strong>net/http</strong>. That makes this a week of restarts. Every Go service you run locally has to be rebuilt on the new toolchain, and on most teams someone wants to see it come back up before it goes anywhere near staging. This post covers how to share a dev server's terminal with a teammate in the browser while the server itself stays on localhost. That is the useful split when the bug you are patching lives in the HTTP stack.</p>
+
+<section>
+<h2>What the two net/http fixes are</h2>
+<p>The Go vulnerability database lists two entries that touch most HTTP code. <a href="https://pkg.go.dev/vuln/GO-2026-6613">GO-2026-6613 (CVE-2026-94439)</a> is request smuggling over HTTP/1 CONNECT. If a handler sends a 2xx response to a CONNECT request and returns without hijacking the connection, the server keeps reading that connection as HTTP. A proxy in front of it, meanwhile, treats the same bytes as a tunnel. Jakub Ciolek is credited with the report.</p>
+<p><a href="https://pkg.go.dev/vuln/GO-2026-6617">GO-2026-6617 (CVE-2026-97032)</a> is a crash. An HTTP/2 server could modify its HPACK encoder from two goroutines at once: one encoding a HEADERS frame for a response, the other applying a client's SETTINGS change to the header table size. A client that repeats a request while changing the table size can take the server down. RyotaK of GMO Flatt Security reported it. On the 1.26 line both are fixed in go1.26.9. The <a href="https://go.dev/doc/devel/release">Go release history</a> lists that release on 2026-10-08, alongside fixes to crypto/tls, html/template, net/textproto, os and the go command.</p>
+</section>
+
+<section>
+<h2>A running process keeps the toolchain it was built with</h2>
+<p>Upgrading Go does nothing to a server that is already running. The binary in memory was linked against the old standard library, and it stays that way until you rebuild and restart it. For a compiled binary on disk, <a href="https://pkg.go.dev/cmd/go">go version</a> reports the Go version that built the file, and the -m flag adds the embedded module information:</p>
+<pre><code>go version -m ./bin/api</code></pre>
+<p>A go run dev loop rebuilds each time it starts, using whichever toolchain the go command selects. Once your install or the go.mod pin says 1.26.9, the restart is the upgrade.</p>
+<p>We went through the same thing in our own repo. On October 9 <a href="https://github.com/TeoSlayer/shell.online/pull/317">a pull request to shell.online</a> moved the Go pin from 1.26.8 to 1.26.9 in go.mod, the Dockerfile, scripts/build-cli.sh and the source-build docs. The reason was that <a href="https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck">govulncheck</a>, a required check on every PR, had started failing on both IDs in net/http@go1.26.8. That change is on main and listed under Unreleased in the changelog. The latest published CLI is still v0.25.0, so the rebuilt binary arrives with the next release. The README makes the same point about our own binary: installing an update does not restart existing sessions.</p>
+</section>
+
+<section>
+<h2>Share a dev server's terminal with a teammate, not its port</h2>
+<p>The usual shortcut for "come look at my dev server" is to tunnel the port to a public URL. During a week when the HTTP server is the thing being patched, that is a poor default. You are putting a development build of a stack with known request-handling bugs on the internet, often with debug routes switched on.</p>
+<p><a href="https://shell.online">shell.online gives the running process a browser link</a> and leaves the port alone. Wrap the restart:</p>
+<pre><code>shell --name "api on go1.26.9" -- go run ./cmd/api</code></pre>
+<p>The terminal prints a URL, an eight-character password and a QR code. Your teammate opens the link on a laptop or phone, enters the password and sees the same live terminal: the build output, the listen line, each request log as it arrives, and the stack trace if something panics. Any dev server works the same way. The README's own example is <strong>shell -- npm run dev</strong>.</p>
+<p>One detail matters for the patching workflow. <span class="brand-shell">shell.online</span> starts a new process. It does not attach to one that is already running. That suits a restart well: the moment you stop the old server to rebuild it is also the moment you start the new one under shell.</p>
+</section>
+
+<section>
+<h2>What the teammate gets, and what they don't</h2>
+<p>The link shares the terminal and nothing else. Your teammate cannot load the app through it, cannot send HTTP requests to it, and cannot reach localhost:8080 on your machine. If they need to hit the endpoint themselves, that is a separate tool and a separate exposure decision. In practice, being able to watch the logs while you run the requests covers most "does it come back up cleanly" checks.</p>
+<p>By default the link is interactive. Your teammate can type, press Ctrl-C and rerun the command, with your user's permissions. If they only need to watch, make that the rule when you start the session:</p>
+<pre><code>shell --read-only --name "api logs" -- go run ./cmd/api</code></pre>
+<p>Read-only rejects browser and MCP input, and you choose it when the session is created. If you started an interactive link and want to cut off access, run <strong>shell password rotate &lt;ID&gt;</strong>. It changes the password, disconnects current viewers and leaves the server running.</p>
+<div class="callout"><p>The URL and the password together are a bearer credential. Anyone holding both can view the session and, unless it is read-only, type into it as you. Send them over a channel you would trust with a shell on your machine, and keep the QR code off screen shares.</p></div>
+</section>
+
+<section>
+<h2>Edge cases while the server restarts</h2>
+<p>A share ends when its process exits. If your teammate presses Ctrl-C on <strong>go run</strong>, the server stops and so does the link. When you expect several rebuilds, start a shell instead and run the server inside it:</p>
+<pre><code>shell --name "api restarts"
+# then, inside the shared shell:
+go run ./cmd/api</code></pre>
+<p>Now Ctrl-C stops only the server. The shell, the link and the password survive, and either of you can start it again.</p>
+<p>Sessions run in the background by default, so closing the browser tab does not stop anything. On the host, <strong>shell list</strong> shows local sessions, <strong>shell attach &lt;ID&gt;</strong> joins one in your own terminal (Ctrl-X, then D detaches), and <strong>shell kill -- &lt;ID&gt;</strong> stops that process and closes its share. To make sure the link does not outlive the afternoon, start it with a deadline: <strong>shell --auto-close 2h -- go run ./cmd/api</strong>. The deadline can end the share early. It cannot keep the task alive after the task exits.</p>
+<p>Brief network drops are handled on both ends. The <a href="https://shell.online/reliability/">connection troubleshooting guide</a> says the CLI and the browser both retry temporary failures, and that the host restores the screen when a viewer comes back. It also says an ordinary disconnected share can recover its link for 12 hours. The host does have to stay awake and online. This is terminal sharing, not a cloud machine.</p>
+</section>
+
+<section>
+<h2>What the relay sees</h2>
+<p>Terminal traffic is end-to-end encrypted by default. The CLI encrypts frames before they reach the relay, and the browser decrypts them with a key derived from the password. The relay can see that a session exists and when it is active, but not the request logs inside it. That matters when those logs contain tokens or customer data from a seeded database. The <a href="https://shell.online/e2ee/">encryption details</a> and the <a href="https://shell.online/security/">security model</a> describe exactly which metadata stays visible. Passing <strong>--no-e2ee</strong> turns payload encryption off and leaves only HTTPS/WSS transport encryption. For a dev server's logs there is no good reason to do that.</p>
+<p>The CLI and the relay are both in <a href="https://github.com/TeoSlayer/shell.online">the MIT-licensed shell.online repository</a>, including the CHANGELOG entry for the 1.26.9 rebuild and the go.mod pin it changed. For an overview of the tool beyond this workflow, see <a href="https://pilotprotocol.network/blog/shell-online-live-terminal-browser-link">our introduction to shell.online</a>.</p>
+</section>
+
+<div class="cta"><h3>Restart on the patched toolchain, then share the terminal</h3><p>Install the CLI, wrap the dev server with shell, and send the link and password to the one person who needs them. Use read-only if they only need to watch.</p><a href="https://shell.online/">Try shell.online</a></div>
+`;
+---
+<BlogLayout
+  title="Share a Dev Server's Terminal With a Teammate, Not Its Port: Restarting on Go 1.26.9 After Two net/http Fixes"
+  description="Go 1.26.9 patches two net/http bugs. Share the dev server's terminal with a teammate in the browser while the server itself stays on localhost."
+  date="October 10, 2026"
+  tags={["shell-online", "golang", "terminal-sharing", "dev-server", "security"]}
+  canonicalPath="/blog/share-a-dev-servers-terminal-with-a-teammate-not-its-port-restarting-on-go-1-26"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/share-a-dev-servers-terminal-with-a-teammate-not-its-port-restarting-on-go-1-26.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
