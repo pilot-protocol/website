@@ -93,8 +93,8 @@
       "id": "io.pilot.generallegal",
       "name": "General Legal",
       "tagline": "Attorney-backed contract review and Delaware company formation — flat-fee legal work from a licensed US law firm",
-      "description": "General Legal is a Y Combinator-backed law firm. This app puts a licensed\nattorney and a Delaware filing desk behind your agent — contract review and\ncompany formation, in one namespace.\n\nThe two halves have different requirements. Formation works the moment you\ninstall. Contract review needs a General Legal account and an API key.\n\n### Company formation — nothing to set up\n\nNo account, no key, no configuration. Call\n`generallegal.formation_options` and it works on a fresh install.\n\nYou will still need to pay: `formation_start_llc` and\n`formation_start_c_corp` return a payment link, and the founder pays there.\nUse the founder's real details — this files an actual Delaware company.\n\n### Contract review — bring your own API key\n\n1. Sign up at https://portal.general.legal/signup\n2. Open the account menu and choose **API keys**\n   (https://portal.general.legal/api-keys)\n3. Create a key and copy it — the full value is shown **once**\n4. Import it into the app:\n\n```\nprintf '{\"GENERAL_LEGAL_API_KEY\":\"glk_YOUR_KEY\"}' > ~/.pilot/apps/io.pilot.generallegal/secrets.json\nchmod 600 ~/.pilot/apps/io.pilot.generallegal/secrets.json\npilotctl appstore restart io.pilot.generallegal\n```\n\nThe restart matters: the key is read at startup. Verify with\n`pilotctl appstore call io.pilot.generallegal generallegal.deals_list '{}'`.\nThe key stays on your machine, is never sent to the formation service, and\nscopes you to your own General Legal organization.\n\n### What it costs\n\nContract review is flat-fee, with no hourly billing and no minimums. The fee\ncovers every turn through signature, including negotiation with the\ncounterparty.\n\n| Work | Price |\n| --- | --- |\n| Contract, 3 pages or fewer | $250 |\n| Contract, 3-50 pages | $500 |\n| Contract, 50+ pages | $10 per page |\n| Drafting from scratch | $2,000 |\n| Delaware LLC | $190 instant / $210 standard / $260 next-day / $310 same-day |\n| Delaware C-corp | $218 standard / $268 next-day / $318 same-day |\n\n### What the app does\n\n**Company formation** — `formation_options` (free), `formation_start_llc`\n(**paid**), `formation_start_c_corp` (**paid**), `formation_status`,\n`formation_update`, `formation_documents` (free).\n\n**Contract review** — `deal_open` (**paid**), `document_upload` (**paid**),\n`thread_post` (**paid**, covered by the matter's flat fee), plus\n`deals_list`, `deal_get`, `thread_get`, `contracts_list`, `contract_get`,\n`version_download_link` (free) and `upload_begin`, `upload_chunk`,\n`upload_abort` (free — a document is staged in chunks because a single call\ncannot carry a file).\n\n### What costs money\n\nFive methods spend real money and will not warn you first:\n`formation_start_llc`, `formation_start_c_corp`, `deal_open`,\n`document_upload` and `thread_post`. Every other method is free.\n`generallegal.help` lists them under `billable_methods` with the price.",
-      "summary": "General Legal is a Y Combinator-backed law firm. This app puts a licensed attorney and a Delaware filing desk behind your agent — contract review and company formation, in one namespace. The two halves have different requirements. Formation works the moment you install. Contract review needs a General Legal account and an API key. Company formation — nothing to set up No account, no key, no configuration. Call…",
+      "description": "General Legal is a Y Combinator-backed law firm. This app puts a licensed\nattorney and a Delaware filing desk behind your agent — contract review and\ncompany formation, in one namespace.\n\nNothing here needs a browser. Formation works the moment you install;\ncontract review needs a General Legal account, which the agent can open\nitself in three calls.\n\n### Company formation — nothing to set up\n\nNo account, no key, no configuration. Call\n`generallegal.formation_options` and it works on a fresh install.\n\nYou will still need to pay: `formation_start_llc` and\n`formation_start_c_corp` return a payment link, and the founder pays there.\nUse the founder's real details — this files an actual Delaware company.\n\n### Contract review — sign up from the agent\n\n1. `generallegal.signup_terms` returns the engagement letter (PDF). Read it:\n   accepting it engages General Legal as your company's counsel.\n2. `generallegal.signup` with the company name, a contact email you can\n   read, and a US billing city/state/ZIP. A six-digit code is emailed.\n3. `generallegal.signup_complete` with the `signup_id`, the code and\n   `engagement_letter_accepted: true`.\n\nGeneral Legal issues one API key. The app saves it on this host and sends it\non every later call. It never appears in the reply, and you don't need to\nrestart. Verify with `generallegal.deals_list`. The key scopes you to your\nown General Legal organization and is never sent to the formation service.\n\nAlready have a key from https://portal.general.legal/api-keys? Save it with\n`generallegal.set_key '{\"api_key\":\"glk_...\"}'`. Lost it? Use\n`generallegal.key_recover`, then `generallegal.key_recover_complete`. This\nissues a replacement and revokes the old key.\n\n### What it costs\n\nContract review is flat-fee, with no hourly billing and no minimums. The fee\ncovers every turn through signature, including negotiation with the\ncounterparty.\n\n| Work | Price |\n| --- | --- |\n| Contract, 3 pages or fewer | $250 |\n| Contract, 3-50 pages | $500 |\n| Contract, 50+ pages | $10 per page |\n| Drafting from scratch | $2,000 |\n| Delaware LLC | $190 instant / $210 standard / $260 next-day / $310 same-day |\n| Delaware C-corp | $218 standard / $268 next-day / $318 same-day |\n\n### What the app does\n\n**Company formation** — `formation_options` (free), `formation_start_llc`\n(**paid**), `formation_start_c_corp` (**paid**), `formation_status`,\n`formation_update`, `formation_documents` (free).\n\n**Contract review** — `deal_open` (**paid**), `document_upload` (**paid**),\n`thread_post` (**paid**, covered by the matter's flat fee), plus\n`deals_list`, `deal_get`, `thread_get`, `contracts_list`, `contract_get`,\n`version_download_link` (free) and `upload_begin`, `upload_chunk`,\n`upload_abort` (free — a document is staged in chunks because a single call\ncannot carry a file).\n\n**Account** — `signup_terms`, `signup`, `signup_resend`,\n`signup_complete`, `key_recover`, `key_recover_complete`, `set_key` (all\nfree; signing up costs nothing until you open a matter).\n\n### What costs money\n\nFive methods spend real money and will not warn you first:\n`formation_start_llc`, `formation_start_c_corp`, `deal_open`,\n`document_upload` and `thread_post`. Every other method is free.\n`generallegal.help` lists them under `billable_methods` with the price.",
+      "summary": "General Legal is a Y Combinator-backed law firm. This app puts a licensed attorney and a Delaware filing desk behind your agent — contract review and company formation, in one namespace. Nothing here needs a browser. Formation works the moment you install; contract review needs a General Legal account, which the agent can open itself in three calls. Company formation — nothing to set up No account, no key, no…",
       "categories": [
         "work"
       ],
@@ -111,7 +111,7 @@
         "llc",
         "c-corp"
       ],
-      "version": "0.1.0",
+      "version": "0.2.0",
       "vendor": "General Legal",
       "vendor_url": "https://general.legal",
       "license": "Apache-2.0",
@@ -155,8 +155,50 @@
           "gated": ""
         },
         {
+          "name": "generallegal.signup_terms",
+          "summary": "URL of the engagement letter (PDF) an agent accepts at signup. Free, no account needed. Read it before generallegal.signup_complete — accepting engages General Legal as your company's counsel.",
+          "example": "",
+          "gated": ""
+        },
+        {
+          "name": "generallegal.signup",
+          "summary": "Open a General Legal account from the agent — no portal. Takes the company name, a contact email you can read and a US billing city/state/ZIP; a six-digit code is emailed. Free.",
+          "example": "",
+          "gated": ""
+        },
+        {
+          "name": "generallegal.signup_resend",
+          "summary": "Re-send the six-digit signup code for a pending signup. Free.",
+          "example": "",
+          "gated": ""
+        },
+        {
+          "name": "generallegal.signup_complete",
+          "summary": "Finish signup with the emailed code and engagement_letter_accepted: true. The issued API key is saved on this host and used on every later call — never shown, no restart. Free.",
+          "example": "",
+          "gated": ""
+        },
+        {
+          "name": "generallegal.key_recover",
+          "summary": "Lost the key? Emails a six-digit code to the account's contact address. Free.",
+          "example": "",
+          "gated": ""
+        },
+        {
+          "name": "generallegal.key_recover_complete",
+          "summary": "Finish key recovery with the emailed code. Saves a replacement key on this host and revokes the old one. Free.",
+          "example": "",
+          "gated": ""
+        },
+        {
+          "name": "generallegal.set_key",
+          "summary": "Already have a key from portal.general.legal/api-keys? Save it on this host with {\"api_key\":\"glk_...\"}. Local, free.",
+          "example": "",
+          "gated": ""
+        },
+        {
           "name": "generallegal.deals_list",
-          "summary": "List your matters, paginated, with an optional status filter. Free. Needs your General Legal API key.",
+          "summary": "List your matters, paginated, with an optional status filter. Free. Needs a General Legal account — open one with generallegal.signup.",
           "example": "",
           "gated": ""
         },
@@ -235,6 +277,16 @@
       ],
       "changelog": [
         {
+          "version": "0.2.0",
+          "date": "2026-10-05",
+          "notes": [
+            "Contract review without the portal: the agent opens its own General Legal account with generallegal.signup and generallegal.signup_complete (emailed code + engagement letter).",
+            "The issued key is saved on the host, never shown, and used with no restart. generallegal.set_key saves a portal key; key_recover replaces a lost one.",
+            "Calls that need an account now say how to get one instead of failing with a bare 401.",
+            "Now runs on macOS and Linux, Intel and ARM (0.1.0 was Linux x86-64 only)."
+          ]
+        },
+        {
           "version": "0.1.0",
           "date": "2026-08-29",
           "notes": [
@@ -247,6 +299,7 @@
       "grants": [
         "fs.read:$APP/config.json",
         "fs.read:$APP/secrets.json",
+        "fs.write:$APP/secrets.json",
         "fs.read:$APP/blobs",
         "fs.write:$APP/blobs",
         "net.dial:api.general.legal",
@@ -269,15 +322,31 @@
         {
           "label": "New matters",
           "value": "25 / day per organization"
+        },
+        {
+          "label": "Account",
+          "value": "Opened by the agent — emailed code, no portal"
         }
       ],
       "bundles": [
         {
           "platform": "linux-amd64",
-          "bytes": 5074207
+          "bytes": 5160557
+        },
+        {
+          "platform": "linux-arm64",
+          "bytes": 4729360
+        },
+        {
+          "platform": "darwin-arm64",
+          "bytes": 4994209
+        },
+        {
+          "platform": "darwin-amd64",
+          "bytes": 5331977
         }
       ],
-      "installed_bytes": 0,
+      "installed_bytes": 9320989,
       "depends": [],
       "protection": "shareable",
       "featured": false,
@@ -301,11 +370,11 @@
         "go"
       ],
       "published_at": "2026-08-29",
-      "updated_at": "2026-08-29",
+      "updated_at": "2026-10-05",
       "product_demo": {
         "skill": "io.pilot.generallegal",
         "title": "Full usage demo",
-        "when_to_use": "When a contract needs a licensed attorney to review, redline or draft it, or when an agent needs its own Delaware company. Formation works on a fresh install; contract review needs your own General Legal API key.",
+        "when_to_use": "When a contract needs a licensed attorney to review, redline or draft it, or an agent needs its own Delaware company. Formation needs no account; contract review needs one, which the agent opens itself.",
         "metered": false,
         "quickstart": {
           "title": "",
@@ -313,7 +382,7 @@
           "command": "pilotctl appstore call io.pilot.generallegal generallegal.formation_options '{\"entity_type\":\"llc\"}'",
           "expect": "{\"options\":[{\"filing_speed\":\"instant\",\"total_cents\":19000},{\"filing_speed\":\"standard\",\"total_cents\":21000}]}",
           "cost": "",
-          "note": "Free, and it needs no account or key at all — the fastest way to confirm the app works. Contract review is the half that needs a key; see the examples."
+          "note": "Free, and it needs no account or key at all — the fastest way to confirm the app works. Contract review needs an account; the agent opens one itself with generallegal.signup (see the examples)."
         },
         "examples": [
           {
@@ -333,12 +402,20 @@
             "note": "Free. Repeat only after poll_after_seconds. When complete, generallegal.formation_documents returns short-lived links."
           },
           {
-            "title": "Bring your own key, then confirm it works",
-            "goal": "Authenticate as your own General Legal organization",
-            "command": "pilotctl appstore call io.pilot.generallegal generallegal.deals_list '{\"page\":1,\"page_size\":5}'",
-            "expect": "{\"items\":[...],\"total\":n} once the key is in place; 401 until then",
+            "title": "Open a General Legal account from the agent",
+            "goal": "Read the engagement letter, then start signup",
+            "command": "pilotctl appstore call io.pilot.generallegal generallegal.signup '{\"company_name\":\"Acme Inc\",\"contact_email\":\"legal@acme.com\",\"billing_city\":\"Dover\",\"billing_state\":\"DE\",\"billing_zip\":\"19901\"}'",
+            "expect": "{\"signup_id\":\"...\",\"status\":\"...\",\"engagement_letter_url\":\"https://portal.general.legal/...pdf\"}",
             "cost": "",
-            "note": "Contract review only. Sign up at https://portal.general.legal/signup, then account menu -> API keys (shown once). Import: printf '{\"GENERAL_LEGAL_API_KEY\":\"glk_YOUR_KEY\"}' > ~/.pilot/apps/io.pilot.generallegal/secrets.json && chmod 600 ~/.pilot/apps/io.pilot.generallegal/secrets.json && pilotctl appstore restart io.pilot.generallegal"
+            "note": "Free. No portal, no browser. A six-digit code is emailed to contact_email — use an address someone actually reads. generallegal.signup_terms returns the same engagement letter URL; read it before accepting, because accepting engages General Legal as the company's counsel."
+          },
+          {
+            "title": "Finish signup — the key is saved for you",
+            "goal": "Trade the emailed code for an API key stored on this host",
+            "command": "pilotctl appstore call io.pilot.generallegal generallegal.signup_complete '{\"signup_id\":\"<signup_id>\",\"code\":\"123456\",\"engagement_letter_accepted\":true}'",
+            "expect": "{\"client_id\":\"...\",\"api_key\":\"saved on this host as GENERAL_LEGAL_API_KEY; sent on every call\"}",
+            "cost": "",
+            "note": "Free. The key is written to $APP/secrets.json and redacted from the reply; every later call carries it with no restart. Already have a portal key? generallegal.set_key '{\"api_key\":\"glk_...\"}'. Lost it? generallegal.key_recover then key_recover_complete (revokes the old key)."
           },
           {
             "title": "Ask an attorney to review a contract",
@@ -355,27 +432,19 @@
             "expect": "{\"blob_id\":\"a1b2...\",\"max_chunk_bytes\":524288,\"next_seq\":0}",
             "cost": "",
             "note": "Then generallegal.upload_chunk with seq 0,1,2... and base64 of at most max_chunk_bytes raw bytes. The last returns complete:true. Finally generallegal.document_upload with the blob_id and deal_id (BILLABLE)."
-          },
-          {
-            "title": "Collect the released redline",
-            "goal": "Get a downloadable link to counsel's version",
-            "command": "pilotctl appstore call io.pilot.generallegal generallegal.version_download_link '{\"version_id\":\"v-07...\"}'",
-            "expect": "{\"file_name\":\"nda-redline.docx\",\"download_url\":\"https://...\",\"download_token_expires_at\":\"...\"}",
-            "cost": "",
-            "note": "Free. The URL needs no auth and expires in ~15 minutes - fetch it yourself. Find version ids via generallegal.deal_get or generallegal.contract_get."
           }
         ],
         "cost": null,
         "gotchas": [
-          "Two halves, different requirements. Company formation needs no account and no key. Contract review needs a General Legal account and an API key imported.",
-          "For contract review: sign up at portal.general.legal/signup, mint a key under API keys, write it to $APP/secrets.json, then restart the app - the key is read at startup.",
+          "Two halves, different requirements. Company formation needs no account and no key. Contract review needs a General Legal account — open it from the agent with generallegal.signup, then generallegal.signup_complete with the emailed code.",
+          "Signup engages a law firm: signup_complete requires engagement_letter_accepted:true. Read the letter from generallegal.signup_terms first, and only accept on behalf of a company that has authorised it.",
           "Five methods spend money: deal_open and document_upload are flat-fee per contract ($250/$500/$10-per-page/$2,000); formation_start_llc and formation_start_c_corp file a real company ($190-$318); thread_post is covered by the matter's fee.",
           "A document cannot ride in one call. Use upload_begin then upload_chunk (<=512 KiB raw each) and pass the blob_id. A blob is single-use and dropped once sent.",
           "Matters reach a real attorney and formations file a real company. Neither is a sandbox - confirm before calling a billable method.",
           "Contract-review limits are per organization: 120 reads/min, 25 new matters/day, 50 uploads/day. Honour Retry-After on a 429."
         ],
         "next": [
-          "generallegal.formation_options to price a company, or generallegal.deals_list to see the matters your key can reach.",
+          "generallegal.formation_options to price a company, or generallegal.signup to open the account contract review needs.",
           "generallegal.help lists every method and marks exactly which ones cost money."
         ]
       }
