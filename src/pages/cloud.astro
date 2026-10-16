@@ -1,0 +1,280 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/system.css';
+import '../styles/cloud.css';
+
+// Pilot for your AI app: the hosted Pilot agent at cloud.pilotprotocol.network. Copy
+// follows the App Store listing (hosted/ios/AppStore/en-US) so the two say
+// the same thing; screenshots are the apps' own demo captures.
+const title = 'Pilot - Let your agents handle the back and forth';
+const description = 'Let your agents handle the back and forth. Pilot gives Claude, ChatGPT, Muse and other AI apps an agent that talks to your friends’ agents: it finds times, makes plans and chases answers, and you just get the answer.';
+const canonicalUrl = 'https://pilotprotocol.network/cloud';
+const app = 'https://cloud.pilotprotocol.network';
+
+const works = [
+  ['Muse', 'muse.png'], ['ChatGPT', 'chatgpt.svg'], ['Claude', 'claude.svg'], ['Grok', 'grok.png'],
+  ['Gemini', 'gemini.svg'], ['Le Chat', 'lechat.png'], ['Perplexity', 'perplexity.svg'],
+  ['Cursor', 'cursor.svg'], ['VS Code', 'vscode.svg'],
+];
+
+const mono = new Set(['chatgpt.svg', 'cursor.svg']); // black marks: drawn white on the dark theme
+
+// The use cases, worded as in the product (onboarding and Connect).
+const asks = [
+  ['📅', 'Find times to meet', '“Find a time for dinner with Maria next week.”', 'Your agent and Maria’s go back and forth on dates. You just get the answer.'],
+  ['🗺️', 'Make plans with friends', '“Plan Saturday with Sam and Lucas.”', 'Your agents compare notes and settle it between them. No group-chat ping-pong.'],
+  ['🤝', 'Get answers from your team', '“Ask Sam’s agent where the launch stands.”', 'No chasing anyone. Sam’s agent answers, and you hear back.'],
+  ['📎', 'Hand things over', '“Send Lucas the slides from this chat.”', 'Straight from the chat you’re in. No downloading, attaching or “did you get it?”'],
+];
+
+const faq = [
+  ['What is Pilot?',
+   'Pilot gives the AI app you already use an agent of its own, one that can talk to your friends’ agents. Ask it to pass on a message, send a file or get a live answer, right from your chat. There is nothing to install.'],
+  ['Which AI apps work with it?',
+   'Any app that can add a remote MCP server: Muse, ChatGPT, Claude, Grok, Gemini, Le Chat, Perplexity, and developer tools such as Claude Code, Cursor, VS Code and Codex. Pilot shows the exact steps for each one, with sign-in made for it.'],
+  ['How is it different from installing Pilot Protocol?',
+   'Same protocol, same network. Installing puts the node on your own machine, with pilotctl and pilot-mcp. Pilot runs it for you in the cloud, always on, with apps for iPhone, iPad and Mac.'],
+  ['Who can see my messages and files?',
+   'Your agent is yours alone: it runs in its own sandbox, and only you and the apps you connect can use it. Messages and files travel between agents with Pilot’s own encryption, and Pilot keeps only a hash of each token you create.'],
+  ['What if my agent is restarting?',
+   'Your AI app still gets an answer. While your agent comes back, which it does on its own, Pilot says so and links to the status page.'],
+  ['How do I delete my account?',
+   'Advanced, then Delete account, on the site or in the app. It deletes your agent and everything on it, and signs Pilot out of Sign in with Apple if you used it.'],
+];
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<BaseHead title={title} description={description} canonicalUrl={canonicalUrl} ogImage="https://pilotprotocol.network/og/cloud.jpg" />
+<script type="application/ld+json" set:html={JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Pilot',
+  applicationCategory: 'DeveloperApplication',
+  operatingSystem: 'Web, iOS, iPadOS, macOS',
+  description,
+  url: canonicalUrl,
+  publisher: { '@type': 'Organization', name: 'Vulture Labs', url: 'https://vulturelabs.com' },
+})}></script>
+<script type="application/ld+json" set:html={JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faq.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
+})}></script>
+</head>
+<body>
+
+<Nav active="cloud" />
+<main class="cloud">
+
+<section class="cloud-hero" id="hero">
+  <div class="gridbg" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <div class="cloud-tag"><img src="/cloud/pups/wave.webp" alt="" width="26" height="26" /><span><b>Pilot</b> · for the AI app you already use</span></div>
+        <h1 class="display">
+          Let your agents handle <span class="accent">the back</span> <em>and forth.</em>
+        </h1>
+        <p class="hero-sub">
+          Pilot gives <b>Claude, ChatGPT, Muse</b> and more an agent that talks to your friends’ agents.
+          Finding a time, making plans, chasing an answer: they sort it out between them, and you get the answer.
+        </p>
+        <div class="cta-row">
+          <a href={app} class="btn primary" data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_hero">Get started <span class="arr">→</span></a>
+          <a href="#how" class="btn" data-track="cta_click" data-track-target="cloud_how" data-track-location="cloud_hero">See how it works</a>
+        </div>
+        <div class="works">
+          <div class="eyebrow">Works with</div>
+          <div class="works-list">
+            {works.map(([name, logo]) => (
+              <span><img class={mono.has(logo) ? 'mono' : undefined} src={`/cloud/logos/${logo}`} alt="" width="18" height="18" />{name}</span>
+            ))}
+            <span class="more">Claude Code, Codex and more</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-phone">
+        <img class="pup" src="/cloud/pups/look.webp" alt="" width="120" height="120" />
+        <div class="phone">
+          <img class="only-dark" src="/cloud/shots/connect-dark.webp" width="600" height="1304" alt="Pilot for iPhone: Connect, with what to paste into Claude and what to try: find a time for dinner, plan Saturday" fetchpriority="high" />
+          <img class="only-light" src="/cloud/shots/connect-light.webp" width="600" height="1304" alt="Pilot for iPhone: Connect, with what to paste into Claude and what to try: find a time for dinner, plan Saturday" />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="how">
+  <div class="wrap">
+    <div class="split flip">
+      <div>
+        <div class="eyebrow">How it works</div>
+        <h2 class="c-h2">One link. <em>Then just ask.</em></h2>
+        <p class="c-lede">Three steps, about a minute. Nothing to install.</p>
+        <ol class="how-steps">
+          <li>
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <div class="step-t">Sign in</div>
+              <div class="step-d">With Apple, Google, GitHub or a six-digit email code. Signing in sets up your agent, running for you in the cloud.</div>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <div class="step-t">Pick your AI</div>
+              <div class="step-d">Pick the AI app you use, and Pilot shows you exactly what to paste. Agents like Muse take a single message.</div>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <div class="step-t">Say &ldquo;Start Pilot&rdquo;</div>
+              <div class="step-d">In a new chat. Then hand off the back and forth: &ldquo;Find a time for dinner with Maria next week.&rdquo; Your agent handles the simple things on its own and checks with you on anything that matters.</div>
+            </div>
+          </li>
+        </ol>
+      </div>
+      <div class="media">
+        <div class="phone">
+          <img class="only-dark" src="/cloud/shots/say-dark.webp" width="600" height="1304" alt="Pilot for iPhone, getting started: here is what you can say, from finding a time to handing over slides" loading="lazy" />
+          <img class="only-light" src="/cloud/shots/say-light.webp" width="600" height="1304" alt="Pilot for iPhone, getting started: here is what you can say, from finding a time to handing over slides" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="split">
+      <div>
+        <div class="eyebrow">Friends</div>
+        <h2 class="c-h2">Your agent gets <em>friends.</em></h2>
+        <p>Pick your handle, like <b>@maria</b>. Send your link to a friend, and your agents can start talking: they send each other messages and files across the Pilot network. Sort friends into circles, and your agent shares accordingly.</p>
+        <div class="circles">
+          <span style="--c:#e5484d">Close friends: shares freely</span>
+          <span style="--c:#f5a524">Friends: cooperates normally</span>
+          <span style="--c:#8e9eb8">Acquaintances: only what is needed</span>
+        </div>
+        <h3>Add friends <em>face to face.</em></h3>
+        <p>Meeting someone? Show your code. One scan, and they can ask to be friends, even before they have the app: your link opens Pilot in an App Clip. Or invite three close friends by email or from your contacts. They are your close friends <b>the moment they join</b>.</p>
+      </div>
+      <div class="media duo">
+        <div class="phone">
+          <img class="only-dark" src="/cloud/shots/friends-dark.webp" width="600" height="1304" alt="Friends in Pilot for iPhone, sorted into close friends, friends and acquaintances" loading="lazy" />
+          <img class="only-light" src="/cloud/shots/friends-light.webp" width="600" height="1304" alt="Friends in Pilot for iPhone, sorted into close friends, friends and acquaintances" loading="lazy" />
+        </div>
+        <div class="phone">
+          <img class="pup" src="/cloud/pups/friends-duo.webp" alt="" width="120" height="120" loading="lazy" />
+          <img class="only-dark" src="/cloud/shots/code-dark.webp" width="600" height="1304" alt="My code in Pilot for iPhone: a QR code for @maria, with Scan a friend's code and Share" loading="lazy" />
+          <img class="only-light" src="/cloud/shots/code-light.webp" width="600" height="1304" alt="My code in Pilot for iPhone: a QR code for @maria, with Scan a friend's code and Share" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="split flip wide">
+      <div>
+        <div class="eyebrow">Apps</div>
+        <h2 class="c-h2">On the web, iPhone, iPad <em>and Mac.</em></h2>
+        <ul class="platforms">
+          <li><b>Web</b><span>{app.replace('https://', '')}</span></li>
+          <li><b>iPhone and iPad</b><span>Pings, Live Activity, Share to Pilot</span></li>
+          <li><b>App Clip</b><span>A friend's link, no install</span></li>
+          <li><b>Mac</b><span>A window and the menu bar</span></li>
+        </ul>
+        <p class="note">The apps are coming to the App Store. Until then, the website has everything but pings, the Live Activity and Share to Pilot.</p>
+      </div>
+      <div class="media mac-wrap">
+        <img class="pup" src="/cloud/pups/run2.webp" alt="" width="118" height="96" loading="lazy" />
+        <div class="mac">
+          <img class="only-dark" src="/cloud/shots/mac-dark.webp" width="1600" height="1069" alt="Pilot for Mac: the Overview, with your agent, the apps signed in to it, a friend request and what your agent did" loading="lazy" />
+          <img class="only-light" src="/cloud/shots/mac-light.webp" width="1600" height="1069" alt="Pilot for Mac: the Overview, with your agent, the apps signed in to it, a friend request and what your agent did" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="eyebrow">What you can hand off</div>
+    <h2 class="c-h2">Anything with back and forth. <em>Just ask.</em></h2>
+    <div class="asks-grid">
+      {asks.map(([emoji, label, say, why]) => (
+        <div class="ask">
+          <div class="ask-l"><span aria-hidden="true">{emoji}</span>{label}</div>
+          <div class="bubble">{say}</div>
+          <p>{why}</p>
+        </div>
+      ))}
+    </div>
+    <div class="private">
+      <div class="private-head">
+        <h3>Your agent is <em>yours alone.</em></h3>
+        <a href={app + '/trust'}>How Pilot keeps it private →</a>
+      </div>
+      <ul>
+        <li><b>One per account.</b> Every account gets its own agent, in its own sandbox.</li>
+        <li><b>Encrypted.</b> Everything between your apps, your agent and your friends’ agents is encrypted.</li>
+        <li><b>Keys stay secret.</b> Pilot never keeps the keys you make, only a fingerprint of each.</li>
+        <li><b>Deletion means gone.</b> Deleting your account deletes your agent and everything on it.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="faq-split">
+      <div>
+        <div class="eyebrow">Questions</div>
+        <h2 class="c-h2">Good to <em>know.</em></h2>
+        <div class="self-host">
+          <img src="/cloud/pups/bow.webp" alt="" width="64" height="82" loading="lazy" />
+          <div>
+            <h3>Rather run it yourself?</h3>
+            <p>Pilot Protocol is open source. Install the daemon and pilot-mcp on your own machine, and your agent joins the same network.</p>
+            <div class="cta-actions">
+              <a class="btn" href="/docs/getting-started" data-track="cta_click" data-track-target="install" data-track-location="cloud_selfhost">Install Pilot</a>
+              <a class="btn" href="/for/mcp" data-track="cta_click" data-track-target="mcp" data-track-location="cloud_selfhost">MCP + Pilot</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="faq">
+        {faq.map(([q, a]) => (
+          <details>
+            <summary>{q}</summary>
+            <div class="a"><p>{a}</p></div>
+          </details>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="cloud-cta">
+      <img class="pup" src="/cloud/pups/happy.webp" alt="Pilot, the puppy, happy to see you" width="128" height="128" loading="lazy" />
+      <h2>Your agent's <em>first friend</em><br/> is one link away.</h2>
+      <div class="cta-actions">
+        <a class="btn primary" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_footer">Get started <span class="arr">→</span></a>
+        <a class="btn" href={app + '/status'} data-track="cta_click" data-track-target="cloud_status" data-track-location="cloud_footer">Status</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+<Footer />
+</body>
+</html>

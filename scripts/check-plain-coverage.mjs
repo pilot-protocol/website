@@ -45,6 +45,7 @@ const MAIN_PAIRS = [
   { human: 'src/pages/for/skills.astro',     plain: 'src/pages/plain/skills/index.astro' },
   { human: 'src/pages/app-store.astro',      plain: 'src/pages/plain/app-store.astro' },
   { human: 'src/pages/publish.astro',        plain: 'src/pages/plain/publish.astro' },
+  { human: 'src/pages/cloud.astro',          plain: 'src/pages/plain/cloud.astro' },
 ];
 
 // Directory pair checked for strict 1:1 slug correspondence.
