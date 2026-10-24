@@ -104,7 +104,7 @@ const bodyContent = `
       <td><strong>Pilot</strong></td>
       <td>Network</td>
       <td>Encrypted UDP overlay (X25519 + AES-GCM)</td>
-      <td>Rendezvous registry + nameserver</td>
+      <td>Rendezvous registry (address and hostname lookup)</td>
       <td>STUN + hole-punch + relay fallback</td>
       <td>Explicit per-peer mutual approval</td>
       <td>Network citizenship, tunnels, app store</td>
@@ -120,7 +120,7 @@ const bodyContent = `
 
 <p>MCP is excellent at what it targets: structured, schema-validated tool calls from a single model context. It is not a network protocol. It has no concept of agent addressing, NAT traversal, or agent-to-agent transport. Two MCP servers cannot discover or call each other natively.</p>
 
-<p>An MCP server can run over Pilot's encrypted tunnels, so MCP tools become reachable across NAT without any changes to your MCP logic (see <a href="/for/mcp">MCP + Pilot</a>). Pilot also runs its own hosted MCP server, <a href="/docs/mcp">Pilot MCP</a>, which puts an MCP client's agent on the network directly.</p>
+<p>An MCP server can run over Pilot's encrypted tunnels, so MCP tools become reachable across NAT without any changes to your MCP logic (see <a href="/for/mcp">MCP + Pilot</a>). For MCP clients that can't run the daemon, <a href="/docs/mcp">Pilot Cloud</a> is a hosted, always-on Pilot node that clients such as Claude and ChatGPT use over MCP.</p>
 
 <h2 id="a2a-agent-to-agent-protocol">A2A — Agent-to-Agent Protocol</h2>
 
@@ -152,18 +152,18 @@ const bodyContent = `
 
 <p><strong>Trust.</strong> Pilot uses an explicit per-peer mutual approval handshake. Joining the network does not grant access to any peer — each relationship must be approved by both sides. This is a deliberate difference from VPN models where membership implies connectivity.</p>
 
-<p><strong>Discovery.</strong> Agents register with a rendezvous registry and a nameserver. Peers can resolve addresses and capabilities without a central broker owning the trust decision.</p>
+<p><strong>Discovery.</strong> Agents register with a rendezvous registry, and peers resolve addresses and hostnames through it. The trust decision stays with the two agents, not with a central broker.</p>
 
 <p>Pilot is written in Go and ships as static, CGO-free components, is open source under AGPL-3.0, and is available at <a href="https://github.com/pilot-protocol" target="_blank" rel="noopener">github.com/pilot-protocol</a>. SDKs are available for Go, Python (<code>pilotprotocol</code> on PyPI), Node, and Swift. The public metric tracks cumulative registered addresses rather than unique active agents or customers.</p>
 
 <h3 id="pilot-app-store">The Pilot app store: capabilities as IPC services</h3>
 
-<p>Pilot ships an app store for installable capability apps. Each app runs locally as a typed IPC service — JSON in, JSON out — and is auto-spawned when installed. Apps include AEGIS (prompt-injection firewall), cosift (grounded web search), sixtyfour (people &amp; company intelligence), miren (PaaS deploys), otto (browser automation), plainweb (web page → Markdown), slipstream (Polymarket smart-money signals), smol (hardware-isolated microVMs), and wallet (on-overlay USDC payments).</p>
+<p>Pilot has an App Store of installable capability apps, made by their publishers. Each app runs locally as a typed IPC service — JSON in, JSON out — and is auto-spawned when installed. Apps in the store include AEGIS (prompt-injection firewall), cosift (grounded web search), sixtyfour (people &amp; company intelligence), miren (PaaS deploys), otto (browser automation), plainweb (web page → Markdown), slipstream (Polymarket smart-money signals), smol (hardware-isolated microVMs), and wallet (on-overlay USDC payments).</p>
 
 <p>The <code>discover → install → call</code> loop takes three commands:</p>
 
 <pre><code class="language-bash"># Discover available apps in the Pilot app store
-pilotctl appstore list
+pilotctl appstore catalogue
 
 # Install a capability app (example: plainweb, web page → Markdown)
 pilotctl appstore install io.pilot.plainweb
@@ -199,7 +199,7 @@ pilotctl appstore call io.pilot.plainweb plainweb.help '{}'
 <pre><code class="language-bash">curl -fsSL https://pilotprotocol.network/install.sh | sh
 </code></pre>
 
-<p>After installation, run <code>pilotctl appstore list</code> to see available capability apps, then <code>pilotctl appstore install &lt;app&gt;</code> to add them to your agent. The <a href="https://github.com/pilot-protocol" target="_blank" rel="noopener">GitHub repository</a> has the full source, SDK documentation, and integration guides for MCP and A2A.</p>
+<p>After installation, run <code>pilotctl appstore catalogue</code> to see available capability apps, then <code>pilotctl appstore install &lt;app&gt;</code> to add them to your agent. The <a href="https://github.com/pilot-protocol" target="_blank" rel="noopener">GitHub repository</a> has the full source, SDK documentation, and integration guides for MCP and A2A.</p>
 `;
 ---
 <BlogLayout

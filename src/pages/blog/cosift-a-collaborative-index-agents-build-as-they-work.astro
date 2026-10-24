@@ -1,11 +1,11 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>Agents fetch the same things over and over. Point a fleet of coding agents at a library's API, a specification, a changelog, and each one browses to the same handful of pages, reads them, and throws the reading away when the task ends. The next agent, often the next run of the same agent, does the work again from scratch. Cosift is the shared place that work can go instead. It is an open-source, free index that an agent writes to as it browses: when an agent pulls a page off the web, it can index that page in Cosift, and from then on any agent retrieves it instead of fetching it again. It lives at <a href="https://cosift.pilotprotocol.network">cosift.pilotprotocol.network</a> and the code is at <a href="https://github.com/pilot-protocol/cosift">github.com/pilot-protocol/cosift</a>.</p>
+const bodyContent = `<p>Agents fetch the same things over and over. Point a fleet of coding agents at a library's API, a specification, a changelog, and each one browses to the same handful of pages, reads them, and throws the reading away when the task ends. The next agent, often the next run of the same agent, does the work again from scratch. Cosift is the shared place that work can go instead. It is an open-source, free index that an agent writes to as it browses: when an agent pulls a page off the web, it can index that page in Cosift, and from then on any agent retrieves it instead of fetching it again. It lives at <a href="https://cosift.pilotprotocol.network">cosift.pilotprotocol.network</a>, the code is at <a href="https://github.com/pilot-protocol/cosift">github.com/pilot-protocol/cosift</a>, and agents on Pilot can install it from the App Store as the app <code>io.pilot.cosift</code>.</p>
 
 <section>
 <h2>A collaborative memory, not another search box</h2>
-<p>The interesting part is not that Cosift can search. Plenty of things search. It is that the corpus is built by the agents that use it, so the common case stops being a crawl and becomes a lookup. An agent that needs a page contributes it back the first time it reads it, and every agent after that is spared the fetch, the parse, and the tokens. The more agents use Cosift, the more of the web is already indexed when you ask, and the more often the answer is simply there. There are already 15 million contributions in it, which is 15 million pieces of reading a new agent does not have to repeat.</p>
+<p>The interesting part is not that Cosift can search. Plenty of things search. It is that the corpus is built by the agents that use it, so the common case stops being a crawl and becomes a lookup. An agent that needs a page contributes it back the first time it reads it, and every agent after that is spared the fetch, the parse, and the tokens. The more agents use Cosift, the more of the web is already indexed when you ask, and the more often the answer is simply there.</p>
 </section>
 
 <section>
@@ -14,14 +14,17 @@ const bodyContent = `<p>Agents fetch the same things over and over. Point a flee
 </section>
 
 <section>
-<h2>Built on what agents already do on Pilot</h2>
-<p>Cosift did not start from an empty index. It grew out of what agents are already doing on <a href="https://pilotprotocol.network">Pilot Protocol</a>: roughly 400 billion exchanges between agents so far, and more than 500 agents already serving data on their own topics across the network. Cosift is that same pattern pointed at the open web. Think of it as a data-service agent that happens to accept contributions, so its knowledge grows with use rather than with a crawl budget, and each new agent that joins raises the odds that the next lookup is already answered.</p>
+<h2>An app in the Pilot App Store</h2>
+<p>On <a href="https://pilotprotocol.network">Pilot Protocol</a>, Cosift is one of the apps in the App Store: an agent with a Pilot daemon installs it with one command and calls it over local IPC like any other app. It follows the same pattern as Pilot's data service agents, about 430 specialists that each serve data on their own topic, pointed at the open web. Think of it as a data-service agent that happens to accept contributions, so its knowledge grows with use rather than with a crawl budget, and each new agent that uses it raises the odds that the next lookup is already answered.</p>
 </section>
 
 <section>
 <h2>How an agent actually uses it</h2>
 <p>Cosift is exposed to a harness as a remote MCP server, and the one-line installer at <a href="https://github.com/pilot-protocol/cosift-install">github.com/pilot-protocol/cosift-install</a> registers it in the harnesses you already run, currently Claude Code, Codex CLI, and opencode. The flow inside a task is the natural one: when the agent needs something from the web, it asks Cosift first; if the answer is there it retrieves it, and if it is not, it fetches the page and contributes it so the next agent does not have to.</p>
 <pre><code>curl -fsSL https://raw.githubusercontent.com/pilot-protocol/cosift-install/v1/install.sh | sh</code></pre>
+<p>An agent that already runs Pilot can use the App Store app instead:</p>
+<pre><code>pilotctl appstore install io.pilot.cosift
+pilotctl appstore call io.pilot.cosift cosift.help '{}'</code></pre>
 <p>Every method is discoverable at runtime through <code>cosift.help</code>, which reports each method's parameters and a latency class, fast, med, or slow, so a caller can pick the cheapest one that fits the question rather than reaching for research when a search would do. The methods return clean structured JSON, and every grounded answer cites the sources it came from by id, so a claim can be checked against the pages behind it.</p>
 </section>
 

@@ -75,7 +75,7 @@ d, _ := driver.Connect("/tmp/pilot.sock")
 info, _ := d.ResolveHostname("reporter-agent")
 addr, _ := protocol.ParseAddr(info["address"].(string))
 cl, _ := dataexchange.Dial(d, addr)
-cl.SendJSON(results.JSON()) <span class="comment">// waits for the receiver's ACK</span>
+cl.Send(&dataexchange.Frame{Type: dataexchange.TypeJSON, Payload: results.JSON()}) <span class="comment">// waits for the receiver's ACK</span>
 cl.Close()</code></pre>
 
   <pre><code># Python example: Agent A - query via MCP, deliver via Pilot
