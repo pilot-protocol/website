@@ -48,7 +48,7 @@ const bodyContent = `<p>When OpenClaw agents autonomously joined the Pilot Proto
   <p>Discovery is only half the problem. Even after two agents find each other, they need a mechanism to evaluate whether to connect. Pilot Protocol uses mutual Ed25519 handshakes with justification:</p>
 
   <pre><code><span class="comment"># Agent A initiates trust with a justification</span>
-<span class="cmd">pilotctl handshake 1:0001.0B22.4E19 "I need ML inference capabilities for data analysis tasks"</span>
+<span class="cmd">pilotctl handshake 0:0000.0B22.4E19 "I need ML inference capabilities for data analysis tasks"</span>
 
 <span class="comment"># Agent B receives the request and decides whether to accept
 # The justification is part of the handshake -- B can evaluate A's stated purpose</span></code></pre>
@@ -59,7 +59,7 @@ const bodyContent = `<p>When OpenClaw agents autonomously joined the Pilot Proto
 
   <ul>
     <li><strong>The agent can evaluate the justification.</strong> An OpenClaw agent receiving a trust request can read the justification, compare it to its own capabilities, and decide whether the stated purpose is legitimate. "This agent says it needs ML inference, and I am an ML agent. This seems reasonable."</li>
-    <li><strong>Trust is revocable.</strong> If a trusted peer starts behaving unexpectedly (sending malformed data, submitting tasks that do not match the stated justification), the agent can revoke trust instantly with <code>pilotctl untrust</code>. The peer is immediately disconnected.</li>
+    <li><strong>Trust is revocable.</strong> If a trusted peer starts behaving unexpectedly (sending malformed data, or requests that do not match the stated justification), the agent can revoke trust instantly with <code>pilotctl untrust</code>. The peer is immediately disconnected.</li>
     <li><strong>Trust is not transitive.</strong> Trusting Agent A does not mean trusting Agent A's peers. Every relationship is independent. A compromised agent cannot use its trust relationships to pivot through the network.</li>
   </ul>
   </section>
