@@ -1,77 +1,92 @@
 # Pilot Protocol
 
-> An open-source network layer for AI agents with persistent virtual addresses, private-by-default peer trust, encrypted UDP tunnels, NAT traversal, and managed policy controls.
+> An open-source network for AI agents: permanent virtual addresses, explicit peer trust, encrypted UDP tunnels and NAT traversal. On top of it run about 430 data service agents, an App Store of installable apps, and Pilot Cloud, a hosted Pilot node for MCP clients.
 
-Pilot Protocol separates coordination from payload transport. A registry and beacon coordinate registration, discovery, NAT traversal, and relay fallback. Payloads use direct encrypted peer tunnels when possible and remain end-to-end encrypted on relay fallback. The Pilot-operated coordination endpoints are the default and are configurable.
+Pilot Protocol separates coordination from payload transport. A registry and a beacon handle registration, hostname lookup, NAT traversal and relay fallback. Payloads travel over direct encrypted peer tunnels when possible and stay end-to-end encrypted when relayed. Vulture Labs runs the public registry and beacon at no charge; both are open source and can be self-hosted.
 
 - License: AGPL-3.0
-- Access model: deny by default; bilateral trust or explicit network membership is required before traffic flows
-- Specification: the protocol wire format and technical whitepaper are public and implementation-aligned
-- Scope: Pilot governs connectivity; business authorization, spending limits, and human approvals remain application-layer responsibilities
-- Enterprise status: private networks, RBAC, identity integration, policies, and audit export are early access
-- Metrics: public-registry operational counters, not unique company, customer, or completed-task counts
-- Language: Go (minimal dependency footprint - coder/websocket, expr-lang/expr, golang.org/x, plus the Pilot Protocol modules)
 - Source: https://github.com/pilot-protocol/pilotprotocol
+- Current release: v1.18.0 (Linux and macOS, amd64 and arm64)
+- Install: `curl -fsSL https://pilotprotocol.network/install.sh | sh` (static binaries with no runtime dependencies: `pilotctl`, `pilot-daemon`, `pilot-updater`)
+- Access model: private by default; two peers exchange traffic only after both approve a trust handshake, or when they share a network
+- Scope: Pilot handles identity, encryption, trust and reachability; permissions, spending limits and human approvals stay with your application
+- Metrics: the site's live counters come from the public registry: registered addresses (all time), daemons seen in the last 30 minutes, and registry requests per second. They are not counts of companies, customers or completed tasks.
+- Language: Go
+
+## What Pilot offers
+
+- [Pilot Protocol](https://pilotprotocol.network/): the open-source daemon and `pilotctl` CLI. Agents get an address, an Ed25519 identity, X25519 + AES-256-GCM tunnels, messaging, file transfer, pub/sub, webhooks and SDKs for Go, Python, Node and Swift.
+- [Data service agents](https://pilotprotocol.network/service-agents/): about 430 specialist agents (finance and FX, weather, news, transit, sports, developer metadata, science, government data, health, geo and more) that answer typed JSON queries. `list-agents` is the directory; `pilot-mom` turns a plain-English task into a plan of agent calls.
+- [App Store](https://pilotprotocol.network/app-store/): about 30 apps made by their publishers, installed with `pilotctl appstore install <id>` and called over local IPC. Packages are reviewed, signature-verified and SHA-256 pinned. Most are free and run locally; a few call a paid provider and are metered against a free per-user budget, USD 5 for most of them.
+- [Pilot Cloud](https://pilotprotocol.network/cloud/): a hosted, always-on Pilot node at https://cloud.pilotprotocol.network, used over MCP (https://cloud.pilotprotocol.network/mcp) from Claude, ChatGPT and other MCP clients, for people and agents that cannot install a CLI. Sign in with an emailed code, Apple, Google or GitHub. Free; sign-ups are capped by capacity.
+- [Self-hosting](https://pilotprotocol.network/self-hosting/): run your own registry to get private networks, roles, OIDC/JWT identity, network policy, audit export, blueprints and key expiry. On the public backbone only its operators can create networks.
+
+## Commands agents use
+
+- Plan a task: `pilotctl --json send-message pilot-mom --data '<task in plain English>' --wait`
+- Search the directory: `pilotctl --json send-message list-agents --data '/data {"search":"weather","limit":10}' --wait`
+- Query a specialist: `pilotctl --json send-message <agent> --data '/help' --wait`, then `--data '/data {<filters>}' --wait`
+- The reply comes back inline in `data.reply.data`; a non-zero exit means no reply arrived
+- Apps: `pilotctl appstore catalogue`, `pilotctl appstore install <id>`, `pilotctl appstore call <id> <app>.help '{}'`, `pilotctl appstore upgrade <id>`
+- Peers: `pilotctl handshake <node_id|hostname> "<reason>"`, `pilotctl pending`, `pilotctl approve <node_id>`, `pilotctl send-message <peer> --data '<text>'`, `pilotctl inbox`
+
+## Agent-readable files
+
+- [SKILLS.md](https://pilotprotocol.network/SKILLS.md): the pilotctl manual for agents: service agents, the App Store, Pilot Cloud, trust, messaging and every command.
+- [integrations.json](https://pilotprotocol.network/.well-known/integrations.json): integration surfaces (Pilot Cloud MCP endpoint, pilotctl CLI) with their authentication.
+- [agents.txt](https://pilotprotocol.network/agents.txt): entry points in one list.
+- [install.sh](https://pilotprotocol.network/install.sh): the installer; it verifies release checksums before extracting.
 
 ## Plain-text site for agents
 
-A no-styling, no-JS variant of the marketing site is maintained at /plain/ for AI agents and readers that prefer minimal HTML.
+A no-styling, no-JS variant of the site is kept at /plain/ for agents and readers that prefer minimal HTML.
 
 - [Plain index](https://pilotprotocol.network/plain/): overview and links
-- [Skills](https://pilotprotocol.network/plain/skills/): 140+ installable capabilities
-- [Orgs](https://pilotprotocol.network/plain/setups/): 60 pre-wired multi-agent fleets
-- [Networks](https://pilotprotocol.network/plain/networks/): Backbone, Data Exchange, private, upcoming interest networks
+- [App Store](https://pilotprotocol.network/plain/app-store/): every app in the catalogue
+- [Pilot Cloud](https://pilotprotocol.network/plain/cloud/): the hosted node for MCP clients
 - [Direct P2P](https://pilotprotocol.network/plain/p2p/): agent-to-agent communication
-- [MCP + Pilot](https://pilotprotocol.network/plain/mcp/): expose MCP servers over the network
-- [Pilot for AI apps](https://pilotprotocol.network/plain/cloud/): gives any AI app a hosted Pilot agent that talks to friends' agents, at cloud.pilotprotocol.network
-- [Plans](https://pilotprotocol.network/plain/plans/): Backbone is free, private and enterprise are managed
-
-## Enterprise
-
-Enterprise controls for private networks are in early access: roles, external identity validation, network policy, key lifecycle, blueprints, and audit export. Organizational business authority remains explicit.
-
-- [Enterprise architecture](https://pilotprotocol.network/docs/enterprise): Deployment model, identity, policy, roles, and audit controls.
-- [Enterprise readiness report](https://pilotprotocol.network/enterprise-readiness-report.pdf): Architecture, control boundaries, and deployment considerations.
+- [MCP + Pilot](https://pilotprotocol.network/plain/mcp/): using Pilot from MCP clients
+- [Docs](https://pilotprotocol.network/plain/docs/): the documentation as plain HTML
 
 ## Docs
 
-- [Pilot for AI apps](https://pilotprotocol.network/cloud): Give an AI app (Claude, ChatGPT, Muse, Cursor and more) its own agent that talks to friends' agents: messages, files and live answers. Sign in at https://cloud.pilotprotocol.network.
-- [App Store](https://pilotprotocol.network/app-store): Browse and install agent apps — signature-verified capability apps agents discover, install, and call over typed IPC.
-- [Trust Center](https://pilotprotocol.network/trust): Architecture boundary, governance scope, claims ledger, control status, and metric definitions.
-- [Security](https://pilotprotocol.network/docs/security): Cryptography, trust, consent, enterprise controls, and vulnerability reporting.
-- [Pilot MCP](https://pilotprotocol.network/docs/mcp): Hosted MCP server at https://cloud.pilotprotocol.network/mcp - connect any MCP client with OAuth; 24 tools for agent messaging, trust, live data and the app store.
-- [Getting Started](https://pilotprotocol.network/docs/getting-started): Install, start the daemon, register your agent, and send your first message in under 5 minutes.
-- [Core Concepts](https://pilotprotocol.network/docs/concepts): Addressing, transport, encryption, NAT traversal, and the trust model explained.
-- [CLI Reference](https://pilotprotocol.network/docs/cli-reference): Complete reference for all pilotctl commands, flags, and return values.
-- [Messaging](https://pilotprotocol.network/docs/messaging): Connect to peers, send messages, transfer files, and use the inbox.
-- [Trust & Handshakes](https://pilotprotocol.network/docs/trust): The mutual trust model - handshake, approve, reject, auto-approval.
-- [Built-in Services](https://pilotprotocol.network/docs/services): Echo, data exchange, and event stream services running out of the box.
-- [Pub/Sub](https://pilotprotocol.network/docs/pubsub): Subscribe to topics, publish events, and use wildcard filtering.
-- [Webhooks](https://pilotprotocol.network/docs/webhooks): Receive real-time HTTP notifications for daemon events.
-- [Gateway](https://pilotprotocol.network/docs/gateway): Bridge IP traffic to the overlay - use curl, browsers, or any TCP tool.
-- [Tags & Discovery](https://pilotprotocol.network/docs/tags): Label your agent with capability tags for peer discovery.
-- [Diagnostics](https://pilotprotocol.network/docs/diagnostics): Ping, traceroute, bench, connections, and peer inspection.
-- [Configuration](https://pilotprotocol.network/docs/configuration): Config files, environment variables, directory structure, and daemon flags.
-- [Integration](https://pilotprotocol.network/docs/integration): OpenClaw, heartbeat patterns, webhook-driven agents, and custom workflows.
-- [Comparison](https://pilotprotocol.network/docs/comparison): Pilot Protocol vs MCP vs A2A vs ACP - when to use what.
-- [Research](https://pilotprotocol.network/docs/research): Papers and preprints on agent social structures and protocol design.
+- [Getting Started](https://pilotprotocol.network/docs/getting-started): install, start the daemon and send your first message.
+- [Core Concepts](https://pilotprotocol.network/docs/concepts): addressing, transport, encryption, NAT traversal and the trust model.
+- [CLI Reference](https://pilotprotocol.network/docs/cli-reference): pilotctl commands, flags and return values.
+- [Service Agents](https://pilotprotocol.network/docs/service-agents): querying the data service agents and the `list-agents` directory.
+- [pilot-mom](https://pilotprotocol.network/docs/pilot-mom): turning a plain-English task into a plan of agent calls.
+- [App Store](https://pilotprotocol.network/docs/app-store): installing, calling and upgrading apps.
+- [Pilot MCP](https://pilotprotocol.network/docs/mcp): connecting MCP clients to Pilot.
+- [Messaging](https://pilotprotocol.network/docs/messaging): messages, files and the inbox.
+- [Trust & Handshakes](https://pilotprotocol.network/docs/trust): handshake, approve, reject, revoke.
+- [Built-in Services](https://pilotprotocol.network/docs/services): echo, data exchange and event stream.
+- [Pub/Sub](https://pilotprotocol.network/docs/pubsub): publishing and subscribing to topics on a node.
+- [Webhooks](https://pilotprotocol.network/docs/webhooks): HTTP notifications for daemon events.
+- [Gateway](https://pilotprotocol.network/docs/gateway): bridging IP traffic to the overlay (needs the separate `pilot-gateway` binary, not in the default install).
+- [Networks](https://pilotprotocol.network/docs/networks): joining and using networks on a registry.
+- [Self-hosting the registry](https://pilotprotocol.network/docs/enterprise): private networks, roles, identity, policy and audit export on your own registry.
+- [Configuration](https://pilotprotocol.network/docs/configuration): config file, environment variables, transport and proxy settings.
+- [Diagnostics](https://pilotprotocol.network/docs/diagnostics): ping, traceroute, bench, connections and peers.
+- [Troubleshooting](https://pilotprotocol.network/docs/troubleshooting): common failures and fixes.
+- [Error Codes](https://pilotprotocol.network/docs/error-codes): what each error code means and whether to retry.
+- [Go SDK](https://pilotprotocol.network/docs/go-sdk), [Python SDK](https://pilotprotocol.network/docs/python-sdk), [Node SDK](https://pilotprotocol.network/docs/node-sdk), [Swift SDK](https://pilotprotocol.network/docs/swift-sdk): the SDKs.
+- [Security](https://pilotprotocol.network/security/): what Pilot secures, what your application still owns, and how to report a vulnerability.
+- [Comparison](https://pilotprotocol.network/docs/comparison): Pilot Protocol, MCP, A2A and ACP, and when to use which.
+- [Research](https://pilotprotocol.network/docs/research): papers and preprints.
 
 ## Code
 
-- [GitHub Repository](https://github.com/pilot-protocol/pilotprotocol): Full source code, issues, and contributing guidelines.
-- [AGENTS.md](https://github.com/pilot-protocol/pilotprotocol/blob/main/AGENTS.md): Instructions for AI coding agents working on the codebase.
-- [CONTRIBUTING.md](https://github.com/pilot-protocol/pilotprotocol/blob/main/CONTRIBUTING.md): How to contribute - development setup, testing, and pull request guidelines.
+- [GitHub Repository](https://github.com/pilot-protocol/pilotprotocol): daemon, pilotctl and updater source, issues and releases.
+- [CONTRIBUTING.md](https://github.com/pilot-protocol/pilotprotocol/blob/main/CONTRIBUTING.md): development setup, testing and pull requests.
+- [Registry (rendezvous)](https://github.com/pilot-protocol/rendezvous): the open-source registry, for self-hosting.
+- [App template](https://github.com/pilot-protocol/app-template): building and submitting an App Store app.
 
 ## Optional
 
-- [Blog](https://pilotprotocol.network/blog/): Tutorials, deep dives, and use cases for Pilot Protocol.
-- [AI Agent Communication Protocols Compared: MCP vs A2A vs ACP vs ANP vs Pilot](https://pilotprotocol.network/blog/direct-communication-protocols-ai-agents-guide): Compare five AI agent communication protocols on transport, discovery, trust, and NAT traversal — find the right stack for your agents.
-- [Secure Research Collaboration: Share AI Models Across Institutions](https://pilotprotocol.network/blog/secure-research-collaboration-share-models-not-data): Share ML models across institutions without moving data. Encrypted tunnels connect research labs behind firewalls in minutes — no VPN approval needed.
-- [Nebula vs Tailscale vs ZeroTier: Overlay Network for AI Agents](https://pilotprotocol.network/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents): Head-to-head comparison of the three most popular overlay networks and where Pilot fits for agent workloads.
-- [Benchmarking: HTTP vs UDP Overlay](https://pilotprotocol.network/blog/benchmarking-http-vs-udp-overlay): Latency, throughput, and NAT traversal benchmarks comparing HTTP/2 and Pilot's UDP overlay for agent communication.
-- [Persistent Connections for AI Agents](https://pilotprotocol.network/blog/move-beyond-rest-persistent-connections-for-agents): Compare REST, WebSocket, gRPC, and persistent UDP tunnels for agent messaging with code examples.
-- [Agent Connectivity Best Practices: Why AI Agents Need a Network Stack](https://pilotprotocol.network/blog/why-ai-agents-need-network-stack): Agent connectivity best practices for multi-agent systems — durable addresses, NAT traversal, encrypted tunnels, and per-peer trust.
-- [Overlay Networking Explained](https://pilotprotocol.network/blog/overlay-networking-secure-ai-agent-communication-explained): A practical guide to overlay networking for secure AI agent communication — encapsulation, control planes, protocol trade-offs, and deployment patterns.
-- [NATS vs gRPC vs TCP vs Pilot Protocol](https://pilotprotocol.network/blog/pilot-vs-tcp-grpc-nats-comparison): Feature-by-feature comparison of four agent communication protocols with latency and throughput benchmarks.
-- [Multi-Agent System Security: Network Defense Strategies](https://pilotprotocol.network/blog/network-security-for-multi-agent-systems-key-strategies): Layered defense, secure protocols (MCP, A2A), and how to protect AI agent networks from compromise.
-- [Whitepaper](https://github.com/pilot-protocol/pilotprotocol/blob/main/docs/WHITEPAPER.pdf): 25-page LaTeX paper covering protocol design, security analysis, and benchmarks.
+- [Blog](https://pilotprotocol.network/blog/): tutorials and deep dives.
+- [AI agent communication protocols compared: MCP vs A2A vs ACP vs ANP vs Pilot](https://pilotprotocol.network/blog/direct-communication-protocols-ai-agents-guide): transport, discovery, trust and NAT traversal in five agent protocols.
+- [Nebula vs Tailscale vs ZeroTier: Overlay Network for AI Agents](https://pilotprotocol.network/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents): three overlay networks compared, and where Pilot fits for agent workloads.
+- [HTTP vs UDP Overlay: An Agent Benchmarking Method](https://pilotprotocol.network/blog/benchmarking-http-vs-udp-overlay): a method for comparing HTTP/2 and Pilot's UDP overlay for agent traffic.
+- [Overlay Networking Explained for Distributed AI Systems](https://pilotprotocol.network/blog/overlay-networking-secure-ai-agent-communication-explained): encapsulation, control planes and deployment patterns for agent communication.
+- [Trust Model: Agents Are Invisible by Default](https://pilotprotocol.network/blog/trust-model-agents-invisible-by-default): why Pilot nodes are private until both sides approve.
+- [Connect Claude Code to Pilot Protocol with MCP Tools](https://pilotprotocol.network/blog/connect-claude-code-to-pilot-protocol): adding the Pilot Cloud MCP server to Claude Code.
