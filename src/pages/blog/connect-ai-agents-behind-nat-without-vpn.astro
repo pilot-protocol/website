@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>"How do IoT devices behind NAT communicate peer-to-peer?" This is one of the most searched networking questions on Stack Overflow, and it has been for years. The underlying problem is simple: 88% of networked devices sit behind a NAT. They can make outbound connections, but nothing from outside can reach them. And when two devices behind different NATs want to talk directly, neither can reach the other.</p>
+const bodyContent = `<p>"How do IoT devices behind NAT communicate peer-to-peer?" This is one of the most searched networking questions on Stack Overflow, and it has been for years. The underlying problem is simple: most networked devices sit behind a NAT. They can make outbound connections, but nothing from outside can reach them. And when two devices behind different NATs want to talk directly, neither can reach the other.</p>
 
   <p>The workarounds are well-known and universally disliked. VPNs work but require configuration on every device, a central server, and ongoing maintenance. Port forwarding works but requires router access, static IPs, and breaks when the network changes. Cloud relay services work but add latency, cost money per gigabyte, and become a single point of failure.</p>
 
@@ -23,19 +23,19 @@ const bodyContent = `<p>"How do IoT devices behind NAT communicate peer-to-peer?
 
   <table>
     <thead>
-      <tr><th>NAT Type</th><th>Mapping Rule</th><th>P2P Possible?</th><th>Prevalence</th></tr>
+      <tr><th>NAT Type</th><th>Mapping Rule</th><th>P2P Possible?</th></tr>
     </thead>
     <tbody>
-      <tr><td>Full Cone</td><td>Any external host can send to the mapped port</td><td>Direct connection</td><td>~15%</td></tr>
-      <tr><td>Restricted Cone</td><td>Only hosts the device has sent to can reply</td><td>Hole-punching</td><td>~25%</td></tr>
-      <tr><td>Port-Restricted</td><td>Only the exact host:port the device sent to can reply</td><td>Hole-punching</td><td>~35%</td></tr>
-      <tr><td>Symmetric</td><td>Different external port for each destination</td><td>Relay only</td><td>~25%</td></tr>
+      <tr><td>Full Cone</td><td>Any external host can send to the mapped port</td><td>Direct connection</td></tr>
+      <tr><td>Restricted Cone</td><td>Only hosts the device has sent to can reply</td><td>Hole-punching</td></tr>
+      <tr><td>Port-Restricted</td><td>Only the exact host:port the device sent to can reply</td><td>Hole-punching</td></tr>
+      <tr><td>Symmetric</td><td>Different external port for each destination</td><td>Relay only</td></tr>
     </tbody>
   </table>
 
   <p>Full Cone NATs are the friendliest: once a mapping is created, anyone can use it. These are common in residential routers and consumer-grade equipment. Restricted and Port-Restricted Cone NATs are more common in enterprise environments and allow peer-to-peer connections through hole-punching. Symmetric NATs -- found in corporate firewalls and carrier-grade NATs -- defeat hole-punching entirely because the external port changes with each destination.</p>
 
-  <p>The practical consequence: roughly 75% of NAT configurations allow direct peer-to-peer connections with the right technique. The remaining 25% require a relay. A complete NAT traversal solution must handle all four types automatically.</p>
+  <p>The practical consequence: most NAT configurations allow direct peer-to-peer connections with the right technique, and symmetric NAT needs a relay. A complete NAT traversal solution must handle all four types automatically.</p>
 
   <h2 id="workarounds-fail">Current Workarounds and Why They Fail</h2>
 
@@ -75,9 +75,10 @@ const bodyContent = `<p>"How do IoT devices behind NAT communicate peer-to-peer?
 
   <pre><code><span class="comment"># Daemon startup: STUN discovery happens automatically</span>
 <span class="cmd">$ pilotctl daemon start --email agent@example.com</span>
-STUN: discovered public endpoint 34.148.103.117:4000
-NAT type: restricted_cone
-Registered with registry</code></pre>
+Daemon running (pid 4127)
+  Address:  0:0000.0000.0008
+  ...
+<span class="comment"># the discovered endpoint is registered; the daemon doesn't classify the NAT type</span></code></pre>
 
   <p>If both agents are behind Full Cone NATs, direct connection works immediately. Agent A looks up Agent B's public endpoint from the registry and sends packets directly. The NAT forwards them because Full Cone NATs accept packets from any source once a mapping exists.</p>
 
@@ -134,50 +135,32 @@ Agent A ──→ Beacon ──→ Agent B
 
   <pre><code><span class="comment"># Agent A (behind Port-Restricted NAT)</span>
 <span class="cmd">$ pilotctl daemon start --email agent-a@example.com</span>
-STUN: public endpoint 73.162.88.14:4000
-NAT type: port_restricted_cone
 
 <span class="comment"># Agent B (behind Symmetric NAT)</span>
-<span class="cmd">$ pilotctl daemon start --email agent-b@example.com</span>
-STUN: public endpoint 91.203.45.67:32761
-NAT type: symmetric
+<span class="cmd">$ pilotctl daemon start --email agent-b@example.com --hostname agent-b --public</span>
 
-<span class="comment"># Agent A connects to Agent B -- all traversal is automatic</span>
-<span class="cmd">$ pilotctl connect agent-b --message "hello from behind NAT"</span>
-Trying direct... failed (3 attempts)
-Trying hole-punch... failed (symmetric NAT on remote)
-Falling back to relay...
-Connected via relay (encrypted, 15ms overhead)
-Message delivered</code></pre>
+<span class="comment"># Agent A messages Agent B (after a trust handshake) -- all traversal is automatic</span>
+<span class="cmd">$ pilotctl send-message agent-b --data "hello from behind NAT"</span>
 
-  <p>The developer's command is <code>pilotctl connect agent-b</code>. The nine retry attempts, the hole-punch coordination, and the relay fallback happen inside the <code>DialConnection</code> function. The developer never writes NAT traversal code, never configures port forwarding, and never sets up a VPN.</p>
+<span class="comment"># Which path did it take?</span>
+<span class="cmd">$ pilotctl peers --all</span>
+● 1 peer — 1 encrypted+authenticated · 1 relay · 0 direct
+
+NODE ID     ENCRYPTED   AUTH        PATH
+9           yes         yes         relay</code></pre>
+
+  <p>The developer's command is <code>pilotctl send-message agent-b</code>. The connection attempts (three direct, then four through the relay), the hole-punch coordination, and the relay fallback happen inside the daemon's <code>DialConnection</code> function. The developer never writes NAT traversal code, never configures port forwarding, and never sets up a VPN.</p>
 
   <p>For cloud VMs with stable public IPs, the <code>--endpoint</code> flag skips STUN entirely:</p>
 
   <pre><code><span class="comment"># Cloud VM with known public IP -- skip STUN</span>
-<span class="cmd">$ pilotctl daemon start --email agent@example.com --endpoint 34.148.103.117:4000 --public</span>
-Registered with fixed endpoint (STUN skipped)</code></pre>
+<span class="cmd">$ pilotctl daemon start --email agent@example.com --endpoint 203.0.113.10:4000 --public</span></code></pre>
 
   <h2 id="performance">Performance by Tier</h2>
 
-  <p>The traversal tier directly affects connection performance. Here are measurements from Pilot's test fleet across five GCP regions:</p>
+  <p>The traversal tier affects connection performance. Direct and hole-punched paths carry traffic peer to peer once they are set up; hole punching only adds the coordination through the beacon at the start. Relayed traffic takes an extra trip through the beacon on every packet, so it adds latency and is limited by the beacon's capacity.</p>
 
-  <table>
-    <thead>
-      <tr><th>Connection Type</th><th>Latency (RTT)</th><th>Throughput</th><th>Setup Time</th></tr>
-    </thead>
-    <tbody>
-      <tr><td>Direct (same region)</td><td>~2ms</td><td>~850 Mbps</td><td>~50ms</td></tr>
-      <tr><td>Direct (cross-region)</td><td>~40ms</td><td>~400 Mbps</td><td>~80ms</td></tr>
-      <tr><td>Hole-punched</td><td>+5ms setup overhead</td><td>Same as direct</td><td>~600ms</td></tr>
-      <tr><td>Relay (same beacon)</td><td>+15ms per hop</td><td>~200 Mbps</td><td>~100ms</td></tr>
-      <tr><td>Relay (cross-beacon)</td><td>+25ms per hop</td><td>~120 Mbps</td><td>~150ms</td></tr>
-    </tbody>
-  </table>
-
-  <p>The key insight: <strong>hole-punched connections perform identically to direct connections</strong> after the initial setup. The ~600ms setup time is the cost of coordinating the punch through the beacon. Once the hole is established, traffic flows peer-to-peer with no added latency. This means 75% of NAT scenarios (Full Cone, Restricted Cone, Port-Restricted Cone) get direct-speed performance.</p>
-
-  <p>Relay adds ~15ms of latency per hop because every packet takes two trips (sender to beacon, beacon to receiver). Throughput is roughly halved because the beacon becomes the bottleneck. For most agent workloads -- task delegation, status updates, small data transfers -- this overhead is imperceptible. For bulk data transfer, hole-punching is strongly preferred.</p>
+  <p>We haven't published per-tier measurements. To see the numbers for your own peers, use <code>pilotctl ping &lt;peer&gt;</code> for round-trip time, <code>pilotctl bench &lt;peer&gt;</code> for throughput, and <code>pilotctl peers --all</code> to see whether each peer is on a direct or relayed path. For most agent workloads -- task delegation, status updates, small data transfers -- relay overhead matters little. For bulk data transfer, a direct path is strongly preferred.</p>
 
   <h2 id="use-cases">Use Cases</h2>
 
@@ -205,36 +188,38 @@ Registered with fixed endpoint (STUN skipped)</code></pre>
 <span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
 <span class="cmd">$ pilotctl init --hostname home-agent-1</span>
 <span class="cmd">$ pilotctl daemon start --email home-agent-1@example.com</span>
-STUN: public endpoint 73.162.88.14:4000 (port_restricted_cone)
-Registered as home-agent-1 (1:0001.0000.0008)
+Daemon running (pid 4127)
+  Address:  0:0000.0000.0008
+  Hostname: home-agent-1
+  ...
 
 <span class="comment"># Home network 2 (Restricted Cone NAT)</span>
 <span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
 <span class="cmd">$ pilotctl init --hostname home-agent-2</span>
 <span class="cmd">$ pilotctl daemon start --email home-agent-2@example.com --public</span>
-STUN: public endpoint 98.45.211.33:4000 (restricted_cone)
-Registered as home-agent-2 (1:0001.0000.0009)
+Daemon running (pid 2210)
+  Address:  0:0000.0000.0009
+  Hostname: home-agent-2
+  ...
 
 <span class="comment"># Home 1: establish trust and connect</span>
 <span class="cmd">$ pilotctl handshake home-agent-2 "Collaborative data processing"</span>
-Handshake sent...
+handshake request sent to node 9
 
 <span class="comment"># Home 2: approve</span>
-<span class="cmd">$ pilotctl approve 1:0001.0000.0008</span>
-Trust established
+<span class="cmd">$ pilotctl approve 8</span>
+trust established with node 8
 
 <span class="comment"># Home 1: connect - hole-punching happens automatically</span>
 <span class="cmd">$ pilotctl ping home-agent-2 --count 4</span>
-PING home-agent-2 (1:0001.0000.0009):
-  Reply: 12ms (hole-punched, encrypted)
-  Reply: 11ms
-  Reply: 11ms
-  Reply: 12ms
-4 packets, 0% loss, avg 11.5ms
+PING 0:0000.0000.0009
+<span class="comment"># one line per reply with its round-trip time</span>
 
-<span class="comment"># Direct peer-to-peer - no relay, no VPN, no port forwarding</span></code></pre>
+<span class="comment"># Home 1: check the path</span>
+<span class="cmd">$ pilotctl peers --all</span>
+<span class="comment"># PATH column: direct (hole-punched) or relay</span></code></pre>
 
-  <p>Both agents are behind NAT on different home networks. The hole-punch succeeded because both NAT types support it (Port-Restricted and Restricted Cone). After the initial punch (~600ms), traffic flows directly between the two home IPs at ~12ms round-trip time. No cloud relay, no VPN tunnel, no router configuration. The only infrastructure needed was the initial discovery and hole-punch coordination, handled by the network.</p>
+  <p>Both agents are behind NAT on different home networks. When both NATs allow hole punching, as Port-Restricted and Restricted Cone do, traffic flows directly between the two home IPs after the initial punch. No cloud relay, no VPN tunnel, no router configuration. The only infrastructure needed was the initial discovery and hole-punch coordination, handled by the network.</p>
 
   <p>For a deeper technical treatment of the NAT traversal protocol, including wire formats, beacon gossip, and cross-beacon relay, see <a href="nat-traversal-ai-agents-deep-dive">NAT Traversal for AI Agents: A Deep Dive</a>. For the encryption that protects all traffic regardless of traversal tier, see <a href="zero-dependency-encryption-x25519-aes-gcm">Zero-Dependency Agent Encryption</a>. For the trust model that determines which agents can connect, see <a href="secure-ai-agent-communication-zero-trust">How to Secure AI Agent Communication With Zero Trust</a>.</p>
 
