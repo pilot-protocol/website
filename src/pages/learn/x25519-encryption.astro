@@ -85,7 +85,7 @@ const bodyContent = `
 <p>In practice, the 32-byte shared secret is then passed through a key-derivation function (KDF) — typically HKDF-SHA256 — to produce the final symmetric encryption key. The KDF step provides several benefits: it can derive a key of any desired length (e.g., 32 bytes for AES-256-GCM), it binds domain-specific context (such as a protocol identifier) into the derived key, and it expands the entropy of the shared secret uniformly.</p>
 
 <div class="callout">
-  <p><strong>Practical impact on protocol design:</strong> Because X25519 does not require certificates, a private key authority, or any PKI infrastructure, it can be embedded directly into a peer-to-peer protocol. Each agent generates a key pair at startup or at daemon initialization, and the public key serves as the agent's cryptographic identity within the network. This is fundamentally different from TLS-based approaches, where a certificate authority must be in the loop.</p>
+  <p><strong>Practical impact on protocol design:</strong> Because X25519 does not require certificates, a private key authority, or any PKI infrastructure, it can be embedded directly into a peer-to-peer protocol. Each daemon generates its X25519 key material locally, with no authority involved. In Pilot the agent's identity is a separate Ed25519 key pair: it signs the key exchange, so each side knows which agent it agreed a key with. This is fundamentally different from TLS-based approaches, where a certificate authority must be in the loop.</p>
 </div>
 
 <h2 id="why-it-matters-for-ai-agent-communication">Why it matters for AI agent communication</h2>
@@ -94,7 +94,7 @@ const bodyContent = `
 
 <ul>
 <li><strong>No human in the loop.</strong> Agents start, stop, and migrate autonomously. Any encryption scheme that requires a human to provision a certificate or approve a key exchange is operationally incompatible with autonomous operation.</li>
-<li><strong>Ephemeral endpoints.</strong> Agents running in containers, serverless functions, or spot instances change IP addresses on every restart. Encryption that is bound to IP or host identity (like IPsec or traditional TLS with certificate pinning) breaks when the endpoint moves. X25519 key exchange binds to the agent's cryptographic identity, not its network location.</li>
+<li><strong>Ephemeral endpoints.</strong> Agents running in containers or on spot instances change IP addresses on every restart. Encryption that is bound to IP or host identity (like IPsec or traditional TLS with certificate pinning) breaks when the endpoint moves. In Pilot the key exchange is authenticated with the agent's Ed25519 identity, not its network location.</li>
 <li><strong>Low overhead per connection.</strong> Agents may establish many short-lived connections — for task delegation, data transfer, discovery queries. A key exchange that costs one round-trip and sub-millisecond computation per connection is acceptable. A key exchange that requires a multi-message handshake and certificate validation is not.</li>
 <li><strong>Peer-to-peer, not client-server.</strong> Agent communication is often symmetric — either agent can initiate a connection. X25519 is symmetric by design: both sides generate key pairs, both sides compute the shared secret, and neither side is privileged over the other. This maps naturally to peer-to-peer architectures.</li>
 </ul>

@@ -10,8 +10,8 @@ export interface LearnGuide {
 export const learnGuides: LearnGuide[] = [
   {
     slug: 'install-pilot-skills-in-meta-muse',
-    title: "Install Pilot Protocol Skills in Meta Muse's Agent VM",
-    description: 'One command installs the Pilot skills and a Pilot node in Muse\'s agent VM, online through its HTTPS-only proxy with rotating credentials, no root needed.',
+    title: 'Install Pilot Protocol Skills in a Proxy-Only Agent VM',
+    description: 'One command installs the Pilot skills and a Pilot node in an agent VM, such as one in Meta Muse, whose only way out is an HTTPS proxy. No root needed.',
     date: 'September 23, 2026',
     isoDate: '2026-09-23',
     track: 'Foundations',
@@ -19,7 +19,7 @@ export const learnGuides: LearnGuide[] = [
   {
     slug: 'pilot-node-through-https-only-egress-proxy',
     title: 'Run a Pilot Node Through an HTTPS-Only Egress Proxy',
-    description: 'Register a node when UDP is blocked, DNS is poisoned, and the only egress is an HTTPS CONNECT proxy: SNI router, mount namespace, trust modes, verification.',
+    description: 'Register a node when UDP is blocked and the only egress is an HTTPS CONNECT proxy: native proxy support since v1.13.11, and the older SNI-router recipe.',
     date: 'September 23, 2026',
     isoDate: '2026-09-23',
     track: 'Transport',

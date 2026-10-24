@@ -50,7 +50,7 @@ const bodyContent = `<p>If you have worked with gRPC, you know it uses HTTP/2 un
 
 <p>An alternative approach is to side-step the TCP/UDP transport question entirely by using an overlay network that handles reachability, encryption, and peer discovery for you. The overlay gives agents a virtual network interface — they send and receive messages over it, and the overlay handles the messy reality of NAT traversal, connection mobility, and encryption underneath.</p>
 
-<p><a href="https://pilotprotocol.network">Pilot Protocol</a> is one such overlay, built specifically for AI agents. It runs entirely over UDP — the daemon establishes encrypted tunnels using X25519 key exchange and AES-256-GCM. STUN and hole-punching create direct P2P paths through NATs. A relay fallback handles symmetric NAT where hole-punching fails.</p>
+<p><a href="https://pilotprotocol.network">Pilot Protocol</a> is one such overlay, built specifically for AI agents. By default it runs over UDP — the daemon establishes encrypted tunnels using X25519 key exchange and AES-256-GCM. Where UDP is blocked, compat mode carries the same tunnels over a single outbound TCP connection on port 443. STUN and hole-punching create direct P2P paths through NATs. A relay fallback handles symmetric NAT where hole-punching fails.</p>
 
 <p>The key difference from running gRPC over QUIC is that Pilot is not a transport for an RPC framework — it is the communication layer itself. Agents speak to each other over the overlay using the protocol that makes sense for their interaction (JSON messages, structured RPC, streaming file transfers). The overlay provides:</p>
 
@@ -87,7 +87,7 @@ const bodyContent = `<p>If you have worked with gRPC, you know it uses HTTP/2 un
   <li>Connection overhead matters — you are running agents on resource-constrained devices.</li>
 </ul>
 
-<p>These are not mutually exclusive. gRPC can run over Pilot's overlay tunnel. The overlay handles connectivity and encryption; gRPC handles the structured RPC layer. Several teams using Pilot do exactly this: they install the daemon for reachability, then run gRPC calls over the tunnel for typed service definitions.</p>
+<p>These are not mutually exclusive. gRPC can run over Pilot's overlay tunnel. The overlay handles connectivity and encryption; gRPC handles the structured RPC layer. In the Go SDK a Pilot stream is a <code>net.Conn</code> and a Pilot port is a <code>net.Listener</code>, so a gRPC server can serve on a Pilot listener and a client can dial through <code>grpc.WithContextDialer</code>.</p>
 </section>
 
 <section>
