@@ -2,81 +2,39 @@
 import Breadcrumbs, { type BreadcrumbItem } from './Breadcrumbs.astro';
 
 interface Props {
-  active?: 'home' | 'docs' | 'blog' | 'news' | 'roadmap' | 'governance' | 'contact' | 'plans' | 'for' | 'tech' | 'apps' | 'trust';
+  active?: 'home' | 'docs' | 'blog' | 'news' | 'roadmap' | 'governance' | 'contact' | 'for' | 'tech' | 'apps' | 'trust' | 'cloud' | 'security' | 'self-hosting' | 'service-agents';
   breadcrumbs?: BreadcrumbItem[] | false;
   breadcrumbLabel?: string;
 }
 const { active, breadcrumbs, breadcrumbLabel } = Astro.props;
 
+// The header names the four things Pilot offers: the protocol, the service
+// agents, the App Store and Pilot Cloud. Only the protocol needs a menu.
 const navGroups = [
   {
-    id: 'product', label: 'Product', eyebrow: 'The platform',
-    title: 'One network layer for agents.',
-    desc: 'Identity, encrypted connectivity, trust, and installable capabilities in one system.',
-    activeFor: ['home', 'apps', 'trust', 'governance', 'plans'],
+    id: 'protocol', label: 'Protocol', eyebrow: 'Open source · AGPL-3.0',
+    title: 'The network layer for agents.',
+    desc: 'A daemon and pilotctl give each agent a permanent address, encrypted tunnels and explicit trust. Vulture Labs runs the public backbone at no charge.',
+    activeFor: ['tech', 'for', 'trust', 'governance', 'security', 'self-hosting'],
     links: [
-      { href: '/', kicker: 'Platform', label: 'Network OS', desc: 'The complete Pilot architecture' },
-      { href: '/trust', kicker: 'Security', label: 'Trust Center', desc: 'Controls, boundaries, and evidence' },
-      { href: '/governance', kicker: 'Governance', label: 'Control model', desc: 'Authority, policy, lifecycle, and audit' },
-      { href: '/app-store', kicker: 'Ecosystem', label: 'App Store', desc: 'Capabilities built for agents' },
-      { href: '/plans', kicker: 'Commercial', label: 'Plans', desc: 'Open network and enterprise paths' },
-    ],
-    footer: { href: '/docs/getting-started', label: 'Explore the product' },
-  },
-  {
-    id: 'solutions', label: 'Solutions', eyebrow: 'Built for real systems',
-    title: 'Connect agents across every boundary.',
-    desc: 'Start with one deployment pattern, then expand without replacing the underlying network.',
-    activeFor: ['for'],
-    links: [
-      { href: '/for/p2p', kicker: 'Connectivity', label: 'Direct P2P', desc: 'Private agent-to-agent paths' },
-      { href: '/for/mcp', kicker: 'Integration', label: 'MCP + Pilot', desc: 'Give MCP servers a network' },
-      { href: '/for/networks', kicker: 'Organization', label: 'Managed networks', desc: 'Shared domains and membership' },
-      { href: '/docs/enterprise', kicker: 'Enterprise', label: 'Enterprise controls', desc: 'Identity, policy, roles, and audit' },
-    ],
-    footer: { href: '/for/setups', label: 'Browse deployment setups' },
-  },
-  {
-    id: 'developers', label: 'Developers', eyebrow: 'Build on Pilot',
-    title: 'From first connection to production.',
-    desc: 'Documentation and tooling for connecting, shipping, and operating agent-native software.',
-    activeFor: ['docs', 'tech'],
-    links: [
+      { href: '/docs/concepts', kicker: 'How it works', label: 'Concepts', desc: 'Addresses, tunnels, NAT traversal and trust' },
       { href: '/docs/getting-started', kicker: 'Start', label: 'Quickstart', desc: 'Install and connect in minutes' },
-      { href: '/docs/', kicker: 'Reference', label: 'Documentation', desc: 'Concepts, CLI, SDKs, and operations' },
-      { href: '/docs/integration', kicker: 'Build', label: 'SDKs & integration', desc: 'Embed Pilot in your stack' },
-      { href: '/for/compatibility', kicker: 'Deploy', label: 'Compatibility', desc: 'Choose the right environment mode' },
+      { href: '/self-hosting', kicker: 'Self-hosting', label: 'Run your own registry', desc: 'Private networks, roles, OIDC, policy and audit' },
+      { href: '/security', kicker: 'Security', label: 'Security model', desc: 'What Pilot protects and what you still own' },
+      { href: '/docs/integration', kicker: 'Build', label: 'SDKs & integration', desc: 'Go, Node, Python and Swift' },
+      { href: '/docs/research', kicker: 'Research', label: 'Technical papers', desc: 'Wire specification and research' },
     ],
-    footer: { href: '/for/skills', label: 'Explore agent skills' },
+    footer: { href: '/learn/what-is-pilot-protocol', label: 'What is Pilot Protocol?' },
   },
-  {
-    id: 'resources', label: 'Resources', eyebrow: 'Learn and evaluate',
-    title: 'Technical depth without the guesswork.',
-    desc: 'Architecture, field notes, evaluator material, and a machine-readable version of the site.',
-    activeFor: ['blog'],
-    links: [
-      { href: '/learn/', kicker: 'Learn', label: 'Learning center', desc: 'Foundations, transport, and security' },
-      { href: '/blog/', kicker: 'Journal', label: 'Field notes', desc: 'Technical guides and architecture' },
-      { href: '/docs/research', kicker: 'Research', label: 'Technical papers', desc: 'Specifications and evaluations' },
-      { href: '/pilot-native-use-cases.pdf', kicker: 'Use cases', label: 'Deployment patterns', desc: 'What the combined Pilot surface enables' },
-      { href: '/press', kicker: 'Media', label: 'Press kit', desc: 'Company and brand resources' },
-      { href: '/plain/', kicker: 'Agents', label: 'Machine-readable site', desc: 'The plain-text agent interface' },
-    ],
-    footer: { href: '/enterprise-readiness-report.pdf', label: 'Read the readiness report' },
-  },
-  {
-    id: 'company', label: 'Company', eyebrow: 'Pilot Protocol',
-    title: 'Building the network for agents.',
-    desc: 'Learn about the company, follow our progress, or speak directly with the team.',
-    activeFor: ['news', 'roadmap', 'contact'],
-    links: [
-      { href: '/about', kicker: 'About', label: 'About Pilot', desc: 'Company, people, and publishing standards' },
-      { href: '/roadmap', kicker: 'Direction', label: 'Product roadmap', desc: 'What we are strengthening next' },
-      { href: '/news/', kicker: 'Newsroom', label: 'Company news', desc: 'Announcements and company updates' },
-      { href: '/contact', kicker: 'Contact', label: 'Talk to the team', desc: 'Enterprise, partnerships, and press' },
-    ],
-    footer: { href: '/contact', label: 'Contact Pilot Protocol' },
-  },
+];
+
+const navLinks = [
+  { href: '/service-agents', label: 'Service agents', activeFor: ['service-agents'] },
+  { href: '/app-store', label: 'App Store', activeFor: ['apps'] },
+  { href: '/cloud', label: 'Pilot Cloud', activeFor: ['cloud'] },
+  { href: '/docs/', label: 'Docs', activeFor: ['docs'] },
+  { href: '/blog/', label: 'Blog', activeFor: ['blog'] },
+  { href: 'https://github.com/pilot-protocol/pilotprotocol', label: 'GitHub', activeFor: [], external: true },
 ];
 ---
 <a class="skip-link" href="#page-content">Skip to content</a>
@@ -121,15 +79,28 @@ const navGroups = [
           </div>
         ))}
 
+        {navLinks.map((l) => {
+          const isActive = l.activeFor.includes(active || '');
+          return (
+            <a
+              href={l.href}
+              class:list={['nav-link', isActive && 'active']}
+              data-track="nav_click"
+              data-track-target={l.label.toLowerCase().replaceAll(' ', '-')}
+            >
+              <span class="nav-trigger-label">{l.label}</span>
+              {l.external && <span class="nav-link-ext" aria-hidden="true">↗</span>}
+            </a>
+          );
+        })}
+
         <div class="nav-mobile-actions">
-          <a class="nav-sales" href="/contact">Contact sales</a>
-          <a class="nav-cta" href="/docs/getting-started">Get started</a>
+          <a class="nav-cta" href="/docs/getting-started" data-track="nav_click" data-track-target="install">Install</a>
         </div>
       </div>
 
       <div class="nav-right">
-        <a class="nav-sales" href="/contact">Contact sales</a>
-        <a class="nav-cta" href="/docs/getting-started">Get started</a>
+        <a class="nav-cta" href="/docs/getting-started" data-track="nav_click" data-track-target="install">Install</a>
         <button id="theme-toggle" class="theme-toggle" aria-label="Toggle light/dark theme" type="button">
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="4.2"></circle>
@@ -243,3 +214,58 @@ const navGroups = [
     }
   })();
 </script>
+
+<style>
+  /* Top-level links sit beside the Protocol menu and borrow its trigger look
+     (system.css styles the dropdowns; these rules cover the plain links). */
+  .nav-top .nav-link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--ink-dim);
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 530;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  .nav-top .nav-link:hover,
+  .nav-top .nav-link.active { color: var(--ink); }
+  .nav-top .nav-link.active::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 17px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+  .nav-top .nav-link:focus-visible { outline: 0; color: var(--ink); }
+  .nav-top .nav-link:focus-visible .nav-trigger-label {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+    border-radius: 3px;
+  }
+  .nav-top .nav-link-ext { font-size: 11px; color: var(--ink-dim); }
+
+  @media (max-width: 1180px) {
+    .nav-top .nav-link {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      min-height: 58px;
+      padding: 0 4px;
+      border-bottom: 1px solid var(--line);
+      font-size: 17px;
+      font-weight: 560;
+      color: var(--ink);
+    }
+    .nav-top .nav-link.active::after { display: none; }
+    .nav-top .nav-link-ext { font-size: 14px; }
+    .nav-top .nav-mobile-actions { grid-template-columns: 1fr; }
+  }
+</style>

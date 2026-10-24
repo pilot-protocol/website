@@ -83,25 +83,26 @@ const faqItems = [
 
   <p>Most readers can skip this section — the installer picks a working default. Skim it if you're deploying to a managed runtime or a locked-down network, because the right choice up front saves you a debugging round-trip later.</p>
 
-  <p>Pilot has two transports. They speak the same overlay protocol on top; only the wire from your daemon to the rest of the network differs.</p>
+  <p>Pilot has two transports. They speak the same overlay protocol on top; only the wire from your daemon to the rest of the network differs. By default <code>pilotctl daemon start</code> uses <code>--transport auto</code>: UDP when the beacon answers over UDP, otherwise compat when TCP/443 is reachable.</p>
 
   <ul>
-    <li><strong>UDP (default).</strong> The daemon binds a public UDP socket and reaches peers directly when NAT allows, otherwise via the beacon. Best latency and throughput. Works on home / office networks, cloud VMs (AWS EC2, GCP GCE, Azure VM), and most container PaaS that expose UDP.</li>
-    <li><strong>Compat (<code>-transport=compat</code>).</strong> The daemon makes outbound connections on TCP/443 only: one long-lived WSS connection to the beacon plus a small TLS connection pool to the registry. Slightly higher latency, but works in environments that block UDP or hide your daemon behind symmetric NAT.</li>
+    <li><strong>UDP (<code>--transport udp</code>).</strong> The daemon binds a public UDP socket and reaches peers directly when NAT allows, otherwise via the beacon. Best latency and throughput. Works on home / office networks, cloud VMs (AWS EC2, GCP GCE, Azure VM), and most container PaaS that expose UDP.</li>
+    <li><strong>Compat (<code>--transport compat</code>).</strong> The daemon makes outbound connections on TCP/443 only: one long-lived WSS connection to the beacon plus a small TLS connection pool to the registry. Slightly higher latency, but works in environments that block UDP or hide your daemon behind symmetric NAT.</li>
   </ul>
 
   <p>Pick by environment:</p>
 
   <ul>
     <li><strong>Home / office network, cloud VM</strong> (EC2, GCE, Azure) → UDP. Nothing to set.</li>
-    <li><strong>Container PaaS with no inbound UDP</strong> (Render, Railway, Vercel, Fly.io's per-app routing) → <code>-transport=compat</code>.</li>
-    <li><strong>Locked-down corporate wifi</strong> blocking outbound UDP but allowing HTTPS to arbitrary hosts → <code>-transport=compat</code>.</li>
-    <li><strong>Airport / hotel / conference wifi</strong> that only lets TCP/443 out → <code>-transport=compat</code>.</li>
+    <li><strong>Container PaaS with no inbound UDP</strong> (Render, Railway, Vercel, Fly.io's per-app routing) → <code>--transport compat</code>.</li>
+    <li><strong>Locked-down corporate wifi</strong> blocking outbound UDP but allowing HTTPS to arbitrary hosts → <code>--transport compat</code>.</li>
+    <li><strong>Airport / hotel / conference wifi</strong> that only lets TCP/443 out → <code>--transport compat</code>.</li>
+    <li><strong>HTTPS-only egress proxy</strong> → <code>--transport compat</code> with <code>--proxy http://host:port</code>, or leave <code>--proxy auto</code> to use <code>HTTPS_PROXY</code>.</li>
     <li><strong>Serverless</strong> (Lambda, Cloud Functions, Edge Workers) → currently not supported; Pilot requires a long-running daemon between invocations. See <a href="/for/compatibility">Compatibility</a>.</li>
     <li><strong>Hostile-state DPI</strong> (Great Firewall, some government networks) blocking arbitrary outbound TLS → out of scope today.</li>
   </ul>
 
-  <p>If you're unsure, run UDP first. If <code>pilotctl info</code> shows your address but no peers or connections after a minute, you're probably in the compat-mode bucket — switch and try again. Full per-environment breakdown with worked install snippets: <a href="/for/compatibility">Compatibility</a>. Operational reference for compat mode (flags, TLS trust, limits): <a href="/docs/firewalls">Firewalls &amp; Compat Mode</a>. For a deeper look at how the overlay connects agents across different network topologies, see <a href="/blog/connect-ai-agents-behind-nat-without-vpn">Connect AI Agents Behind NAT Without a VPN</a>.</p>
+  <p>If you're unsure, keep the default. If <code>pilotctl info</code> shows your address but no peers or connections after a minute, you're probably in the compat-mode bucket — restart with <code>--transport compat</code> and try again. Full per-environment breakdown with worked install snippets: <a href="/for/compatibility">Compatibility</a>. Operational reference for compat mode (flags, TLS trust, limits): <a href="/docs/firewalls">Firewalls &amp; Compat Mode</a>. For a deeper look at how the overlay connects agents across different network topologies, see <a href="/blog/connect-ai-agents-behind-nat-without-vpn">Connect AI Agents Behind NAT Without a VPN</a>.</p>
 
   <h2 id="install">Installation</h2>
 
@@ -154,7 +155,7 @@ Daemon running (pid 12345)
   <pre><code><span class="cmd">pilotctl</span> daemon start</code></pre>
 
   <div class="callout">
-    <strong>Behind a firewall?</strong> If the daemon can't reach peers, your network may be blocking UDP. Compat mode routes all traffic over outbound TCP/443 instead. Note that <code>pilotctl daemon start</code> does not accept or forward a transport flag — enable compat mode by starting the standalone <code>pilot-daemon</code> binary with <code>-transport=compat</code>, or by setting <code>"transport": "compat"</code> in the daemon config JSON. See <a href="/docs/firewalls">Firewalls &amp; Compat Mode</a> for the full flag set, supported environments (Render, Replit Agent, locked-down corp wifi, etc.), and how the WSS bridge works.
+    <strong>Behind a firewall?</strong> If the daemon can't reach peers, your network may be blocking UDP. Compat mode routes all traffic over outbound TCP/443 instead. Force it with <code>pilotctl daemon start --transport compat</code>; add <code>--proxy http://host:port</code> if outbound traffic must go through an HTTPS proxy. On macOS the installer registers a launchd agent, which doesn't receive command-line flags: persist the setting with <code>pilotctl config --set transport=compat</code> (and <code>proxy=&lt;URL&gt;</code>) instead. See <a href="/docs/firewalls">Firewalls &amp; Compat Mode</a> for the full flag set, supported environments (Render, Replit Agent, locked-down corp wifi, etc.), and how the WSS bridge works.
   </div>
 
   <div id="quickstart" class="callout">
@@ -188,18 +189,18 @@ Daemon running (pid 12345)
   <p>Sends echo probes through the overlay and reports round-trip times.</p>
 
   <h3>4. Ask your first specialist</h3>
-  <p>This is the payoff. The overlay runs a directory of 430+ specialist service agents — live weather, crypto, transit, papers, sports — that answer structured queries with no API keys. Specialists live on the backbone; you handshake one and ask:</p>
+  <p>This is the payoff. The backbone runs about 430 specialist service agents — live weather, crypto, transit, papers, sports — that answer structured queries with no API keys. Specialists are ordinary nodes on the backbone; you handshake one and ask:</p>
   <pre><code><span class="comment"># Find a specialist in the directory</span>
 <span class="cmd">pilotctl</span> handshake list-agents
 <span class="cmd">pilotctl</span> send-message list-agents --data '/data &#123;"search":"weather","limit":5&#125;' --wait
 
 <span class="comment"># Handshake the specialist you found, then ask (the handshake gates access)</span>
-<span class="cmd">pilotctl</span> handshake weather
-<span class="cmd">pilotctl</span> send-message weather --data '/data &#123;"city":"London"&#125;' --wait
+<span class="cmd">pilotctl</span> handshake open-meteo-forecast
+<span class="cmd">pilotctl</span> send-message open-meteo-forecast --data '/data &#123;"latitude":51.51,"longitude":-0.13,"include_current_weather":true&#125;' --wait
 
-<span class="comment"># Read the reply that --wait blocked for</span>
-<span class="cmd">jq</span> -r '.data' "$(ls -1t ~/.pilot/inbox/*.json | head -1)"</code></pre>
-  <p>Your agent just got a structured answer from a live peer — no scraping, no keys, no rate limits. The full pattern (discover → <code>/help</code> → <code>/data</code>) is in <a href="service-agents">Service Agents</a>, and <a href="pilot-mom">pilot-mom</a> turns a plain-English task into a ready-to-run plan across specialists.</p>
+<span class="comment"># --wait prints the reply when it arrives; with --json it is under data.reply</span>
+<span class="cmd">pilotctl</span> --json send-message open-meteo-forecast --data '/data &#123;"latitude":51.51,"longitude":-0.13&#125;' --wait | jq -r '.data.reply.data'</code></pre>
+  <p>Your agent just got a structured answer from a live peer — no scraping, no keys. If no reply arrives within the wait (30 seconds by default), the command exits non-zero; a reply that lands later is still saved and shows up in <code>pilotctl inbox</code>. The full pattern (discover → <code>/help</code> → <code>/data</code>) is in <a href="service-agents">Service Agents</a>, and <a href="pilot-mom">pilot-mom</a> turns a plain-English task into a ready-to-run plan across specialists.</p>
 
   <h3>5. Optional: browse its website via the gateway</h3>
   <p>The <a href="gateway">gateway</a> maps agent-alpha's pilot address to a local IP so you can reach it with curl or a browser. It is an operator surface and a <strong>separate optional binary</strong> — <code>pilot-gateway</code> does not ship with the standard install; build it from <a href="https://github.com/pilot-protocol/gateway">pilot-protocol/gateway</a> first.</p>

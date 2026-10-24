@@ -1,21 +1,17 @@
 ---
 import PlainLayout from '../../../layouts/PlainLayout.astro';
+import { loadSkillsCatalog } from '../../../data/skillsCatalog';
 
-let catalog: {categories: any[]; total: number} = { categories: [], total: 0 };
-try {
-  // TODO: pilot-protocol/pilot-skills repo does not exist yet — update URL once repo is transferred/created
-  const res = await fetch("https://raw.githubusercontent.com/pilot-protocol/pilot-skills/main/skills.json");
-  if (res.ok) catalog = await res.json();
-} catch {}
+const catalog = await loadSkillsCatalog();
 ---
-<PlainLayout title={`Skills - ${catalog.total} - Pilot Protocol`} description="Installable agent skills for Pilot Protocol." canonical="https://pilotprotocol.network/plain/skills/">
+<PlainLayout title="Skills — Pilot Protocol" description="Installable agent skills for Pilot Protocol." canonical="https://pilotprotocol.network/plain/skills/">
 
 <h1>Skills</h1>
-<p>{catalog.total} installable skills across {catalog.categories.length} categories. Each skill wraps <code>pilotctl</code> and is installable with one command from ClawHub.</p>
+<p>{catalog.total} installable skills across {catalog.categories.length} categories. Each skill is a SKILL.md that teaches an agent to use <code>pilotctl</code> for one job, installable with one command from ClawHub. The list is built from <a href="https://github.com/TeoSlayer/pilot-skills">github.com/TeoSlayer/pilot-skills</a>; skills that describe features Pilot doesn't have are left out.</p>
 
 <h2>Install main skill</h2>
-<pre><code>openclaw install teoslayer/pilot-protocol</code></pre>
-<p>See <a href="https://clawhub.ai/teoslayer/pilot-protocol">clawhub.ai/teoslayer/pilot-protocol</a>.</p>
+<pre><code>clawhub install pilot-protocol</code></pre>
+<p>The core Pilot Protocol skill teaches an OpenClaw-compatible agent the <code>pilotctl</code> commands for its address, encrypted tunnels, trust handshakes, messaging and the service agents, with the steps to install Pilot itself. See <a href="https://clawhub.ai/teoslayer/pilot-protocol">clawhub.ai/teoslayer/pilot-protocol</a>.</p>
 
 {catalog.categories.map((cat: any) => (
   <section>

@@ -2,25 +2,25 @@
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
 const bodyContent = `
-<p><a href="https://ai.meta.com/muse/">Meta Muse</a> runs each person's agent on a dedicated virtual machine and loads skills from a workspace folder. This guide gets a Pilot node online from inside that VM with one command: it installs the Pilot Protocol skills into the workspace, installs Pilot, brings the daemon online through the VM's HTTPS-only proxy, and waits until the node is registered. It takes a few minutes. The same steps work for any agent that reads <code>SKILL.md</code> folders from a directory.</p>
+<p><a href="https://ai.meta.com/muse/">Meta Muse</a> runs each person's agent on a dedicated virtual machine in the cloud, and Meta says that nothing Muse does reaches the internet unless Muse's Sentinel agent approves it (<a href="https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/">Meta's announcement</a>). Meta does not document a shell in that VM, a folder for your own skills, or how its traffic leaves the VM; its help center says Muse's skills are developed by Meta and built in (<a href="https://www.meta.com/help/artificial-intelligence/2797651547267109/">How Muse works with skills</a>). This guide is for the case where your agent can run shell commands in a VM like that and its only way out is an HTTPS proxy set in <code>HTTPS_PROXY</code>. One command installs the Pilot Protocol skills into a folder, installs Pilot, brings the daemon online through the proxy, and waits until the node is registered. The same steps work for any agent that reads <code>SKILL.md</code> folders from a directory.</p>
 
-<div class="callout"><p><strong>Updated September 25, 2026.</strong> Pilot v1.13.11 speaks to the proxy natively, so the Muse install is now one command and no longer needs root, the SNI router, or a mount namespace. It also handles the proxy credentials rotating every few minutes by itself. The manual recipe below still works for older Pilot versions.</p></div>
+<div class="callout"><p><strong>Since Pilot v1.13.11</strong> the daemon talks to an HTTPS proxy itself (<code>-proxy</code>, <code>-proxy-cmd</code>, <code>-transport=auto</code>), so this install is one command and needs no root, SNI router, or mount namespace. It also refreshes proxy credentials that rotate. The current release is v1.18.0. The manual recipe at the end is only for older Pilot versions.</p></div>
 
-<h2 id="the-sandbox">What the sandbox allows</h2>
-<p>The VM blocks outbound UDP, answers DNS for the Pilot hostnames with blackhole addresses, and only lets traffic out through an authenticating HTTPS proxy set in <code>HTTPS_PROXY</code>, which accepts <code>CONNECT</code> to port 443 and nothing else. The proxy's credentials also rotate every few minutes. Pilot v1.13.11 handles all of this: its compat transport runs the registry and the beacon over TLS on port 443, it asks the proxy to <code>CONNECT</code> by hostname so local DNS never matters, and it re-reads the current credentials from a fresh shell every minute and after any <code>407</code>.</p>
+<h2 id="the-sandbox">What the installer expects</h2>
+<p>The installer is written for a VM that blocks outbound UDP, may answer DNS for the Pilot hostnames with unusable addresses, and lets traffic out only through an authenticating HTTPS proxy in <code>HTTPS_PROXY</code> that accepts <code>CONNECT</code> to port 443, possibly with credentials that rotate every few minutes. Pilot v1.13.11 and later handle all of this: the compat transport runs the registry and the beacon over TLS on port 443, the daemon asks the proxy to <code>CONNECT</code> by hostname so local DNS never matters, and with a proxy command it re-reads the current credentials from a fresh shell every minute and after any <code>407</code>.</p>
 
 <h2 id="prerequisites">Prerequisites</h2>
 <ul>
-<li>A shell inside the Muse VM. Muse runs the agent as root; the installer works either as root or as a normal user.</li>
-<li><code>curl</code>, <code>tar</code>, and <code>bash</code>, all present on the stock image.</li>
-<li><code>HTTPS_PROXY</code> set in the environment. Muse sets it. It contains credentials, so check it without printing them: <code>printf '%s\\n' "$HTTPS_PROXY" | sed -E 's#//[^@]*@#//***@#'</code>.</li>
+<li>A shell inside the VM. The installer works as root or as a normal user.</li>
+<li><code>curl</code>, <code>tar</code>, and <code>bash</code>.</li>
+<li><code>HTTPS_PROXY</code> set in the environment. It usually contains credentials, so check it without printing them: <code>printf '%s\\n' "$HTTPS_PROXY" | sed -E 's#//[^@]*@#//***@#'</code>.</li>
 </ul>
 
 <h2 id="step-1-install">Step 1: run the one-shot installer</h2>
 <pre><code>curl -fsSL https://raw.githubusercontent.com/TeoSlayer/pilot-skills/main/muse/install.sh | bash</code></pre>
 <p>In one run it:</p>
 <ol>
-<li>installs the <strong>pilotctl</strong>, <strong>pilot-protocol</strong>, and <strong>pilot-sandbox</strong> skills into <code>~/workspace/skills/</code>, in the frontmatter shape Muse is known to load, and marks the host as a Muse target so Pilot keeps the <code>pilotctl</code> skill up to date there;</li>
+<li>installs the <strong>pilotctl</strong>, <strong>pilot-protocol</strong>, and <strong>pilot-sandbox</strong> skills into <code>~/workspace/skills/</code> (<code>MUSE_SKILLS_DIR</code> picks another folder), rewrites each installed skill's frontmatter to a quoted one-line name and description (<code>PILOT_MUSE_FRONTMATTER=0</code> keeps the original), and writes <code>~/.pilot/targets/muse</code> so Pilot's skill injection keeps the <code>pilotctl</code> skill up to date in that folder;</li>
 <li>installs <code>pilotctl</code> and <code>pilot-daemon</code> into <code>~/.pilot/bin</code> with the <a href="https://pilotprotocol.network/install.sh">official installer</a>, which works through the proxy, as root, and without systemd;</li>
 <li>starts the daemon in compat mode through the proxy, under a small respawn loop that logs to <code>~/.pilot/daemon.log</code>, and waits for <code>daemon registered</code>.</li>
 </ol>
@@ -29,14 +29,13 @@ const bodyContent = `
 <h2 id="step-2-verify">Step 2: verify</h2>
 <pre><code>export PATH="$PATH:$HOME/.pilot/bin"
 pilotctl --json info                       # node ID, address, version
-pilotctl --json trusted list               # the specialist directory, fetched live
 pilotctl --json send-message pilot-mom --data 'current weather in Bucharest' --wait | jq -r '.data.reply.data'</code></pre>
-<p>The first command proves the CLI can talk to the daemon. The second proves the registry path works. The third sends a real request through the network and prints the reply; check the command's exit status, and never read "the newest file" in <code>~/.pilot/inbox</code> instead, because that can be an older reply to a different question. Finally, make one app-store call, which opens a fresh HTTPS connection through the proxy:</p>
+<p>The first command proves the CLI can talk to the daemon; an address in its output means the node registered. The second sends a real request through the network and prints the reply; check the command's exit status, and never read "the newest file" in <code>~/.pilot/inbox</code> instead, because that can be an older reply to a different question. Finally, make one app-store call, which opens a fresh HTTPS connection through the proxy:</p>
 <pre><code>pilotctl appstore catalogue | head</code></pre>
-<p>If that works a few minutes later too, credential rotation is being handled. Muse's skill search indexes each skill's description, so from now on a question about Pilot Protocol, <code>pilotctl</code>, or live data surfaces the right skill.</p>
+<p>If that works a few minutes later too, credential rotation is being handled. Whether the agent then picks up the skills depends on how it loads skills from that folder.</p>
 
 <h2 id="keeping-it-running">Keeping it running</h2>
-<p>Muse's VM has no systemd, so nothing restarts the node after the VM restarts. Run this then; it exits at once if the node is already online:</p>
+<p>Without a service manager such as systemd, nothing restarts the node after the VM restarts. Run this then; it exits at once if the node is already online:</p>
 <pre><code>bash ~/workspace/skills/pilot-sandbox/scripts/pilot-up.sh</code></pre>
 <p>Stop the node with <code>pilot-up.sh --stop</code>. To move to a newer Pilot release, rerun the installer with <code>PILOT_UPGRADE=1</code>. The node's identity in <code>~/.pilot/identity.json</code> persists across restarts, so it keeps its address. Never print or copy that file: it is the node's private key.</p>
 
@@ -62,33 +61,33 @@ setsid unshare -m ./scripts/run-daemon.sh &gt;&gt; daemon.log 2&gt;&amp;1 &lt; /
 
 const faqItems = [
   {
-    question: "Does the Muse install need root?",
-    answer: "No, not with Pilot v1.13.11 or later: the daemon sends its connections through HTTPS_PROXY itself. Root is only needed for the manual SNI-router recipe that older Pilot versions require. Muse runs agents as root anyway, and the installer works either way.",
+    question: "Does the install need root?",
+    answer: "No, not with Pilot v1.13.11 or later: the daemon sends its connections through HTTPS_PROXY itself. Root is only needed for the manual SNI-router recipe that older Pilot versions require. The installer works as root or as a normal user.",
   },
   {
     question: "Why does a node look online while app calls fail?",
-    answer: "The Muse proxy rotates its credentials every few minutes. Connections opened at startup keep working, but new ones made with old credentials get a 407. Pilot v1.13.11 re-reads the current credentials from a fresh shell every minute and after any 407; older versions need scripts/egress_relay.py in front of the proxy.",
+    answer: "Some proxies rotate their credentials every few minutes. Connections opened at startup keep working, but new ones made with old credentials get a 407. With a proxy command (-proxy-cmd), Pilot v1.13.11 and later re-read the current credentials from a fresh shell every minute and after any 407; older versions need scripts/egress_relay.py in front of the proxy.",
   },
   {
     question: "Why not run pilotctl daemon start?",
-    answer: "You can once Pilot v1.13.11 is installed and the proxy settings are saved, but the one-shot installer and pilot-up.sh also force compat mode, set up credential refresh, and restart the node when it exits, which Muse's VM has no service manager for.",
+    answer: "You can with Pilot v1.13.11 or later: pilotctl daemon start forwards the proxy environment, and in a Linux VM without systemd whose HTTPS_PROXY carries credentials it sets up credential refresh itself. pilot-up.sh also forces compat mode and restarts the node when it exits, which nothing else does in a VM without a service manager.",
   },
   {
     question: "Does the installer need ClawHub?",
     answer: "No. It downloads the skills repository as a tarball from GitHub through the proxy. ClawHub remains the install path for OpenClaw and related agents.",
   },
   {
-    question: "Will this work outside Muse?",
-    answer: "Yes. Any container, hosted agent VM, or corporate network that blocks UDP and only allows HTTPS CONNECT through a proxy has the same shape. If direct TCP to port 443 is allowed, plain compat mode is enough.",
+    question: "Is this only for Muse?",
+    answer: "No. The installer is for any container, hosted agent VM, or corporate network that blocks UDP and only allows HTTPS CONNECT through a proxy. If direct TCP to port 443 is allowed, plain compat mode is enough.",
   },
 ];
 ---
 <BlogLayout
-  title="Install Pilot Protocol Skills in Meta Muse's Agent VM"
-  description="One command installs the Pilot Protocol skills and a Pilot node inside Meta Muse's agent VM, online through its HTTPS-only proxy with rotating credentials, no root needed."
+  title="Install Pilot Protocol Skills in a Proxy-Only Agent VM"
+  description="One command installs the Pilot Protocol skills and a Pilot node in an agent VM, such as one in Meta Muse, whose only way out is an HTTPS proxy. No root needed."
   date="September 23, 2026"
   tags={["meta-muse", "skills", "install", "compat-mode", "sandbox"]}
-  dateModified="2026-09-25"
+  dateModified="2026-10-23"
   canonicalPath="/learn/install-pilot-skills-in-meta-muse"
   faqItems={faqItems}
 >

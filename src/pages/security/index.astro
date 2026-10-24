@@ -1,0 +1,455 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+import '../../styles/system.css';
+
+// /security replaces /trust and /governance (both 301 here). Every control on
+// this page is checked against the open-source daemon, registry (rendezvous),
+// beacon and app-store code; nothing is labelled as coming later.
+const title = 'Pilot Protocol Security: Controls, Limits and Reporting';
+const description = 'The security controls that ship in Pilot Protocol, what the public backbone can see, what your application still owns, and how to report a vulnerability.';
+const canonicalUrl = 'https://pilotprotocol.network/security/';
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <BaseHead title={title} description={description} canonicalUrl={canonicalUrl} />
+  <script type="application/ld+json" set:html={JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: title,
+    description,
+    url: canonicalUrl,
+    about: {
+      '@type': 'SoftwareApplication',
+      name: 'Pilot Protocol',
+      applicationCategory: 'NetworkingApplication',
+      license: 'https://www.gnu.org/licenses/agpl-3.0.html',
+    },
+  })}></script>
+</head>
+<body>
+
+<Nav active="trust" />
+
+<main>
+  <section class="trust-hero">
+    <div class="gridbg" aria-hidden="true"></div>
+    <div class="wrap">
+      <div class="eyebrow">Security</div>
+      <h1>What Pilot secures,<br/> <em>and what it <span class="keep-word">doesn’t.</span></em></h1>
+      <p class="trust-lede">How Pilot handles identity, encryption, trust and reachability, what the public backbone can see, and which decisions stay with your application. All of it can be checked against the source.</p>
+      <div class="trust-actions">
+        <a class="btn primary" href="/security/disclosure">Report a vulnerability <span class="arr">→</span></a>
+        <a class="btn" href="/docs/security">Security documentation</a>
+        <a class="btn" href="https://github.com/pilot-protocol" target="_blank" rel="noopener">Inspect the source</a>
+        <a class="btn" href="#metrics">Metric definitions</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="trust-summary" aria-label="Pilot Protocol security summary">
+    <div class="wrap summary-grid">
+      <div class="summary-item">
+        <span class="summary-label">Source</span>
+        <strong>AGPL-3.0</strong>
+        <span>The daemon, pilotctl, registry and beacon are public.</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Default</span>
+        <strong>Private</strong>
+        <span>A daemon’s endpoint stays hidden from peers it doesn’t trust.</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Tunnels</span>
+        <strong>X25519 + AES-256-GCM</strong>
+        <span>A key per pair of peers. Relays carry ciphertext only.</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Certification</span>
+        <strong>None</strong>
+        <span>Pilot has no SOC 2 report or other independent certification.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="controls">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">Controls that ship</div>
+          <h2>In the code<br/> <em>you can read.</em></h2>
+        </div>
+        <p>These run in every daemon by default. The last card lists the stricter checks operators can turn on; they are off by default so older clients keep working.</p>
+      </div>
+
+      <div class="control-grid">
+        <a href="/docs/security" class="control-card"><span>Daemon · default</span><h3>Ed25519 identity</h3><p>Each daemon has a persistent Ed25519 key pair. Trust handshakes and identity-changing registry operations, such as key rotation, are signed with it.</p></a>
+        <a href="/docs/security" class="control-card"><span>Daemon · default</span><h3>Encrypted tunnels</h3><p>X25519 key agreement gives each pair of peers its own secret. AES-256-GCM encrypts and authenticates every tunnel packet. Encryption is on unless a daemon is started with <code>--no-encrypt</code>.</p></a>
+        <a href="/docs/trust" class="control-card"><span>Daemon · default</span><h3>Mutual trust handshakes</h3><p>A private node accepts streams and datagrams only from peers it trusts or shares a network with. A handshake has to be approved, and trust can be rejected or revoked with <code>pilotctl untrust</code>.</p></a>
+        <a href="/docs/trust" class="control-card"><span>Daemon · default</span><h3>Private by default</h3><p>Daemons start private. Directory lookups don’t hand a private node’s endpoint to untrusted peers. Some metadata, such as a hostname you set, stays visible in the directory.</p></a>
+        <a href="/docs/app-store" class="control-card"><span>App Store</span><h3>Package signing and pinning</h3><p>Catalogue apps are reviewed, signature-verified and SHA-256 pinned before they install. An app declares its grants in its manifest and you accept them at install.</p></a>
+        <a href="/self-hosting/#hardening" class="control-card"><span>Operator flags · off by default</span><h3>Pre-trust hardening</h3><p>Flags on the daemon, registry and beacon extend trust checks to key exchange, directory lookups, registration and hole punching. They are off by default; whoever runs each component turns them on.</p></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="architecture">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">Architecture</div>
+          <h2>Peer traffic.<br/> <em>Separate coordination.</em></h2>
+        </div>
+        <p>Agent traffic runs in encrypted tunnels between peers. The registry and beacon only help peers find and reach each other: registration, discovery, NAT traversal and relay fallback.</p>
+      </div>
+
+      <div class="architecture-map" aria-label="Pilot Protocol control-plane and data-plane architecture">
+        <div class="map-node map-agent">
+          <span class="map-kicker">Endpoint</span>
+          <strong>Agent A</strong>
+          <span>Ed25519 identity</span>
+        </div>
+        <div class="map-center">
+          <div class="map-lane control-lane">
+            <span class="lane-name">Coordination</span>
+            <strong>Registry + beacon</strong>
+            <span>Discovery, public keys, endpoint exchange, NAT traversal</span>
+            <small>Run by Vulture Labs on the public backbone · or run your own</small>
+          </div>
+          <div class="map-lane data-lane">
+            <span class="lane-name">Payload</span>
+            <strong>Encrypted peer tunnel</strong>
+            <span>X25519 key exchange · AES-256-GCM tunnel</span>
+            <small>Direct when possible · encrypted relay through the beacon when not</small>
+          </div>
+        </div>
+        <div class="map-node map-agent">
+          <span class="map-kicker">Endpoint</span>
+          <strong>Agent B</strong>
+          <span>Ed25519 identity</span>
+        </div>
+      </div>
+
+      <div class="architecture-notes">
+        <div><b>The registry</b><span>Issues addresses, stores public keys, answers lookups, holds network membership and records which nodes trust each other.</span></div>
+        <div><b>The beacon</b><span>Tells a daemon its public address (STUN), coordinates hole punching, and relays encrypted packets when a direct path fails.</span></div>
+        <div><b>What you can change</b><span>Registry and beacon addresses are settings (<code>--registry</code>, <code>--beacon</code>). Both servers are open source, so you can <a href="/self-hosting/">run your own</a>.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="backbone">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">Metadata</div>
+          <h2>What the backbone<br/> <em>can see.</em></h2>
+        </div>
+        <p>On the public backbone, Vulture Labs runs the registry and beacon. This is what each part of the system handles in the clear.</p>
+      </div>
+
+      <div class="claims-table">
+        <div class="claim-row claim-head"><span>Part</span><span>Run by</span><span>What it sees</span></div>
+        <div class="claim-row"><b>Registry</b><span class="status shipped">Vulture Labs</span><p>Node ID, public key, version, hostname and tags if you set them, public or private flag, advertised endpoints, network membership, which nodes trust each other, heartbeat times, and the email you gave for key recovery, if any.</p></div>
+        <div class="claim-row"><b>Beacon</b><span class="status shipped">Vulture Labs</span><p>Your public IP and port, hole-punch requests, and the timing and size of relayed packets. Relayed payloads are ciphertext; the beacon has no tunnel keys.</p></div>
+        <div class="claim-row"><b>Peer tunnel</b><span class="status shipped">The two endpoints</span><p>Only the two peers can read the payload. Neither the registry nor the beacon receives the keys.</p></div>
+        <div class="claim-row"><b>Data service agents</b><span class="status shipped">Vulture Labs</span><p>The <a href="/service-agents/">agent you query</a> sees your query and calls its upstream data source. <code>/summary</code> and free-text queries are also sent to Google Gemini.</p></div>
+        <div class="claim-row"><b>App Store broker</b><span class="status shipped">Vulture Labs</span><p>Some apps route calls through Pilot’s broker. The broker processes those request contents and forwards them to the provider named in the app’s listing.</p></div>
+        <div class="claim-row"><b>Usage events</b><span class="status shipped">Vulture Labs</span><p><code>pilotctl</code> sends signed events for App Store catalogue views, app views, installs and reviews. Turn them off with <code>{'{"consent": {"telemetry": false}}'}</code> in <code>~/.pilot/config.json</code>; see <a href="/docs/consent">consent</a>.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="authority">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">Responsibility split</div>
+          <h2>Connectivity is not<br/> <em>permission to act.</em></h2>
+        </div>
+        <p>Pilot decides whether two endpoints can talk. Whether an agent may read data, spend money or make a commitment is decided by your application.</p>
+      </div>
+
+      <div class="boundary-table" aria-label="Pilot and application responsibility boundary">
+        <div class="boundary-column pilot-column">
+          <div class="column-head"><span>Pilot handles</span><b>Identity and reachability</b></div>
+          <ul>
+            <li>Daemon identity and signed handshakes</li>
+            <li>Encrypted tunnels between peers</li>
+            <li>Who can reach a private node: trust and network membership</li>
+            <li>Rejecting and revoking trust</li>
+            <li>NAT traversal and relay fallback</li>
+            <li>On a registry you run: roles, network policy and audit export</li>
+          </ul>
+        </div>
+        <div class="boundary-column app-column">
+          <div class="column-head"><span>Your application owns</span><b>What an agent may do</b></div>
+          <ul>
+            <li>Which tasks, tools and methods an agent may use</li>
+            <li>Spending, order and counterparty limits</li>
+            <li>Human approval for consequential actions</li>
+            <li>What data an agent may read, share or keep</li>
+            <li>Prompt, model and tool safety</li>
+            <li>Legal, regulatory and contractual compliance</li>
+          </ul>
+        </div>
+      </div>
+
+      <ol class="decision-flow" id="control-model" aria-label="The checks a cross-boundary request passes">
+        <li><span>01</span><b>Identify</b><p>The daemon proves its Ed25519 identity in the handshake.</p></li>
+        <li><span>02</span><b>Admit</b><p>A private node checks peer trust or shared network membership.</p></li>
+        <li><span>03</span><b>Constrain</b><p>A network with a port policy drops traffic to unlisted ports.</p></li>
+        <li><span>04</span><b>Authorize</b><p>Your application checks scope, data, budget and approvals.</p></li>
+        <li><span>05</span><b>Record</b><p>Your own logs, plus the registry’s audit export if you run the registry.</p></li>
+      </ol>
+
+      <div class="governance-callout">
+        <span class="callout-mark">!</span>
+        <p><b>A trusted connection only means two endpoints may exchange packets.</b> It does not authorize a purchase, a payment, a data disclosure or a contract. Put those checks in the application, with human approval where the consequence warrants it.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="apps">
+    <div class="wrap split-detail">
+      <div>
+        <div class="eyebrow">App Store</div>
+        <h2>Checked packages.<br/> <em>Ordinary processes.</em></h2>
+      </div>
+      <div class="detail-copy">
+        <p>Apps in the App Store are made by their publishers. Before a catalogue app installs, the daemon checks its signature and its SHA-256 pin.</p>
+        <ul>
+          <li>Review answers whether a listing meets the catalogue’s requirements.</li>
+          <li>Grants say what an app asks the daemon to do for it. The daemon checks them on calls it brokers.</li>
+          <li>Apps are not OS-sandboxed. An installed app runs as a normal process with your user’s permissions.</li>
+          <li>Most apps run locally and are free. Some call their publisher’s hosted service, and a few are metered against a per-user budget.</li>
+        </ul>
+        <a href="/docs/app-store">Read the App Store model →</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="claims">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">Current status</div>
+          <h2>What exists,<br/> <em>stated plainly.</em></h2>
+        </div>
+        <p id="registry-controls">The open-source registry also has private networks, owner, admin and member roles, OIDC/JWT validation, directory sync, network policy, audit export and blueprints. They need the registry admin token, so on the public backbone only its operators can use them. To use them yourself, <a href="/self-hosting/">run your own registry</a>; nobody runs one for you.</p>
+      </div>
+
+      <div class="claims-table">
+        <div class="claim-row claim-head"><span>Topic</span><span>Status</span><span>Precise statement</span></div>
+        <div class="claim-row"><b>Protocol implementation</b><span class="status shipped">Open source</span><p>The daemon, pilotctl, registry and beacon are published under AGPL-3.0 and can be inspected, modified and redistributed under that license.</p></div>
+        <div class="claim-row"><b>Wire specification</b><span class="status shipped">Published</span><p>Message types, addressing, transport, encryption and the trust model are documented alongside the implementation.</p></div>
+        <div class="claim-row"><b>Pre-trust hardening</b><span class="status shipped">Operator flags</span><p>Strict checks on key exchange, directory lookups, registration and hole punching. Off by default; whoever runs the daemon, registry and beacon turns them on.</p></div>
+        <div class="claim-row"><b>Registry controls</b><span class="status shipped">Self-hosted</span><p>Roles, identity-provider validation, policy, audit export and blueprints ship in the open-source registry and work on a registry you run.</p></div>
+        <div class="claim-row"><b>App isolation</b><span class="status none">Not implemented</span><p>Apps run as ordinary processes. The daemon checks grants on brokered calls, but there is no OS-level sandbox.</p></div>
+        <div class="claim-row"><b>Security certification</b><span class="status none">None</span><p>Pilot has no SOC 2 report or other independent certification. Evaluate the controls on this page against your own requirements.</p></div>
+        <div class="claim-row"><b>Business-process governance</b><span class="status none">Your application</span><p>Pilot governs agent connectivity. Application authorization, approval flows and legal authority are set up by whoever deploys the agents.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="policies">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">Policies</div>
+          <h2>The documents a<br/> <em>reviewer asks for.</em></h2>
+        </div>
+        <p>Pilot Protocol is operated by Vulture Labs, Inc. The legal policies, the sub-processor list and the data-request process are published here.</p>
+      </div>
+
+      <div class="control-grid">
+        <a href="/privacy" class="control-card"><span>Policy</span><h3>Privacy policy</h3><p>What the daemon, website and registry collect, the legal basis for processing, and your GDPR and CCPA rights.</p></a>
+        <a href="/privacy#subprocessors" class="control-card"><span>Policy</span><h3>Sub-processors</h3><p>The third parties that process data on our behalf, what each one does, and where the data is processed.</p></a>
+        <a href="/privacy#legal-requests" class="control-card"><span>Policy</span><h3>Government data requests</h3><p>We disclose user data only under valid legal process, narrow overbroad requests, and notify affected users unless the law prohibits it.</p></a>
+        <a href="/terms" class="control-card"><span>Policy</span><h3>Terms of Service</h3><p>The terms governing use of the Pilot Protocol daemon, website and Pilot-operated services.</p></a>
+        <a href="/cookies" class="control-card"><span>Policy</span><h3>Cookie policy</h3><p>The cookies set on pilotprotocol.network. Analytics and advertising cookies load only after you consent.</p></a>
+        <a href="/security/disclosure" class="control-card"><span>Reporting</span><h3>Vulnerability disclosure</h3><p>How to report a security issue, privacy concern or bug privately, and what to include.</p></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="data-handling">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">Data handling</div>
+          <h2>What we hold,<br/> <em>and for how long.</em></h2>
+        </div>
+        <p>A summary of the commitments in our <a href="/privacy">privacy policy</a>. Where the two differ, the privacy policy governs.</p>
+      </div>
+
+      <div class="claims-table">
+        <div class="claim-row claim-head"><span>Topic</span><span>Summary</span><span>Precise statement</span></div>
+        <div class="claim-row"><b>Hosting</b><span class="status shipped">United States</span><p>The registry and Pilot-operated agents run on Google Cloud Platform, with data at rest in <code>us-central1</code>. The website is served by Cloudflare’s global edge network.</p></div>
+        <div class="claim-row"><b>Payload visibility</b><span class="status shipped">End-to-end</span><p>Peer-to-peer tunnel traffic is end-to-end encrypted, and we do not hold the keys. Relayed traffic stays encrypted; we see only routing metadata. Brokered App Store calls are the exception: our broker processes their request contents and forwards them to the provider named in the listing.</p></div>
+        <div class="claim-row"><b>Encryption</b><span class="status shipped">In transit &amp; at rest</span><p>TLS 1.2 or higher for control-plane traffic, AES-256-GCM for peer tunnels, and AES-256 encryption at rest.</p></div>
+        <div class="claim-row"><b>Retention</b><span class="status shipped">Time-limited</span><p>Registration data is deleted after an agent has been offline for 30 consecutive days. Server access logs are deleted after 30 days. See <a href="/privacy#retention">the full retention schedule</a>.</p></div>
+        <div class="claim-row"><b>Breach notification</b><span class="status shipped">As required by law</span><p>If a data breach occurs, we notify affected users and the relevant authorities as applicable law requires.</p></div>
+        <div class="claim-row"><b>Legal requests</b><span class="status shipped">Process required</span><p>We disclose user data only under valid, legally binding process, and we notify affected users first unless the law prohibits it. See <a href="/privacy#legal-requests">the full policy</a>.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="metrics">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">Metric definitions</div>
+          <h2>What the live<br/> <em>counters count.</em></h2>
+        </div>
+        <p>Network figures on this site come from the public registry’s telemetry endpoint. Each label below says exactly what its counter measures.</p>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric-card"><code>total_nodes</code><h3>Registered addresses (all time)</h3><p>Every address the public registry has issued. It is not a count of people, organizations, customers or agents online.</p></div>
+        <div class="metric-card"><code>active_nodes</code><h3>Daemons seen in the last 30 minutes</h3><p>Daemons that sent the registry a heartbeat within its 30-minute stale threshold. One machine can run several daemons, and a daemon is not necessarily an AI agent.</p></div>
+        <div class="metric-card"><code>requests_per_sec</code><h3>Registry requests per second</h3><p>The rate of requests the public registry handles, such as heartbeats, lookups and registrations. It is not traffic between agents, which never passes through the registry.</p></div>
+      </div>
+      <p class="metric-source">Source: <a href="https://polo.pilotprotocol.network/api/public-stats" target="_blank" rel="noopener">public network telemetry JSON</a>. Where a page shows requests per hour, it is <code>requests_per_sec</code> × 3,600. Build-time values are used when the endpoint can’t be reached. These counters have not been independently audited.</p>
+    </div>
+  </section>
+
+  <section class="section section-alt trust-close" id="report">
+    <div class="wrap close-grid">
+      <div>
+        <div class="eyebrow">Report a vulnerability</div>
+        <h2>Found something?<br/> <em>Tell us privately.</em></h2>
+      </div>
+      <div>
+        <p>Send security issues, privacy concerns and bugs through the disclosure form, or email <a href="mailto:founders@pilotprotocol.network?subject=Pilot%20Protocol%20disclosure">founders@pilotprotocol.network</a>. The channel supports coordinated disclosure; it does not promise a bounty, safe harbor or a fixed response time.</p>
+        <div class="trust-actions">
+          <a class="btn primary" href="/security/disclosure">Report a vulnerability <span class="arr">→</span></a>
+          <a class="btn" href="/.well-known/security.txt">security.txt</a>
+          <a class="btn" href="/docs/security">Security documentation</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<Footer />
+
+<style>
+  .trust-hero { position: relative; overflow: hidden; padding: 110px 0 96px; border-bottom: 1px solid var(--line); }
+  .trust-hero .wrap { position: relative; z-index: 1; }
+  .trust-hero h1 { max-width: 1100px; margin: 18px 0 28px; font-size: clamp(58px, 8vw, 128px); line-height: .9; letter-spacing: -.05em; }
+  .trust-hero h1 em, h2 em { font-family: var(--serif); font-weight: 400; }
+  .keep-word { white-space: nowrap; }
+  .trust-lede { max-width: 760px; color: var(--ink-dim); font-size: clamp(19px, 2vw, 25px); line-height: 1.5; }
+  .trust-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+  .trust-summary { border-bottom: 1px solid var(--line); background: var(--bg-deep); }
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .summary-item { display: flex; flex-direction: column; min-height: 190px; padding: 28px; border-right: 1px solid var(--line); }
+  .summary-item:last-child { border-right: 0; }
+  .summary-label, .map-kicker, .lane-name, .control-card > span { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-text); }
+  .summary-item strong { margin: auto 0 8px; font-size: 22px; }
+  .summary-item > span:last-child { color: var(--ink-dim); font-size: 13px; line-height: 1.5; }
+  .section-alt { background: var(--bg-deep); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .section-copy { display: grid; grid-template-columns: 1.1fr .9fr; gap: 80px; align-items: end; margin-bottom: 52px; }
+  .section-copy h2, .split-detail h2, .close-grid h2 { margin-top: 14px; font-size: clamp(44px, 5.8vw, 84px); line-height: .97; letter-spacing: -.045em; }
+  .section-copy > p { max-width: 48ch; color: var(--ink-dim); font-size: clamp(18px, 1.8vw, 22px); line-height: 1.55; }
+  .section-copy > p a, .claim-row p a, .architecture-notes a, .close-grid p a { color: var(--accent-text); }
+  .architecture-map { display: grid; grid-template-columns: 220px 1fr 220px; gap: 18px; align-items: stretch; }
+  .map-node, .map-lane { border: 1px solid var(--line-2); background: var(--bg); }
+  .map-node { display: flex; flex-direction: column; justify-content: center; min-height: 300px; padding: 26px; text-align: center; }
+  .map-node strong { margin: 18px 0 8px; font-size: 28px; }
+  .map-node > span:last-child { color: var(--ink-dim); font-size: 13px; }
+  .map-center { display: grid; grid-template-rows: 1fr 1fr; gap: 18px; }
+  .map-lane { position: relative; display: grid; grid-template-columns: 160px 1fr; gap: 8px 24px; padding: 25px 30px; }
+  .map-lane::before, .map-lane::after { content: ''; position: absolute; top: 50%; width: 19px; height: 1px; background: var(--accent); }
+  .map-lane::before { left: -19px; }
+  .map-lane::after { right: -19px; }
+  .map-lane strong { font-size: 20px; }
+  .map-lane > span:not(.lane-name) { color: var(--ink-dim); font-size: 14px; }
+  .map-lane small { grid-column: 2; color: var(--ink-dim); font-family: var(--mono); font-size: 10px; line-height: 1.5; }
+  .data-lane { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: color-mix(in srgb, var(--accent) 6%, var(--bg)); }
+  .architecture-notes { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 18px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+  .architecture-notes > div { padding: 24px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .architecture-notes b { display: block; margin-bottom: 10px; font-size: 15px; }
+  .architecture-notes span { color: var(--ink-dim); font-size: 13px; line-height: 1.5; }
+  .boundary-table { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line-2); }
+  .boundary-column { padding: 34px; }
+  .boundary-column + .boundary-column { border-left: 1px solid var(--line-2); }
+  .column-head { display: flex; flex-direction: column; gap: 6px; padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+  .column-head span { color: var(--ink-dim); font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+  .column-head b { font-size: 28px; }
+  .boundary-column ul { margin: 24px 0 0; list-style: none; }
+  .boundary-column li { position: relative; padding: 10px 0 10px 26px; border-bottom: 1px solid var(--line); color: var(--ink-dim); }
+  .boundary-column li::before { content: '✓'; position: absolute; left: 0; color: var(--accent); }
+  .app-column li::before { content: '→'; }
+  .decision-flow { display: grid; grid-template-columns: repeat(5, 1fr); margin: 18px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+  .decision-flow li { display: flex; flex-direction: column; min-height: 210px; padding: 24px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg); }
+  .decision-flow li > span { color: var(--accent-text); font: 500 9px/1 var(--mono); }
+  .decision-flow b { margin: auto 0 12px; font-size: 21px; }
+  .decision-flow p { margin: 0; color: var(--ink-dim); font-size: 13px; line-height: 1.5; }
+  .governance-callout { display: flex; gap: 20px; align-items: center; margin-top: 18px; padding: 24px 28px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); background: color-mix(in srgb, var(--accent) 6%, var(--bg)); }
+  .callout-mark { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-family: var(--mono); font-weight: 800; }
+  .governance-callout p { color: var(--ink-dim); }
+  .governance-callout b { color: var(--ink); }
+  .control-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+  .control-card { min-height: 260px; display: flex; flex-direction: column; padding: 28px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  .control-card:hover { color: var(--ink); background: color-mix(in srgb, var(--accent) 5%, var(--bg)); }
+  .control-card h3 { margin: auto 0 12px; font-size: 24px; }
+  .control-card p { color: var(--ink-dim); font-size: 14px; line-height: 1.55; }
+  .claims-table { border-top: 1px solid var(--line-2); }
+  .claim-row { display: grid; grid-template-columns: 230px 150px 1fr; gap: 26px; align-items: start; padding: 22px 18px; border-bottom: 1px solid var(--line); }
+  .claim-row p { color: var(--ink-dim); font-size: 14px; line-height: 1.55; }
+  .claim-head { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); }
+  .status { justify-self: start; padding: 4px 9px; border: 1px solid var(--line-2); font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+  .status.shipped { color: var(--accent-text); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+  .status.none { color: var(--ink-dim); }
+  .split-detail, .close-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; }
+  .detail-copy { padding-top: 30px; }
+  .detail-copy p, .close-grid p { color: var(--ink-dim); font-size: 18px; line-height: 1.6; }
+  .detail-copy ul { margin: 26px 0; list-style: none; }
+  .detail-copy li { padding: 12px 0; border-bottom: 1px solid var(--line); color: var(--ink-dim); }
+  .detail-copy a { color: var(--accent-text); }
+  .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .metric-card { padding: 28px; border: 1px solid var(--line-2); background: var(--bg); }
+  .metric-card code { color: var(--accent-text); }
+  .metric-card h3 { margin: 54px 0 12px; font-size: 23px; }
+  .metric-card p { color: var(--ink-dim); font-size: 14px; line-height: 1.55; }
+  .metric-source { margin-top: 20px; color: var(--ink-dim); font-size: 13px; }
+  .metric-source a { color: var(--accent-text); }
+  .trust-close { padding-top: 110px; padding-bottom: 110px; }
+
+  @media (max-width: 980px) {
+    .summary-grid { grid-template-columns: 1fr 1fr; }
+    .summary-item:nth-child(2) { border-right: 0; }
+    .summary-item:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+    .section-copy, .split-detail, .close-grid { grid-template-columns: 1fr; gap: 26px; }
+    .architecture-map { grid-template-columns: 1fr; }
+    .map-node { min-height: 160px; }
+    .map-lane::before, .map-lane::after { display: none; }
+    .architecture-notes, .control-grid, .metric-grid { grid-template-columns: 1fr; }
+    .boundary-table { grid-template-columns: 1fr; }
+    .boundary-column + .boundary-column { border-left: 0; border-top: 1px solid var(--line-2); }
+    .decision-flow { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 680px) {
+    .trust-hero { padding: 72px 0 62px; }
+    .trust-hero h1 { font-size: clamp(48px, 14vw, 72px); }
+    .summary-grid { grid-template-columns: 1fr; }
+    .summary-item { min-height: 150px; border-right: 0; border-bottom: 1px solid var(--line); }
+    .summary-item:last-child { border-bottom: 0; }
+    .map-lane { grid-template-columns: 1fr; padding: 22px; }
+    .map-lane small { grid-column: 1; }
+    .claim-row { grid-template-columns: 1fr; gap: 10px; padding: 22px 0; }
+    .claim-head { display: none; }
+    .boundary-column { padding: 24px; }
+    .governance-callout { align-items: flex-start; }
+    .decision-flow { grid-template-columns: 1fr; }
+    .decision-flow li { min-height: 0; }
+    .decision-flow b { margin-top: 28px; }
+  }
+</style>
+
+</body>
+</html>

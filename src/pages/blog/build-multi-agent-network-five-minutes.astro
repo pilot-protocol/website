@@ -9,7 +9,7 @@ const bodyContent = `<p>This tutorial takes you from zero to a working multi-age
 
   <p>The one-line installer ships prebuilt binaries — <strong>no Go toolchain required</strong>. (Building from source needs Go 1.25+.) The install drops a small set of binaries: <code>pilotctl</code>, <code>pilot-daemon</code>, and the auto-updater.</p>
 
-  <p>You will also need a Pilot network. The default network at <code>pilotprotocol.network</code> is available for all users.</p>
+  <p>You don't need to set up any servers. By default the daemon registers with the public registry and beacon that Vulture Labs runs at <code>34.71.57.205</code>, free for anyone.</p>
 
   <h2 id="install">Step 1: Install pilotctl</h2>
 
@@ -22,48 +22,43 @@ const bodyContent = `<p>This tutorial takes you from zero to a working multi-age
   <p>Verify the installation:</p>
 
   <pre><code><span class="cmd">$ pilotctl version</span>
-pilotctl v1.13.9</code></pre>
+1.18.0</code></pre>
 
   <div class="callout">
-    <p><strong>Alternative:</strong> You can also clone the repository and build from source with <code>go build ./cmd/pilotctl</code>. See the <a href="/docs/getting-started">Getting Started guide</a> for details.</p>
+    <p><strong>Alternative:</strong> You can also clone the repository and build from source with <code>make build</code>, which builds both <code>pilotctl</code> and the daemon. See the <a href="/docs/getting-started">Getting Started guide</a> for details.</p>
   </div>
 
   <h2 id="start">Step 2: Start Two Agents</h2>
 
-  <p>Each agent needs its own identity. The <code>init</code> command generates a cryptographic identity (Ed25519 key pair) and stores it locally.</p>
+  <p>Each agent needs its own identity. The daemon generates a cryptographic identity (Ed25519 key pair) the first time it starts and stores it locally.</p>
 
   <h3>Agent Alice (Terminal 1)</h3>
 
-  <pre><code><span class="comment"># Write local config (registry required)</span>
-<span class="cmd">$ pilotctl init --registry 34.71.57.205:9000</span>
-<span class="comment"># The daemon creates the Ed25519 identity on first start:</span>
-<span class="cmd">$ pilotctl daemon start</span>
-Identity created: ~/.pilot/identity.json
-
-<span class="comment"># Start the daemon and register as "alice"</span>
+  <pre><code><span class="comment"># Start the daemon and register as "alice"</span>
+<span class="comment"># (first start creates the identity in ~/.pilot/identity.json)</span>
 <span class="cmd">$ pilotctl daemon start --hostname alice --email alice@example.com --public</span>
-Daemon started
-Registered as alice (0:0000.0000.0003)
-STUN discovered endpoint: 203.0.113.42:4000
-Tunnel listening on :4000</code></pre>
+Daemon running (pid 48213)
+  Address:  0:0000.0000.0003
+  Hostname: alice
+  Transport: udp
+  Socket:   /tmp/pilot.sock
+  Logs:     /home/alice/.pilot/pilot-48213.log</code></pre>
 
   <h3>Agent Bob (Terminal 2)</h3>
 
-  <pre><code><span class="comment"># On a different machine (or different directory)</span>
-<span class="cmd">$ pilotctl init</span>
-Identity created: ~/.pilot/identity.json
-
-<span class="comment"># Start the daemon and register as "bob"</span>
+  <pre><code><span class="comment"># On a different machine, start the daemon and register as "bob"</span>
 <span class="cmd">$ pilotctl daemon start --hostname bob --email bob@example.com --public</span>
-Daemon started
-Registered as bob (0:0000.0000.0004)
-STUN discovered endpoint: 198.51.100.17:4000
-Tunnel listening on :4000</code></pre>
+Daemon running (pid 51007)
+  Address:  0:0000.0000.0004
+  Hostname: bob
+  Transport: udp
+  Socket:   /tmp/pilot.sock
+  Logs:     /home/bob/.pilot/pilot-51007.log</code></pre>
 
-  <p>Both agents are now running. The <code>--public</code> flag makes them discoverable by hostname. Without it, agents are private and can only be found by trusted peers.</p>
+  <p>Both agents are now running. The <code>--public</code> flag makes them resolvable by hostname for anyone. Without it, agents are private and resolve only for trusted peers. (Your addresses will differ; the registry assigns them in order.)</p>
 
   <div class="callout">
-    <p><strong>Same machine?</strong> If you are running both agents on one machine for testing, use different directories for identity storage: <code>PILOT_HOME=~/.pilot-alice pilotctl init</code> and <code>PILOT_HOME=~/.pilot-bob pilotctl init</code>. Each daemon also needs a different tunnel listen port: <code>--listen :4000</code> and <code>--listen :4001</code>.</p>
+    <p><strong>Same machine?</strong> If you are running both agents on one machine for testing, give the second one its own state directory and socket: run Bob's commands as <code>PILOT_HOME=~/bob PILOT_SOCKET=/tmp/pilot-bob.sock pilotctl ...</code> and start his daemon with <code>--socket /tmp/pilot-bob.sock</code>. The tunnel listen port is picked at random by default, so the two daemons don't collide.</p>
   </div>
 
   <h2 id="discover">Step 3: Discover and Establish Trust</h2>
@@ -72,25 +67,32 @@ Tunnel listening on :4000</code></pre>
 
   <pre><code><span class="comment"># From Alice's terminal</span>
 <span class="cmd">$ pilotctl find bob</span>
-bob  0:0000.0000.0004  public  198.51.100.17:4000</code></pre>
+Hostname:  bob
+Node ID:   4
+Address:   0:0000.0000.0004
+Visible:   public</code></pre>
 
   <p>Now Alice initiates a trust handshake. The justification message tells Bob why Alice wants to connect:</p>
 
   <pre><code><span class="comment"># Alice requests trust</span>
 <span class="cmd">$ pilotctl handshake bob "Collaborating on the Q1 data analysis project"</span>
-Handshake request sent to bob (0:0000.0000.0004)
-Waiting for approval...</code></pre>
+handshake request sent to node 4
+  they must approve on their side · check status: pilotctl trust · propagation can take ~60s</code></pre>
 
   <p>On Bob's side, the handshake request appears. Bob reviews it and approves:</p>
 
   <pre><code><span class="comment"># Bob sees the pending request</span>
 <span class="cmd">$ pilotctl pending</span>
-PENDING HANDSHAKES:
-  0:0000.0000.0003 (alice) - "Collaborating on the Q1 data analysis project"
+Pending handshakes — 1
+
+  node 3 · 12s ago (2026-02-28 10:14)
+  Collaborating on the Q1 data analysis project
+  accept: pilotctl approve 3 · decline: pilotctl reject 3 "reason"
 
 <span class="comment"># Bob approves</span>
-<span class="cmd">$ pilotctl approve 0:0000.0000.0003</span>
-Trust established with alice (0:0000.0000.0003)</code></pre>
+<span class="cmd">$ pilotctl approve 3</span>
+trust established with node 3
+  trust is now mutual — message them: pilotctl send-message 3 --data "hi"</code></pre>
 
   <p>Done. Alice and Bob now have a <strong>mutual trust relationship</strong>, signed with Ed25519 keys. An encrypted tunnel is established automatically.</p>
 
@@ -103,23 +105,32 @@ Trust established with alice (0:0000.0000.0003)</code></pre>
   <p>Test connectivity and measure latency:</p>
 
   <pre><code><span class="cmd">$ pilotctl ping bob</span>
-PING bob (0:0000.0000.0004) via echo port 7
-Reply from 0:0000.0000.0004: seq=1 time=23.4ms
-Reply from 0:0000.0000.0004: seq=2 time=21.8ms
-Reply from 0:0000.0000.0004: seq=3 time=22.1ms</code></pre>
+PING 0:0000.0000.0004
+<span class="comment"># then one line per reply (4 by default) with its round-trip time</span></code></pre>
 
   <h3>Send a Message</h3>
 
-  <p>Send structured text data through the Data Exchange service on port 1001:</p>
+  <p>Send a message through the Data Exchange service on port 1001. Bob's daemon acknowledges it and saves it to his inbox:</p>
 
   <pre><code><span class="comment"># Alice sends a message to Bob</span>
-<span class="cmd">$ pilotctl send bob 1001 --data "Analysis complete. 47 anomalies detected in dataset-7."</span>
-Message sent to bob (0:0000.0000.0004)
+<span class="cmd">$ pilotctl send-message bob --data "Analysis complete. 47 anomalies detected in dataset-7."</span>
+{
+  "ack": "ACK TEXT 54 bytes",
+  "bytes": 54,
+  "reused": false,
+  "seq": 0,
+  "target": "0:0000.0000.0004",
+  "to": "0:0000.0000.0004",
+  "type": "text"
+}
 
-<span class="comment"># Bob receives it</span>
-<span class="cmd">$ pilotctl recv 1001</span>
-From: alice (0:0000.0000.0003)
-  "Analysis complete. 47 anomalies detected in dataset-7."</code></pre>
+<span class="comment"># Bob reads his inbox</span>
+<span class="cmd">$ pilotctl inbox</span>
+Inbox — 1 message(s) · showing 1 newest
+
+  TEXT-20260228-101502.481-000001
+  0:0000.0000.0003 · TEXT · 9s ago · 54 B
+  Analysis complete. 47 anomalies detected in dataset-7.</code></pre>
 
   <h3>Transfer a File</h3>
 
@@ -127,44 +138,42 @@ From: alice (0:0000.0000.0003)
 
   <pre><code><span class="comment"># Alice sends a file to Bob</span>
 <span class="cmd">$ pilotctl send-file bob ./report.pdf</span>
-Sending report.pdf (2.4 MB) to bob...
-Transfer complete: 2.4 MB in 1.2s (2.0 MB/s)
+<span class="comment"># prints a JSON summary: filename, bytes, elapsed_ms, throughput_mbps, ack</span>
 
 <span class="comment"># Bob receives files into ~/.pilot/received/</span>
-<span class="cmd">$ ls report.pdf</span>
-report.pdf</code></pre>
+<span class="cmd">$ pilotctl received</span></code></pre>
 
   <h3>Publish/Subscribe Events</h3>
 
-  <p>Set up real-time event streams using the built-in pub/sub on port 1002:</p>
+  <p>Every daemon runs a pub/sub broker on port 1002. You subscribe to a topic on a peer's broker, and anything published to that topic on that broker reaches every subscriber. Publish and subscribe always target a peer's broker, not your own daemon's, so here both commands target Alice's:</p>
 
-  <pre><code><span class="comment"># Bob subscribes to events from Alice on topic "status"</span>
-<span class="cmd">$ pilotctl subscribe alice "status"</span>
-Subscribed to alice/status
-Listening...
+  <pre><code><span class="comment"># Bob subscribes to topic "status" on Alice's broker</span>
+<span class="cmd">$ pilotctl subscribe alice status</span>
+subscribed to "status" on 0:0000.0000.0003 — waiting for events...
 
-<span class="comment"># Alice publishes events</span>
-<span class="cmd">$ pilotctl publish alice "status" --data "processing batch 1/10"</span>
-<span class="cmd">$ pilotctl publish alice "status" --data "processing batch 2/10"</span>
+<span class="comment"># From a second terminal on Bob's machine (or any other trusted peer),</span>
+<span class="comment"># publish to the same topic on Alice's broker</span>
+<span class="cmd">$ pilotctl publish alice status --data "processing batch 1/10"</span>
+<span class="cmd">$ pilotctl publish alice status --data "processing batch 2/10"</span>
 
-<span class="comment"># Bob sees them in real time</span>
-[alice/status] processing batch 1/10
-[alice/status] processing batch 2/10</code></pre>
+<span class="comment"># The subscriber sees them in real time</span>
+[status] processing batch 1/10
+[status] processing batch 2/10</code></pre>
 
   <h2 id="explained">What Just Happened</h2>
 
   <p>Behind those simple CLI commands, a surprising amount happened:</p>
 
   <ol>
-    <li><strong>Identity generation</strong> -- <code>pilotctl init</code> generated an <a href="https://www.rfc-editor.org/rfc/rfc8032.html" target="_blank" rel="noopener">Ed25519</a> key pair and stored it in <code>~/.pilot/identity.json</code>. This key pair is the agent's permanent cryptographic identity.</li>
+    <li><strong>Identity generation</strong> -- the daemon generated an <a href="https://www.rfc-editor.org/rfc/rfc8032.html" target="_blank" rel="noopener">Ed25519</a> key pair on first start and stored it in <code>~/.pilot/identity.json</code>. This key pair is the agent's permanent cryptographic identity.</li>
     <li><strong>STUN discovery</strong> -- when the daemon started, it sent a UDP packet to the beacon server and learned its own public IP:port mapping. This is how other agents can reach it through NAT.</li>
-    <li><strong>Registration</strong> -- the daemon connected to the network and registered its hostname, public key, and STUN-discovered endpoint.</li>
+    <li><strong>Registration</strong> -- the daemon connected to the registry and registered its hostname, public key, and STUN-discovered endpoint; the registry assigned its address.</li>
     <li><strong>Handshake</strong> -- Alice's handshake request was signed with her Ed25519 private key and relayed through the network to Bob. Bob verified the signature, approved, and signed his response. Both sides now store the peer's public key.</li>
-    <li><strong>Tunnel establishment</strong> -- with trust established, Alice's daemon resolved Bob's endpoint from the network, attempted direct UDP connection (using hole-punching if needed), and performed X25519 key exchange to set up AES-256-GCM encryption.</li>
+    <li><strong>Tunnel establishment</strong> -- with trust established, Alice's daemon resolved Bob's endpoint from the registry, attempted direct UDP connection (using hole-punching if needed), and performed X25519 key exchange to set up AES-256-GCM encryption.</li>
     <li><strong>Communication</strong> -- every message, file, and ping traveled over the encrypted tunnel as Pilot Protocol packets with the 34-byte header, CRC32 checksums, sequence numbers, and acknowledgments.</li>
   </ol>
 
-  <p>All of this happened without configuring firewalls, opening ports, setting up TLS certificates, or deploying cloud infrastructure. The agents found each other, established trust, traversed NAT, and communicated -- all through the protocol. If you want to take this further, you can <a href="/blog/build-agent-swarm-self-organizes">build a self-organizing agent swarm with reputation-based routing</a>, <a href="/blog/replace-message-broker-twelve-lines-go">replace your message broker with 12 lines of Go</a>, or <a href="/blog/http-services-over-encrypted-overlay">run standard HTTP services over the encrypted overlay</a>.</p>
+  <p>All of this happened without configuring firewalls, opening ports, setting up TLS certificates, or deploying your own servers. The agents found each other through the public registry, established trust, traversed NAT, and communicated. If you want to take this further, you can <a href="/blog/build-agent-swarm-self-organizes">build a self-organizing agent swarm</a>, <a href="/blog/replace-message-broker-twelve-lines-go">use the built-in pub/sub in place of a message broker</a>, or <a href="/blog/http-services-over-encrypted-overlay">run standard HTTP services over the encrypted overlay</a>.</p>
 
   <h2 id="next">Next Steps</h2>
 
@@ -177,7 +186,7 @@ Listening...
     <li><a href="/docs/cli-reference"><strong>CLI Reference</strong></a> -- complete documentation for every <code>pilotctl</code> command</li>
     <li><a href="/docs/services"><strong>Built-in Services</strong></a> -- port-based services including Echo (7), Stdio (1000), Data Exchange (1001), and Event Stream (1002)</li>
     <li><a href="/docs/integration"><strong>Integration Guide</strong></a> -- embed Pilot Protocol in your Go applications</li>
-    <li><a href="/blog/build-agent-swarm-self-organizes"><strong>Build a Self-Organizing Agent Swarm</strong></a> -- take multi-agent networking further with 10 agents that discover, trust, and route work by capability without an orchestrator</li>
+    <li><a href="/blog/build-agent-swarm-self-organizes"><strong>Build a Self-Organizing Agent Swarm</strong></a> -- take multi-agent networking further with a group of agents that find each other, establish trust, and share work</li>
   </ul>
 
   <div class="cta">

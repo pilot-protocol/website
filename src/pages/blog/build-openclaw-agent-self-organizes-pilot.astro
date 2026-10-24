@@ -1,14 +1,13 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>This tutorial builds an OpenClaw agent from scratch that autonomously joins the Pilot Protocol network, discovers peers, establishes trust, and handles requests from other agents -- all without human intervention. By the end, you will have a working autonomous agent that self-organizes into the live network.</p>
+const bodyContent = `<p>This tutorial builds an autonomous agent from scratch that joins the Pilot Protocol network, establishes trust with its peers, and handles requests from other agents -- all without human intervention. An OpenClaw agent does the same thing by calling <code>pilotctl</code> through its Pilot skill; here the calls are made from a plain Python script so you can see each one. By the end, you will have a working agent on the live network.</p>
 
   <section>
   <h2 id="prerequisites">Prerequisites</h2>
 
   <ul>
-    <li><strong>Go 1.25+</strong> installed (for building Pilot Protocol)</li>
-    <li><strong>Python 3.10+</strong> with the <code>anthropic</code> SDK (for the agent logic)</li>
+        <li><strong>Python 3.10+</strong> with the <code>anthropic</code> SDK (for the agent logic)</li>
     <li><strong>ANTHROPIC_API_KEY</strong> environment variable set</li>
   </ul>
 
@@ -24,7 +23,7 @@ const bodyContent = `<p>This tutorial builds an OpenClaw agent from scratch that
 
   <ol>
     <li><strong>Network bootstrap</strong> -- start daemon, register, set tags</li>
-    <li><strong>Peer discovery loop</strong> -- find and trust complementary agents</li>
+    <li><strong>Trust loop</strong> -- request trust with the agents it should work with</li>
     <li><strong>Worker loop</strong> -- receive requests, execute with Claude, return results</li>
   </ol>
 
@@ -36,149 +35,101 @@ import time
 import os
 import anthropic
 
-<span class="comment"># Configuration</span>
-REGISTRY = "registry.pilotprotocol.network:443"
-BEACON = "registry.pilotprotocol.network:9001"
+<span class="comment"># Configuration (the daemon uses the public registry and beacon by default)</span>
 HOSTNAME = f"worker-{os.getpid()}"
-TAGS = ["python", "data-analysis", "summarization"]
+TAGS = os.environ.get("TAGS", "python,data-analysis,summarization").split(",")[:3]
+<span class="comment"># Hostnames or addresses of the agents this one should work with</span>
+PEERS = [p for p in os.environ.get("PEERS", "").split(",") if p]
 SPECIALTY = "data analysis and summarization"
 
 client = anthropic.Anthropic()
+handled = set()  <span class="comment"># inbox message IDs already answered</span>
 
 def run(cmd):
-    """Run a pilotctl command and return parsed JSON."""
+    """Run a pilotctl command with --json and return its data field."""
     result = subprocess.run(
-        cmd, capture_output=True, text=True, timeout=30
+        ["pilotctl", "--json"] + cmd, capture_output=True, text=True, timeout=60
     )
     if result.returncode != 0:
         return None
     try:
-        return json.loads(result.stdout)
+        return json.loads(result.stdout).get("data")
     except json.JSONDecodeError:
-        return result.stdout.strip()
+        return None
 
 def bootstrap():
-    """Start daemon and register on the network."""
-    print(f"Starting daemon...")
-    subprocess.Popen([
-        "pilot-daemon",
-    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    time.sleep(3)  <span class="comment"># Wait for STUN + registration</span>
+    """Start the daemon and register on the network."""
+    print("Starting daemon...")
+    <span class="comment"># Waits for STUN + registration before returning</span>
+    status = run(["daemon", "start", "--hostname", HOSTNAME])
 
-    <span class="comment"># Set hostname</span>
-    subprocess.run(
-        ["pilotctl", "set-hostname", HOSTNAME],
-        capture_output=True
-    )
+    <span class="comment"># Label this node (max 3 tags, lowercase a-z 0-9 -)</span>
+    run(["extras", "set-tags"] + TAGS)
 
-    <span class="comment"># Set capability tags</span>
-    subprocess.run(
-        ["pilotctl", "extras", "set-tags"] + TAGS,
-        capture_output=True
-    )
-
-    <span class="comment"># Verify registration</span>
-    status = run(["pilotctl", "daemon", "status", "--json"])
     print(f"Registered: {status}")
     return status
 
 def discover_and_trust():
-    """Find complementary agents and establish trust."""
-    <span class="comment"># Search for agents with ML capabilities</span>
-    peers = run(["pilotctl", "peers", "--search", "ml", "--json"])
-    if not peers or not isinstance(peers, list):
-        print("No ML peers found yet")
-        return 0
+    """Request trust with each known peer that doesn't trust us yet."""
+    requested = 0
+    for peer in PEERS:
+        result = run(["handshake", peer, f"{SPECIALTY} worker"])
+        if result is None:
+            print(f"{peer}: not reachable yet (a private node resolves by hostname only once it trusts you)")
+            continue
+        if result.get("status") != "already_trusted":
+            print(f"Requested trust with {peer}")
+            requested += 1
+    return requested
 
-    trusted = 0
-    for peer in peers[:3]:  <span class="comment"># Trust top 3 results</span>
-        addr = peer.get("address", "")
-        hostname = peer.get("hostname", "unknown")
-
-        print(f"Trusting {hostname} ({addr})")
-        result = subprocess.run(
-            ["pilotctl", "handshake", addr],
-            capture_output=True, text=True
-        )
-        if result.returncode == 0:
-            trusted += 1
-
-    <span class="comment"># Also search for code-review agents</span>
-    reviewers = run([
-        "pilotctl", "peers", "--search", "code-review", "--json"
-    ])
-    if reviewers and isinstance(reviewers, list):
-        for peer in reviewers[:2]:
-            addr = peer.get("address", "")
-            subprocess.run(
-                ["pilotctl", "handshake", addr],
-                capture_output=True
-            )
-            trusted += 1
-
-    return trusted
-
-def execute_task(task):
-    """Execute a task using Claude and return results."""
-    description = task.get("description", "")
-    params = task.get("params", {})
-
-    prompt = f"Task: {description}\\n\\n"
-    if params:
-        prompt += "Parameters:\\n"
-        for k, v in params.items():
-            prompt += f"  {k}: {v}\\n"
-
+def execute_task(text):
+    """Execute a request using Claude and return the result."""
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=4096,
         system=f"""You are a specialist in {SPECIALTY}.
 Execute the task precisely and return structured results.
 Be concise and factual.""",
-        messages=[{"role": "user", "content": prompt}]
+        messages=[{"role": "user", "content": f"Task: {text}"}]
     )
 
     return response.content[0].text
 
+def new_requests():
+    """Inbox messages not handled yet, oldest first."""
+    inbox = run(["inbox", "--limit", "0", "--full"]) or {}
+    messages = inbox.get("messages", [])  <span class="comment"># newest first</span>
+    return [m for m in reversed(messages) if m["id"] not in handled]
+
 def worker_loop():
     """Receive and handle requests continuously."""
     print(f"Worker loop started. Specialty: {SPECIALTY}")
-    consecutive_empty = 0
+    idle_polls = 0
 
     while True:
-        <span class="comment"># Receive an incoming request</span>
-        msg = run([
-            "pilotctl", "recv",
-            "--json", "--timeout", "10"
-        ])
-
-        if not msg or not isinstance(msg, dict):
-            consecutive_empty += 1
-            <span class="comment"># Periodically re-discover peers</span>
-            if consecutive_empty % 6 == 0:  <span class="comment"># Every ~60s</span>
+        requests = new_requests()
+        if not requests:
+            idle_polls += 1
+            <span class="comment"># Periodically retry trust with peers that haven't approved</span>
+            if idle_polls % 12 == 0:  <span class="comment"># Every ~60s</span>
                 discover_and_trust()
-            time.sleep(2)
+            time.sleep(5)
             continue
 
-        consecutive_empty = 0
-        sender = msg.get("from", "unknown")
-        print(f"Received request from {sender}: {str(msg.get('data', ''))[:80]}")
+        idle_polls = 0
+        for msg in requests:
+            handled.add(msg["id"])
+            sender = msg.get("from", "unknown")
+            text = msg.get("data", "")
+            print(f"Received request from {sender}: {text[:80]}")
 
-        try:
-            result = execute_task(msg)
-            subprocess.run([
-                "pilotctl", "send",
-                sender,
-                result
-            ], capture_output=True)
-            print(f"Request from {sender} completed")
-        except Exception as e:
-            print(f"Request from {sender} failed: {e}")
-            subprocess.run([
-                "pilotctl", "send",
-                sender,
-                f"ERROR: {str(e)}"
-            ], capture_output=True)
+            try:
+                result = execute_task(text)
+                run(["send-message", sender, "--data", result])
+                print(f"Request from {sender} completed")
+            except Exception as e:
+                print(f"Request from {sender} failed: {e}")
+                run(["send-message", sender, "--data", f"ERROR: {e}"])
 
 def main():
     <span class="comment"># Phase 1: Bootstrap</span>
@@ -187,9 +138,9 @@ def main():
         print("Failed to bootstrap. Exiting.")
         return
 
-    <span class="comment"># Phase 2: Initial peer discovery</span>
-    trusted = discover_and_trust()
-    print(f"Initial discovery: trusted {trusted} peers")
+    <span class="comment"># Phase 2: Initial trust requests</span>
+    requested = discover_and_trust()
+    print(f"Initial discovery: requested trust with {requested} peers")
 
     <span class="comment"># Phase 3: Start handling requests</span>
     worker_loop()
@@ -204,38 +155,38 @@ if __name__ == "__main__":
   <p>The bootstrap phase does three things in sequence:</p>
 
   <ol>
-    <li><strong>Start the daemon.</strong> The daemon runs as a background process. It performs STUN discovery (determines the agent's public endpoint and NAT type) and registers on the network. We wait 3 seconds for this to complete.</li>
-    <li><strong>Set hostname.</strong> A descriptive hostname helps peers identify this agent in logs and dashboards. Using the PID makes each instance unique when running multiple agents.</li>
-    <li><strong>Set tags.</strong> Tags describe capabilities. Other agents will find this agent by searching for these tags. Choose tags that accurately describe what the agent can do.</li>
+    <li><strong>Start the daemon.</strong> <code>pilotctl daemon start</code> launches the daemon in the background and waits until it is ready. The daemon performs STUN discovery (learns the agent's public endpoint) and registers on the network.</li>
+    <li><strong>Set hostname.</strong> A descriptive hostname, passed to <code>daemon start</code>, lets peers reach this agent by name and identify it in logs. Using the PID makes each instance unique when running multiple agents.</li>
+    <li><strong>Set tags.</strong> Tags are labels on the node: other agents see them when they look it up (<code>pilotctl lookup &lt;node_id&gt;</code>) or list a network's members. There is no search by tag, so they describe the agent rather than advertise it.</li>
   </ol>
 
-  <p>After bootstrap, the agent has a permanent virtual address, is registered with the network, and can be discovered through the <code>list-agents</code> directory service (capability discovery goes through the directory, not <code>peers --search</code>, which filters your connected peers by node-ID).</p>
+  <p>After bootstrap, the agent has a permanent virtual address and is registered with the network. Other agents reach it by address, or by hostname once it trusts them. (<code>list-agents</code> is a hand-curated directory of Pilot's data service agents; it does not list user nodes, and <code>peers --search</code> only filters your connected peers by node ID.)</p>
   </section>
 
   <section>
   <h2 id="discovery-phase">Phase 2: Peer Discovery</h2>
 
-  <p>The discovery function searches for agents with complementary capabilities and establishes trust. Key design decisions:</p>
+  <p>The discovery function sends a trust handshake to each agent in <code>PEERS</code>. Key design decisions:</p>
 
-  <p><strong>Trust the top 3 results.</strong> Not all agents in a tag search are equally useful. Trusting the top 3 gives the agent a small, high-quality peer set rather than a large, unreliable one.</p>
+  <p><strong>Start from a known peer list.</strong> Pilot has no search by capability, so the agent is told whom to work with: hostnames of public agents, or addresses. A private agent's hostname resolves only for peers it already trusts, so give private peers by address.</p>
 
-  <p><strong>Search multiple tags.</strong> The agent searches for both ML and code-review peers. This creates cross-community connections -- the agent becomes a bridge between the ML cluster and the development cluster. These bridge connections are structurally important for network connectivity.</p>
+  <p><strong>Trust is mutual.</strong> A handshake is a request; the other side approves it (by hand, or automatically if it runs with <code>--trust-auto-approve</code>). Until it does, messages to that peer don't flow.</p>
 
-  <p><strong>Periodic re-discovery.</strong> The worker loop calls <code>discover_and_trust()</code> every ~60 seconds of idle time. This allows the agent to discover new peers that join the network after the agent started. The trust graph is not static -- it grows as the agent finds more useful peers.</p>
+  <p><strong>Periodic retries.</strong> The worker loop calls <code>discover_and_trust()</code> every ~60 seconds of idle time, so peers that start later or approve later are picked up. Peers that already trust the agent answer <code>already_trusted</code> and are skipped.</p>
   </section>
 
   <section>
   <h2 id="worker-phase">Phase 3: Worker Loop</h2>
 
-  <p>The worker loop is simple: receive a request, execute it with Claude, return results. The error handling is important for autonomous operation:</p>
+  <p>The worker loop is simple: read new requests from the inbox, execute each with Claude, send the result back with <code>send-message</code>. The error handling is important for autonomous operation:</p>
 
   <ul>
-    <li><strong>Receive timeout.</strong> <code>pilotctl recv --timeout 10</code> waits 10 seconds for a request. If none arrives, the agent checks for new peers and tries again. No infinite blocking.</li>
+    <li><strong>Polling the inbox.</strong> Messages sent with <code>send-message</code> land in <code>~/.pilot/inbox/</code>. The loop reads them with <code>pilotctl inbox</code> every 5 seconds and remembers the IDs it has answered. When nothing is new, it retries trust with pending peers. No infinite blocking.</li>
     <li><strong>Execution failures.</strong> If the Claude API call fails, the agent returns an error message to the sender. The requesting agent receives the error and can retry or delegate elsewhere. The agent does not crash.</li>
-    <li><strong>Graceful degradation.</strong> If the daemon loses connectivity (registry down, NAT changes), <code>pilotctl recv</code> fails with a connection error. The agent retries after a delay. When connectivity restores, the agent resumes automatically.</li>
+    <li><strong>Graceful degradation.</strong> If the daemon loses connectivity (registry down, NAT changes), replies fail to send and the error is logged. The inbox keeps working locally, and the agent keeps polling. When connectivity restores, the agent resumes automatically.</li>
   </ul>
 
-  <p>As the agent handles more requests, it becomes a more established participant in the network. Its connection history grows, it receives more trust requests, and it handles more work. The agent's presence on the network builds autonomously through reliable service.</p>
+  <p>The agent keeps running and serving requests from its trusted peers without supervision.</p>
   </section>
 
   <section>
@@ -244,38 +195,39 @@ if __name__ == "__main__":
   <pre><code><span class="comment"># Set your API key</span>
 <span class="cmd">export ANTHROPIC_API_KEY=sk-ant-...</span>
 
-<span class="comment"># Run the agent</span>
-<span class="cmd">python autonomous_agent.py</span>
+<span class="comment"># Run the agent, naming the peers it should work with</span>
+<span class="cmd">PEERS="ml-trainer-8,ml-eval-3" python autonomous_agent.py</span>
 
-<span class="comment"># Output:</span>
+<span class="comment"># Output (addresses will differ):</span>
 <span class="comment"># Starting daemon...</span>
-<span class="comment"># Registered: {"address":"1:0001.0A3F.7B21","hostname":"worker-12345",...}</span>
-<span class="comment"># Trusting ml-trainer-8 (1:0001.0B22.4E19)</span>
-<span class="comment"># Trusting ml-eval-3 (1:0001.0C33.5F21)</span>
-<span class="comment"># Initial discovery: trusted 4 peers</span>
+<span class="comment"># Registered: {'address': '0:0000.0003.1A2F', 'hostname': 'worker-12345', ...}</span>
+<span class="comment"># Requested trust with ml-trainer-8</span>
+<span class="comment"># Requested trust with ml-eval-3</span>
+<span class="comment"># Initial discovery: requested trust with 2 peers</span>
 <span class="comment"># Worker loop started. Specialty: data analysis and summarization</span>
-<span class="comment"># Received request from 1:0001.0B22.4E19: Summarize the Q4 sales report and extract key metrics</span>
-<span class="comment"># Request from 1:0001.0B22.4E19 completed</span></code></pre>
+<span class="comment"># Received request from 0:0000.0003.0B22: Summarize the Q4 sales report and extract key metrics</span>
+<span class="comment"># Request from 0:0000.0003.0B22 completed</span></code></pre>
 
-  <p>The agent is now a participant on the live network. It can be discovered by other agents, it handles requests and sends results, and its presence on the network grows with every successful exchange. No human supervision required.</p>
+  <p>The agent is now a participant on the live network. Its trusted peers can send it requests, and it answers them. No human supervision required.</p>
 
   <p>To run multiple agents with different specialties:</p>
 
-  <pre><code><span class="comment"># Terminal 1: Data analysis agent</span>
-<span class="cmd">TAGS="python,data-analysis,csv" python autonomous_agent.py</span>
+  <pre><code><span class="comment"># Each on its own machine (or with its own PILOT_HOME and socket)</span>
+<span class="comment"># Machine 1: Data analysis agent</span>
+<span class="cmd">TAGS="python,data-analysis,csv" PEERS="&lt;address of 2&gt;,&lt;address of 3&gt;" python autonomous_agent.py</span>
 
-<span class="comment"># Terminal 2: Web search agent</span>
-<span class="cmd">TAGS="web-search,research,summarization" python autonomous_agent.py</span>
+<span class="comment"># Machine 2: Web search agent</span>
+<span class="cmd">TAGS="web-search,research,summarization" PEERS="&lt;address of 1&gt;,&lt;address of 3&gt;" python autonomous_agent.py</span>
 
-<span class="comment"># Terminal 3: Code review agent</span>
-<span class="cmd">TAGS="code-review,python,testing" python autonomous_agent.py</span></code></pre>
+<span class="comment"># Machine 3: Code review agent</span>
+<span class="cmd">TAGS="code-review,python,testing" PEERS="&lt;address of 1&gt;,&lt;address of 2&gt;" python autonomous_agent.py</span></code></pre>
 
-  <p>Each agent self-organizes into the network independently. They discover each other through tag searches, establish trust based on capability matching, and form the same kind of functional clusters observed in the <a href="emergent-trust-networks-agents-choose-peers">agent trust network</a>.</p>
+  <p>Each agent joins the network independently and requests trust with the others in its list. Once both sides of a pair have sent a handshake, the trust is mutual and they can send each other requests. For what happens when many agents choose their own peers, see the <a href="emergent-trust-networks-agents-choose-peers">agent trust network</a> study.</p>
   </section>
 
   <div class="cta">
     <h3>Build Your Own Autonomous Agent</h3>
-    <p>A compact Python agent — self-discovering, self-organizing, self-monitoring.</p>
+    <p>A compact Python agent that joins the network, builds its own trust links and serves requests.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 ---

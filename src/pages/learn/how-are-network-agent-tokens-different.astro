@@ -45,7 +45,7 @@ const bodyContent = `<p>Every AI agent on a network needs a way to prove who it 
 
 <p>A traditional token is granted by an authority. An agent that needs credentials must authenticate to that authority first, which requires either another credential (bootstrap problem) or human intervention. This model requires an always-available identity provider and introduces a single point of failure for the entire agent fleet.</p>
 
-<p>Pilot identity is self-sovereign. The agent generates its key pair locally during <code>pilotctl init</code>. The registry learns the public key after generation, but the generation itself does not depend on the registry. An agent that has never contacted the network still has a valid identity. This matters for air-gapped deployments, edge devices with intermittent connectivity, and agents that must bootstrap autonomously.</p>
+<p>Pilot identity is self-sovereign. The daemon generates the agent's key pair locally the first time it starts and keeps it in <code>~/.pilot/identity.json</code>. The registry learns the public key after generation, but the generation itself does not depend on the registry. This matters for air-gapped deployments, edge devices with intermittent connectivity, and agents that must bootstrap autonomously.</p>
 
 <h3 id="2-permanent-vs-ephemeral">2. Permanent vs. Ephemeral</h3>
 
@@ -55,7 +55,7 @@ const bodyContent = `<p>Every AI agent on a network needs a way to prove who it 
 
 <h3 id="3-no-shared-secrets">3. No Shared Secrets</h3>
 
-<p>API keys are shared secrets. The same string that authenticates the caller is stored in the server's database. A database breach exposes every API key — the attacker authenticates as any agent whose key was leaked. Industry surveys indicate that a substantial portion of organizations still use shared API keys for agent-to-agent communication, meaning a single database compromise can compromise the entire agent fleet.</p>
+<p>API keys are shared secrets. The same string that authenticates the caller is stored in the server's database. A database breach exposes every API key — the attacker authenticates as any agent whose key was leaked. If every agent in a fleet authenticates with keys stored that way, a single database compromise can compromise the whole fleet.</p>
 
 <p>Pilot uses asymmetric cryptography. The private key never leaves the agent node. The public key is registered with the network but reveals nothing that can be used to impersonate the agent. A registry breach exposes public keys, not credentials. The only way to impersonate an agent is to compromise its specific node and extract its private key — a much higher bar than a database dump.</p>
 
@@ -75,7 +75,7 @@ const bodyContent = `<p>Every AI agent on a network needs a way to prove who it 
 
 <p>A stolen API key or JWT is usable from anywhere. An attacker who intercepts an HTTP request and extracts the Authorization header can replay that token from their own machine, for as long as the token is valid. The token carries no binding to the specific agent that originally presented it.</p>
 
-<p>Pilot's identity is bound to the node that holds the private key. Extracting the virtual address from a network packet reveals only a 48-bit identifier — not a credential. An attacker who intercepts traffic on the wire sees encrypted payloads and an address, but cannot authenticate as that agent without the private key. The cost of compromise is higher, and the blast radius of a network-level interception is zero.</p>
+<p>Pilot's identity is bound to the node that holds the private key. Extracting the virtual address from a network packet reveals only a 48-bit identifier — not a credential. An attacker who intercepts traffic on the wire sees encrypted payloads and an address, but cannot authenticate as that agent without the private key. Intercepting traffic yields no credential to replay; impersonating the agent means stealing its private key from the node.</p>
 
 <h3 id="7-identity-binds-to-agent-not-account">7. Identity Binds to Agent, Not Account</h3>
 
@@ -163,7 +163,7 @@ const bodyContent = `<p>Every AI agent on a network needs a way to prove who it 
 <p>The operator rotates the key pair using <code>pilotctl rotate-key</code>, re-registers the new public key, and re-establishes trust with its peers. The compromised private key is replaced. Unlike a shared API key leak, the private key only authenticates that specific agent — no other agent or service is affected.</p>
 
 <h3 id="how-does-pilot-handle-token-less-authentication-for-public-services">How does Pilot handle token-less authentication for public services?</h3>
-<p>Public service agents (like the 430+ specialist agents in the Pilot directory) use a different trust model: they are in a trusted-agent allowlist and require no handshake or token. Any agent can query them directly. This is the exception, not the default — the default is that agents are invisible and must be handshaked.</p>
+<p>Public service agents (the roughly 430 agents in the Pilot directory) still go through the trust handshake, but you don't run it yourself: pilotctl ships an allowlist of their node IDs and sends the handshake automatically on first contact, and the service agents approve it. No token or API key is involved. This is the exception, not the default — the default is that agents are invisible until both sides approve a handshake.</p>
 
 <h3 id="do-i-need-to-manage-certificate-authorities">Do I need to manage certificate authorities?</h3>
 <p>No. Pilot Protocol uses Ed25519 signatures for identity verification. There is no certificate authority, no chain of trust to maintain, and no CA to keep online. Trust is established peer-to-peer through the handshake protocol — the registry relays signed messages but does not act as a CA.</p>
@@ -179,7 +179,7 @@ const bodyContent = `<p>Every AI agent on a network needs a way to prove who it 
   faqItems={[
     { question: "Can Pilot agents still use API keys for application-level auth?", answer: "Yes. Pilot Protocol replaces the transport-layer credential — how agents prove their identity to establish a tunnel. Application protocols running over that tunnel (HTTP, gRPC, database connections) can use whatever authentication they need, including API keys and JWTs." },
     { question: "What happens if an agent's private key is compromised?", answer: "The operator rotates the key pair using pilotctl rotate-key, re-registers the new public key, and re-establishes trust with its peers. The compromised private key is replaced. Unlike a shared API key leak, the private key only authenticates that specific agent — no other agent or service is affected." },
-    { question: "How does Pilot handle token-less authentication for public services?", answer: "Public service agents (like the 430+ specialist agents in the Pilot directory) use a different trust model: they are in a trusted-agent allowlist and require no handshake or token. Any agent can query them directly. This is the exception, not the default — the default is that agents are invisible and must be handshaked." },
+    { question: "How does Pilot handle token-less authentication for public services?", answer: "Public service agents (the roughly 430 agents in the Pilot directory) still go through the trust handshake, but you don't run it yourself: pilotctl ships an allowlist of their node IDs and sends the handshake automatically on first contact, and the service agents approve it. No token or API key is involved. This is the exception, not the default — the default is that agents are invisible until both sides approve a handshake." },
     { question: "Do I need to manage certificate authorities?", answer: "No. Pilot Protocol uses Ed25519 signatures for identity verification. There is no certificate authority, no chain of trust to maintain, and no CA to keep online. Trust is established peer-to-peer through the handshake protocol — the registry relays signed messages but does not act as a CA." }
   ]}
 >

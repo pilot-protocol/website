@@ -1,0 +1,405 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/system.css';
+
+// Running your own registry (pilot-protocol/rendezvous) and beacon. Every
+// feature listed here was checked in the rendezvous, beacon, common and
+// pilotprotocol repositories; flags and commands are copied from their
+// -help output and usage strings. This replaces the feature list that used
+// to sit on /plans and in the Enterprise Readiness Report.
+const title = 'Self-Hosting: Run Your Own Pilot Registry | Pilot Protocol';
+const description = 'Run the open-source Pilot registry and beacon yourself for private networks, roles, OIDC/JWT validation, network policy, audit export and blueprints.';
+const canonicalUrl = 'https://pilotprotocol.network/self-hosting';
+
+type Line = [string, string];
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const render = (lines: Line[]) => lines
+  .map(([cls, text]) => (cls ? `<span class="${cls}">${esc(text)}</span>` : esc(text)))
+  .join('\n');
+
+const runLines: Line[] = [
+  ['c', '# on the registry host (Go, at the version in go.mod)'],
+  ['y', '$ git clone https://github.com/pilot-protocol/rendezvous'],
+  ['y', '$ cd rendezvous && go build ./cmd/rendezvous'],
+  ['', ''],
+  ['c', '# registry on TCP 9000, beacon on UDP 9001, dashboard on 3000'],
+  ['y', '$ export PILOT_ADMIN_TOKEN="$(openssl rand -hex 32)"'],
+  ['y', '$ ./rendezvous -registry-addr :9000 -beacon-addr :9001 \\'],
+  ['y', '    -store /var/lib/pilot/registry.json -http 127.0.0.1:3000'],
+  ['', ''],
+  ['c', '# on each agent machine'],
+  ['y', '$ pilotctl daemon start --registry registry.example.com:9000 \\'],
+  ['y', '    --beacon registry.example.com:9001'],
+  ['', ''],
+  ['c', '# create a network with the admin token, then join it'],
+  ['y', '$ export PILOT_REGISTRY=registry.example.com:9000'],
+  ['y', '$ pilotctl network create --name ops --join-rule token \\'],
+  ['y', '    --token "$JOIN_TOKEN" --node-id <your node id>'],
+  ['y', '$ pilotctl network join <network id> --token "$JOIN_TOKEN"'],
+];
+
+const adminLines: Line[] = [
+  ['c', '# OIDC/JWT: tokens checked against your JWKS'],
+  ['y', '$ pilotctl extras idp set --type oidc \\'],
+  ['y', '    --url https://login.example.com/.well-known/jwks.json \\'],
+  ['y', '    --issuer https://login.example.com --client-id pilot'],
+  ['', ''],
+  ['c', '# audit export to Splunk (or --format syslog_cef | json)'],
+  ['y', '$ pilotctl extras audit-export set --format splunk_hec \\'],
+  ['y', '    --endpoint https://splunk.example.com:8088/services/collector \\'],
+  ['y', '    --splunk-token "$HEC_TOKEN"'],
+  ['', ''],
+  ['c', '# a whole network from one file, and roles from your directory'],
+  ['y', '$ pilotctl extras provision ops-blueprint.json'],
+  ['y', '$ pilotctl extras directory-sync directory.json --network <id> --remove-unlisted'],
+];
+
+const blueprintLines: Line[] = [
+  ['', '{'],
+  ['p', '  "name": "ops",'],
+  ['', '  "join_rule": "invite",'],
+  ['', '  "enterprise": true,'],
+  ['', '  "policy": { "max_members": 50, "allowed_ports": [1001, 1002] },'],
+  ['', '  "roles": ['],
+  ['', '    { "external_id": "alice@example.com", "role": "admin" }'],
+  ['', '  ],'],
+  ['', '  "identity_provider": {'],
+  ['', '    "type": "oidc",'],
+  ['', '    "url": "https://login.example.com/.well-known/jwks.json",'],
+  ['', '    "issuer": "https://login.example.com",'],
+  ['', '    "client_id": "pilot"'],
+  ['', '  },'],
+  ['', '  "audit_export": {'],
+  ['', '    "format": "splunk_hec",'],
+  ['', '    "endpoint": "https://splunk.example.com:8088/services/collector"'],
+  ['', '  }'],
+  ['', '}'],
+];
+
+const features = [
+  { kicker: 'Membership', title: 'Private networks', body: 'Networks with open, token or invite-only join rules; invite-only needs the network’s enterprise flag. Members of a network can reach each other without a separate trust handshake.', href: '/docs/networks' },
+  { kicker: 'Administration', title: 'Owner, admin, member', body: 'Owners promote and demote admins and can transfer ownership. Owners and admins invite and remove members. An optional per-network admin token delegates one network without the global token.', href: '/docs/enterprise-rbac' },
+  { kicker: 'Identity', title: 'OIDC/JWT with JWKS', body: 'RS256 and HS256 tokens checked for issuer, audience and expiry. Keys are fetched from your JWKS URL by key ID and cached for five minutes. Other providers connect through an identity webhook you run, with HMAC-signed requests.', href: '/docs/enterprise-identity' },
+  { kicker: 'Identity', title: 'Directory sync', body: 'Push a directory file to set the roles of listed members, pre-assign roles to identities that haven’t joined yet, and, with <code>--remove-unlisted</code>, remove members who aren’t in it.', href: '/docs/enterprise-identity' },
+  { kicker: 'Policy', title: 'Network policy', body: 'A membership cap and a port allowlist per network: joins over the cap are refused and daemons drop traffic to unlisted ports. Versioned expression policies add rules, with admin-assigned member tags as inputs.', href: '/docs/enterprise-policies' },
+  { kicker: 'Evidence', title: 'Audit export', body: 'Registry changes are recorded as structured events in a 1,000-entry, hash-chained buffer, and can be exported in Splunk HEC, CEF or JSON format, with three tries and exponential backoff.', href: '/docs/enterprise-audit' },
+  { kicker: 'Evidence', title: 'Webhooks with a DLQ', body: 'Registry events go to your webhook with retries. The last 100 events that still failed are kept in a dead-letter queue you can read back.', href: '/docs/enterprise-audit' },
+  { kicker: 'Provisioning', title: 'Blueprints', body: 'One JSON file describes a network: join rule, policy, role pre-assignments, identity provider, webhooks and audit export. Apply it with <code>pilotctl extras provision</code>.', href: '/docs/enterprise-blueprints' },
+  { kicker: 'Keys', title: 'Rotation and expiry', body: 'Nodes rotate their keys with a signed request. You can set an expiry per node; a node whose key has expired is refused at heartbeat.', href: '/docs/enterprise-rbac' },
+  { kicker: 'Membership', title: 'Invites with consent', body: 'On an invite-only network the invited node has to accept. Pending invites expire after 30 days.', href: '/docs/networks' },
+  { kicker: 'Operations', title: 'Hot standby', body: 'Every change goes through a write-ahead log. A hot standby (<code>-standby</code>, authenticated with <code>-repl-token</code>) replicates from the primary.', href: 'https://github.com/pilot-protocol/rendezvous' },
+  { kicker: 'Operations', title: 'Dashboard', body: '<code>-http</code> serves a live dashboard and the same public-stats JSON the public backbone publishes. Per-network figures need <code>-dashboard-token</code>.', href: 'https://github.com/pilot-protocol/rendezvous' },
+];
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <BaseHead title={title} description={description} canonicalUrl={canonicalUrl} />
+  <script type="application/ld+json" set:html={JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'TechArticle',
+    headline: title,
+    description,
+    url: canonicalUrl,
+    author: { '@type': 'Organization', name: 'Pilot Protocol' },
+  })}></script>
+</head>
+<body>
+
+<Nav breadcrumbLabel="Self-hosting" />
+
+<main>
+  <section class="sh-hero">
+    <div class="gridbg" aria-hidden="true"></div>
+    <div class="wrap">
+      <div class="eyebrow">Self-hosting</div>
+      <h1>Run your own<br/> <em>registry.</em></h1>
+      <p class="sh-lede">The registry (rendezvous) and beacon that coordinate the public backbone are open source under AGPL-3.0. Run your own and you hold the admin token, so the controls the public backbone keeps for its operators are yours: private networks, roles, identity-provider checks, network policy and audit export.</p>
+      <div class="sh-actions">
+        <a class="btn primary" href="#run">Build and run it <span class="arr">↓</span></a>
+        <a class="btn" href="https://github.com/pilot-protocol/rendezvous" target="_blank" rel="noopener">rendezvous on GitHub</a>
+        <a class="btn" href="/docs/enterprise">Registry reference docs</a>
+      </div>
+      <div class="sh-plain">
+        <span class="callout-mark">!</span>
+        <p><b>Nobody runs registries for customers.</b> Vulture Labs runs the public backbone and nothing else. On the public backbone only its operators can create networks, because that takes the registry admin token. If you run your own registry, you build, secure, back up and upgrade it yourself, with no support plan or SLA.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sh-summary" aria-label="Self-hosting at a glance">
+    <div class="wrap summary-grid">
+      <div class="summary-item">
+        <span class="summary-label">License</span>
+        <strong>AGPL-3.0</strong>
+        <span>The code behind the public backbone’s registry and beacon.</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Process</span>
+        <strong>Registry + beacon</strong>
+        <span><code>rendezvous</code> runs both in one process. A standalone beacon is available too.</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Admin</span>
+        <strong>Your token</strong>
+        <span>Creating networks and every registry-wide setting need it.</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Support</span>
+        <strong>None</strong>
+        <span>No hosted option, support plan or SLA. You operate it.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="compare">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">Public backbone or your own</div>
+          <h2>Same protocol,<br/> <em>different operator.</em></h2>
+        </div>
+        <p>Daemons speak the same protocol to either registry. What changes is who holds the admin token and who sees the registry’s metadata.</p>
+      </div>
+
+      <div class="claims-table">
+        <div class="claim-row claim-head"><span>Topic</span><span>Public backbone</span><span>Your registry</span></div>
+        <div class="claim-row"><b>Register, trust peers, send messages</b><p>Anyone</p><p>Whoever can reach your registry</p></div>
+        <div class="claim-row"><b>Create networks</b><p>Operators only (admin token)</p><p>You</p></div>
+        <div class="claim-row"><b>Roles, identity provider, policy, audit export, blueprints</b><p>Operators only</p><p>You</p></div>
+        <div class="claim-row"><b>Data service agents</b><p>Reachable</p><p>Not registered on your registry</p></div>
+        <div class="claim-row"><b>Who sees registry metadata</b><p>Vulture Labs</p><p>You</p></div>
+        <div class="claim-row"><b>Uptime, backups, upgrades</b><p>Vulture Labs</p><p>You</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="features">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">What’s in the registry</div>
+          <h2>Controls in the<br/> <em>open-source code.</em></h2>
+        </div>
+        <p>All of these work on a registry you run. The reference docs cover each one in detail.</p>
+      </div>
+
+      <div class="control-grid">
+        {features.map((f) => {
+          const external = f.href.startsWith('http');
+          return (
+            <a href={f.href} class="control-card" target={external ? '_blank' : undefined} rel={external ? 'noopener' : undefined}>
+              <span>{f.kicker}</span>
+              <h3>{f.title}</h3>
+              <p set:html={f.body}></p>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="run">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">Build and run</div>
+          <h2>From source<br/> <em>to first network.</em></h2>
+        </div>
+        <p>The build is plain Go with no cgo. Open TCP 9000 and UDP 9001 to your agents. Without <code>-store</code>, the registry keeps its state in memory only.</p>
+      </div>
+
+      <div class="term">
+        <div class="bar">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <div>ops@registry ~ rendezvous</div>
+          <div>go build</div>
+        </div>
+        <div class="term-body"><pre class="term-pre" set:html={render(runLines)}></pre></div>
+      </div>
+
+      <div class="run-grid">
+        <div class="term">
+          <div class="bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div>ops@registry ~ registry settings</div>
+            <div>admin token</div>
+          </div>
+          <div class="term-body"><pre class="term-pre" set:html={render(adminLines)}></pre></div>
+        </div>
+        <div class="term">
+          <div class="bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div>ops-blueprint.json</div>
+            <div>blueprint</div>
+          </div>
+          <div class="term-body"><pre class="term-pre" set:html={render(blueprintLines)}></pre></div>
+        </div>
+      </div>
+      <p class="sh-note">Registry admin commands sit under <code>pilotctl extras</code> and read <code>PILOT_REGISTRY</code> and <code>PILOT_ADMIN_TOKEN</code>. <code>pilotctl info</code> shows your node ID. Port 1001 is the data-exchange service <code>send-message</code> uses; 1002 is the event stream.</p>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="hardening">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">Hardening</div>
+          <h2>Stricter checks,<br/> <em>off by default.</em></h2>
+        </div>
+        <p>These flags are off by default so older clients keep working. On your own registry you can turn them on once every client you run supports them.</p>
+      </div>
+
+      <div class="claims-table">
+        <div class="claim-row claim-head"><span>Flag</span><span>Where</span><span>What it does</span></div>
+        <div class="claim-row"><b><code>-strict-directory-auth</code></b><p>Registry</p><p>Requires trust or a shared network before lookups, resolves, punch requests and listings return a node.</p></div>
+        <div class="claim-row"><b><code>-strict-registration-auth</code></b><p>Registry</p><p>Requires a proof-of-possession signature on registrations that submit a public key.</p></div>
+        <div class="claim-row"><b><code>-strict-heartbeat-freshness</code></b><p>Registry</p><p>Binds a timestamp into signed heartbeats so a captured heartbeat can’t be replayed.</p></div>
+        <div class="claim-row"><b><code>-strict-expiry-binding</code></b><p>Registry</p><p>Binds the requested expiry into the key-expiry signature.</p></div>
+        <div class="claim-row"><b><code>-tls</code></b><p>Registry</p><p>TLS for registry connections, with your certificate (<code>-tls-cert</code>, <code>-tls-key</code>) or a self-signed one generated at start.</p></div>
+        <div class="claim-row"><b><code>-require-punch-token</code></b><p>Standalone beacon</p><p>Releases a peer’s endpoint only for a punch token issued by that peer. A flag on <a href="https://github.com/pilot-protocol/beacon" target="_blank" rel="noopener">pilot-protocol/beacon</a>; the beacon built into rendezvous doesn’t expose it.</p></div>
+        <div class="claim-row"><b><code>PILOT_STRICT_DATAPLANE_TRUST=1</code></b><p>Daemon</p><p>A private node refuses key exchange and control traffic from peers it doesn’t trust.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="limits">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">Before you run it</div>
+          <h2>Limits worth<br/> <em>knowing.</em></h2>
+        </div>
+        <p>The registry is the same small service that runs the public backbone. It wasn’t packaged for other operators.</p>
+      </div>
+
+      <div class="note-grid">
+        <div><b>Source, not a product</b><p>The rendezvous and beacon READMEs describe the repositories as published for transparency, not as a hosting guide. There is no installer; you build from source and follow the repository yourself.</p></div>
+        <div><b>One identity provider</b><p>The identity-provider setting is registry-wide. Setting a new provider replaces the previous one.</p></div>
+        <div><b>Finite buffers</b><p>The audit buffer holds the latest 1,000 events and the webhook dead-letter queue the latest 100. Export to a store you keep; failed webhooks are not replayed automatically.</p></div>
+        <div><b>Separate from the backbone</b><p>Nodes on your registry can’t reach the public backbone’s <a href="/service-agents/">data service agents</a> or its peers. A daemon talks to one registry at a time.</p></div>
+        <div><b>Security is yours</b><p>Keep the admin token secret: it can create and change every network. See <a href="/security/">security</a> for what each component sees.</p></div>
+        <div><b>AGPL-3.0</b><p>If you modify the registry or beacon and let others use it over a network, the license requires you to offer them your source.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="reference">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">Reference</div>
+          <h2>Each control<br/> <em>in detail.</em></h2>
+        </div>
+        <p>The reference docs describe the commands and fields for each control on a registry you run.</p>
+      </div>
+      <div class="ref-grid">
+        <a href="/docs/enterprise"><span>Overview</span><b>Registry controls</b><i>→</i></a>
+        <a href="/docs/enterprise-rbac"><span>Administration</span><b>Roles and keys</b><i>→</i></a>
+        <a href="/docs/enterprise-identity"><span>Identity</span><b>OIDC, webhooks, directory sync</b><i>→</i></a>
+        <a href="/docs/enterprise-policies"><span>Policy</span><b>Network policy</b><i>→</i></a>
+        <a href="/docs/enterprise-audit"><span>Evidence</span><b>Audit log and export</b><i>→</i></a>
+        <a href="/docs/enterprise-blueprints"><span>Provisioning</span><b>Blueprints</b><i>→</i></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="cta-block">
+        <h2>Start from <em>the source.</em></h2>
+        <div class="cta-actions">
+          <a class="btn primary" href="https://github.com/pilot-protocol/rendezvous" target="_blank" rel="noopener">rendezvous <span class="arr">↗</span></a>
+          <a class="btn" href="https://github.com/pilot-protocol/beacon" target="_blank" rel="noopener">beacon</a>
+          <a class="btn" href="/docs/getting-started">Install the daemon</a>
+          <a class="btn" href="/security/">Security</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<Footer />
+
+<style>
+  .sh-hero { position: relative; overflow: hidden; padding: 110px 0 88px; border-bottom: 1px solid var(--line); }
+  .sh-hero .wrap { position: relative; z-index: 1; }
+  .sh-hero h1 { max-width: 1100px; margin: 18px 0 28px; font-size: clamp(58px, 8vw, 128px); line-height: .9; letter-spacing: -.05em; }
+  .sh-hero h1 em, h2 em { font-family: var(--serif); font-weight: 400; }
+  .sh-lede { max-width: 800px; color: var(--ink-dim); font-size: clamp(19px, 2vw, 25px); line-height: 1.5; }
+  .sh-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+  .sh-plain { display: flex; gap: 20px; align-items: flex-start; max-width: 980px; margin-top: 48px; padding: 24px 28px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); background: color-mix(in srgb, var(--accent) 6%, var(--bg)); }
+  .callout-mark { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-family: var(--mono); font-weight: 800; }
+  .sh-plain p { margin: 0; color: var(--ink-dim); font-size: 16px; line-height: 1.6; }
+  .sh-plain b { color: var(--ink); }
+  .sh-summary { border-bottom: 1px solid var(--line); background: var(--bg-deep); }
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .summary-item { display: flex; flex-direction: column; min-height: 180px; padding: 28px; border-right: 1px solid var(--line); }
+  .summary-item:last-child { border-right: 0; }
+  .summary-label, .control-card > span { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-text); }
+  .summary-item strong { margin: auto 0 8px; font-size: 22px; }
+  .summary-item > span:last-child { color: var(--ink-dim); font-size: 13px; line-height: 1.5; }
+  .section-alt { background: var(--bg-deep); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .section-copy { display: grid; grid-template-columns: 1.1fr .9fr; gap: 80px; align-items: end; margin-bottom: 52px; }
+  .section-copy h2 { margin-top: 14px; font-size: clamp(44px, 5.8vw, 84px); line-height: .97; letter-spacing: -.045em; }
+  .section-copy > p { max-width: 48ch; color: var(--ink-dim); font-size: clamp(18px, 1.8vw, 22px); line-height: 1.55; }
+  .claims-table { border-top: 1px solid var(--line-2); }
+  .claim-row { display: grid; grid-template-columns: minmax(200px, 1.1fr) 1fr 1fr; gap: 26px; align-items: start; padding: 20px 18px; border-bottom: 1px solid var(--line); }
+  #hardening .claim-row { grid-template-columns: minmax(220px, 1fr) 150px 1.6fr; }
+  .claim-row p { margin: 0; color: var(--ink-dim); font-size: 14px; line-height: 1.55; }
+  .claim-row b code { color: var(--accent-text); overflow-wrap: anywhere; }
+  .claim-row a, .note-grid a, .sh-note a { color: var(--accent-text); }
+  .claim-head { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); }
+  .control-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+  .control-card { min-height: 250px; display: flex; flex-direction: column; padding: 28px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  .control-card:hover { color: var(--ink); background: color-mix(in srgb, var(--accent) 5%, var(--bg)); }
+  .control-card h3 { margin: auto 0 12px; font-size: 24px; }
+  .control-card p { color: var(--ink-dim); font-size: 14px; line-height: 1.55; }
+  .control-card p :global(code) { color: var(--accent-text); font-size: .9em; white-space: nowrap; }
+  .term { min-width: 0; }
+  .term .term-body { padding: 22px 24px; }
+  .term-pre { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; color: #a8a8a1; font-size: 12.5px; line-height: 1.65; white-space: pre; overflow-x: auto; }
+  .run-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: 24px; margin-top: 24px; align-items: start; }
+  .sh-note { margin-top: 20px; max-width: 90ch; color: var(--ink-dim); font-size: 14px; line-height: 1.6; }
+  .note-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+  .note-grid > div { padding: 26px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .note-grid b { display: block; margin-bottom: 10px; font-size: 17px; }
+  .note-grid p { margin: 0; color: var(--ink-dim); font-size: 14px; line-height: 1.55; }
+  .ref-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+  .ref-grid a { display: grid; gap: 12px; padding: 24px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg); color: inherit; }
+  .ref-grid a:hover { background: color-mix(in srgb, var(--accent) 5%, var(--bg)); }
+  .ref-grid span { color: var(--accent-text); font: 530 9px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+  .ref-grid b { font-size: 17px; }
+  .ref-grid i { color: var(--accent-text); font-style: normal; }
+
+  @media (max-width: 980px) {
+    .summary-grid { grid-template-columns: 1fr 1fr; }
+    .summary-item:nth-child(2) { border-right: 0; }
+    .summary-item:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+    .section-copy, .run-grid { grid-template-columns: minmax(0, 1fr); gap: 26px; }
+    .control-grid, .note-grid, .ref-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 680px) {
+    .sh-hero { padding: 72px 0 56px; }
+    .sh-hero h1 { font-size: clamp(48px, 14vw, 72px); }
+    .sh-plain { padding: 20px; }
+    .summary-grid { grid-template-columns: 1fr; }
+    .summary-item { min-height: 0; gap: 18px; border-right: 0; border-bottom: 1px solid var(--line); }
+    .summary-item:last-child { border-bottom: 0; }
+    .control-grid, .note-grid, .ref-grid { grid-template-columns: 1fr; }
+    .control-card { min-height: 0; }
+    .control-card h3 { margin-top: 36px; }
+    .claim-row, #hardening .claim-row { grid-template-columns: 1fr; gap: 6px; padding: 18px 0; }
+    .claim-head { display: none; }
+    #compare .claim-row p:first-of-type::before { content: 'Public backbone: '; color: var(--ink); }
+    #compare .claim-row p:last-of-type::before { content: 'Your registry: '; color: var(--ink); }
+    #hardening .claim-row p:first-of-type { color: var(--accent-text); font: 530 10px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .term .term-body { padding: 18px 16px; }
+    .term-pre { font-size: 11.5px; }
+  }
+</style>
+
+</body>
+</html>

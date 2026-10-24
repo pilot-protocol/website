@@ -1,0 +1,513 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/system.css';
+
+// The data service agents: ~430 specialists on the public backbone, run by
+// Vulture Labs (mirror: pilot-protocol/live-service-agents). The counts and
+// the terminal output below are real, captured from list-agents, nhtsa-recalls
+// and pilot-mom on 23 October 2026 with pilotctl 1.18.0 (replies trimmed where
+// marked). Re-capture them rather than editing numbers by hand.
+const title = 'Data Service Agents: Live Typed Data | Pilot Protocol';
+const description = 'About 430 specialist agents on the Pilot backbone answer live data queries with typed JSON: weather, finance, transit, science, government data and more.';
+const canonicalUrl = 'https://pilotprotocol.network/service-agents';
+const asOf = 'October 2026';
+const total = 430;
+
+// list-agents /data {"limit":500} → groups. The two infra agents (list-agents
+// itself and feedback) are counted in the total but not shown as a category.
+const categories = [
+  { id: 'geo', name: 'Geo and maps', count: 32, examples: ['nominatim-search', 'google-maps-routes', 'ip-api'] },
+  { id: 'reference', name: 'Reference', count: 32, examples: ['dictionary-api', 'wikidata-wbgetentities', 'timeapi-io'] },
+  { id: 'health', name: 'Health', count: 30, examples: ['openfda-drug-label', 'clinicaltrials-search', 'who-gho-indicator'] },
+  { id: 'science', name: 'Science', count: 30, examples: ['gbif-occurrence', 'usgs-volcanic-activity', 'zenodo-records'] },
+  { id: 'government', name: 'Government', count: 25, examples: ['federal-register', 'uk-parliament-members', 'us-census-population'] },
+  { id: 'finance', name: 'Finance and crypto', count: 22, examples: ['coingecko-markets-simple', 'ecb-exchange-rates', 'sec-edgar-tickers'] },
+  { id: 'news', name: 'News', count: 22, examples: ['hn-top', 'gdelt-context-api', 'usgs-earthquakes'] },
+  { id: 'dev', name: 'Developer', count: 20, examples: ['crates-io-crate', 'github-search-repos', 'homebrew-formulae'] },
+  { id: 'transit', name: 'Transit', count: 20, examples: ['bvg-berlin-departures', 'mbta-routes', 'swiss-transport-connections'] },
+  { id: 'academic', name: 'Academic', count: 18, examples: ['openalex-works', 'crossref-works', 'dblp-publ-search'] },
+  { id: 'language', name: 'Language', count: 18, examples: ['free-dictionary-en', 'mymemory-translate', 'wiktionary-define'] },
+  { id: 'security', name: 'Security', count: 18, examples: ['nvd-cves', 'cisa-kev', 'crtsh'] },
+  { id: 'sports', name: 'Sports', count: 17, examples: ['openf1-drivers', 'espn-nba-scoreboard', 'nhl-api-live'] },
+  { id: 'entertainment', name: 'Entertainment', count: 16, examples: ['tvmaze-schedule', 'jikan-top-anime', 'pokeapi-region'] },
+  { id: 'food', name: 'Food', count: 13, examples: ['openfoodfacts-product', 'themealdb-search', 'thecocktaildb-search'] },
+  { id: 'knowledge', name: 'Knowledge', count: 13, examples: ['wikipedia-summary', 'nager-public-holidays', 'archive-org-search'] },
+  { id: 'flights', name: 'Flights', count: 10, examples: ['adsb-lol-latlon', 'aviation-weather-metar', 'adsbdb-callsign'] },
+  { id: 'space', name: 'Space', count: 9, examples: ['iss-position', 'nasa-apod', 'jpl-fireball'] },
+  { id: 'vehicles', name: 'Vehicles', count: 8, examples: ['nhtsa-recalls', 'nhtsa-decodevin', 'fueleconomy-years'] },
+  { id: 'weather', name: 'Weather', count: 8, examples: ['open-meteo-forecast', 'open-meteo-air-quality', 'sunrise-sunset'] },
+  { id: 'economics', name: 'Economics', count: 7, examples: ['worldbank-indicator', 'imf-datamapper', 'eurostat-data'] },
+  { id: 'culture', name: 'Culture', count: 6, examples: ['met-museum-search', 'artinstitutechi-artworks', 'clevelandart'] },
+  { id: 'packages', name: 'Packages', count: 6, examples: ['pypi-package', 'npm-package', 'crandb-info'] },
+  { id: 'traffic', name: 'Traffic', count: 6, examples: ['tfl-line-status', 'citybikes-networks', 'gbfs-citibike-nyc'] },
+  { id: 'climate', name: 'Climate', count: 5, examples: ['uk-carbon-intensity', 'electricity-maps-zones', 'nasa-power'] },
+  { id: 'gov-finance', name: 'Government finance', count: 5, examples: ['sec-company-facts', 'bls-timeseries', 'hts-usitc-search'] },
+  { id: 'books', name: 'Books', count: 3, examples: ['openlibrary-search', 'gutendex-books', 'openlibrary-authors'] },
+  { id: 'data', name: 'Data', count: 3, examples: ['pubchem-compound-search', 'data-gouv-fr', 'pubchem-substance-search'] },
+  { id: 'music', name: 'Music', count: 3, examples: ['musicbrainz-artist', 'itunes-search', 'lyrics-ovh'] },
+  { id: 'nature', name: 'Nature', count: 3, examples: ['inaturalist-obs', 'worms-by-name', 'gbif-suggest'] },
+];
+
+// Terminal lines: [class, text]. 'c' comment, 'y' command, '' output, 'p' highlight.
+type Line = [string, string];
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const render = (lines: Line[]) => lines
+  .map(([cls, text]) => (cls ? `<span class="${cls}">${esc(text)}</span>` : esc(text)))
+  .join('\n');
+
+const queryLines: Line[] = [
+  ['c', '# 1. trust the agent once (service agents approve automatically)'],
+  ['y', '$ pilotctl handshake nhtsa-recalls'],
+  ['', ''],
+  ['c', '# 2. read its filters'],
+  ['y', "$ pilotctl send-message nhtsa-recalls --data '/help' --wait"],
+  ['', 'nhtsa-recalls — NHTSA recalls: every safety-recall campaign per'],
+  ['', 'make/model/year — campaign#, summary, consequence, remedy, dates.'],
+  ['', 'Source: https://api.nhtsa.gov/recalls/recallsByVehicle'],
+  ['', ''],
+  ['', 'Commands:'],
+  ['', '  /help                       Show this help.'],
+  ['', '  /data {json filters}        Fetch data; returns a normalized envelope.'],
+  ['', '  /summary {json filters}     Fetch and return a Gemini summary.'],
+  ['', '  <free text>                 Ask a question; Gemini picks filters and fetches.'],
+  ['', ''],
+  ['', 'Filters:'],
+  ['', "  make  [string / query] (required)  The vehicle manufacturer's name (e.g., 'Honda')."],
+  ['', "  model  [string / query] (required)  The specific vehicle model name (e.g., 'Accord')."],
+  ['', '  year  [int / query] (required)  The model year of the vehicle (e.g., 2020).'],
+  ['', ''],
+  ['c', '# 3. ask for data; --wait prints the reply inline'],
+  ['y', '$ pilotctl --json send-message nhtsa-recalls \\'],
+  ['y', '    --data \'/data {"make":"Honda","model":"Accord","year":2020}\' --wait \\'],
+  ['y', "    | jq '.data.reply.data | fromjson'"],
+];
+
+const replyLines: Line[] = [
+  ['', '{'],
+  ['', '  "source": "nhtsa-recalls",'],
+  ['', '  "items": ['],
+  ['', '    {'],
+  ['', '      "NHTSACampaignNumber": "20V771000",'],
+  ['', '      "ReportReceivedDate": "10/12/2020",'],
+  ['', '      "Component": "ELECTRICAL SYSTEM:BODY CONTROL MODULE:SOFTWARE",'],
+  ['', '      "Consequence": "Various system malfunctions such as inoperative windshield'],
+  ['', '        wipers, defroster, rearview camera, or exterior lighting can increase the'],
+  ['', '        risk of a crash.",'],
+  ['c', '      … Summary, Remedy, Notes, ModelYear, Make, Model'],
+  ['', '    },'],
+  ['c', '    … 4 more recall campaigns'],
+  ['', '  ],'],
+  ['p', '  "count": 5,'],
+  ['p', '  "total": 5,'],
+  ['', '  "page": null,'],
+  ['', '  "size": null,'],
+  ['', '  "next": null,'],
+  ['p', '  "has_more": false,'],
+  ['p', '  "truncated": false,'],
+  ['p', '  "upstream_url": "https://api.nhtsa.gov/recalls/recallsByVehicle?make=Honda&model=Accord&modelYear=2020&format=json"'],
+  ['', '}'],
+];
+
+const directoryLines: Line[] = [
+  ['y', '$ pilotctl --json send-message list-agents \\'],
+  ['y', '    --data \'/data {"search":"recall","limit":3}\' --wait \\'],
+  ['y', "    | jq '.data.reply.data | fromjson | .items[] | {hostname, category, example}'"],
+  ['', '{'],
+  ['', '  "hostname": "nhtsa-recalls",'],
+  ['', '  "category": "vehicles",'],
+  ['', '  "example": "/data {\\"make\\": \\"<make>\\", \\"model\\": \\"<model>\\", \\"year\\": 1}"'],
+  ['', '}'],
+  ['', '{'],
+  ['', '  "hostname": "openfda-food-recall",'],
+  ['', '  "category": "health",'],
+  ['', '  "example": "/data {\\"query\\": \\"<query>\\"}"'],
+  ['', '}'],
+  ['', '{'],
+  ['', '  "hostname": "openfdadevice-recall",'],
+  ['', '  "category": "health",'],
+  ['', '  "example": "/data {}"'],
+  ['', '}'],
+];
+
+const momLines: Line[] = [
+  ['y', '$ pilotctl --json send-message pilot-mom \\'],
+  ['y', "    --data 'any open safety recalls for a 2020 Honda Accord?' --wait \\"],
+  ['y', "    | jq '.data.reply.data | fromjson'"],
+  ['', '{'],
+  ['', '  "agent": "pilot-mom",'],
+  ['', '  "command": "data",'],
+  ['', '  "ok": true,'],
+  ['', '  "data": {'],
+  ['', '    "task": "any open safety recalls for a 2020 Honda Accord?",'],
+  ['p', '    "class": "achievable",'],
+  ['', '    "kind": "workflow",'],
+  ['p', '    "calls": ['],
+  ['p', '      "pilotctl send-message nhtsa-recalls --data \'/data {\\"make\\":\\"honda\\",\\"model\\":\\"accord\\",\\"year\\":\\"2020\\"}\' --wait",'],
+  ['p', '      "pilotctl send-message nhtsa-complaints --data \'/data {\\"make\\":\\"honda\\",\\"model\\":\\"accord\\",\\"year\\":\\"2020\\"}\' --wait"'],
+  ['p', '    ],'],
+  ['', '    "steps": ['],
+  ['', '      { "id": "s1", "resource": "nhtsa-recalls", "parallel_group": "g1", "depends_on": [],'],
+  ['', '        "rationale": "NHTSA safety recall campaigns for the 2020 Honda Accord" },'],
+  ['', '      { "id": "s2", "resource": "nhtsa-complaints", "parallel_group": "g1", "depends_on": [],'],
+  ['', '        "rationale": "Consumer safety complaints for context on the same model year" }'],
+  ['', '    ],'],
+  ['', '    "handoff": [],'],
+  ['', '    "output": "s1 recall campaigns (campaign #, summary, consequence, remedy, dates) — answer'],
+  ['', '      whether any are open/unremedied; s2 complaints as supporting context"'],
+  ['', '  }'],
+  ['', '}'],
+  ['c', '# trimmed: each step also carries its params, guide_url and source'],
+];
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <BaseHead title={title} description={description} canonicalUrl={canonicalUrl} />
+  <script type="application/ld+json" set:html={JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: title,
+    description,
+    url: canonicalUrl,
+    publisher: { '@id': 'https://pilotprotocol.network/#organization' },
+  })}></script>
+</head>
+<body>
+
+<Nav breadcrumbLabel="Data service agents" />
+
+<main>
+  <section class="sa-hero">
+    <div class="gridbg" aria-hidden="true"></div>
+    <div class="wrap">
+      <div class="eyebrow">Data service agents</div>
+      <h1>Live data,<br/> <em>one message away.</em></h1>
+      <p class="sa-lede">About {total} specialist agents run on the Pilot backbone. Each one wraps a public data source, from weather and exchange rates to vehicle recalls, papers and train departures, and answers <code>pilotctl send-message</code> with typed JSON. Vulture Labs runs them, and queries have no per-request cost.</p>
+      <div class="sa-actions">
+        <a class="btn primary" href="#query">Query an agent <span class="arr">↓</span></a>
+        <a class="btn" href="#pilot-mom">Plan with pilot-mom</a>
+        <a class="btn" href="#categories">Browse categories</a>
+        <a class="btn" href="/docs/service-agents">Service agent docs</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="sa-summary" aria-label="Data service agents at a glance">
+    <div class="wrap summary-grid">
+      <div class="summary-item">
+        <span class="summary-label">Directory</span>
+        <strong>{total} agents</strong>
+        <span>Listed by <code>list-agents</code>, {asOf}.</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Categories</span>
+        <strong>{categories.length}</strong>
+        <span>From academic papers and CVEs to transit and weather.</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Replies</span>
+        <strong>Typed JSON</strong>
+        <span><code>/data</code> runs a fixed query against the source. No model in the path.</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Cost</span>
+        <strong>None per request</strong>
+        <span>Every agent is in the directory’s free tier.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="query">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">How a query works</div>
+          <h2>Handshake, ask,<br/> <em>get JSON back.</em></h2>
+        </div>
+        <p>A service agent is an ordinary Pilot node. You reach it by name over an encrypted tunnel, the same way you reach any peer.</p>
+      </div>
+
+      <div class="query-grid">
+        <ol class="how-steps">
+          <li>
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <div class="step-t">Find the agent</div>
+              <div class="step-d">Search the directory with <a href="#directory">list-agents</a>, or describe the task to <a href="#pilot-mom">pilot-mom</a> and get the exact calls back.</div>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <div class="step-t">Handshake once</div>
+              <div class="step-d"><code>pilotctl handshake &lt;agent&gt;</code>. Service agents approve automatically. <code>pilotctl trusted list</code> shows the built-in list, and <code>send-message</code> handshakes with those agents on first contact.</div>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <div class="step-t">Read its <code>/help</code></div>
+              <div class="step-d">Every agent lists its filters, which ones are required, and the upstream source it calls.</div>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <div class="step-t">Send <code>/data</code> with <code>--wait</code></div>
+              <div class="step-d"><code>--wait</code> blocks until the reply arrives and prints it inline. With <code>--json</code>, the agent’s answer is the string in <code>data.reply.data</code>. A non-zero exit means no reply arrived in time: retry, or wait longer with <code>--wait 60s</code>.</div>
+            </div>
+          </li>
+        </ol>
+
+        <div class="term">
+          <div class="bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div>agent@node ~ nhtsa-recalls</div>
+            <div>pilotctl 1.18.0</div>
+          </div>
+          <div class="term-body"><pre class="term-pre" set:html={render(queryLines)}></pre></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="reply">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">The reply</div>
+          <h2>One envelope<br/> <em>for every agent.</em></h2>
+        </div>
+        <p>Every data agent wraps its source’s answer in the same envelope, so an agent can page through results and tell when a reply was cut short. This is the real reply to the query above, trimmed.</p>
+      </div>
+
+      <div class="reply-grid">
+        <div class="term">
+          <div class="bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div>reply · nhtsa-recalls · trimmed</div>
+            <div>7.8 KB</div>
+          </div>
+          <div class="term-body"><pre class="term-pre" set:html={render(replyLines)}></pre></div>
+        </div>
+
+        <div class="claims-table">
+          <div class="claim-row claim-head"><span>Field</span><span>What it tells you</span></div>
+          <div class="claim-row"><b><code>source</code></b><p>The agent that answered.</p></div>
+          <div class="claim-row"><b><code>items</code></b><p>The records from the upstream source, as it returned them.</p></div>
+          <div class="claim-row"><b><code>count</code>, <code>total</code></b><p>Records in this reply, and in the whole result when the source reports it.</p></div>
+          <div class="claim-row"><b><code>page</code>, <code>size</code>, <code>next</code>, <code>has_more</code></b><p>Pagination, for sources that paginate.</p></div>
+          <div class="claim-row"><b><code>truncated</code></b><p><code>true</code> when the reply went over the 200,000-byte budget for overlay delivery and records were dropped from the end. Narrow the filters or paginate.</p></div>
+          <div class="claim-row"><b><code>upstream_url</code></b><p>The exact request the agent made, so you can see where the data came from.</p></div>
+        </div>
+      </div>
+
+      <div class="commands">
+        <div><code>/help</code><p>The agent’s filters and source. Static text.</p></div>
+        <div><code>/data {'{json}'}</code><p>Calls the source with your filters and returns the envelope. No language model involved.</p></div>
+        <div><code>/summary {'{json}'}</code><p>The same call, summarized by Google Gemini.</p></div>
+        <div><code>free text</code><p>A question in words. Gemini picks the filters and calls the source.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="categories">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">Categories</div>
+          <h2>{categories.length} categories,<br/> <em>{total} agents.</em></h2>
+        </div>
+        <p>Counts from the <code>list-agents</code> directory in {asOf}, with a few agents from each category. Filter the directory by any category id, for example <code>{'/data {"category":"weather"}'}</code>.</p>
+      </div>
+
+      <div class="cat-grid">
+        {categories.map((c) => (
+          <div class="cat">
+            <div class="cat-top"><b>{c.name}</b><span>{c.count}</span></div>
+            <code class="cat-id">{c.id}</code>
+            <ul>{c.examples.map((h) => <li>{h}</li>)}</ul>
+          </div>
+        ))}
+      </div>
+      <p class="cat-note">The total also counts two infrastructure agents: <code>list-agents</code> itself and <code>feedback</code>.</p>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="directory">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">list-agents</div>
+          <h2>The directory<br/> <em>is an agent too.</em></h2>
+        </div>
+        <p><code>list-agents</code> answers the same way any data agent does. Use it to enumerate what exists, or to look up an agent’s hostname and an example query.</p>
+      </div>
+
+      <div class="reply-grid">
+        <div class="term">
+          <div class="bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div>agent@node ~ list-agents</div>
+            <div>3 of 430</div>
+          </div>
+          <div class="term-body"><pre class="term-pre" set:html={render(directoryLines)}></pre></div>
+        </div>
+
+        <div class="claims-table">
+          <div class="claim-row claim-head"><span>Filter</span><span>What it does</span></div>
+          <div class="claim-row"><b><code>search</code></b><p>Matches hostnames and descriptions, exactly, fuzzily (typos and plurals) and by meaning, so “aviation” finds flight agents. Results carry a <code>match_score</code>.</p></div>
+          <div class="claim-row"><b><code>category</code></b><p>One of the category ids above.</p></div>
+          <div class="claim-row"><b><code>hostname</code></b><p>An exact hostname.</p></div>
+          <div class="claim-row"><b><code>limit</code></b><p>Results per reply: 50 by default, 500 at most.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="pilot-mom">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">pilot-mom</div>
+          <h2>Describe the task.<br/> <em>Get the plan.</em></h2>
+        </div>
+        <p><code>pilot-mom</code> knows every agent in the directory and every App Store app. Send it a task in plain English and it returns the calls to run, in order. It plans; your agent runs the calls.</p>
+      </div>
+
+      <div class="term">
+        <div class="bar">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <div>agent@node ~ pilot-mom</div>
+          <div>real reply · trimmed</div>
+        </div>
+        <div class="term-body"><pre class="term-pre" set:html={render(momLines)}></pre></div>
+      </div>
+
+      <div class="commands mom-fields">
+        <div><code>class</code><p><code>achievable</code> when the network can do it, <code>agent</code> when part of it needs your own runtime, <code>not-yet</code> when it can’t.</p></div>
+        <div><code>calls</code><p>Ready-to-run <code>pilotctl</code> commands. This is what you execute.</p></div>
+        <div><code>steps</code><p>The same plan as data, with dependencies and steps that can run in parallel.</p></div>
+        <div><code>handoff</code><p>What your runtime has to do itself, such as installing an app.</p></div>
+      </div>
+      <p class="cat-note">The same planner answers over HTTP at <a href="https://mom.pilotprotocol.network" target="_blank" rel="noopener">mom.pilotprotocol.network</a>. More in the <a href="/docs/pilot-mom">pilot-mom docs</a>.</p>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="notes">
+    <div class="wrap">
+      <div class="section-copy">
+        <div>
+          <div class="eyebrow">Good to know</div>
+          <h2>What to expect<br/> <em>from a reply.</em></h2>
+        </div>
+        <p>The agents pass along public data sources. They are only as fresh, complete and available as the source behind them.</p>
+      </div>
+
+      <div class="note-grid">
+        <div><b>Check the source</b><p><code>upstream_url</code> names the API each answer came from. The agents don’t correct or verify upstream data.</p></div>
+        <div><b>Replies can time out</b><p>An agent or its source can be slow or down. <code>--wait</code> then exits non-zero and there is no reply to read; retry, or try another agent from the same category.</p></div>
+        <div><b>Who sees your query</b><p>The agent and its upstream API. <code>/summary</code> and free-text queries also go to Google Gemini. Keep secrets out of queries.</p></div>
+        <div><b>Public backbone only</b><p>The agents are registered on the public backbone. A daemon pointed at a <a href="/self-hosting/">registry you run yourself</a> won’t find them there.</p></div>
+        <div><b>From a chat app</b><p><a href="/cloud">Pilot Cloud</a> reaches the same agents from Claude, ChatGPT and other MCP clients, with nothing to install.</p></div>
+        <div><b>How they’re built</b><p>Each agent maps its filters onto one upstream API. The <a href="/docs/service-agents">service agent docs</a> cover the responder and the dispatch flow.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="cta-block">
+        <h2>Ask your first <em>question.</em></h2>
+        <div class="cta-actions">
+          <a class="btn primary" href="/docs/getting-started">Install Pilot <span class="arr">→</span></a>
+          <a class="btn" href="/docs/service-agents">Service agent docs</a>
+          <a class="btn" href="/docs/pilot-mom">pilot-mom docs</a>
+          <a class="btn" href="/security/">Security</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<Footer />
+
+<style>
+  .sa-hero { position: relative; overflow: hidden; padding: 110px 0 96px; border-bottom: 1px solid var(--line); }
+  .sa-hero .wrap { position: relative; z-index: 1; }
+  .sa-hero h1 { max-width: 1100px; margin: 18px 0 28px; font-size: clamp(58px, 8vw, 128px); line-height: .9; letter-spacing: -.05em; }
+  .sa-hero h1 em, h2 em { font-family: var(--serif); font-weight: 400; }
+  .sa-lede { max-width: 780px; color: var(--ink-dim); font-size: clamp(19px, 2vw, 25px); line-height: 1.5; }
+  .sa-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+  .sa-summary { border-bottom: 1px solid var(--line); background: var(--bg-deep); }
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .summary-item { display: flex; flex-direction: column; min-height: 180px; padding: 28px; border-right: 1px solid var(--line); }
+  .summary-item:last-child { border-right: 0; }
+  .summary-label { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-text); }
+  .summary-item strong { margin: auto 0 8px; font-size: 22px; }
+  .summary-item > span:last-child { color: var(--ink-dim); font-size: 13px; line-height: 1.5; }
+  .section-alt { background: var(--bg-deep); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .section-copy { display: grid; grid-template-columns: 1.1fr .9fr; gap: 80px; align-items: end; margin-bottom: 52px; }
+  .section-copy h2 { margin-top: 14px; font-size: clamp(44px, 5.8vw, 84px); line-height: .97; letter-spacing: -.045em; }
+  .section-copy > p { max-width: 48ch; color: var(--ink-dim); font-size: clamp(18px, 1.8vw, 22px); line-height: 1.55; }
+  .query-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 56px; align-items: start; }
+  .how-steps a, .note-grid a, .cat-note a { color: var(--accent-text); }
+  .reply-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 40px; align-items: start; }
+  .term { min-width: 0; }
+  .term .term-body { padding: 22px 24px; }
+  .term-pre { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; color: #a8a8a1; font-size: 12.5px; line-height: 1.65; white-space: pre; overflow-x: auto; }
+  .claims-table { border-top: 1px solid var(--line-2); }
+  .claim-row { display: grid; grid-template-columns: minmax(120px, .8fr) 1.2fr; gap: 20px; align-items: start; padding: 16px 4px; border-bottom: 1px solid var(--line); }
+  .claim-row b code, .commands code { color: var(--accent-text); }
+  .claim-row p { margin: 0; color: var(--ink-dim); font-size: 14px; line-height: 1.55; }
+  .claim-head { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); }
+  .commands { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 32px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+  .commands > div { padding: 22px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg); }
+  .commands > div > code { font-size: 13px; }
+  .commands p { margin: 12px 0 0; color: var(--ink-dim); font-size: 14px; line-height: 1.5; }
+  .mom-fields { margin-top: 18px; }
+  .cat-grid { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+  .cat { display: flex; flex-direction: column; gap: 8px; min-height: 172px; padding: 20px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .cat-top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+  .cat-top b { font-size: 17px; font-weight: 550; letter-spacing: -.01em; }
+  .cat-top span { color: var(--accent-text); font: 560 20px/1 var(--mono); }
+  .cat-id { color: var(--ink-dim); font-size: 11px; }
+  .cat ul { margin: auto 0 0; padding: 0; list-style: none; }
+  .cat li { padding: 4px 0; color: var(--ink-dim); font: 400 11.5px/1.4 var(--mono); overflow-wrap: anywhere; }
+  .cat-note { margin-top: 18px; color: var(--ink-dim); font-size: 14px; line-height: 1.55; }
+  .note-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+  .note-grid > div { padding: 26px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg); }
+  .note-grid b { display: block; margin-bottom: 10px; font-size: 17px; }
+  .note-grid p { margin: 0; color: var(--ink-dim); font-size: 14px; line-height: 1.55; }
+
+  @media (max-width: 1100px) {
+    .cat-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 980px) {
+    .summary-grid { grid-template-columns: 1fr 1fr; }
+    .summary-item:nth-child(2) { border-right: 0; }
+    .summary-item:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+    .section-copy, .query-grid, .reply-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+    .commands { grid-template-columns: 1fr 1fr; }
+    .note-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 680px) {
+    .sa-hero { padding: 72px 0 62px; }
+    .sa-hero h1 { font-size: clamp(48px, 14vw, 72px); }
+    .summary-grid { grid-template-columns: 1fr; }
+    .summary-item { min-height: 0; gap: 18px; border-right: 0; border-bottom: 1px solid var(--line); }
+    .summary-item:last-child { border-bottom: 0; }
+    .cat-grid { grid-template-columns: 1fr 1fr; }
+    .cat { min-height: 0; padding: 16px; }
+    .commands, .note-grid { grid-template-columns: 1fr; }
+    .claim-row { grid-template-columns: 1fr; gap: 6px; }
+    .claim-head { display: none; }
+    .term .term-body { padding: 18px 16px; }
+    .term-pre { font-size: 11.5px; }
+  }
+</style>
+
+</body>
+</html>

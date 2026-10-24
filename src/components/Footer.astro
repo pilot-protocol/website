@@ -1,12 +1,5 @@
 ---
-// Full site footer - large display text + 4-column nav + fine print
-
-import { solutionGroups } from '../data/solutions';
-
-const enterpriseLinks = [
-  { href: '/docs/enterprise', label: 'Enterprise networks' },
-  { href: '/plans', label: 'Plans' },
-];
+// Full site footer - large display text + link columns + fine print
 
 // Social links — add new entries here to extend the row.
 const socials = [
@@ -29,8 +22,8 @@ const socials = [
       for <span class="a">agents.</span>
     </div>
     <div class="foot-cta">
-      <a href="/docs/getting-started" class="btn primary">Get started <span class="arr">→</span></a>
-      <a href="/contact" class="btn">Contact sales</a>
+      <a href="/docs/getting-started" class="btn primary">Install Pilot <span class="arr">→</span></a>
+      <a href="/cloud" class="btn">Use Pilot Cloud</a>
     </div>
 
     <div class="foot-grid">
@@ -51,33 +44,38 @@ const socials = [
         </div>
       </div>
       <div>
-        <p class="foot-heading">Product</p>
-        <a href="/learn/what-is-pilot-protocol">Network OS</a>
-        <a href="/trust">Trust Center</a>
-        <a href="/governance">Governance</a>
-        <a href="/app-store">App Store</a>
-        <a href="/plans">Plans</a>
-        <a href="/docs/enterprise">Enterprise controls</a>
+        <p class="foot-heading">Protocol</p>
+        <a href="/docs/concepts">How it works</a>
+        <a href="/docs/getting-started">Quickstart</a>
+        <a href="/self-hosting">Self-hosting</a>
+        <a href="/security">Security</a>
+        <a href="/docs/integration">SDKs &amp; integration</a>
+        <a href="/for/compatibility">Compatibility</a>
+        <a href="https://github.com/pilot-protocol/pilotprotocol">GitHub</a>
       </div>
       <div>
-        <p class="foot-heading">Developers</p>
+        <p class="foot-heading">Services</p>
+        <a href="/service-agents">Service agents</a>
+        <a href="/docs/pilot-mom">pilot-mom</a>
+        <a href="/app-store">App Store</a>
+        <a href="/publish">Publish an app</a>
+        <a href="/cloud">Pilot Cloud</a>
+      </div>
+      <div>
+        <p class="foot-heading">Resources</p>
         <a href="/docs/">Documentation</a>
-        <a href="/docs/getting-started">Quickstart</a>
-        <a href="/docs/integration">SDKs &amp; integration</a>
-        <a href="/research/WHITEPAPER.pdf">Wire specification</a>
-        <a href="/pilot-native-use-cases.pdf">Use-case brochure</a>
-        <a href="https://github.com/pilot-protocol/pilotprotocol">GitHub</a>
+        <a href="/learn/">Learning center</a>
+        <a href="/blog/">Blog</a>
         <a href="/docs/research">Research</a>
+        <a href="/research/WHITEPAPER.pdf">Wire specification</a>
+        <a href="/for/skills">Agent skills</a>
       </div>
       <div>
         <p class="foot-heading">Company</p>
         <a href="/about">About</a>
-        <a href="/learn/">Learning center</a>
         <a href="/roadmap">Roadmap</a>
         <a href="/news/">Company news</a>
-        <a href="/blog/">Blog</a>
         <a href="/press">Press</a>
-        <a href="/enterprise-readiness-report.pdf">Readiness report</a>
         <a href="/contact">Contact</a>
       </div>
       <div>
@@ -101,46 +99,9 @@ const socials = [
     <div class="foot-bottom">
       <div>© {new Date().getFullYear()} Pilot Protocol · Built for agents</div>
       <div class="foot-bottom-right">
-        <span class="foot-status">pilot://0x00000000 · backbone · up</span>
+        <a class="foot-status" href="https://github.com/pilot-protocol/pilotprotocol">Open source · AGPL-3.0</a>
       </div>
     </div>
-
-    <nav class="foot-solutions" aria-label="Explore Pilot solutions">
-      <div class="foot-solutions-intro">
-        <span>Explore Pilot</span>
-        <span>Capabilities by workflow</span>
-      </div>
-      <div class="foot-solutions-grid">
-        {solutionGroups.map((group) => (
-          <div class="foot-solutions-group">
-            <p>{group.name}</p>
-            <div>
-              {group.solutions.map((solution) => (
-                <a
-                  href={`/solutions/${solution.slug}`}
-                  data-track="footer_solution_click"
-                  data-track-target={solution.slug}
-                  data-track-location="footer_directory"
-                >{solution.footerLabel}</a>
-              ))}
-            </div>
-          </div>
-        ))}
-        <div class="foot-solutions-group">
-          <p>Enterprise</p>
-          <div>
-            {enterpriseLinks.map((link) => (
-              <a
-                href={link.href}
-                data-track="footer_enterprise_click"
-                data-track-target={link.href.split('/').at(-1)}
-                data-track-location="footer_directory"
-              >{link.label}</a>
-            ))}
-          </div>
-        </div>
-      </div>
-    </nav>
   </div>
 </footer>
 
@@ -193,8 +154,8 @@ const socials = [
 
   .foot-grid {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
-    gap: 48px;
+    grid-template-columns: 1.4fr repeat(6, minmax(0, 1fr));
+    gap: 32px;
     margin-bottom: 64px;
   }
 
@@ -324,63 +285,6 @@ const socials = [
     flex-wrap: wrap;
   }
 
-  /* A dense, low-emphasis capability directory at the absolute bottom of the
-     footer. It follows the large-company footer pattern without competing with
-     the primary navigation or the main footer calls to action. */
-  .foot-solutions {
-    margin-top: 34px;
-    padding-top: 24px;
-    border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
-  }
-  .foot-solutions-intro {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 18px;
-    color: var(--ink-dim);
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 500;
-    line-height: 1.2;
-    letter-spacing: .12em;
-    text-transform: uppercase;
-  }
-  .foot-solutions-intro span:last-child { opacity: .85; }
-  .foot-solutions-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 32px;
-  }
-  .foot-solutions-group p {
-    margin: 0 0 9px;
-    color: var(--ink-dim);
-    font-family: var(--mono);
-    font-size: 9px;
-    line-height: 1.2;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-  }
-  .foot-solutions-group > div {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 3px 0;
-  }
-  .foot-solutions-group a {
-    display: inline-flex;
-    align-items: center;
-    color: var(--ink-dim);
-    font-size: 11px;
-    line-height: 1.45;
-    text-decoration: none;
-    transition: color .15s ease;
-  }
-  .foot-solutions-group a:not(:last-child)::after {
-    content: '·';
-    margin: 0 8px;
-    color: color-mix(in srgb, var(--ink-faint) 68%, transparent);
-  }
-  .foot-solutions-group a:hover { color: var(--ink); }
   .foot-plain {
     color: var(--ink-dim);
     text-decoration: none;
@@ -388,29 +292,15 @@ const socials = [
   }
   .foot-plain:hover { color: var(--accent-text); }
 
-  @media (max-width: 1080px) {
-    .foot-grid { grid-template-columns: 1fr 1fr 1fr; gap: 32px; }
+  @media (max-width: 1180px) {
+    .foot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
+    .foot-grid .foot-about { grid-column: 1 / -1; }
   }
   @media (max-width: 700px) {
     .foot-grid { grid-template-columns: 1fr 1fr; gap: 24px; }
-    .foot-solutions-grid { grid-template-columns: 1fr 1fr; gap: 22px 28px; }
   }
   @media (max-width: 480px) {
     .foot-grid { grid-template-columns: 1fr 1fr; gap: 24px; }
     .site-footer { padding: 56px 0 32px; }
-    .foot-solutions-intro span:last-child { display: none; }
-    .foot-solutions-grid { grid-template-columns: 1fr; gap: 18px; }
-    .foot-solutions-group > div {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0 14px;
-    }
-    .foot-solutions-group a {
-      min-height: 30px;
-      padding: 6px 0;
-      font-size: 10.5px;
-      line-height: 1.65;
-    }
-    .foot-solutions-group a:not(:last-child)::after { display: none; }
   }
 </style>

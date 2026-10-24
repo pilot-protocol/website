@@ -15,7 +15,7 @@
 //   GEMINI_API_KEY=... node scripts/regen-plain.mjs [page-slug ...]
 //
 //   If no page-slug is passed, all pages in the manifest are regenerated.
-//   Valid slugs: index, p2p, mcp, plans, app-store, publish, plus every
+//   Valid slugs: index, p2p, mcp, app-store, publish, plus every
 //   docs/<slug> auto-discovered from src/pages/docs/.
 //
 //   Pass --stale-only to regenerate ONLY pages whose twin's stamped source
@@ -86,13 +86,6 @@ const MANIFEST = {
     title: 'MCP + Pilot — Pilot Protocol',
     canonical: 'https://pilotprotocol.network/plain/mcp/',
     description: 'Expose MCP servers to other agents on the Pilot Protocol network.',
-  },
-  plans: {
-    source: 'src/pages/plans.astro',
-    dest: 'src/pages/plain/plans.astro',
-    title: 'Plans — Pilot Protocol',
-    canonical: 'https://pilotprotocol.network/plain/plans/',
-    description: 'Backbone is open and free. Private networks and enterprise are managed early-access.',
   },
   'app-store': {
     source: 'src/pages/app-store.astro',

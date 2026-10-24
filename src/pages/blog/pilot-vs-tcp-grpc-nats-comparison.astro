@@ -69,7 +69,7 @@ conn, err := net.Dial("tcp", "agent-b.internal:8080")
   <section><h2 id="pilot">Choose Pilot for Agent Identity and Reachability</h2>
     <p>Pilot is designed for agents that move between networks or need to communicate without exposing a new public endpoint for every service. A retained cryptographic identity maps to a stable Pilot address, while the local daemon manages discovery, traversal, encrypted tunnels, and relay fallback.</p>
     <p>Pilot does not replace an RPC schema, durable log, business authorization model, or application-level governance. Those concerns remain explicit. Pilot supplies the network path and peer identity on which those controls can operate.</p>
-    <p>The daemon can be used from Go, Node.js, Python, and Swift integrations, and the gateway can bridge existing TCP-speaking applications onto the overlay. See the <a href="/docs/gateway">gateway documentation</a> and <a href="/solutions/private-agent-network">private agent network overview</a> for the two common adoption paths.</p>
+    <p>The daemon can be used from Go, Node.js, Python, and Swift integrations, and the gateway can bridge existing TCP-speaking applications onto the overlay. See the <a href="/docs/gateway">gateway documentation</a> and <a href="/docs/networks">private agent network overview</a> for the two common adoption paths.</p>
   </section>
 
   <section><h2 id="combinations">The Most Useful Architectures Combine Layers</h2>
@@ -94,7 +94,7 @@ conn, err := net.Dial("tcp", "agent-b.internal:8080")
     <p>Your answers usually identify a combination, not a single winner. That is the useful outcome: fewer hidden assumptions and a stack whose responsibilities are clear.</p>
   </section>
 
-  <div class="cta"><h3>Map Pilot to Your Existing Stack</h3><p>Start with one service that is difficult to reach across environments. Keep its application protocol and test Pilot as the identity and connectivity layer.</p><a href="/contact?interest=private-agent-network">Discuss an architecture</a></div>`;
+  <div class="cta"><h3>Map Pilot to Your Existing Stack</h3><p>Start with one service that is difficult to reach across environments. Keep its application protocol and test Pilot as the identity and connectivity layer.</p><a href="/docs/getting-started">Get started</a></div>`;
 ---
 
 <BlogLayout
@@ -107,7 +107,7 @@ conn, err := net.Dial("tcp", "agent-b.internal:8080")
   bannerImage="/blog/banners/pilot-vs-tcp-grpc-nats-comparison.webp"
   faqItems={[
     {question: "Does Pilot replace NATS or gRPC?", answer: "No. Pilot provides agent identity, discovery, and cross-network reachability. gRPC defines typed remote calls, while NATS provides brokered messaging and optional persistence. They can be used together when a system needs both layers."},
-    {question: "Can gRPC or another TCP service run over Pilot?", answer: "Pilot's gateway can bridge TCP-speaking applications onto the overlay. This lets a team retain an existing application protocol while Pilot handles agent addressing, traversal, and the encrypted peer path."},
+    {question: "Can gRPC or another TCP service run over Pilot?", answer: "Pilot's gateway, a separate binary that needs root to create loopback aliases, can bridge TCP-speaking applications onto the overlay. This lets a team retain an existing application protocol while Pilot handles agent addressing, traversal, and the encrypted peer path."},
     {question: "Does Pilot work without coordination infrastructure?", answer: "No. Pilot uses registry and beacon services for registration, discovery, traversal coordination, and relay fallback. Payloads take a direct encrypted path when possible and remain encrypted when relay fallback is required."},
     {question: "When should a team choose NATS?", answer: "Choose NATS when subject-based routing, queue groups, request/reply, or JetStream persistence and replay are central requirements. A reachable NATS server or cluster remains part of that operating model."},
     {question: "How should these options be benchmarked?", answer: "Test the same topology, security requirements, payload, connection lifecycle, delivery contract, and runtime. Measure cold and warm paths separately, include broker or relay hops, and retain the benchmark harness with the results."}

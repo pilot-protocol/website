@@ -35,9 +35,9 @@ const MAIN_PAIRS = [
   { human: 'src/pages/index.astro',          plain: 'src/pages/plain/index.astro' },
   { human: 'src/pages/for/p2p.astro',        plain: 'src/pages/plain/p2p.astro' },
   { human: 'src/pages/for/mcp.astro',        plain: 'src/pages/plain/mcp.astro' },
-  { human: 'src/pages/plans.astro',          plain: 'src/pages/plain/plans.astro' },
-  { human: 'src/pages/trust.astro',          plain: 'src/pages/plain/trust.astro' },
-  { human: 'src/pages/governance.astro',     plain: 'src/pages/plain/governance.astro' },
+  { human: 'src/pages/security/index.astro', plain: 'src/pages/plain/security/index.astro' },
+  { human: 'src/pages/service-agents.astro', plain: 'src/pages/plain/service-agents.astro' },
+  { human: 'src/pages/self-hosting.astro',   plain: 'src/pages/plain/self-hosting.astro' },
   { human: 'src/pages/roadmap.astro',        plain: 'src/pages/plain/roadmap.astro' },
   { human: 'src/pages/news/index.astro',     plain: 'src/pages/plain/news.astro' },
   { human: 'src/pages/contact.astro',        plain: 'src/pages/plain/contact.astro' },
@@ -45,6 +45,7 @@ const MAIN_PAIRS = [
   { human: 'src/pages/for/skills.astro',     plain: 'src/pages/plain/skills/index.astro' },
   { human: 'src/pages/app-store.astro',      plain: 'src/pages/plain/app-store.astro' },
   { human: 'src/pages/publish.astro',        plain: 'src/pages/plain/publish.astro' },
+  { human: 'src/pages/cloud.astro',          plain: 'src/pages/plain/cloud.astro' },
 ];
 
 // Directory pair checked for strict 1:1 slug correspondence.
@@ -118,7 +119,7 @@ async function main() {
   //    must match the CURRENT hash of its source. A mismatch means the source
   //    was edited but the plain twin was never regenerated — the silent staleness
   //    the structural checks above can't see. Files with no stamp (data-driven
-  //    skills/setups pages, hand-written plain pages) are skipped here.
+  //    skills pages, hand-written plain pages) are skipped here.
   let stamped = 0;
   for (const rel of await walkAstro(PLAIN_DIR)) {
     const stamp = readStamp(await readFile(join(REPO_ROOT, rel), 'utf8'));

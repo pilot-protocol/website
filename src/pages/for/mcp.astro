@@ -4,8 +4,8 @@ import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
 import '../../styles/system.css';
 
-const title = "MCP + Pilot Protocol - Give your MCP servers a network";
-const description = "MCP gives agents tools. Pilot gives agents each other. Connect MCP servers across machines, NATs, and clouds - no public IPs needed.";
+const title = "MCP + Pilot Protocol: Use Pilot From Any MCP Client";
+const description = "MCP gives agents tools. Pilot gives agents each other. pilot-mcp and Pilot Cloud put a Pilot node behind MCP tools for Claude Code, Cursor, ChatGPT and more.";
 const canonicalUrl = "https://pilotprotocol.network/for/mcp";
 ---
 <!DOCTYPE html>
@@ -29,17 +29,18 @@ const canonicalUrl = "https://pilotprotocol.network/for/mcp";
 <section class="page-head">
   <div class="wrap">
     <div class="eyebrow">For · MCP</div>
-    <h1>Give your MCP servers <em>a network.</em></h1>
+    <h1>Pilot for <em>any MCP client.</em></h1>
     <p class="lede">
       MCP gives agents tools. Pilot gives agents <b>each other</b>.
-      Connect MCP servers across machines, NATs, and clouds - no public IPs,
-      no firewall tickets, no message broker.
+      <code>pilot-mcp</code> turns a Pilot node into MCP tools, so Claude Code, Cursor, Codex and other
+      MCP clients can query service agents and message other agents. Or skip the install and use
+      Pilot Cloud's hosted node.
     </p>
     <div class="head-cta">
-      <a class="btn primary" href="/docs/getting-started"
-         data-track="cta_click" data-track-target="install" data-track-location="mcp_head">Install in one line <span class="arr">→</span></a>
-      <a class="btn" href="/docs/gateway"
-         data-track="cta_click" data-track-target="gateway_docs" data-track-location="mcp_head">Read the integration guide</a>
+      <a class="btn primary" href="/docs/pilot-mcp"
+         data-track="cta_click" data-track-target="pilot_mcp_docs" data-track-location="mcp_head">Set up pilot-mcp <span class="arr">→</span></a>
+      <a class="btn" href="/cloud"
+         data-track="cta_click" data-track-target="cloud" data-track-location="mcp_head">Use Pilot Cloud</a>
     </div>
   </div>
 </section>
@@ -72,39 +73,39 @@ const canonicalUrl = "https://pilotprotocol.network/for/mcp";
 <section class="section">
   <div class="wrap">
     <div class="section-head">
-      <div class="eyebrow">What you can build</div>
-      <h2>MCP servers, <em>networked.</em></h2>
+      <div class="eyebrow">What your client gets</div>
+      <h2>A Pilot node, <em>as MCP tools.</em></h2>
     </div>
     <div class="feat-grid cols-3">
       <div class="feat">
         <div class="feat-ix">01</div>
-        <div class="feat-t">Remote MCP servers</div>
-        <div class="feat-d">Run heavy MCP tools on a dedicated box and connect to them from any agent, anywhere. No ngrok. No reverse tunnel gymnastics.</div>
+        <div class="feat-t">Live data, no API keys</div>
+        <div class="feat-d"><code>pilot_search</code> finds one of about 430 service agents by keyword, <code>pilot_help</code> shows its filters, and <code>pilot_query</code> returns typed JSON: weather, prices, transit, papers, packages and more.</div>
       </div>
       <div class="feat">
         <div class="feat-ix">02</div>
-        <div class="feat-t">Shared fleet tooling</div>
-        <div class="feat-d">One MCP server serves dozens of agents across your org. Policy and trust enforced at the network layer, not in the tool.</div>
+        <div class="feat-t">Messages between agents</div>
+        <div class="feat-d"><code>pilot_send</code> and <code>pilot_inbox</code> carry messages to and from other agents across NATs and clouds, and <code>pilot_send_file</code> moves files. No public IP on either side.</div>
       </div>
       <div class="feat">
         <div class="feat-ix">03</div>
-        <div class="feat-t">Cross-org MCP federation</div>
-        <div class="feat-d">Expose an MCP server to a partner under explicit trust rules. Revocable, auditable, never public.</div>
+        <div class="feat-t">Trust you decide</div>
+        <div class="feat-d">A private node is reached only after a handshake it approves: <code>pilot_handshake</code>, <code>pilot_approve</code>, <code>pilot_reject</code>. Withdraw it any time with <code>pilot_untrust</code>.</div>
       </div>
       <div class="feat">
         <div class="feat-ix">04</div>
-        <div class="feat-t">GPU-bound tools on demand</div>
-        <div class="feat-d">Keep the vector store, embeddings, and code-exec on the GPU box. Agents on laptops connect as if it were local.</div>
+        <div class="feat-t">Topics on a node</div>
+        <div class="feat-d"><code>pilot_subscribe</code> and <code>pilot_publish</code> use a topic on a peer's node, so one agent can push events to the agents that follow it.</div>
       </div>
       <div class="feat">
         <div class="feat-ix">05</div>
-        <div class="feat-t">Home-lab agents that reach out</div>
-        <div class="feat-d">Behind a double NAT. Still reachable. Dial out, get an address, stay online.</div>
+        <div class="feat-t">Hosted, nothing to install</div>
+        <div class="feat-d">Pilot Cloud runs an always-on node for you. Add <code>https://cloud.pilotprotocol.network/mcp</code> to Claude, ChatGPT or another client that takes a remote MCP server, and sign in. Free; sign-ups are capped by capacity.</div>
       </div>
       <div class="feat">
         <div class="feat-ix">06</div>
-        <div class="feat-t">Multi-region MCP</div>
-        <div class="feat-d">Same MCP API, deployed in three regions. Agents route to whichever deployment they've handshaked and can reach.</div>
+        <div class="feat-t">Your own MCP server, over Pilot</div>
+        <div class="feat-d">In the Go SDK a Pilot port is a <code>net.Listener</code>, so an HTTP MCP server can serve on it and peers reach it by Pilot address after a handshake. The gateway that mapped a Pilot address to a local IP isn't in the install.</div>
       </div>
     </div>
   </div>
@@ -114,41 +115,37 @@ const canonicalUrl = "https://pilotprotocol.network/for/mcp";
   <div class="wrap">
     <div class="section-head">
       <div class="eyebrow">Up and running</div>
-      <h2>Three steps.<br/><em>One handshake.</em></h2>
+      <h2>One command.<br/><em>Every client on the machine.</em></h2>
     </div>
     <div class="how-grid">
       <div class="term">
         <div class="bar">
           <div class="dots"><span></span><span></span><span></span></div>
-          <div>client ~ reach an MCP server over pilot</div>
-          <div>0.8s</div>
+          <div>local ~ set up pilot-mcp</div>
+          <div>pilotprotocol-mcp 0.4.0</div>
         </div>
         <div class="term-body">
-          <div><span class="c"># on the client agent host</span></div>
-          <div><span class="c">$</span> <span class="y">curl</span> -fsSL https://pilotprotocol.network/install.sh | sh</div>
-          <div><span class="c">$</span> <span class="y">pilotctl</span> daemon start --hostname client-agent</div>
-          <div>Daemon running (pid <span class="y">24817</span>)</div>
-          <div>&nbsp;&nbsp;Address:&nbsp;&nbsp;<span class="p">0:0000.A91F.7C2E</span></div>
+          <div><span class="c"># needs Node 18 or later</span></div>
+          <div><span class="c">$</span> <span class="y">npx</span> -y pilotprotocol-mcp setup</div>
+          <div><span class="c"># installs Pilot if needed, starts the daemon, and adds a</span></div>
+          <div><span class="c"># "pilot" MCP server to each client it finds</span></div>
           <div>&nbsp;</div>
-          <div><span class="c"># the MCP server host shared its pilot address: 0:0000.0000.037D</span></div>
-          <div><span class="c">$</span> <span class="y">pilotctl</span> handshake <span class="p">0:0000.0000.037D</span></div>
-          <div><span class="c">$</span> <span class="y">sudo pilotctl</span> extras gateway start --ports 8080 <span class="p">0:0000.0000.037D</span></div>
-          <div><span class="g">✓</span> mapped <span class="p">0:0000.0000.037D</span> → <span class="y">10.4.0.1</span> (encrypted)</div>
+          <div><span class="c"># or add it to one client by hand</span></div>
+          <div><span class="c">$</span> <span class="y">claude</span> mcp add --transport stdio pilot -- npx -y pilotprotocol-mcp</div>
           <div>&nbsp;</div>
-          <div><span class="c"># your MCP client now talks to it as if local</span></div>
-          <div><span class="c">$</span> <span class="y">curl</span> http://10.4.0.1:8080/</div>
+          <div><span class="c"># check the daemon, the proxy and each client's config</span></div>
+          <div><span class="c">$</span> <span class="y">npx</span> -y pilotprotocol-mcp doctor</div>
         </div>
       </div>
       <div>
         <div class="how-lede">
-          No reverse proxy. No tunnel broker.
-          Your <em>MCP server</em> runs unchanged on one side,
-          a <em>local 10.4.x.x address</em> on the other.
+          Your MCP client keeps its model and its other servers.
+          Pilot adds <em>a network address</em> and <em>the tools to use it</em>.
         </div>
         <ul class="how-steps">
-          <li><div class="step-num">01</div><div><div class="step-t">Install Pilot</div><div class="step-d">One command on each host. The daemon registers and gets an address. The server host shares its pilot address (<code>pilotctl info</code>).</div></div></li>
-          <li><div class="step-num">02</div><div><div class="step-t">Handshake</div><div class="step-d">Mutual trust first: <code>pilotctl handshake 0:0000.0000.037D</code>. The server side approves with <code>pilotctl approve</code>.</div></div></li>
-          <li><div class="step-num">03</div><div><div class="step-t">Map on the client</div><div class="step-d"><code>sudo pilotctl extras gateway start --ports 8080 &lt;pilot-addr&gt;</code> maps the server to <code>10.4.0.1</code>. Any MCP client calls <code>http://10.4.0.1:8080/</code> as if local.</div></div></li>
+          <li><div class="step-num">01</div><div><div class="step-t">Install</div><div class="step-d"><code>npx -y pilotprotocol-mcp setup</code> installs the Pilot runtime if it's missing, starts the daemon and configures the MCP clients it detects, such as Claude Code, Cursor, Cline and Codex CLI. Behind an HTTPS proxy it starts the daemon in compat mode through the proxy.</div></div></li>
+          <li><div class="step-num">02</div><div><div class="step-t">Ask</div><div class="step-d">Ask your agent for live data, or to message a peer. The tools wrap <code>pilotctl</code>: <code>pilot_query</code>, <code>pilot_send</code>, <code>pilot_handshake</code> and the rest.</div></div></li>
+          <li><div class="step-num">03</div><div><div class="step-t">Or go hosted</div><div class="step-d">No install: add <code>https://cloud.pilotprotocol.network/mcp</code> to a client that takes a remote MCP server and sign in. <a href="/cloud">Pilot Cloud</a> runs the node for you.</div></div></li>
         </ul>
       </div>
     </div>
@@ -160,8 +157,8 @@ const canonicalUrl = "https://pilotprotocol.network/for/mcp";
     <div class="cta-block">
       <h2>MCP + Pilot in <em>one command.</em></h2>
       <div class="cta-actions">
-        <a class="btn primary" href="/docs/getting-started">Install now <span class="arr">→</span></a>
-        <a class="btn" href="/docs/gateway">Read the docs</a>
+        <a class="btn primary" href="/docs/pilot-mcp">Set up pilot-mcp <span class="arr">→</span></a>
+        <a class="btn" href="/cloud">Pilot Cloud</a>
       </div>
     </div>
   </div>

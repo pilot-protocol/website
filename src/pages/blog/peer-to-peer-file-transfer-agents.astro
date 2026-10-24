@@ -10,26 +10,34 @@ const bodyContent = `<p>When AI agents need to share files -- model weights, tra
   <section>
   <h2 id="architecture">How It Works</h2>
 
-  <p>File transfer over Pilot uses port 1001 (data exchange), the same port used for structured data transfer between agents. The transfer is a streaming operation: the sender reads the file in chunks, writes each chunk to the Pilot connection, and the receiver reassembles them on the other end. Pilot's transport layer handles the complexity.</p>
+  <p>Built-in file transfer over Pilot uses port 1001, the daemon's data-exchange service, the same port that carries structured messages between agents. One command sends a file, and it lands in the receiver's <code>~/.pilot/received/</code> directory:</p>
+
+  <pre><code><span class="comment"># Sender</span>
+<span class="cmd">$ pilotctl send-file agent-b ./checkpoint-0042.safetensors</span>
+
+<span class="comment"># Receiver</span>
+<span class="cmd">$ pilotctl received</span></code></pre>
+
+  <p>The transfer is a streaming operation: the sender reads the file in chunks, writes each chunk to the Pilot connection, and the receiver reassembles them on the other end.</p>
 
   <ol>
     <li><strong>Connection establishment.</strong> The sender opens a connection to the receiver's Pilot address on port 1001. The Pilot daemon handles NAT traversal -- using direct connection, hole-punching, or relay depending on the network topology. The tunnel is encrypted with X25519 key exchange and AES-256-GCM.</li>
-    <li><strong>Metadata exchange.</strong> The sender transmits a header containing the filename, total size, checksum, and any custom metadata (e.g., model architecture, dataset schema, content type). The receiver validates the metadata and confirms readiness.</li>
-    <li><strong>Chunked transfer.</strong> The sender reads the file in chunks and writes them to the connection. Pilot's auto segmentation splits each chunk into MTU-sized packets at the transport layer. The receiver reads chunks and writes them to disk.</li>
-    <li><strong>Verification.</strong> After the final chunk, the receiver computes a checksum of the reassembled file and compares it against the sender's declared checksum. A match confirms integrity.</li>
+    <li><strong>Metadata exchange.</strong> The sender transmits a header containing the filename, total size and a SHA-256 of the whole file. The receiver answers with the offset it already holds (zero for a new transfer).</li>
+    <li><strong>Chunked transfer.</strong> The sender sends the file in 48 KiB chunks, and the receiver acknowledges each one and writes it to a <code>.partial</code> file. Pilot's transport layer splits each chunk into smaller segments underneath.</li>
+    <li><strong>Verification.</strong> After the final chunk, the receiver computes the SHA-256 of the reassembled file and compares it against the sender's. A match confirms integrity, and the file is moved into place.</li>
   </ol>
 
   <p>The critical point is that the application code does not manage packets, retransmission, or flow control. Pilot's transport layer -- with its sliding window, AIMD congestion control, and advertised receive window -- handles all of this transparently. The application sees a reliable byte stream, just like TCP, but over encrypted UDP tunnels that traverse NAT.</p>
 
   <div class="callout">
-    <p><strong>Why port 1001?</strong> Pilot's port model assigns specific purposes to port numbers. Port 1001 is reserved for data exchange -- structured data transfer between agents. File transfer is the most common data exchange pattern, but the same port handles any binary payload: serialized model states, database snapshots, compressed archives.</p>
+    <p><strong>Why port 1001?</strong> Pilot's port model assigns specific purposes to port numbers. Port 1001 is the daemon's data-exchange service, which handles <code>send-message</code> and <code>send-file</code> for any payload: serialized model states, database snapshots, compressed archives. Because the daemon holds that port, your own code cannot listen on it. A custom protocol like the one built below uses an application port of its own; this article uses 7001.</p>
   </div>
   </section>
 
   <section>
   <h2 id="sender-implementation">Building the File Sender</h2>
 
-  <p>Here is a complete Go implementation of a file sender that transfers a file to a remote agent over Pilot:</p>
+  <p>When you need your own framing -- custom metadata such as a model architecture or dataset schema, or your own acceptance rules -- you can build the same pattern on an application port. Here is a complete Go implementation of a file sender that transfers a file to a remote agent over Pilot:</p>
 
   <pre><code>package main
 
@@ -61,7 +69,7 @@ func main() {
         os.Exit(1)
     }
 
-    targetAddr := os.Args[1] <span class="comment">// e.g., "1:0000.0042.00A1"</span>
+    targetAddr := os.Args[1] <span class="comment">// e.g., "0:0000.0042.00A1"</span>
     filePath := os.Args[2]
 
     <span class="comment">// Open the file and compute checksum</span>
@@ -81,11 +89,11 @@ func main() {
     }
     defer drv.Close()
 
-    <span class="comment">// Open a connection to the receiver on port 1001 (data exchange)</span>
+    <span class="comment">// Open a connection to the receiver on application port 7001</span>
     <span class="comment">// Dial takes a single "N:XXXX.YYYY.YYYY:PORT" address string</span>
-    conn, err := drv.Dial(targetAddr + ":1001")
+    conn, err := drv.Dial(targetAddr + ":7001")
     if err != nil {
-        log.Fatalf("dial %s:1001: %v", targetAddr, err)
+        log.Fatalf("dial %s:7001: %v", targetAddr, err)
     }
     defer conn.Close()
 
@@ -158,7 +166,7 @@ func computeSHA256(path string) string {
   <section>
   <h2 id="receiver-implementation">Building the File Receiver</h2>
 
-  <p>The receiver listens on port 1001 for incoming file transfers:</p>
+  <p>The receiver listens on port 7001 for incoming file transfers:</p>
 
   <pre><code>package main
 
@@ -175,6 +183,13 @@ import (
     "github.com/pilot-protocol/common/driver"
 )
 
+<span class="comment">// FileHeader matches the sender's header</span>
+type FileHeader struct {
+    Filename string
+    Size     int64
+    Checksum string
+}
+
 func main() {
     outputDir := "./received"
     os.MkdirAll(outputDir, 0755)
@@ -186,14 +201,15 @@ func main() {
     }
     defer drv.Close()
 
-    <span class="comment">// Listen for incoming connections on port 1001</span>
-    listener, err := drv.Listen(1001)
+    <span class="comment">// Listen for incoming connections on port 7001</span>
+    <span class="comment">// (1001 is already bound by the daemon's data-exchange service)</span>
+    listener, err := drv.Listen(7001)
     if err != nil {
-        log.Fatalf("listen 1001: %v", err)
+        log.Fatalf("listen 7001: %v", err)
     }
     defer listener.Close()
 
-    log.Println("File receiver listening on port 1001")
+    log.Println("File receiver listening on port 7001")
 
     for {
         conn, err := listener.Accept()
@@ -222,8 +238,8 @@ func receiveFile(conn io.ReadWriteCloser, outputDir string) {
     log.Printf("Incoming file: %s (%d bytes, checksum %s)",
         header.Filename, header.Size, header.Checksum[:16]+"...")
 
-    <span class="comment">// Create output file</span>
-    outPath := filepath.Join(outputDir, header.Filename)
+    <span class="comment">// Create output file (Base drops any directory part of the name)</span>
+    outPath := filepath.Join(outputDir, filepath.Base(header.Filename))
     f, err := os.Create(outPath)
     if err != nil {
         conn.Write([]byte{0x00}) <span class="comment">// reject</span>
@@ -256,7 +272,7 @@ func receiveFile(conn io.ReadWriteCloser, outputDir string) {
     }
 }</code></pre>
 
-  <p>The receiver listens on port 1001, accepts incoming connections from any trusted peer, reads the file header, and streams the data to disk while computing a running SHA-256 checksum. The <code>io.Copy</code> with <code>io.LimitReader</code> ensures the receiver reads exactly the declared number of bytes, preventing a malicious sender from writing more data than expected.</p>
+  <p>The receiver listens on port 7001, accepts incoming connections from any trusted peer, reads the file header, and streams the data to disk while computing a running SHA-256 checksum. The <code>io.Copy</code> with <code>io.LimitReader</code> ensures the receiver reads exactly the declared number of bytes, preventing a malicious sender from writing more data than expected.</p>
   </section>
 
   <section>
@@ -264,13 +280,13 @@ func receiveFile(conn io.ReadWriteCloser, outputDir string) {
 
   <p>Beneath the simple <code>Read</code>/<code>Write</code> API, Pilot's transport layer performs several operations that make file transfer reliable over unreliable networks:</p>
 
-  <p><strong>Auto segmentation.</strong> When the sender writes a 64 KB chunk, Pilot's transport layer splits it into virtual segments (Pilot's <code>MaxSegmentSize</code> is 4096 bytes). Each segment gets a sequence number in the 34-byte packet header. The receiver reassembles segments in order, handling reordering and duplicates. The application never sees individual packets.</p>
+  <p><strong>Auto segmentation.</strong> When the sender writes a 64 KB chunk, Pilot's transport layer splits it into segments of up to 1,152 bytes (a peer accepts segments of up to 4,096 bytes). Each segment gets a sequence number in the 34-byte packet header. The receiver reassembles segments in order, handling reordering and duplicates. The application never sees individual packets.</p>
 
   <p><strong>Sliding window.</strong> Pilot maintains a send window that limits how many unacknowledged segments can be in flight. This prevents the sender from flooding the network. The window size adapts dynamically using AIMD (Additive Increase, Multiplicative Decrease) congestion control -- the same algorithm family that TCP uses, tuned for UDP overlay characteristics.</p>
 
   <p><strong>Flow control.</strong> The receiver advertises its available buffer space in every acknowledgment packet (the 2-byte Window field in the packet header). If the receiver's buffer fills up -- because disk I/O is slow or the receiver is processing other connections -- the sender pauses until the receiver signals it has space. This prevents the receiver from being overwhelmed regardless of how fast the sender can produce data.</p>
 
-  <p><strong>Encryption.</strong> Every segment is encrypted with AES-256-GCM before transmission. The encryption key is established during the initial X25519 key exchange when the tunnel is created. Encryption is on by default; it can be turned off with the daemon's <code>-encrypt=false</code> flag, but leaving it on is strongly recommended. A per-connection nonce scheme prevents nonce reuse across sessions.</p>
+  <p><strong>Encryption.</strong> Every segment is encrypted with AES-256-GCM before transmission. The encryption key is established during the initial X25519 key exchange when the tunnel is created. Encryption is on by default; it can be turned off with the daemon's <code>-encrypt=false</code> flag, but leaving it on is strongly recommended. A random nonce prefix per tunnel key, followed by a counter, prevents nonce reuse.</p>
 
   <p>These mechanisms work together to make file transfer over Pilot as reliable as TCP while maintaining the NAT traversal properties of UDP. The sender and receiver code does not need to implement any of this -- it is handled by the Pilot daemon and driver library.</p>
   </section>
@@ -294,21 +310,23 @@ func receiveFile(conn io.ReadWriteCloser, outputDir string) {
       <tr><td>Setup</td><td>IAM roles, bucket policies, SDKs</td><td>Pilot daemon + driver connect</td></tr>
       <tr><td>NAT traversal</td><td>Handled by cloud (public endpoints)</td><td>Handled by Pilot (STUN/punch/relay)</td></tr>
       <tr><td>Resumability</td><td>Multipart upload/download</td><td>Reconnect and continue from offset</td></tr>
-      <tr><td>Max file size</td><td>5 TB (S3 limit)</td><td>Unlimited (streaming)</td></tr>
+      <tr><td>Max file size</td><td>Set by the provider</td><td>No per-file cap in the streamed protocol; by default the receiver keeps at most 2 GiB of received files</td></tr>
     </tbody>
   </table>
 
-  <p>The most compelling advantage of direct transfer is data privacy. When Agent A sends model weights directly to Agent B over a Pilot tunnel, no third party ever holds the data. There is no S3 bucket to misconfigure, no IAM policy to audit, no cloud provider with potential access. For organizations subject to HIPAA, GDPR, or data sovereignty requirements, this is not a nice-to-have -- it is a compliance requirement.</p>
+  <p>The most compelling advantage of direct transfer is data privacy. When Agent A sends model weights directly to Agent B over a Pilot tunnel, no storage service holds a copy of the data. There is no S3 bucket to misconfigure, no IAM policy to audit, no cloud provider with access to stored objects. If the relay is used, it carries only ciphertext and connection metadata. That can make data-residency questions easier to answer, but it does not by itself make a system compliant with HIPAA, GDPR or any other regime.</p>
 
-  <p>The cost advantage is also significant at scale. AWS charges \$0.09/GB for S3 egress. Transferring a 10 GB model checkpoint costs \$0.90 for the upload egress and \$0.90 for the download egress, totaling \$1.80 per transfer. An agent that shares model checkpoints 100 times a month pays \$180 in cloud egress fees alone. Direct transfer over Pilot costs zero in cloud fees -- the agents use their existing network connections.</p>
+  <p>The cost advantage also grows with scale. Cloud providers charge for data transferred out of object storage, and those fees add up for agents that move large checkpoints often. Direct transfer over Pilot has no object-storage fees -- the agents use their existing network connections.</p>
   </section>
 
   <section>
   <h2 id="resumability">Resumable Transfers</h2>
 
-  <p>Network interruptions are inevitable, especially for large file transfers. A 50 GB dataset transfer that fails at 90% should not restart from zero. Pilot's connection tracking enables resumable transfers by maintaining state about the last successfully received offset.</p>
+  <p>Network interruptions are inevitable, especially for large file transfers. A dataset transfer that fails at 90% should not restart from zero.</p>
 
-  <p>The implementation pattern is straightforward: the receiver tracks how many bytes it has written to disk. If the connection drops and the sender reconnects, the receiver sends the last received offset in its acceptance message, and the sender seeks to that position in the file before resuming:</p>
+  <p><code>pilotctl send-file</code> resumes on its own. The transfer ID is derived from the file's SHA-256, and the receiver keeps what has arrived in a <code>.partial</code> file. When the same file is sent again, the receiver answers with the offset it already holds and the sender continues from there; the result's <code>bytes_resumed</code> field shows how much was skipped.</p>
+
+  <p>For the hand-built protocol above, the implementation pattern is straightforward: the receiver tracks how many bytes it has written to disk. If the connection drops and the sender reconnects, the receiver sends the last received offset in its acceptance message, and the sender seeks to that position in the file before resuming:</p>
 
   <pre><code><span class="comment">// Receiver: include resume offset in acceptance</span>
 type AcceptMessage struct {
@@ -341,7 +359,7 @@ func sendWithResume(conn io.ReadWriteCloser, f *os.File, resumeAt int64) error {
     }
 }</code></pre>
 
-  <p>The receiver stores the resume offset in a temporary metadata file alongside the partially received data. If the agent restarts entirely, it can detect the partial file, read the metadata, and request a resume from the sender. This makes large transfers resilient to transient network issues, daemon restarts, and even machine reboots.</p>
+  <p>The receiver can store the resume offset in a temporary metadata file alongside the partially received data. If the agent restarts entirely, it can detect the partial file, read the metadata, and request a resume from the sender. This makes large transfers resilient to transient network issues, daemon restarts, and even machine reboots.</p>
   </section>
 
   <section>

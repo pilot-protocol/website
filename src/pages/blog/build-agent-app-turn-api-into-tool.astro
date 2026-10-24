@@ -9,10 +9,10 @@ const bodyContent = `<p>You have an API. It has a REST endpoint, maybe a Python 
   <h2>What "build an agent app" means</h2>
   <p>An agent app is not a new API. It's an adapter layer that makes an existing API <em>agent-native</em>: discoverable at runtime, typed (JSON in, JSON out), permission-scoped, and callable without a browser or bespoke glue code. Concretely, on Pilot Protocol an installed app is:</p>
   <ul>
-    <li><strong>Local.</strong> A small binary runs on the agent's own daemon; your actual backend — the database, the model, the service you already run — stays exactly where it is. The installed binary is a thin, stateless adapter that talks to it.</li>
+    <li><strong>Local.</strong> A small binary runs on the agent's own daemon; your actual backend — the database, the model, the service you already run — stays exactly where it is. The installed binary is a thin adapter that talks to it.</li>
     <li><strong>Typed.</strong> Every method is a JSON request and response, not an HTML page or a bespoke SDK call.</li>
     <li><strong>Signature-verified.</strong> The manifest pins the binary's hash and carries a signature; the daemon re-checks both every time it spawns the app.</li>
-    <li><strong>Grant-scoped.</strong> The manifest declares exactly what the app may touch — network, filesystem — and the operator accepts those grants at install time, not before.</li>
+    <li><strong>Declared grants.</strong> The manifest declares what the app may touch — network, filesystem — and the operator accepts those grants by installing it. They are checked against the manifest, not enforced by an OS sandbox.</li>
     <li><strong>Runtime-discoverable.</strong> Every app exposes a <code>&lt;app&gt;.help</code> method that returns its own methods, parameters, and expected latency, so an agent learns the interface by calling it, not by reading your docs.</li>
   </ul>
   <p>That last point is the difference that matters for adoption. A REST API with great docs still requires a human to read those docs and write the integration. An agent app answers "what can you do?" as a structured API call, so an agent can onboard itself.</p>
@@ -21,7 +21,7 @@ const bodyContent = `<p>You have an API. It has a REST endpoint, maybe a Python 
   <section>
   <h2>Why this beats a bare API or an MCP server</h2>
   <p>If you already expose an MCP server, that's a real integration path — <a href="/blog/mcp-plus-pilot-tools-and-network">MCP gives one agent a standard way to reach your tool</a> over a connection it manages itself. What it doesn't give you is distribution: every agent that wants to use your tool still has to know it exists, configure a connection to it, and manage that connection's lifecycle itself.</p>
-  <p>The app store is a distributed catalogue layered on top of that problem, running over the same <a href="/blog/overlay-network-ai-agents">overlay network</a> that gives every agent its persistent address and trust model. Publish once, and any agent on the overlay can find your app in the catalogue, install it with one command, and start calling it — with the daemon handling verification, permission grants, and process supervision so neither you nor the agent's operator has to. These are complementary models, not competing ones: plenty of teams run an MCP server for direct integrations and also publish an agent app for overlay-wide discovery.</p>
+  <p>The app store is a distributed catalogue layered on top of that problem, running over the same <a href="/blog/overlay-network-ai-agents">overlay network</a> that gives every agent its persistent address and trust model. Publish once, and any agent on the overlay can find your app in the catalogue, install it with one command, and start calling it — with the daemon handling verification, permission grants, and process supervision so neither you nor the agent's operator has to. These are complementary models, not competing ones: you can run an MCP server for direct integrations and also publish an agent app for overlay-wide discovery.</p>
   <p>Compared to a bare REST API, the difference is what the agent has to do before the first successful call. Against a raw API, an agent (or its operator) needs the base URL, an API key, the request/response shapes, and error-handling conventions — usually assembled by a human reading docs. Against an installed agent app, the agent runs <code>&lt;app&gt;.help</code> and gets that shape back as data.</p>
   </section>
 
@@ -49,7 +49,7 @@ const bodyContent = `<p>You have an API. It has a REST endpoint, maybe a Python 
 
 <span class="comment"># Call a method — JSON in, JSON out</span>
 <span class="cmd">pilotctl appstore call io.pilot.yourapp yourapp.search '{"q":"example"}'</span></code></pre>
-  <p>That's the whole lifecycle from the agent's side. No SDK to import for your specific API, no key to provision by hand, no endpoint to memorize.</p>
+  <p>That's the whole lifecycle from the agent's side. No SDK to import for your specific API and no endpoint to memorize; if your API needs a credential, the operator supplies it once, locally.</p>
   </section>
 
   <section>
@@ -99,7 +99,7 @@ const faqItems = [
   },
   {
     question: "How is publishing an agent app different from running an MCP server?",
-    answer: "An MCP server gives one agent a standard way to reach your tool over a connection it configures and manages itself. Publishing to the Pilot app store adds distribution on top: any agent on the overlay can discover your app in the catalogue and install it with one command, with the daemon handling verification and process supervision. The two are complementary, and many teams run both.",
+    answer: "An MCP server gives one agent a standard way to reach your tool over a connection it configures and manages itself. Publishing to the Pilot app store adds distribution on top: any agent on the overlay can discover your app in the catalogue and install it with one command, with the daemon handling verification and process supervision. The two are complementary, and you can run both.",
   },
   {
     question: "Who holds my API keys or secrets after I publish?",

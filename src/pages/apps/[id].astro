@@ -72,7 +72,6 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
   operatingSystem: oses.join(', '),
   softwareVersion: app.version,
   description: app.tagline,
-  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   author: { '@type': 'Organization', name: app.vendor },
 })}></script>
 </head>
@@ -133,7 +132,7 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
         <div class="m"><div class="v">v{app.version}</div><div class="l">Version</div></div>
         <div class="m"><div class="v">{app.methods.length || '—'}</div><div class="l">Methods</div></div>
         <div class="m"><div class="v">{app.installedBytes ? fmtBytes(app.installedBytes) : '—'}</div><div class="l">Size</div></div>
-        <div class="m"><div class="v" style="text-transform:capitalize;">{app.protection}</div><div class="l">Sandbox</div></div>
+        <div class="m"><div class="v">{app.grants.length ? `${app.grants.length} declared` : 'None declared'}</div><div class="l">Permissions</div></div>
         <div class="m"><div class="v">{osSummary(app.bundles)}</div><div class="l">Platforms</div></div>
       </div>
     </div>
@@ -355,18 +354,18 @@ const canonicalUrl = `https://pilotprotocol.network/apps/${app.id}`;
           {app.sourceUrl && <div class="info-row"><span class="k">Source</span><span class="val"><a href={app.sourceUrl} target="_blank" rel="noopener">{app.sourceUrl.includes('github.com') ? 'GitHub' : 'Source'} ↗</a></span></div>}
         </div>
 
-        {app.grants.length > 0 && (
         <div class="side-card">
           <h3>Permissions</h3>
-          {app.grants.map((g) => {
-            const idx = g.indexOf(':');
-            const cap = idx === -1 ? g : g.slice(0, idx);
-            const target = idx === -1 ? '' : g.slice(idx + 1);
-            return <div class="perm"><code><span class="cap">{cap}</span>{target && <>:{target}</>}</code></div>;
-          })}
-          <p style="font-family:var(--mono);font-size:10px;color:var(--ink-dim);margin:12px 0 0;line-height:1.5;">Granted or denied by the agent at install time. No ambient authority.</p>
+          {app.grants.length > 0
+            ? app.grants.map((g) => {
+                const idx = g.indexOf(':');
+                const cap = idx === -1 ? g : g.slice(0, idx);
+                const target = idx === -1 ? '' : g.slice(idx + 1);
+                return <div class="perm"><code><span class="cap">{cap}</span>{target && <>:{target}</>}</code></div>;
+              })
+            : <p style="font-size:13px;color:var(--ink-dim);line-height:1.55;margin:0;">This app declares no grants in its manifest.</p>}
+          <p style="font-family:var(--mono);font-size:10px;color:var(--ink-dim);margin:12px 0 0;line-height:1.5;">Declared in the manifest and accepted at install. The daemon checks grants on calls it brokers; apps are not OS-sandboxed and run as normal processes with your user's permissions.</p>
         </div>
-        )}
 
         <div class="side-card">
           <h3>Publish an app</h3>

@@ -40,33 +40,25 @@ const bodyContent = `<p>Many agent communication patterns put an application ser
 
   <p>The reason you often cannot "just open a socket" between two agents is <a href="/blog/nat-traversal-ai-agents-deep-dive">NAT</a>. Agents frequently run behind address translation or firewalls, so an inbound direct connection is not always available.</p>
 
-  <p>Pilot solves this with three tiers of traversal, tried in order:</p>
+  <p>Pilot handles this with three tiers of traversal, tried in order. The daemon does not classify the NAT type up front; it tries a direct path, then a beacon-coordinated punch, then the relay (seven dial attempts in all: three direct, four relayed).</p>
 
   <p><strong>Tier 1: STUN Discovery (Full-Cone NAT)</strong></p>
   <p>The agent sends a probe to a STUN server (built into the Pilot beacon). The STUN response reveals the agent's public-facing IP and port. For full-cone NAT, this endpoint is valid for all peers - any agent can send UDP packets to it directly.</p>
 
-  <pre><code>$ pilotctl status
-NAT type:  full-cone
-Endpoint:  34.148.103.117:4000
-Strategy:  direct (STUN endpoint reachable by all peers)</code></pre>
-
   <p><strong>Tier 2: Hole-Punching (Restricted / Port-Restricted Cone)</strong></p>
   <p>For restricted cone NAT, the public endpoint only accepts packets from IPs it has previously sent to. Pilot coordinates simultaneous UDP sends from both agents (via the beacon), creating firewall pinholes that allow direct communication.</p>
 
-  <pre><code>$ pilotctl connect agent-b
-Discovering NAT type... port-restricted cone
-Requesting hole-punch via beacon...
-✓ Punch sent → peer punched back
-✓ Direct tunnel established. RTT: 34ms</code></pre>
-
   <p><strong>Tier 3: Relay (Symmetric NAT)</strong></p>
-  <p>Symmetric NAT assigns a different port for every destination - hole-punching cannot work. Pilot automatically falls back to relay through the beacon. The relay forwards opaque encrypted packets. It cannot read, modify, or log the content.</p>
+  <p>Symmetric NAT assigns a different port for every destination - hole-punching cannot work. Pilot automatically falls back to relay through the beacon. The relay forwards opaque encrypted packets: it cannot read the content, and AES-256-GCM makes any modification detectable.</p>
 
-  <pre><code>$ pilotctl connect agent-c
-Discovering NAT type... symmetric
-Hole-punch not possible. Switching to relay...
-✓ Relay tunnel via beacon. RTT: 68ms (relay adds ~30ms)
-✓ All data encrypted end-to-end. Relay cannot decrypt.</code></pre>
+  <p>To see which path each peer ended up on:</p>
+
+  <pre><code>$ pilotctl peers --all
+● 2 peers — 2 encrypted+authenticated · 1 relay · 1 direct
+
+NODE ID     ENCRYPTED   AUTH        PATH
+238321      yes         yes         direct
+238327      yes         yes         relay</code></pre>
 
   <p>The key insight: your application code is identical regardless of NAT type. You dial a hostname, Pilot figures out the traversal.</p>
   </section>
@@ -85,17 +77,18 @@ Hole-punch not possible. Switching to relay...
     <li>Revoking peer trust drops the associated connection unless another network policy still grants access.</li>
   </ul>
 
-  <pre><code># Agent A trusts Agent B
-pilotctl handshake agent-b
-# Nothing happens yet - Agent B must reciprocate
+  <pre><code># Agent A asks Agent B for trust (by address: a private
+# agent's hostname does not resolve for strangers)
+$ pilotctl handshake 0:0000.0003.A2F7 "pipeline coordination"
+handshake request sent to node 238327
 
-# Agent B trusts Agent A
-pilotctl handshake agent-a
-# ✓ Mutual trust established. Both agents can now dial each other.
+# Nothing happens yet - Agent B approves the request
+$ pilotctl approve 238321
+trust established with node 238321
 
 # Later: revoke trust
-pilotctl untrust agent-b
-# ✓ Agent A is now invisible to Agent B again.</code></pre>
+$ pilotctl untrust agent-b
+trust revoked for node 238327</code></pre>
 
   <p>This model means agents choose who they talk to. No platform, no admin, no configuration file decides on their behalf. This is critical for autonomous agents that may interact with untrusted peers.</p>
   </section>
@@ -107,17 +100,18 @@ pilotctl untrust agent-b
 
   <p><strong>Machine A (your laptop, behind home NAT):</strong></p>
 
-  <pre><code># 1. Install (30 seconds)
+  <pre><code># 1. Install
 curl -fsSL https://pilotprotocol.network/install.sh | sh
 
 # 2. Start daemon with a hostname
 pilotctl daemon start --hostname agent-a
 
 # Output:
-# ✓ Identity generated: Ed25519
-# ✓ Registered as agent-a (1:0001.A3F2.00B1)
-# ✓ NAT type: port-restricted cone
-# ✓ Daemon listening on /tmp/pilot.sock</code></pre>
+# Daemon running (pid 48211)
+#   Address:  0:0000.0003.A2F1
+#   Hostname: agent-a
+#   Socket:   /tmp/pilot.sock
+#   Logs:     ~/.pilot/pilot-48211.log</code></pre>
 
   <p><strong>Machine B (AWS EC2 instance):</strong></p>
 
@@ -127,62 +121,59 @@ pilotctl daemon start --hostname agent-b</code></pre>
 
   <p><strong>Establish trust (from either machine):</strong></p>
 
-  <pre><code># On Machine A
-pilotctl handshake agent-b
+  <pre><code># On Machine A (B's address, shared out of band)
+pilotctl handshake 0:0000.0003.A2F7 "pipeline coordination"
 
-# On Machine B
-pilotctl handshake agent-a
+# On Machine B (A's address)
+pilotctl handshake 0:0000.0003.A2F1 "pipeline coordination"
 
-# Both sides have now agreed. Mutual trust is established.</code></pre>
+# Two crossing requests are approved automatically: mutual trust is established.</code></pre>
 
   <p><strong>Exchange data:</strong></p>
 
-  <pre><code># Agent A sends a message to Agent B
-pilotctl connect agent-b --message '{"task":"analyze","payload":"data..."}'
+  <pre><code># Agent A sends a message to Agent B (port 1001, the data-exchange service)
+pilotctl send-message agent-b --type json --data '{"task":"analyze","payload":"data..."}'
 
-# Output:
-# ✓ Connected to agent-b (hole-punch, RTT: 42ms)
-# ✓ X25519 + AES-256-GCM
-# → Sent 1 message (247 bytes)
-# ← ACK received</code></pre>
+# On Machine B: read it
+pilotctl inbox</code></pre>
 
   <p><strong>Or programmatically in Go:</strong></p>
 
   <pre><code>package main
 
 import (
-    "fmt"
-
     "github.com/pilot-protocol/common/driver"
+    "github.com/pilot-protocol/common/protocol"
+    "github.com/pilot-protocol/dataexchange"
 )
 
 func main() {
     d, _ := driver.Connect("/tmp/pilot.sock")
+    defer d.Close()
 
-    // Resolve the peer's hostname to its pilot address, then dial :1001
+    // Resolve the peer's hostname to its pilot address
     info, _ := d.ResolveHostname("agent-b")
-    conn, _ := d.Dial(fmt.Sprintf("%s:1001", info["address"]))
+    addr, _ := protocol.ParseAddr(info["address"].(string))
 
-    // Send data
-    conn.Write([]byte("{\"task\":\"analyze\",\"rows\":1842}"))
+    // Port 1001 is the daemon's data-exchange service, which frames
+    // every message; use its client rather than raw writes
+    c, _ := dataexchange.Dial(d, addr)
+    defer c.Close()
 
-    // Receive response
-    buf := make([]byte, 65535)
-    n, _ := conn.Read(buf)
-    fmt.Println("Response:", string(buf[:n]))
-
-    conn.Close()
+    // Returns once agent-b acknowledges; the message lands in its inbox
+    c.SendJSON([]byte(\`{"task":"analyze","rows":1842}\`))
 }</code></pre>
+
+  <p>A reply comes back the same way: Agent B sends a message to <code>agent-a</code>, and it lands in Agent A's inbox.</p>
 
   <p><strong>Or in Python:</strong></p>
 
   <pre><code>import pilotprotocol as pilot
 
 with pilot.Driver() as d:
-    conn = d.dial("1:0001.A3F2.00B1:1001")  # agent-b's pilot address
-    conn.write(b'{"task": "analyze", "rows": 1842}')
-    response = conn.read()
-    print("Response:", response)</code></pre>
+    # Frames the message for the data-exchange service on port 1001
+    result = d.send_message("agent-b", b'{"task": "analyze", "rows": 1842}', "json")
+    print(result)</code></pre>
   </section>
 
   <section>
@@ -193,11 +184,11 @@ with pilot.Driver() as d:
       <tr><th></th><th>API Gateway / Broker</th><th>Pilot (Direct P2P)</th></tr>
     </thead>
     <tbody>
-      <tr><td><strong>Data path</strong></td><td>Agent → Server → Agent (2 hops)</td><td>Agent → Agent (1 hop)</td></tr>
-      <tr><td><strong>Latency overhead</strong></td><td>Server processing + extra hop</td><td>Zero (just network RTT)</td></tr>
+      <tr><td><strong>Data path</strong></td><td>Agent → Server → Agent (2 hops)</td><td>Agent → Agent (1 hop when direct; the relay adds one)</td></tr>
+      <tr><td><strong>Latency overhead</strong></td><td>Server processing + extra hop</td><td>Network RTT on a direct path</td></tr>
       <tr><td><strong>Encryption</strong></td><td>TLS to server, server decrypts</td><td>End-to-end, no decryption point</td></tr>
-      <tr><td><strong>Single point of failure</strong></td><td>Server down = all comms down</td><td>Only affected agent's connections</td></tr>
-      <tr><td><strong>Infrastructure</strong></td><td>Server to deploy, maintain, scale</td><td>Single binary per agent</td></tr>
+      <tr><td><strong>Single point of failure</strong></td><td>Server down = all comms down</td><td>No broker in the data path; new lookups and relayed paths depend on the registry and beacon</td></tr>
+      <tr><td><strong>Infrastructure</strong></td><td>Server to deploy, maintain, scale</td><td>Daemon and CLI per agent, plus a shared registry and beacon (public or your own)</td></tr>
       <tr><td><strong>NAT handling</strong></td><td>Server must have public IP</td><td>Automatic traversal, no public IP needed</td></tr>
       <tr><td><strong>Cost</strong></td><td>Dedicated broker hosting + egress</td><td>No separate application broker to provision</td></tr>
       <tr><td><strong>Setup time</strong></td><td>Broker config + credentials</td><td>One-command client installation</td></tr>
@@ -224,7 +215,7 @@ with pilot.Driver() as d:
   <section>
   <h2 id="get-started">Get Started</h2>
 
-  <pre><code># Install (30 seconds)
+  <pre><code># Install
 curl -fsSL https://pilotprotocol.network/install.sh | sh
 
 # Or with Python

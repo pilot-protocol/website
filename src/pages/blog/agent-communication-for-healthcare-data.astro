@@ -1,0 +1,292 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p><strong>Healthcare agent transport needs clear technical controls</strong> for encryption, authentication, access, and auditability. This page explains which of those controls Pilot's transport provides for systems that handle Protected Health Information (PHI), and which it does not. Pilot is infrastructure, not a compliance certification. Vulture Labs, which runs Pilot's public backbone, offers no Business Associate Agreement (BAA). Each organization remains responsible for its full architecture, contracts, policies, risk analysis, and legal review.</p>
+
+  <p>A hospital deploys an AI agent to summarize patient records. The agent needs to send those summaries to a specialist's AI assistant for review. The communication crosses a network boundary. The summaries contain Protected Health Information (PHI). And the moment that PHI leaves the hospital's infrastructure, the hospital is responsible for ensuring <a href="https://www.hhs.gov/hipaa/index.html" target="_blank" rel="noopener">HIPAA</a> compliance at every point in the data path.</p>
+
+  <p>This is where many healthcare AI projects stall. Not because the AI models cannot do the work, but because the networking between agents was never designed for regulated data. Cloud API calls send PHI to third-party servers. Webhook integrations can expose PHI to message queues and logging systems you do not control. Even encrypted connections can terminate TLS at a load balancer, leaving data in plaintext on the provider's internal network.</p>
+
+  <p>Healthcare teams are right to be skeptical of vague privacy language. The question is not whether AI agents can help healthcare. It is whether the communication between agents can be controlled and documented well enough for regulated data.</p>
+
+  <section>
+  <h2>The Compliance Problem: AI Agents and Healthcare Data</h2>
+
+  <p>HIPAA's Security Rule requires three categories of safeguards for electronic PHI (ePHI): administrative, physical, and technical. For agent-to-agent communication, the technical safeguards are the hardest to satisfy because they must apply to every system that touches ePHI in transit.</p>
+
+  <p>The relevant technical safeguards under 45 CFR 164.312 include:</p>
+
+  <ul>
+    <li><strong>Access control (164.312(a)):</strong> Only authorized persons or software programs should access ePHI</li>
+    <li><strong>Audit controls (164.312(b)):</strong> Hardware, software, and procedural mechanisms to record and examine access to ePHI</li>
+    <li><strong>Integrity controls (164.312(c)):</strong> Policies and procedures to protect ePHI from improper alteration or destruction</li>
+    <li><strong>Transmission security (164.312(e)):</strong> Technical security measures to guard against unauthorized access to ePHI during electronic transmission</li>
+  </ul>
+
+  <p>GDPR adds its own requirements for healthcare data processing under Article 9 (special categories of personal data), including explicit consent, data minimization, and the right to erasure. For organizations operating across the US and EU, both regulatory frameworks apply simultaneously.</p>
+
+  <p>The compliance challenge is not abstract. When an AI agent sends a patient summary from System A to System B, every intermediary system in the data path is in scope. That includes the transport layer, any relay infrastructure, logging systems, and error handling. A single unencrypted hop, a single log entry containing PHI in plaintext, or a single third-party system without a Business Associate Agreement where one is required can be enough to put a deployment out of compliance.</p>
+  </section>
+
+  <section>
+  <h2>Why Cloud APIs Are Risky</h2>
+
+  <p>The most common architecture for AI agents involves calling cloud APIs -- OpenAI, Anthropic, Google, or others -- to process data. For general-purpose tasks, this works. For healthcare data, it creates a compliance gap that is difficult to close.</p>
+
+  <p>The core question is contractual scope. A Business Associate Agreement may be needed when a covered entity shares PHI with a service provider, and provider coverage varies by product and plan. Teams need to verify which processing, transport, logging, support, and subprocessors are covered before sending PHI.</p>
+
+  <p>Some providers offer BAA-covered services, but scope varies. If an agent sends PHI through an API gateway, load balancer, inference service, observability system, or support workflow, review how each component is covered. This is the same transport challenge that <a href="/blog/cross-company-agent-collaboration-without-shared-infrastructure">cross-company agent collaboration</a> faces: agents on different infrastructure need a secure channel with a documented data path.</p>
+
+  <p>The dynamic nature of AI agents makes this harder. An agent that decides on its own to call a new API endpoint, forward data to another agent, or store intermediate results in a cache creates data flows that were never anticipated in the Data Protection Impact Assessment (DPIA). Each unexpected data flow is a potential compliance gap.</p>
+
+  <div class="callout">
+    <p><strong>The point:</strong> if you cannot say how data moves between agents, you cannot show that ePHI is protected at every point in the data path. The transport layer is part of that answer, alongside the application.</p>
+  </div>
+  </section>
+
+  <section>
+  <h2>The Pilot Approach: Minimize Intermediaries in the Data Path</h2>
+
+  <p>Pilot Protocol is a peer-to-peer overlay network. It prefers direct encrypted UDP tunnels, while a registry and a beacon handle discovery and NAT traversal. When no direct path works, traffic is relayed through the beacon. That adds an intermediary to the data path: on the public backbone the beacon is run by Vulture Labs, and in a self-hosted deployment it is yours. The relay forwards ciphertext and does not hold the tunnel key.</p>
+
+  <p>This architecture can reduce the number of systems that handle plaintext. On a direct path, application data moves between the two endpoints without an application broker. Teams still need to account for endpoint software, optional relay paths, app services, logs, backups, and every other component in their own data-flow and vendor review.</p>
+
+  <p>For the NAT traversal case where direct connectivity is not possible (symmetric NAT on both sides), Pilot uses relay through the beacon server. Even in this case, the data is end-to-end encrypted before it reaches the relay. The beacon sees only encrypted ciphertext that it cannot decrypt, because it does not possess the session key established during the agents' X25519 key exchange.</p>
+
+  <pre><code><span class="comment"># Architecture: direct tunnel (no third party in data path)</span>
+
+  Agent A (Hospital)           Agent B (Specialist)
+  +-----------------+         +-----------------+
+  | PHI Processing  |         | PHI Processing  |
+  | Pilot Daemon    | ======= | Pilot Daemon    |
+  +-----------------+  E2E    +-----------------+
+                     Encrypted
+                      Tunnel
+
+<span class="comment"># The registry handles address resolution, not application payloads</span>
+<span class="comment"># The beacon handles NAT signaling and may relay ciphertext</span>
+<span class="comment"># Even relay mode: beacon sees only encrypted ciphertext</span></code></pre>
+  </section>
+
+  <section>
+  <h2>Encryption Properties: X25519 + AES-256-GCM End-to-End</h2>
+
+  <p>Pilot tunnel encryption is enabled by default across ports. Port 443 is a secure-service convention, not a distinct second cryptographic layer in the current SDK. The encryption stack uses:</p>
+
+  <ul>
+    <li><strong><a href="https://www.rfc-editor.org/rfc/rfc7748.html" target="_blank" rel="noopener">X25519</a> key exchange:</strong> Each daemon generates a key pair at startup and derives a distinct tunnel secret with each peer. This provides peer isolation; the current daemon-lifetime key design does not provide per-session forward secrecy.</li>
+    <li><strong><a href="https://www.rfc-editor.org/rfc/rfc5288.html" target="_blank" rel="noopener">AES-256-GCM</a>:</strong> Authenticated encryption for all tunnel traffic. GCM provides both confidentiality (data cannot be read) and integrity (data cannot be modified without detection).</li>
+    <li><strong>Nonce prefix and counter:</strong> Each time a tunnel key is derived for a peer, the daemon picks a random 4-byte nonce prefix, then counts up from it. The receiver rejects counters it has already seen.</li>
+    <li><strong>Ed25519 identity signing:</strong> Trust handshakes are signed with the agent's persistent Ed25519 key, so the peer you establish a session with is the peer you intended to trust.</li>
+  </ul>
+
+  <p>The tunnel encryption uses Go's standard library (<code>crypto/ecdh</code>, <code>crypto/aes</code>, <code>crypto/cipher</code>, <code>crypto/ed25519</code>), with no third-party crypto library to review. For a broader overview of <a href="/blog/encrypted-tunnel-advantages-peer-to-peer-ai-networks">encrypted tunnel advantages for P2P AI networks</a>, including the security and performance trade-offs of different tunnel architectures, see the dedicated comparison.</p>
+
+  <div class="callout">
+    <p><strong>Control mapping:</strong> AES-256-GCM can support transmission confidentiality and integrity controls. Whether a deployment meets HIPAA requirements depends on implementation, key management, endpoint controls, audit procedures, contracts, and the organization&rsquo;s documented risk analysis.</p>
+  </div>
+  </section>
+
+  <section>
+  <h2>Trust Model as Access Control</h2>
+
+  <p>HIPAA requires access controls that limit ePHI access to authorized persons and software programs. In Pilot, the trust model is the network-level access control. By default, an agent cannot exchange messages with another agent until a trust handshake between them has been approved. Some requests are approved without a person: when both sides request trust, when they share a network, when the daemon runs with <code>--trust-auto-approve</code>, or when the requester is on the daemon's built-in trusted-agents list. Decide on each of these before PHI is involved.</p>
+
+  <h3>Handshake as an authorization step</h3>
+
+  <p>The trust handshake is a two-party protocol. Agent A sends Agent B a request with an optional justification, a free-text note. Agent B's operator approves or rejects it. This is a technical authorization step. It is not a substitute for legal consent, minimum-necessary policy, or application-level authorization:</p>
+
+  <pre><code><span class="comment"># Hospital agent asks the specialist agent for trust</span>
+<span class="cmd">pilotctl handshake &lt;specialist-address&gt; "Referral summaries for radiology review"</span>
+
+<span class="comment"># On the specialist's machine: list requests (node ID, justification, time received)</span>
+<span class="cmd">pilotctl pending</span>
+
+<span class="comment"># Specialist approves</span>
+<span class="cmd">pilotctl approve &lt;hospital-address&gt;</span></code></pre>
+
+  <p>The justification is a note for the person approving, capped at 1,024 bytes. It is not covered by the request's signature, which binds only the two node IDs. The receiving daemon keeps it in the pending queue, writes it to its log, and, for requests that arrive directly, includes it in the <code>handshake.received</code> and <code>handshake.pending</code> webhook events. Approving or rejecting the request removes it from the queue, and the trust record an approval creates keeps the peer's node ID, public key and approval time, not the justification. When the direct path fails, the request is relayed through the registry, which holds the justification until the peer collects it.</p>
+
+  <p>So keep PHI and contract details out of the justification. If you need a record of why access was granted, keep it in your own system of record, for example by storing the webhook event when the request arrives.</p>
+
+  <h3>Revocation as instant de-authorization</h3>
+
+  <p>When a BAA expires, a physician leaves a practice, or a collaboration ends, revoke trust:</p>
+
+  <pre><code><span class="comment"># Revoke trust with a node</span>
+<span class="cmd">pilotctl untrust &lt;peer-address&gt;</span>
+
+<span class="comment"># What the daemon does:</span>
+<span class="comment"># - removes the trust record and tears down the tunnel to that node</span>
+<span class="comment"># - sends the node a revocation notice (best effort)</span>
+<span class="comment"># - asks the registry to remove the trust pair, so it stops resolving your endpoint for that node</span>
+<span class="comment"># - blocks messages to and from that node until a new handshake is completed</span></code></pre>
+
+  <p>Certificate-based access control depends on CRL distribution or OCSP checks for revocation. Pilot's revocation takes effect on your daemon when the command runs. It does not wait for the 25-second tunnel keepalive or the 60-second registry heartbeat.</p>
+
+  <h3>Private by default</h3>
+
+  <p>Pilot withholds an agent&rsquo;s reachable endpoint and connectivity from untrusted peers by default; a daemon is only publicly visible when started with <code>--public</code>. Some directory metadata, tags, or network membership may remain visible depending on configuration, and shared-network membership can grant connectivity. Treat metadata exposure and network join rules as explicit design decisions for healthcare deployments.</p>
+
+  <p>This is the opposite of the "Agent Card" model used by some protocols, where agents advertise their capabilities publicly. For healthcare, public advertisement of agent capabilities would leak metadata about what kinds of data processing are happening, which your risk analysis would then have to account for.</p>
+  </section>
+
+  <section>
+  <h2>Audit Trails: What the Daemon and Registry Record</h2>
+
+  <p>HIPAA's audit controls standard (164.312(b)) asks for mechanisms that record and examine activity in systems that contain or use ePHI. Pilot records network and trust activity, not what your applications do with the data. There are three sources, and they live in different places.</p>
+
+  <h3>Daemon log</h3>
+
+  <p>Each daemon writes a structured log with Go's <code>log/slog</code> package to <code>~/.pilot/pilot.log</code> on its own machine. Start the daemon with <code>--log-format json</code> to get one JSON object per line for a log shipper. At the default <code>info</code> level the log records trust changes (handshake requests with their justification, approvals, rejections and revocations) and tunnel path changes, such as a switch to relay.</p>
+
+  <h3>Webhook events for SIEM integration</h3>
+
+  <p>The daemon can POST its events as JSON to an HTTP(S) endpoint you choose. Each event carries <code>event_id</code>, <code>event</code>, <code>node_id</code>, <code>timestamp</code> and <code>data</code>:</p>
+
+  <pre><code><span class="comment"># Send this daemon's events to your SIEM collector</span>
+<span class="cmd">pilotctl set-webhook http://localhost:9090/siem-ingest</span>
+
+<span class="comment"># Events include:</span>
+<span class="comment"># - handshake.pending, handshake.approved, handshake.rejected, trust.revoked</span>
+<span class="comment"># - conn.established, conn.fin, conn.rst</span>
+<span class="comment"># - data.datagram, file.delivered</span>
+<span class="comment"># - node.registered, key.rotated, tunnel.*, security.*</span></code></pre>
+
+  <p>Delivery is best effort. The daemon queues up to 1,024 events, tries each POST up to three times, and drops events when the queue is full, so treat the webhook as a feed into your SIEM, not as the audit record itself. Link-local and cloud-metadata addresses are refused, but any other target is accepted, including remote hosts. Point it at a collector on your own infrastructure.</p>
+
+  <h3>Registry audit log, on a registry you run</h3>
+
+  <p>The registry keeps its own audit log of registry changes, among them node registrations, trust pairs created and revoked, relayed handshakes, network joins and key rotations. It is a 1,000-entry hash-chained buffer that can also be exported to Splunk HEC, syslog/CEF or a JSON endpoint. Reading it (<code>pilotctl extras audit</code>) and configuring export (<code>pilotctl extras audit-export set</code>) take the registry admin token. On the public backbone only Vulture Labs holds that token, so this log is only yours if you <a href="/self-hosting/">run your own registry</a>.</p>
+  </section>
+
+  <section>
+  <h2>Architecture: Encrypted Tunnels + Trust-Gated Access</h2>
+
+  <p>Pilot Protocol prefers direct encrypted tunnels between agents. Coordination infrastructure handles address resolution and NAT traversal, and an encrypted relay path may be used when direct connectivity fails. Applications layered on Pilot can also introduce their own service providers.</p>
+
+  <pre><code><span class="comment"># On each machine handling PHI: use the registry and beacon you run</span>
+<span class="cmd">export PILOT_REGISTRY=registry.example.com:9000</span>
+<span class="cmd">export PILOT_BEACON=registry.example.com:9001</span>
+<span class="cmd">pilotctl daemon start --log-format json</span></code></pre>
+
+  <p>In this deployment:</p>
+
+  <ul>
+    <li><strong>Agent daemons:</strong> Run on your hardware, handle PHI processing</li>
+    <li><strong>Tunnels:</strong> Direct UDP connections between your machines when a direct path works, relayed through the beacon as ciphertext when it does not</li>
+    <li><strong>Registry and beacon:</strong> Run by you, so registry metadata and relayed traffic stay on your infrastructure</li>
+    <li><strong>Logs:</strong> Stored on your hardware; you ship them to your SIEM</li>
+  </ul>
+
+  <p>On a direct path, plaintext stays at the endpoints and the network transports ciphertext. On a relay path, the relay handles ciphertext and connection metadata. Your risk analysis should classify that metadata and document both paths rather than assuming it cannot be sensitive.</p>
+
+  <p><strong>On the public backbone</strong>, the registry and beacon are run by Vulture Labs. The registry holds each node's ID, public key, network addresses, hostname and email if you set them, which nodes trust each other, and relayed handshake requests with their justification. When a direct path fails, the beacon relays the tunnel traffic as ciphertext. Vulture Labs offers no BAA for any of this. To keep that metadata and relayed traffic on infrastructure you control, <a href="/self-hosting/">run your own registry and beacon</a>.</p>
+
+  <h3>Multi-site deployment</h3>
+
+  <p>For healthcare organizations with multiple sites (a hospital network with clinics, a research consortium with partner institutions), Pilot's NAT traversal enables cross-site agent communication without VPN infrastructure:</p>
+
+  <pre><code><span class="comment"># Site A (hospital) and Site B (clinic), each behind its own NAT,</span>
+<span class="comment"># with PILOT_REGISTRY and PILOT_BEACON set to your registry and beacon</span>
+<span class="cmd">pilotctl daemon start --hostname hospital-a-agent</span>
+<span class="cmd">pilotctl daemon start --hostname clinic-b-agent</span>
+
+<span class="comment"># Site A asks Site B for trust; Site B approves (addresses from pilotctl info)</span>
+<span class="cmd">pilotctl handshake &lt;clinic-b-address&gt; "Referral summaries"</span>
+<span class="cmd">pilotctl approve &lt;hospital-a-address&gt;</span>
+
+<span class="comment"># NAT traversal is automatic (STUN + hole-punch + relay)</span>
+<span class="comment"># All tunnel traffic is E2E encrypted</span></code></pre>
+  </section>
+
+  <section>
+  <h2>What Pilot Does Not Do (And What You Still Need)</h2>
+
+  <p>Pilot provides transport controls that can support a healthcare deployment. It does not make an agent system compliant on its own. Here is what you still need:</p>
+
+  <h3>Business Associate Agreements for your own infrastructure</h3>
+
+  <p>If agents run on cloud infrastructure, review whether a BAA and related contractual controls are required for the compute, storage, observability, support, and relay services in scope. Vulture Labs offers no BAA, for the public backbone or anything else, so if registry metadata or relayed traffic needs to be covered, run your own registry and beacon. Pilot can reduce intermediary plaintext access, but it does not decide which vendors or paths require contractual coverage.</p>
+
+  <h3>De-identification</h3>
+
+  <p>HIPAA's Safe Harbor method (164.514(b)) requires removing 18 categories of identifiers from data before it can be considered de-identified. If your agents exchange de-identified data, many HIPAA requirements relax. Pilot does not perform de-identification -- that is an application-layer concern. Your agents should de-identify data before transmission when possible.</p>
+
+  <h3>Data Protection Impact Assessment (DPIA)</h3>
+
+  <p>GDPR Article 35 requires a DPIA for processing that is "likely to result in a high risk to the rights and freedoms of natural persons." Healthcare AI processing falls squarely in this category. Your DPIA must document the data flows. Daemon logs, webhook events and, on a registry you run, the registry audit log can feed that documentation, but the DPIA itself is a document you must write, review, and maintain as your agent architecture evolves.</p>
+
+  <h3>Application-layer access controls</h3>
+
+  <p>Pilot's trust model controls <em>which agents can communicate</em>. It does not control <em>what data those agents exchange</em> or <em>what operations they perform on that data</em>. You need application-layer controls for role-based access, data minimization (only sending the minimum PHI necessary for the task), and purpose limitation (ensuring agents only use PHI for the stated purpose).</p>
+
+  <h3>Breach notification procedures</h3>
+
+  <p>HIPAA requires notification within 60 days of discovering a breach affecting 500+ individuals (164.408). Pilot's logs and events can show which nodes connected, and when, but not which PHI an application read. Your organization must have procedures for detection, assessment, and notification.</p>
+
+  <div class="callout">
+    <p><strong>What Pilot covers:</strong> Transport encryption, peer authorization, and network and trust events. These controls can contribute to a broader program; application authorization, PHI-access auditing, BAAs, risk assessments, retention, and incident procedures remain your responsibility.</p>
+  </div>
+  </section>
+
+  <section>
+  <h2>Getting Started for Healthcare</h2>
+
+  <p>A starting point for a healthcare-oriented test deployment:</p>
+
+  <pre><code><span class="comment"># 1. Run your own registry and beacon (see /self-hosting/), then on each machine:</span>
+<span class="cmd">export PILOT_REGISTRY=registry.example.com:9000</span>
+<span class="cmd">export PILOT_BEACON=registry.example.com:9001</span>
+<span class="cmd">pilotctl daemon start --log-format json</span>
+
+<span class="comment"># 2. Request trust with a short note that contains no PHI</span>
+<span class="cmd">pilotctl handshake &lt;peer-address&gt; "Referral processing"</span>
+
+<span class="comment"># 3. On the peer: review and approve</span>
+<span class="cmd">pilotctl pending</span>
+<span class="cmd">pilotctl approve &lt;your-address&gt;</span>
+
+<span class="comment"># 4. Send this daemon's events to your SIEM collector</span>
+<span class="cmd">pilotctl set-webhook http://localhost:9090/siem-ingest</span>
+
+<span class="comment"># 5. Send test data over the encrypted tunnel</span>
+<span class="cmd">pilotctl send-file &lt;peer-address&gt; test-summary.json</span></code></pre>
+
+  <p>This setup gives you encrypted transport, an approved trust relationship, and network and trust events to integrate with your audit process. Before using PHI, validate direct and relay paths, endpoint logging, app dependencies, retention, incident response, and contractual scope.</p>
+  </section>
+
+  <div class="cta">
+    <h3>Try Pilot Protocol</h3>
+    <p>Encrypted, trust-gated agent transport with controls that can support a healthcare security architecture.</p>
+    <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
+  </div>`;
+---
+<BlogLayout
+  title="Technical Controls for Healthcare AI Agent Communication"
+  description="How encrypted tunnels, peer trust, and network events can support a healthcare AI security architecture — and which responsibilities remain outside the transport layer."
+  date="June 7, 2026"
+  tags={["healthcare", "HIPAA", "security"]}
+  canonicalPath="/blog/agent-communication-for-healthcare-data"
+  bannerImage="/blog/banners/agent-communication-for-healthcare-data.webp"
+  faqItems={[
+    {
+      question: "Does Pilot Protocol make an agent deployment HIPAA compliant?",
+      answer: "No. Pilot provides transport encryption, peer authorization and network events that can support a healthcare security program, but no transport protocol makes a deployment compliant by itself, and Vulture Labs offers no Business Associate Agreement. Organizations must assess the complete system, including endpoints, applications, vendors, contracts, policies, and operational procedures."
+    },
+    {
+      question: "Can healthcare AI agents use cloud API providers?",
+      answer: "Provider terms and BAA scope vary by service and plan. Review the processing endpoint, transport, logging, support, and subprocessors in the full data flow. Direct peer paths can reduce intermediaries, while encrypted relay fallback and application services still need to be documented."
+    },
+    {
+      question: "What encryption does Pilot use for agent traffic?",
+      answer: "Pilot uses peer-specific secrets derived from daemon-lifetime X25519 keys and AES-256-GCM authenticated encryption. These controls can support transmission confidentiality and integrity, but the current design does not provide per-session forward secrecy and compliance depends on the complete implementation."
+    },
+    {
+      question: "How does Pilot Protocol's trust model relate to HIPAA access controls?",
+      answer: "Pilot's trust handshake can support a technical authorization boundary: each peer is approved or rejected and can later be revoked. Application-level roles, minimum-necessary rules, metadata policy, human approvals, and compliance records remain the operator's responsibility."
+    }
+  ]}
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>

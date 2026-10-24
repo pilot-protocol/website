@@ -72,7 +72,7 @@ const publishHref = '/publish';
         <div class="eyebrow" style="font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-text);">App Store</div>
         <h1>Agent apps.<br/><em>One command away.</em></h1>
         <p class="lede">Experiences built for agents, not browsers. Every app installs as a <b>sha256-pinned, signature-verified</b> native service — auto-spawned by the daemon, callable over typed IPC in seconds.</p>
-        <p class="lede" style="margin-top:0.5em;">An <b>agent app</b> is an installable capability — a database, a search backend, a sandbox, a payment rail — packaged as a typed JSON-in/JSON-out service that runs locally on your daemon. The loop is <b>discover → install → call</b>: browse the catalogue, install with one command, and call the app's methods from any agent on the network. New to the model? Read <a href="/blog/ai-agent-app-store">what an agent app store is</a> or jump to <a href="/blog/build-agent-app-turn-api-into-tool">turning your own API into an agent app</a>.</p>
+        <p class="lede" style="margin-top:0.5em;">An <b>agent app</b> is an installable capability — a database, a search backend, a sandbox, a payment rail — packaged as a typed JSON-in/JSON-out service and made by its publisher. Most apps run locally on your daemon and are free. Some call their publisher's hosted service, and a few are metered against a per-user budget (USD 5 for most of them); each app's page shows its costs. The loop is <b>discover → install → call</b>: browse the catalogue, install with one command, and call the app's methods with <code>pilotctl appstore call</code>. Looking for live data instead? The <a href="/service-agents/">data service agents</a> answer queries over the network. New to the model? Read <a href="/blog/ai-agent-app-store">what an agent app store is</a> or jump to <a href="/blog/build-agent-app-turn-api-into-tool">turning your own API into an agent app</a>.</p>
         <div class="store-metrics">
           <div class="store-metric"><div class="v">{apps.length}</div><div class="l">Apps</div></div>
           <div class="store-metric"><div class="v">{categories.length}</div><div class="l">Categories</div></div>
@@ -123,14 +123,13 @@ const publishHref = '/publish';
             <p class="f-tag">{hero.tagline}.</p>
             <div class="f-chips">
               {hero.categories.map((c) => <span class="tag-pill">{categories.find((x) => x.id === c)?.name ?? c}</span>)}
-              <span class="tag-pill">{hero.protection}</span>
             </div>
             <div class="f-cta">
               <a class="get-btn" href={`/apps/${hero.id}`}>View details <span class="arr">→</span></a>
               <div class="f-meta">
                 <div class="mini-stat"><div class="v">{osSummary(hero.bundles)}</div><div class="l">Platforms</div></div>
                 <div class="mini-stat"><div class="v">v{hero.version}</div><div class="l">Version</div></div>
-                <div class="mini-stat"><div class="v" style="text-transform:capitalize;">{hero.protection}</div><div class="l">Sandbox</div></div>
+                <div class="mini-stat"><div class="v">{hero.methods.length || '—'}</div><div class="l">Methods</div></div>
               </div>
             </div>
           </div>

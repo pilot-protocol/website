@@ -30,23 +30,27 @@ const bodyContent = `<p>Your MCP server can query a database, call an API, read 
   <section>
   <h2 id="the-solution">The Solution: One Install, Direct Connection</h2>
 
-  <p>Pilot Protocol is a single binary that gives your agent a network identity, encrypted connections, and the ability to dial any other agent by hostname - regardless of NAT, firewall, or cloud provider.</p>
+  <p>Pilot Protocol is a daemon and a CLI (static binaries, no runtime dependencies) that give your agent a network identity, encrypted connections, and the ability to dial any other agent by hostname - regardless of NAT, firewall, or cloud provider.</p>
 
   <p>Here is what the full flow looks like:</p>
 
-  <pre><code># Install Pilot (one command, under 30 seconds)
+  <pre><code># Install Pilot (one command)
 curl -fsSL https://pilotprotocol.network/install.sh | sh
 
-# Start Agent A with a hostname
-pilotctl daemon start --hostname analyst-agent
+# Start Agent A with a hostname (--public lets peers resolve the name)
+pilotctl daemon start --hostname analyst-agent --public
 
-# Start Agent B on a different machine (same command)
-pilotctl daemon start --hostname reporter-agent
+# Start Agent B on a different machine
+pilotctl daemon start --hostname reporter-agent --public
 
-# Agent A sends MCP query results to Agent B
-pilotctl connect reporter-agent --message '{"rows":1842,"summary":"Q4 up 23%"}'</code></pre>
+# One-time trust: each side sends a handshake (crossed requests approve each other)
+pilotctl handshake reporter-agent    # on A
+pilotctl handshake analyst-agent     # on B
 
-  <p>That is the entire setup. No YAML. No Docker. No cloud accounts. No port forwarding. Agent A dials Agent B by hostname; after a one-time mutual trust handshake (the peer approves the request with <code>pilotctl approve</code>, or runs with <code>-trust-auto-approve</code> in a trusted environment), an encrypted tunnel is established and the data flows directly between them.</p>
+# Agent A sends MCP query results to Agent B (they land in B's inbox)
+pilotctl send-message reporter-agent --data '{"rows":1842,"summary":"Q4 up 23%"}' --type json</code></pre>
+
+  <p>That is the entire setup. No YAML. No Docker. No cloud accounts. No port forwarding. Agent A reaches Agent B by hostname; after the one-time mutual trust handshake (both sides send one, or the peer approves the request with <code>pilotctl approve</code>, or runs with <code>-trust-auto-approve</code> in a trusted environment), an encrypted tunnel is established and the data flows between them, directly when NAT allows.</p>
   </section>
 
   <section>
@@ -66,12 +70,13 @@ results := mcpClient.CallTool("postgres", "query", map[string]any{
     "sql": "SELECT * FROM sales WHERE quarter = 'Q4'",
 })
 
-// 2. Send results to peer agent via Pilot
+// 2. Send results to peer agent via Pilot (data exchange, port 1001)
 d, _ := driver.Connect("/tmp/pilot.sock")
 info, _ := d.ResolveHostname("reporter-agent")
-conn, _ := d.Dial(fmt.Sprintf("%s:1001", info["address"]))
-conn.Write(results.JSON())
-conn.Close()</code></pre>
+addr, _ := protocol.ParseAddr(info["address"].(string))
+cl, _ := dataexchange.Dial(d, addr)
+cl.Send(&dataexchange.Frame{Type: dataexchange.TypeJSON, Payload: results.JSON()}) <span class="comment">// waits for the receiver's ACK</span>
+cl.Close()</code></pre>
 
   <pre><code># Python example: Agent A - query via MCP, deliver via Pilot
 import pilotprotocol as pilot
@@ -81,30 +86,31 @@ import mcp
 async with mcp.Client("postgres-server") as client:
     results = await client.call_tool("query", sql="SELECT * FROM sales")
 
-# 2. Send results to peer agent via Pilot
+# 2. Send results to peer agent via Pilot (lands in its inbox)
 with pilot.Driver() as d:
-    conn = d.dial("1:0001.0000.0005:1001")  # reporter-agent's pilot address
-    conn.write(results.to_json())</code></pre>
+    d.send_message("reporter-agent", results.to_json().encode(), msg_type="json")</code></pre>
   </section>
 
   <section>
   <h2 id="crossing-nats">Crossing NATs: The Real Problem</h2>
 
-  <p>The reason you cannot just "open a TCP connection" between two agents is NAT. <a href="/blog/connect-ai-agents-behind-nat-without-vpn">88% of networks involve NAT</a>. Your MCP server is behind a firewall. Your peer agent is behind a different firewall. Neither has a public IP.</p>
+  <p>The reason you cannot just "open a TCP connection" between two agents is NAT. <a href="/blog/connect-ai-agents-behind-nat-without-vpn">Most networks involve NAT</a>. Your MCP server is behind a firewall. Your peer agent is behind a different firewall. Neither has a public IP.</p>
 
   <p>Pilot handles this transparently with three-tier traversal:</p>
 
   <ol>
-    <li><strong>STUN discovery</strong> - Determines your NAT type and public-facing endpoint.</li>
+    <li><strong>STUN discovery</strong> - Determines your public-facing endpoint.</li>
     <li><strong>UDP hole-punching</strong> - For restricted and port-restricted cone NAT, the beacon coordinates simultaneous punches from both sides.</li>
     <li><strong>Relay fallback</strong> - For symmetric NAT (unpredictable port mapping), data is relayed through the beacon. The relay only forwards opaque encrypted packets - it cannot read your data.</li>
   </ol>
 
-  <p>All of this is automatic. Your code dials a hostname. Pilot figures out the traversal strategy.</p>
+  <p>All of this is automatic. Your code dials a hostname. Pilot tries direct, hole-punched and relayed paths in turn.</p>
 
   <pre><code># This works whether the peer is on the same LAN, behind NAT, or across clouds
-pilotctl connect reporter-agent --message '{"data": "..."}'
-# ✓ Connected via hole-punch. RTT: 34ms. Encrypted.</code></pre>
+pilotctl send-message reporter-agent --data '{"data": "..."}'
+# prints the receiver's acknowledgement ("ack": "ACK TEXT 15 bytes")
+pilotctl peers --all
+# PATH column: direct or relay</code></pre>
   </section>
 
   <section>
@@ -132,10 +138,10 @@ curl -fsSL https://pilotprotocol.network/install.sh | sh</code></pre>
 
   <p><strong>Step 2: Start daemons</strong></p>
   <pre><code># Machine A (behind corporate NAT)
-pilotctl daemon start --hostname analyst-agent
+pilotctl daemon start --hostname analyst-agent --public
 
 # Machine B (AWS EC2)
-pilotctl daemon start --hostname reporter-agent</code></pre>
+pilotctl daemon start --hostname reporter-agent --public</code></pre>
 
   <p><strong>Step 3: Establish trust</strong></p>
   <pre><code># Agent A trusts Agent B
@@ -144,16 +150,26 @@ pilotctl handshake reporter-agent
 pilotctl handshake analyst-agent</code></pre>
 
   <p><strong>Step 4: Agent A queries and delivers</strong></p>
-  <pre><code># Agent A's application code
+  <pre><code># Agent A's application code (mcp_* stand for your MCP client calls)
+import pilotprotocol as pilot
+
 results = mcp_query("SELECT * FROM sales WHERE quarter = 'Q4'")
 analysis = mcp_run_python(f"analyze({results})")
 
 # Send to reporter - Pilot handles NAT, encryption, everything
-pilot_send("reporter-agent", port=1001, data=analysis.to_json())</code></pre>
+with pilot.Driver() as d:
+    d.send_message("reporter-agent", analysis.to_json().encode(), msg_type="json")</code></pre>
 
   <p><strong>Step 5: Agent B receives and acts</strong></p>
-  <pre><code># Agent B's application code - listening on port 1001
-data = pilot_receive(port=1001)
+  <pre><code># Agent B's application code - messages land in the daemon's inbox
+import json, subprocess
+
+def latest_from(peer):
+    out = subprocess.run(["pilotctl", "--json", "inbox", "--from", peer, "--latest"],
+                         capture_output=True, text=True)
+    return json.loads(json.loads(out.stdout)["data"]["messages"][0]["data"])
+
+data = latest_from("analyst-agent")
 mcp_call("slack", "post_message", channel="#reports", text=data["summary"])
 mcp_call("email", "send", to="cfo@company.com", body=data["full_report"])</code></pre>
 
@@ -166,22 +182,23 @@ mcp_call("email", "send", to="cfo@company.com", body=data["full_report"])</code>
   <p>The pattern scales to N agents. Each agent has different MCP tools, and they coordinate over Pilot tunnels:</p>
 
   <pre><code># Pipeline: scraper → analyzer → reporter
-# Each agent has its own MCP servers
+# Each agent has its own MCP servers. send_to() wraps Driver.send_message,
+# latest_from() reads the inbox as in Step 5.
 
 # scraper (MCP: browser, fetch)
 data = mcp_fetch("https://api.example.com/data")
-pilot_send("analyzer", port=1001, data=data)
+send_to("analyzer", data)
 
 # analyzer (MCP: postgres, python)
-raw = pilot_receive(port=1001)
+raw = latest_from("scraper")
 insights = mcp_run_python(f"analyze({raw})")
-pilot_send("reporter", port=1001, data=insights)
+send_to("reporter", insights)
 
 # reporter (MCP: slack, email)
-results = pilot_receive(port=1001)
+results = latest_from("analyzer")
 mcp_call("slack", "post_message", text=results["summary"])</code></pre>
 
-  <p>Every link in the pipeline is a direct encrypted tunnel. No central orchestrator needed - each agent knows its upstream and downstream peers by hostname.</p>
+  <p>Every link in the pipeline is an encrypted tunnel, direct when NAT allows and relayed otherwise. No central orchestrator needed - each agent knows its upstream and downstream peers by hostname.</p>
   </section>
 
   <section>
@@ -194,13 +211,12 @@ mcp_call("slack", "post_message", text=results["summary"])</code></pre>
   <pre><code># On the MCP server machine (behind NAT, no public IP)
 pilotctl daemon start --hostname db-tool-server</code></pre>
 
-  <p>Any trusted agent can now resolve and connect:</p>
+  <p>Any trusted agent can now resolve it:</p>
 
-  <pre><code># On any other machine, anywhere
-pilotctl connect db-tool-server 80
-# ✓ Connected. NAT traversed automatically.</code></pre>
+  <pre><code># On any other machine, anywhere (after trust)
+pilotctl find db-tool-server</code></pre>
 
-  <p>The MCP server never needs a public IP, a reverse proxy, or an ngrok tunnel. Pilot's hostname resolution + NAT traversal makes it reachable from any trusted agent on the network.</p>
+  <p>To reach the MCP server itself, something on that machine has to listen on a Pilot port and hand connections to it. Pilot doesn't expose local services on its own. For an HTTP-based MCP server, that can be a small Go program that accepts on port 80 with the driver (<code>d.Listen(80)</code>) and proxies each connection to the local endpoint. The MCP server never needs a public IP, a reverse proxy, or an ngrok tunnel: Pilot's hostname resolution and NAT traversal make that Pilot port reachable from any trusted agent.</p>
   </section>
 
   <section>
@@ -212,7 +228,7 @@ pilotctl connect db-tool-server 80
   <ul>
     <li><strong>NAT traversal</strong> - Concrete walkthrough of how agents behind different firewalls connect</li>
     <li><strong>Zero configuration</strong> - Emphasis on one-command install, no infrastructure to manage</li>
-    <li><strong>Code examples</strong> - Go and Python examples you can copy and run</li>
+    <li><strong>Code examples</strong> - Go and Python sketches (the MCP calls stand in for your own client code)</li>
     <li><strong>Full scenario</strong> - Step-by-step from install to data flowing between agents</li>
   </ul>
 
@@ -222,7 +238,7 @@ pilotctl connect db-tool-server 80
   <section>
   <h2 id="get-started">Get Started</h2>
 
-  <pre><code># Install (30 seconds)
+  <pre><code># Install
 curl -fsSL https://pilotprotocol.network/install.sh | sh
 
 # Or with Python

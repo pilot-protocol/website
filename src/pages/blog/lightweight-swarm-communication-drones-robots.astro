@@ -3,7 +3,7 @@ import BlogLayout from '../../layouts/BlogLayout.astro';
 
 const bodyContent = `<p>Robotics teams building multi-robot swarms on ROS2 run into a recurring scaling problem. DDS, the middleware underneath ROS2, uses multicast for peer discovery. On WiFi networks -- where most mobile robots and drones actually operate -- multicast is unreliable, generates broadcast storms, and consumes bandwidth that the robots need for telemetry and coordination. The result: adding more robots to the swarm makes communication worse, not better.</p>
 
-  <p>The question robotics teams keep asking is straightforward: what affordable, stable system provides communication between multiple robots without the overhead of ROS2/DDS? This article examines why the DDS multicast model breaks for swarms, what lightweight alternatives exist, and how a single-socket UDP overlay with tag-based discovery can coordinate robot swarms on constrained hardware.</p>
+  <p>The question robotics teams keep asking is straightforward: what affordable, stable system provides communication between multiple robots without the overhead of ROS2/DDS? This article examines why the DDS multicast model breaks for swarms, what lightweight alternatives exist, and how a single-socket UDP overlay with registry-based discovery can coordinate robot swarms on constrained hardware.</p>
 
   <section>
   <h2>The DDS/ROS2 Multicast Problem</h2>
@@ -12,11 +12,11 @@ const bodyContent = `<p>Robotics teams building multi-robot swarms on ROS2 run i
 
   <p><strong>Discovery storms.</strong> DDS uses SPDP (Simple Participant Discovery Protocol) to find other participants on the network. Each participant periodically multicasts its presence. With 10 robots, that is 10 discovery messages every few seconds, each broadcast to all network participants. On WiFi, multicast frames are transmitted at the lowest data rate (often 1 Mbps on 802.11b/g compatibility mode), consuming disproportionate airtime. With 50 robots, the discovery traffic alone can saturate the WiFi channel.</p>
 
-  <p><strong>Middleware latency overhead.</strong> The ROS2 middleware layer adds latency compared to raw DDS. The ROS2 middleware layer -- type support, serialization, executor callbacks -- adds measurable delay to every message. For a swarm doing position updates at 10 Hz, this means the position data each robot receives is 50% staler than it needs to be.</p>
+  <p><strong>Middleware latency overhead.</strong> The ROS2 middleware layer -- type support, serialization, executor callbacks -- adds delay to every message on top of raw DDS. For a swarm doing position updates at 10 Hz, that delay makes the position data each robot receives staler than it needs to be.</p>
 
   <p><strong>WiFi multicast is fundamentally broken.</strong> WiFi access points handle multicast by converting it to broadcast, which is transmitted without acknowledgment or retransmission. If a robot misses a multicast frame due to interference (common in outdoor environments with 2.4 GHz congestion), the message is silently lost. DDS has reliability mechanisms, but they depend on the transport layer delivering the multicast in the first place. On WiFi, this assumption fails routinely.</p>
 
-  <p><strong>Memory and CPU overhead.</strong> A ROS2 node with DDS middleware typically consumes 50-100 MB of RSS depending on the number of topics and participants. On a Raspberry Pi 4 with 4 GB of RAM running a navigation stack, vision processing, and motor control, the communication middleware alone uses 2-5% of available memory. On a Jetson Nano with 2 GB, it is 5-10%. Every megabyte matters when you are running neural networks on edge hardware.</p>
+  <p><strong>Memory and CPU overhead.</strong> A ROS2 node with DDS middleware carries memory and CPU overhead that grows with the number of topics and participants. On a Raspberry Pi 4 or a Jetson Nano that is also running a navigation stack, vision processing, and motor control, that overhead competes with the robot's real work. Every megabyte matters when you are running neural networks on edge hardware.</p>
   </section>
 
   <section>
@@ -27,7 +27,7 @@ const bodyContent = `<p>Robotics teams building multi-robot swarms on ROS2 run i
   <ul>
     <li><strong>Many-to-many messaging.</strong> Every robot needs to share its state (position, battery, task status) with every other robot. This is not point-to-point; it is a broadcast pattern. But it needs to work on WiFi, where real broadcast is unreliable.</li>
     <li><strong>Heterogeneous networks.</strong> Drones on cellular, ground robots on WiFi, the ground station on ethernet. The communication system must bridge these networks without requiring all participants to be on the same LAN.</li>
-    <li><strong>Constrained hardware.</strong> Swarm robots are cost-optimized. They run on Raspberry Pi, Jetson Nano, ESP32, or similarly constrained platforms. The communication stack cannot consume 100 MB of RAM or a full CPU core.</li>
+    <li><strong>Constrained hardware.</strong> Swarm robots are cost-optimized. They run on Raspberry Pi, Jetson Nano, ESP32, or similarly constrained platforms. The communication stack cannot consume a large share of RAM or a full CPU core.</li>
     <li><strong>Dynamic membership.</strong> Robots join when powered on, leave when battery dies, and may rejoin later. The system must handle this without manual reconfiguration.</li>
     <li><strong>Field deployment.</strong> Swarms operate in warehouses, agricultural fields, disaster zones, and construction sites. There is no IT department to configure routers, open ports, or manage certificates.</li>
   </ul>
@@ -36,71 +36,74 @@ const bodyContent = `<p>Robotics teams building multi-robot swarms on ROS2 run i
   </section>
 
   <section>
-  <h2>Pilot's Approach: Single Socket, No Multicast, Tag Discovery</h2>
+  <h2>Pilot's Approach: Single Socket, No Multicast, Registry Discovery</h2>
 
   <p>Pilot Protocol takes a fundamentally different approach to the problems DDS struggles with.</p>
 
   <p><strong>Single UDP socket.</strong> Each Pilot daemon uses one UDP socket for all communication. There is no multicast, no broadcast, no SPDP discovery traffic. All messages are unicast -- sent directly from one peer to another. On WiFi, unicast frames are transmitted at the highest negotiated data rate with acknowledgment and retransmission. This means every Pilot message gets the reliability that WiFi provides for unicast, which multicast discards.</p>
 
-  <p><strong>Tag-based discovery.</strong> Instead of multicast discovery, robots register with a lightweight registry server and tag themselves with capabilities. Other robots query the registry to discover peers. The registry is a single process that can run on the ground station, a cloud VM, or one of the robots themselves. Discovery traffic is unicast TCP to the registry, not multicast on the WiFi channel.</p>
+  <p><strong>Registry-based discovery.</strong> Instead of multicast discovery, robots register with a registry server under a hostname and can label themselves with up to three tags. Other robots look a peer up by hostname to get its virtual address. The registry (with its companion beacon) can be the public one run by Vulture Labs, or your own on the ground station or a cloud VM. Discovery traffic is unicast TCP to the registry, not multicast on the WiFi channel.</p>
 
-  <pre><code><span class="comment"># Each drone tags itself on startup</span>
+  <pre><code><span class="comment"># Each drone registers a name and labels itself on startup</span>
+<span class="cmd">pilotctl set-hostname drone-07</span>
 <span class="cmd">pilotctl extras set-tags drone survey-team-alpha quadcopter</span>  <span class="comment"># max 3 tags</span>
 
-<span class="comment"># Ground station discovers all drones</span>
-<span class="cmd">pilotctl peers --search "drone" --json</span>
+<span class="comment"># Ground station resolves a drone it trusts (or shares a network with)</span>
+<span class="cmd">pilotctl find drone-07</span>
 
-<span class="comment"># Or find specific capabilities</span>
-<span class="cmd">pilotctl peers --search "drone thermal-camera" --json</span></code></pre>
+<span class="comment"># The drone's tags come back with a registry lookup</span>
+<span class="cmd">pilotctl --json lookup drone-07</span></code></pre>
 
-  <p><strong>10 MB RSS per daemon.</strong> The Pilot daemon is a single Go binary with no external dependencies. In our own runs it uses on the order of ~10 MB of RSS at idle — substantially less than a typical ROS2 node (the figures below are illustrative, not published benchmarks) with DDS middleware. On a Raspberry Pi 4, this is 0.25% of available memory. On a Jetson Nano, it is 0.5%. The remaining resources are available for the robot's actual workload: navigation, perception, and control.</p>
+  <p>There is no search by tag: the ground station keeps the list of drone hostnames. On a registry you run yourself, an operator can put the swarm in one network, and <code>pilotctl network members &lt;id&gt;</code> lists every member with its hostname (its <code>--json</code> output includes the tags).</p>
 
-  <pre><code><span class="comment"># Memory comparison on Raspberry Pi 4 (4GB)</span>
-<span class="comment"># ROS2 Humble + FastDDS:  ~80MB RSS  (2.0% of RAM)</span>
-<span class="comment"># ROS2 Humble + CycloneDDS: ~60MB RSS (1.5% of RAM)</span>
-<span class="comment"># Pilot daemon:            ~10MB RSS  (0.25% of RAM)</span></code></pre>
+  <p><strong>Small footprint.</strong> The daemon and <code>pilotctl</code> are static Go binaries with no runtime dependencies, so they run next to the robot's navigation, perception, and control workloads without a middleware installation.</p>
   </section>
 
   <section>
   <h2>Architecture: Drone Swarm Coordinating via Event Stream</h2>
 
-  <p>Here is a concrete architecture for a swarm of 10 survey drones coordinated by a ground station. Each drone publishes telemetry (position, battery, status) to the event stream. The ground station subscribes to all telemetry, computes the survey plan, and publishes waypoints back to individual drones.</p>
+  <p>Here is a concrete architecture for a swarm of 10 survey drones coordinated by a ground station. Every Pilot daemon runs an event-stream broker on port 1002; the swarm shares the broker of one always-on hub node. Each drone publishes telemetry (position, battery, status) to the hub. The ground station subscribes to all telemetry, computes the survey plan, and publishes waypoints back to individual drones.</p>
 
   <p>Components:</p>
 
   <ul>
     <li><strong>10 drones</strong> -- each runs Pilot daemon + flight controller + camera</li>
     <li><strong>1 ground station</strong> -- runs Pilot daemon + mission planner + telemetry display</li>
-    <li><strong>1 registry/beacon</strong> -- runs on ground station or cloud VM (lightweight, ~15 MB RSS)</li>
+    <li><strong>1 hub</strong> -- an always-on node (a small VM or a companion computer at the base) whose broker carries the swarm's topics</li>
+    <li><strong>Registry and beacon</strong> -- the public ones, or your own on the ground station or a cloud VM</li>
   </ul>
 
   <p>Communication flow:</p>
 
   <ol>
-    <li>Each drone publishes telemetry to <code>swarm.telemetry.drone-N</code> every 100ms.</li>
-    <li>Ground station subscribes to <code>swarm.telemetry.*</code> -- receives all drone telemetry.</li>
+    <li>Each drone publishes telemetry to <code>swarm.telemetry</code> every 100ms, with its drone ID in the payload.</li>
+    <li>Ground station subscribes to <code>swarm.telemetry</code> -- receives all drone telemetry.</li>
     <li>Ground station publishes waypoints to <code>swarm.command.drone-N</code> for each drone.</li>
     <li>Each drone subscribes to <code>swarm.command.drone-N</code> (its own command channel).</li>
-    <li>Drones publish events to <code>swarm.events.*</code> (low battery, obstacle detected, survey complete).</li>
+    <li>Drones publish events to <code>swarm.events</code> (low battery, obstacle detected, survey complete).</li>
   </ol>
 
-  <pre><code><span class="comment"># Drone startup sequence</span>
-<span class="cmd">pilot-daemon</span>
-<span class="cmd">pilotctl network join 1</span>
-<span class="cmd">pilotctl extras set-tags drone drone-07 survey-team-alpha</span>  <span class="comment"># max 3 tags</span>
+  <p>Topics match exactly. A subscriber can use <code>*</code> to receive every topic on the hub, but there are no prefix wildcards such as <code>swarm.telemetry.*</code>, which is why the drone ID travels in the payload.</p>
 
-<span class="comment"># Ground station startup</span>
-<span class="cmd">pilot-daemon</span>
-<span class="cmd">pilotctl network join 1</span>
+  <pre><code><span class="comment"># Drone startup sequence</span>
+<span class="cmd">pilotctl daemon start</span>
+<span class="cmd">pilotctl set-hostname drone-07</span>
+<span class="cmd">pilotctl extras set-tags drone survey-team-alpha quadcopter</span>  <span class="comment"># max 3 tags</span>
+
+<span class="comment"># Ground station startup (each subscribe runs until stopped; use one terminal per topic)</span>
+<span class="cmd">pilotctl daemon start</span>
+<span class="cmd">pilotctl set-hostname ground-station</span>
 <span class="cmd">pilotctl extras set-tags ground-station survey-team-alpha</span>
 <span class="cmd">pilotctl subscribe &lt;hub-address|hostname&gt; swarm.telemetry</span>
 <span class="cmd">pilotctl subscribe &lt;hub-address|hostname&gt; swarm.events</span></code></pre>
+
+  <p>No network join is needed on the public backbone: once the hub approves a node's trust handshake, they can talk. Private networks are created by a registry operator, so to keep the swarm in one, run your own rendezvous.</p>
   </section>
 
   <section>
   <h2>Code Example: Telemetry Publishing and Subscribing</h2>
 
-  <p>Here is the pattern for a Go program running on each drone, publishing GPS telemetry over Pilot. <em>Note: pub/sub is exposed through the <code>pilotctl publish</code>/<code>subscribe</code> commands and the event-stream service; the Go SDK (<code>common/driver</code>) itself provides datagram primitives (<code>SendTo</code>/<code>RecvFrom</code>). The <code>stream</code> calls below are illustrative pseudocode for the pub/sub pattern — wire them to <code>publish</code>/<code>subscribe</code> or the messaging API in real code.</em></p>
+  <p>Here is a Go program for each drone, publishing GPS telemetry over Pilot. It uses the <code>eventstream</code> package: <code>eventstream.Subscribe</code> connects to the hub's broker and subscribes to one topic, and the same client can <code>Publish</code> to any topic and <code>Recv</code> the events of the topic it subscribed to.</p>
 
   <pre><code>package main
 
@@ -111,6 +114,8 @@ import (
     "time"
 
     "github.com/pilot-protocol/common/driver"
+    "github.com/pilot-protocol/common/protocol"
+    "github.com/pilot-protocol/eventstream"
 )
 
 type Telemetry struct {
@@ -131,31 +136,39 @@ func main() {
         droneID = "drone-01"
     }
 
+    <span class="comment">// The hub whose broker the swarm shares, e.g. "0:0000.0000.1A2B"</span>
+    hub, err := protocol.ParseAddr(os.Getenv("HUB_ADDR"))
+    if err != nil {
+        panic(err)
+    }
+
     d, err := driver.Connect("")
     if err != nil {
         panic(err)
     }
-    stream, err := d.OpenEventStream()
+
+    <span class="comment">// Subscribe to commands addressed to this drone; the same client publishes telemetry</span>
+    cmdTopic := fmt.Sprintf("swarm.command.%s", droneID)
+    stream, err := eventstream.Subscribe(d, hub, cmdTopic)
     if err != nil {
         panic(err)
     }
-
-    topic := fmt.Sprintf("swarm.telemetry.%s", droneID)
-
-    <span class="comment">// Also subscribe to commands addressed to this drone</span>
-    cmdTopic := fmt.Sprintf("swarm.command.%s", droneID)
-    cmdCh, _ := stream.Subscribe(cmdTopic)
+    defer stream.Close()
 
     <span class="comment">// Handle incoming commands in background</span>
     go func() {
-        for event := range cmdCh {
+        for {
+            event, err := stream.Recv()
+            if err != nil {
+                return
+            }
             var cmd struct {
                 Action string    \`json:"action"\`
                 WaypointLat float64 \`json:"waypoint_lat,omitempty"\`
                 WaypointLon float64 \`json:"waypoint_lon,omitempty"\`
                 WaypointAlt float64 \`json:"waypoint_alt,omitempty"\`
             }
-            json.Unmarshal(event.Data, &cmd)
+            json.Unmarshal(event.Payload, &cmd)
             fmt.Printf("[CMD] %s: %+v\\n", cmd.Action, cmd)
             <span class="comment">// Send command to flight controller...</span>
         }
@@ -178,7 +191,7 @@ func main() {
             Ts:         time.Now().UnixMilli(),
         }
         data, _ := json.Marshal(telem)
-        stream.Publish(topic, data)
+        stream.Publish("swarm.telemetry", data)
     }
 }
 
@@ -198,8 +211,11 @@ func getFlightState() string { return "flying" }</code></pre>
 import (
     "encoding/json"
     "fmt"
+    "os"
 
     "github.com/pilot-protocol/common/driver"
+    "github.com/pilot-protocol/common/protocol"
+    "github.com/pilot-protocol/eventstream"
 )
 
 type Telemetry struct {
@@ -220,34 +236,47 @@ type Waypoint struct {
 }
 
 func main() {
+    hub, err := protocol.ParseAddr(os.Getenv("HUB_ADDR"))
+    if err != nil {
+        panic(err)
+    }
+
     d, err := driver.Connect("")
     if err != nil {
         panic(err)
     }
-    stream, err := d.OpenEventStream()
+
+    <span class="comment">// One subscription per topic (topics match exactly; "*" would mean every topic)</span>
+    telemStream, err := eventstream.Subscribe(d, hub, "swarm.telemetry")
+    if err != nil {
+        panic(err)
+    }
+    eventStream, err := eventstream.Subscribe(d, hub, "swarm.events")
     if err != nil {
         panic(err)
     }
 
-    <span class="comment">// Subscribe to ALL drone telemetry</span>
-    telemCh, _ := stream.Subscribe("swarm.telemetry.*")
-
-    <span class="comment">// Subscribe to swarm events (low battery, obstacles, etc.)</span>
-    eventCh, _ := stream.Subscribe("swarm.events.*")
-
-    <span class="comment">// Handle events in background</span>
+    <span class="comment">// Handle events (low battery, obstacles, etc.) in background</span>
     go func() {
-        for event := range eventCh {
-            fmt.Printf("[EVENT] %s: %s\\n", event.Topic, string(event.Data))
+        for {
+            event, err := eventStream.Recv()
+            if err != nil {
+                return
+            }
+            fmt.Printf("[EVENT] %s: %s\\n", event.Topic, string(event.Payload))
         }
     }()
 
     <span class="comment">// Process telemetry</span>
     droneState := make(map[string]Telemetry)
 
-    for event := range telemCh {
+    for {
+        event, err := telemStream.Recv()
+        if err != nil {
+            panic(err)
+        }
         var telem Telemetry
-        json.Unmarshal(event.Data, &telem)
+        json.Unmarshal(event.Payload, &telem)
         droneState[telem.DroneID] = telem
 
         <span class="comment">// Check for low battery and send return-to-home command</span>
@@ -263,7 +292,7 @@ func main() {
             }
             data, _ := json.Marshal(cmd)
             cmdTopic := fmt.Sprintf("swarm.command.%s", telem.DroneID)
-            stream.Publish(cmdTopic, data)
+            telemStream.Publish(cmdTopic, data)
         }
 
         <span class="comment">// Display swarm status every 100 updates</span>
@@ -282,23 +311,22 @@ func main() {
   <p>Pilot handles this transparently with its three-stage NAT traversal:</p>
 
   <ol>
-    <li><strong>STUN discovery.</strong> Each drone discovers its public IP and NAT type by querying the beacon server over UDP. This takes ~50ms.</li>
-    <li><strong>Hole-punching.</strong> For restricted-cone and port-restricted-cone NAT (the most common types on consumer and carrier networks), the beacon coordinates a simultaneous hole-punch. Both peers send a UDP packet to each other's public endpoint at the same time, creating a NAT mapping that allows bidirectional traffic.</li>
-    <li><strong>Relay fallback.</strong> For symmetric NAT (common on enterprise networks and some cellular carriers), where hole-punching cannot work, the beacon relays traffic. This adds ~10ms of latency (one extra hop) but guarantees connectivity.</li>
+    <li><strong>STUN discovery.</strong> Each drone discovers its public IP and port by querying the beacon server over UDP.</li>
+    <li><strong>Hole-punching.</strong> When a direct packet does not get through, the beacon coordinates a simultaneous hole-punch. Both peers send a UDP packet to each other's public endpoint at the same time, creating NAT mappings that allow bidirectional traffic. This works through the cone-type NATs common on consumer and carrier networks.</li>
+    <li><strong>Relay fallback.</strong> When hole-punching fails (symmetric NAT, common on enterprise networks and some cellular carriers), the beacon relays the encrypted traffic. That adds a trip through the beacon, and it works as long as both peers can reach the beacon.</li>
   </ol>
 
   <pre><code><span class="comment"># Drone on cellular (behind carrier-grade NAT)</span>
-<span class="cmd">pilot-daemon</span>
-<span class="comment"># NAT type is detected automatically</span>
-<span class="comment"># Hole-punch or relay is selected automatically</span>
+<span class="cmd">pilotctl daemon start</span>
+<span class="comment"># Direct path first, then hole-punch, then relay -- tried automatically</span>
 <span class="comment"># No configuration needed on the drone</span>
 
 <span class="comment"># Ground station on WiFi (behind home router NAT)</span>
-<span class="cmd">pilot-daemon</span>
+<span class="cmd">pilotctl daemon start</span>
 <span class="comment"># Same: automatic NAT traversal</span>
 
-<span class="comment"># Both can now communicate regardless of NAT type</span>
-<span class="cmd">pilotctl ping 1:0001.0002.0001</span>  <span class="comment"># Ground station pings drone</span></code></pre>
+<span class="comment"># Once they trust each other, both can communicate whatever the NAT</span>
+<span class="cmd">pilotctl ping 0:0000.0002.0001</span>  <span class="comment"># Ground station pings drone</span></code></pre>
 
   <p>This is critical for field deployment. You do not ask a farmer to configure port forwarding on the cellular modem attached to a survey drone. You do not ask a search-and-rescue team to set up a VPN before deploying robots in a disaster zone. The communication just works because NAT traversal is built into the protocol, not bolted on as a configuration step.</p>
   </section>
@@ -350,13 +378,6 @@ func main() {
       <td>AES-256-GCM (built-in)</td>
     </tr>
     <tr>
-      <td>Memory (daemon)</td>
-      <td>60-100 MB</td>
-      <td>~1 MB (library)</td>
-      <td>~20 MB</td>
-      <td>~10 MB</td>
-    </tr>
-    <tr>
       <td>QoS/Reliability</td>
       <td>Full DDS QoS</td>
       <td>None (best-effort)</td>
@@ -388,11 +409,11 @@ func main() {
 
   <p><strong>ROS2/DDS</strong> has the largest ecosystem. If you need MoveIt for manipulation, Nav2 for navigation, or integration with hundreds of sensor drivers, ROS2 is the pragmatic choice despite its communication overhead. The communication layer is the price you pay for the ecosystem.</p>
 
-  <p><strong>MAVLink</strong> is purpose-built for drone autopilots. It is extremely lightweight (~1 MB) and well-suited for telemetry and command between a ground station and drones using standard autopilot firmware (ArduPilot, PX4). But it is point-to-point and has no pub/sub, no encryption, and no NAT traversal. For swarm coordination beyond basic telemetry, you need something on top of MAVLink.</p>
+  <p><strong>MAVLink</strong> is purpose-built for drone autopilots. It is extremely lightweight and well-suited for telemetry and command between a ground station and drones using standard autopilot firmware (ArduPilot, PX4). But it is point-to-point and has no pub/sub, no encryption, and no NAT traversal. For swarm coordination beyond basic telemetry, you need something on top of MAVLink.</p>
 
-  <p><strong>Zenoh</strong> is the closest competitor for this use case. It has low overhead (~20 MB), supports pub/sub, and has a router-based approach to bridging networks. Its scouting mechanism still uses multicast by default (though it can be configured for unicast), and its NAT traversal relies on Zenoh routers rather than built-in hole-punching. For constrained environments, Zenoh is a strong option.</p>
+  <p><strong>Zenoh</strong> is the closest competitor for this use case. It has low overhead, supports pub/sub, and has a router-based approach to bridging networks. Its scouting mechanism still uses multicast by default (though it can be configured for unicast), and its NAT traversal relies on Zenoh routers rather than built-in hole-punching. For constrained environments, Zenoh is a strong option.</p>
 
-  <p><strong>Pilot</strong> occupies the niche of zero-configuration swarm communication. No multicast, built-in NAT traversal, 10 MB footprint, and encrypted by default. It trades the rich QoS model of DDS for simplicity and the massive ecosystem of ROS2 for lightweight deployment.</p>
+  <p><strong>Pilot</strong> occupies the niche of zero-configuration swarm communication. No multicast, built-in NAT traversal, static binaries, and encrypted by default. It trades the rich QoS model of DDS for simplicity and the massive ecosystem of ROS2 for lightweight deployment.</p>
   </section>
 
   <section>
@@ -402,10 +423,11 @@ func main() {
 
   <ul>
     <li><strong>No hard real-time guarantees.</strong> Pilot uses UDP with congestion control and flow control, but it does not provide deterministic latency. For safety-critical control loops -- motor commands, emergency stops, collision avoidance at 100+ Hz -- you need a real-time transport like EtherCAT, ROS2 with real-time Linux, or direct serial communication. Pilot is for coordination (telemetry, task assignment, swarm planning), not for actuator control.</li>
-    <li><strong>No QoS profiles.</strong> DDS provides configurable QoS: reliable vs best-effort, transient-local vs volatile, deadline constraints, liveliness assertions. Pilot's event stream is best-effort pub/sub. If a message is lost during congestion, it is gone. For telemetry at 10 Hz (where the next update replaces the previous one), this is acceptable. For critical commands, use the data exchange port (1001) which provides reliable delivery.</li>
+    <li><strong>No QoS profiles.</strong> DDS provides configurable QoS: reliable vs best-effort, transient-local vs volatile, deadline constraints, liveliness assertions. Pilot's event stream has none of these: events travel over the daemon's reliable stream, but nothing is stored, so a subscriber that is disconnected when an event is published never receives it. For telemetry at 10 Hz (where the next update replaces the previous one), this is acceptable. For critical commands, use <code>send-message</code> (the data exchange port, 1001), where the receiver acknowledges each message it stores.</li>
     <li><strong>Registry dependency.</strong> Unlike DDS's decentralized multicast discovery, Pilot uses a registry for peer discovery. If the network is temporarily unreachable, new robots cannot discover peers, but existing connections continue working.</li>
     <li><strong>No ROS2 integration.</strong> Pilot does not provide a ROS2 transport plugin. If your robot stack depends on ROS2 packages (Nav2, MoveIt, sensor drivers), you cannot replace DDS with Pilot. You can, however, run Pilot alongside ROS2 for swarm-level coordination while keeping ROS2 for intra-robot communication.</li>
-    <li><strong>Not for control frequencies above ~50 Hz.</strong> The event stream is designed for coordination messages, not high-frequency control loops. At 10-50 Hz (telemetry, status updates, waypoints), Pilot performs well. At 100+ Hz (servo commands, IMU fusion), use a dedicated real-time transport.</li>
+    <li><strong>Not for high-frequency control loops.</strong> The event stream is designed for coordination messages (telemetry, status updates, waypoints), not control loops. For servo commands or IMU fusion at 100+ Hz, use a dedicated real-time transport.</li>
+    <li><strong>64-bit hosts only.</strong> Release builds cover Linux and macOS on amd64 and arm64. Microcontrollers such as the ESP32 cannot run the daemon; bridge them through a companion computer.</li>
   </ul>
 
   <div class="callout">
@@ -416,39 +438,47 @@ func main() {
   <section>
   <h2>Getting Started with a Robot Swarm</h2>
 
-  <p>Set up a 3-robot swarm with a ground station:</p>
+  <p>Set up a 3-robot swarm with a ground station and a hub:</p>
 
-  <pre><code><span class="comment"># On the ground station (also runs the registry)</span>
-<span class="cmd">go install github.com/pilot-protocol/pilotprotocol/cmd/pilotctl@latest</span>
-<span class="cmd">pilot-daemon</span>
+  <pre><code><span class="comment"># On every node: install pilotctl and pilot-daemon, then start the daemon</span>
+<span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
+<span class="cmd">pilotctl daemon start</span>
+
+<span class="comment"># On the hub (always on): name it, then approve each node's handshake</span>
+<span class="cmd">pilotctl set-hostname swarm-hub</span>
+<span class="cmd">pilotctl pending</span>
+<span class="cmd">pilotctl approve &lt;node_id&gt;</span>
+
+<span class="comment"># On the ground station</span>
+<span class="cmd">pilotctl set-hostname ground-station</span>
 <span class="cmd">pilotctl extras set-tags ground-station swarm-controller</span>
+<span class="cmd">pilotctl handshake &lt;hub-address&gt; "ground station for survey-team-alpha"</span>
 <span class="cmd">pilotctl subscribe &lt;hub-address|hostname&gt; swarm.telemetry</span>
 
-<span class="comment"># On each robot (Raspberry Pi / Jetson Nano)</span>
-<span class="cmd">go install github.com/pilot-protocol/pilotprotocol/cmd/pilotctl@latest</span>
-<span class="cmd">pilot-daemon</span>
-<span class="cmd">pilotctl network join 1</span>
+<span class="comment"># On each robot (Raspberry Pi / Jetson with a 64-bit OS)</span>
+<span class="cmd">pilotctl set-hostname robot-01</span>
 <span class="cmd">pilotctl extras set-tags swarm-member robot ground-unit</span>
+<span class="cmd">pilotctl handshake &lt;hub-address&gt; "robot-01 in survey-team-alpha"</span>
 
 <span class="comment"># Verify connectivity</span>
-<span class="cmd">pilotctl peers --search "swarm-member" --json</span>
-<span class="cmd">pilotctl ping 1:0001.0001.0001</span>
+<span class="cmd">pilotctl ping &lt;hub-address|hostname&gt;</span>
 
 <span class="comment"># Start publishing telemetry</span>
-<span class="cmd">pilotctl publish &lt;hub-address|hostname&gt; swarm.telemetry --data '{"lat":37.77,"lon":-122.42,"battery":95}'</span></code></pre>
+<span class="cmd">pilotctl publish &lt;hub-address|hostname&gt; swarm.telemetry --data '{"drone_id":"robot-01","lat":37.77,"lon":-122.42,"battery_pct":95}'</span></code></pre>
 
-  <p>The entire communication stack -- daemon, registry client, NAT traversal, encryption -- is a single binary with zero external dependencies. Cross-compile it for ARM (Raspberry Pi) or ARM64 (Jetson) with one command:</p>
+  <p>The communication stack -- daemon, registry client, NAT traversal, encryption -- is two static binaries, <code>pilotctl</code> and <code>pilot-daemon</code>, with no runtime dependencies. They need a registry and beacon: the public ones, or your own. Release builds include Linux arm64, and the install script picks the right one. To build from source for an arm64 robot instead:</p>
 
-  <pre><code><span class="cmd">GOOS=linux GOARCH=arm64 go build -o pilotctl ./cmd/pilotctl</span>
-<span class="comment"># Copy the binary to the robot</span>
-<span class="cmd">scp pilotctl robot@192.168.1.42:/usr/local/bin/</span></code></pre>
+  <pre><code><span class="cmd">GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o pilotctl ./cmd/pilotctl</span>
+<span class="cmd">GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o pilot-daemon ./cmd/daemon</span>
+<span class="comment"># Copy both binaries to the robot</span>
+<span class="cmd">scp pilotctl pilot-daemon robot@192.168.1.42:/usr/local/bin/</span></code></pre>
 
-  <p>No ROS2 installation. No DDS configuration. No multicast tuning. A single 15 MB binary that runs on any Linux ARM device and provides encrypted, NAT-traversing swarm communication out of the box.</p>
+  <p>No ROS2 installation. No DDS configuration. No multicast tuning. Two binaries that run on 64-bit Linux ARM devices and provide encrypted, NAT-traversing swarm communication out of the box.</p>
   </section>
 
   <div class="cta">
     <h3>Try Pilot Protocol</h3>
-    <p>10 MB daemon, single UDP socket, no multicast storms. Coordinate robot swarms on constrained hardware with zero-configuration networking.</p>
+    <p>One UDP socket per daemon, no multicast storms. Coordinate robot swarms on constrained hardware with zero-configuration networking.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 ---

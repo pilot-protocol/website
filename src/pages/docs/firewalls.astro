@@ -30,9 +30,13 @@ const bodyContent = `<h1>Running pilot behind a firewall</h1>
 
   <h2 id="enabling">Enabling compat mode</h2>
 
-  <p>Compat mode is opt-in via one CLI flag on the standalone <code>pilot-daemon</code> binary:</p>
+  <p>Compat mode is one flag, on <code>pilotctl daemon start</code> or on the <code>pilot-daemon</code> binary itself:</p>
 
-  <pre><code><span class="cmd">pilot-daemon</span> -transport=compat</code></pre>
+  <pre><code><span class="cmd">pilotctl</span> daemon start --transport compat   <span class="comment"># always compat</span>
+<span class="cmd">pilotctl</span> daemon start --transport auto     <span class="comment"># UDP when the beacon answers over UDP, else compat on TCP 443</span>
+<span class="cmd">pilot-daemon</span> -transport=compat               <span class="comment"># the daemon binary directly</span></code></pre>
+
+  <p>You can also set it once with <code>pilotctl config --set transport=compat</code> (config.json <code>transport</code>) or <code>$PILOT_TRANSPORT</code>. Precedence is the flag, then <code>$PILOT_TRANSPORT</code>, then config.json. With none of them set, <code>pilotctl daemon start</code> asks the daemon for <code>auto</code>; <code>pilot-daemon</code> run directly defaults to <code>udp</code>.</p>
 
   <p>That's it — every other flag has a working default. As of v1.10.3 the daemon uses <strong>a single outbound port — TCP/443</strong> for everything: the beacon WSS bridge AND the registry (one long-lived WSS connection to the beacon, plus a small TLS connection pool to the registry, all on 443). Explicit form:</p>
 
@@ -46,8 +50,8 @@ const bodyContent = `<h1>Running pilot behind a firewall</h1>
   <p>Flag semantics:</p>
 
   <ul>
-    <li><code>-transport=compat</code> — switches the tunnel transport from UDP to WSS. Default is <code>udp</code>; the daemon falls back to UDP behavior if this flag is unset.</li>
-    <li><code>-compat-beacon &lt;url&gt;</code> — the beacon's WSS endpoint. The default points at the managed public beacon (<code>wss://beacon.pilotprotocol.network/v1/compat</code>); self-hosted deployments override it.</li>
+    <li><code>-transport=compat</code> — switches the tunnel transport from UDP to WSS. <code>auto</code> picks UDP or compat at startup and logs the choice; <code>udp</code> is the daemon binary's own default.</li>
+    <li><code>-compat-beacon &lt;url&gt;</code> — the beacon's WSS endpoint. The default points at the public beacon (<code>wss://beacon.pilotprotocol.network/v1/compat</code>); self-hosted deployments override it.</li>
     <li><code>-tls-trust &lt;mode&gt;</code> — see <a href="#tls-trust">TLS trust</a>. Defaults to <code>system</code>.</li>
     <li><code>-registry &lt;host:port&gt;</code> — auto-defaults to <code>registry.pilotprotocol.network:443</code> in compat mode. Overrides the standard <code>34.71.57.205:9000</code> UDP-mode default; you can still pass a custom registry host:port if you self-host.</li>
     <li><code>-registry-tls</code> + <code>-registry-trust=system</code> — auto-enabled in compat mode. The registry channel is TLS-terminated on the same TCP/443 listener as the beacon WSS bridge (nginx SNI-routes the two hostnames behind one port).</li>
@@ -82,13 +86,20 @@ const bodyContent = `<h1>Running pilot behind a firewall</h1>
 
   <h2 id="proxy-only">Proxy-only egress (no direct TCP)</h2>
 
-  <p>Some sandboxes go further than blocking UDP: DNS for <code>*.pilotprotocol.network</code> returns blackhole addresses, <code>/etc/hosts</code> is read-only, and the only way out is an HTTP proxy that accepts <code>CONNECT</code> to port 443. Hosted agent VMs such as Meta Muse's work this way. Compat mode alone cannot help there, because the daemon can neither resolve nor dial the registry.</p>
+  <p>Some sandboxes go further than blocking UDP: DNS for <code>*.pilotprotocol.network</code> returns blackhole addresses, and the only way out is an HTTP proxy that accepts <code>CONNECT</code> to port 443. Hosted agent VMs such as Meta Muse's work this way.</p>
 
-  <p>The <a href="https://github.com/TeoSlayer/pilot-skills/tree/main/skills/pilot-sandbox">pilot-sandbox</a> skill covers that case. A transparent SNI router on <code>127.0.0.1:443</code> reads each ClientHello's server name, opens a <code>CONNECT</code> tunnel through the proxy, and replays the original bytes unchanged, so TLS stays end to end. A launcher bind-mounts a hosts file over <code>/etc/hosts</code> inside a private mount namespace (<code>unshare -m</code>, root required) and runs the daemon there with the compat flags above. Rewriting the SNI in flight does not work: TLS binds the session keys to the handshake transcript and the server answers <code>DECRYPTION_FAILED_OR_BAD_RECORD_MAC</code>.</p>
+  <p>Since v1.13.11 the daemon speaks HTTPS proxies itself. With compat mode and <code>--proxy auto</code> (the default), the registry, the WSS beacon and the daemon's HTTP clients go through <code>$HTTPS_PROXY</code> / <code>$ALL_PROXY</code> (honoring <code>$NO_PROXY</code>). The daemon <code>CONNECT</code>s by host name, so poisoned local DNS does not matter, and TLS stays end to end. Behind such a proxy with UDP blocked, a plain <code>pilotctl daemon start</code> picks compat by itself.</p>
 
-  <pre><code><span class="cmd">clawhub</span> install pilot-sandbox
-<span class="cmd">nohup</span> python3 scripts/sni_router.py &gt; sni_router.log 2&gt;&amp;1 &amp;
-<span class="cmd">setsid</span> unshare -m ./scripts/run-daemon.sh &gt;&gt; daemon.log 2&gt;&amp;1 &lt; /dev/null &amp;</code></pre>
+  <pre><code><span class="comment"># Usually nothing to set: HTTPS_PROXY from the environment is used with compat</span>
+<span class="cmd">pilotctl</span> daemon start
+
+<span class="comment"># An explicit proxy, used for every connection except loopback</span>
+<span class="cmd">pilotctl</span> daemon start --transport compat --proxy http://proxy.internal:3128
+
+<span class="comment"># A proxy whose credentials rotate: a command that prints the current proxy URL</span>
+<span class="cmd">pilotctl</span> daemon start --proxy-cmd 'printf %s "$https_proxy"'</code></pre>
+
+  <p><code>--proxy</code> takes <code>auto</code>, <code>off</code>, or an <code>http(s)://[user:pass@]host:port</code> URL (also <code>$PILOT_PROXY</code> and config.json <code>proxy</code>); a URL with credentials is passed to the daemon through its environment, never on the command line. <code>--proxy-cmd</code> (also <code>$PILOT_PROXY_CMD</code> and config.json <code>proxy_cmd</code>) runs with <code>sh -c</code>, again once 60 s have passed, and whenever the proxy rejects the credentials.</p>
 
   <p>Step-by-step: <a href="/learn/pilot-node-through-https-only-egress-proxy">Run a Pilot node through an HTTPS-only egress proxy</a>. For Muse specifically: <a href="/learn/install-pilot-skills-in-meta-muse">Install Pilot Protocol skills in Meta Muse</a>.</p>
 

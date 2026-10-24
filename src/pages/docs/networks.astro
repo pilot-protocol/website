@@ -24,7 +24,7 @@ const bodyContent = `<h1>Networks</h1>
 
   <p>Add 10 agents to the same network and they can discover and connect to each other without creating N&sup2; bilateral trust pairs. Membership is a group-level network grant; enterprise port policy and application authorization can further narrow the resulting access.</p>
 
-  <p>Networks are managed through the <code>pilotctl network</code> commands - create networks, add agents, monitor status, and control membership from the CLI. Private Network is in <a href="/plans">early access</a>; the team onboards deployments directly.</p>
+  <p>Any node can list, join, leave and inspect networks with the <code>pilotctl network</code> commands. Creating a network needs the registry admin token. On the public backbone run by Vulture Labs only the operators hold that token, so you can join networks there only when the operators created one and gave you its token or an invite. To create and run your own networks, run your own registry: see <a href="enterprise">Self-hosting the registry</a>.</p>
 
   <h2 id="vs-trust">Networks vs. bilateral trust</h2>
 
@@ -71,8 +71,7 @@ const bodyContent = `<h1>Networks</h1>
 
   <h3>Enterprise networks</h3>
 
-  <p><em>Enterprise networks are in early access — the commands below work on self-hosted deployments; managed availability is onboarding via <a href="/plans">Plans</a>.</em></p>
-  <p>Enterprise networks add a full suite of production controls on top of standard network membership. Enable enterprise at creation time with <code>pilotctl network create --name prod --enterprise</code>.</p>
+  <p>Enterprise mode adds production controls on top of standard network membership. Enable it at creation time with <code>pilotctl network create --name prod --enterprise</code> on a registry where you hold the admin token.</p>
 
   <ul>
     <li><strong><a href="enterprise-rbac">RBAC</a></strong> - three-tier roles (owner, admin, member) with a permissions matrix. Promote, demote, kick, and transfer ownership.</li>
@@ -80,11 +79,11 @@ const bodyContent = `<h1>Networks</h1>
     <li><strong><a href="enterprise-identity">Identity &amp; SSO</a></strong> - OIDC/JWT validation plus external identity mapping and webhook-based bridges.</li>
     <li><strong><a href="enterprise-identity#directory-sync">Directory sync</a></strong> - map external directory entries and roles to existing agents; sync does not create agents or add members.</li>
     <li><strong><a href="enterprise-policies">Policies</a></strong> - membership caps, port whitelists, and network descriptions with merge-on-update semantics.</li>
-    <li><strong><a href="enterprise-audit">Audit &amp; compliance</a></strong> - structured audit events, SIEM export (Splunk HEC, CEF, JSON), webhooks with DLQ.</li>
+    <li><strong><a href="enterprise-audit">Audit log &amp; export</a></strong> - structured audit events, SIEM export (Splunk HEC, CEF, JSON), webhooks with DLQ.</li>
     <li><strong><a href="enterprise-blueprints">Blueprints</a></strong> - declarative JSON provisioning: one document, one command, full network setup.</li>
   </ul>
 
-  <p>See the <a href="enterprise">Enterprise documentation</a> for the full guide, or the <a href="cli-reference#networks">CLI reference</a> for enterprise commands.</p>
+  <p>See <a href="enterprise">Self-hosting the registry</a> for the full guide, or the <a href="cli-reference#networks">CLI reference</a> for the network commands.</p>
 
   <h3>The design principle</h3>
 
@@ -105,13 +104,13 @@ const bodyContent = `<h1>Networks</h1>
 
   <h2 id="join-rules">Join rules</h2>
 
-  <p>When you create a network with <code>pilotctl network create</code>, you choose a join rule that controls how new members are added:</p>
+  <p>Whoever creates a network with <code>pilotctl network create</code> chooses a join rule that controls how new members are added:</p>
 
   <table>
     <thead><tr><th>Rule</th><th>Who can join</th><th>Use case</th></tr></thead>
     <tbody>
       <tr><td><strong>Open</strong></td><td>Any node can join without approval</td><td>Internal fleets where every owned agent should join without a per-agent invite</td></tr>
-      <tr><td><strong>Invite only</strong></td><td>Only when an owner or admin invites them</td><td>High-security environments where membership is tightly controlled</td></tr>
+      <tr><td><strong>Invite only</strong></td><td>Only nodes an owner or admin invites, once they accept. Needs enterprise mode.</td><td>High-security environments where membership is tightly controlled</td></tr>
       <tr><td><strong>Token-gated</strong></td><td>Anyone with the shared secret token</td><td>Teams that can distribute a token out-of-band (Slack, email, config file)</td></tr>
     </tbody>
   </table>
@@ -126,11 +125,26 @@ const bodyContent = `<h1>Networks</h1>
 
   <pre><code><span class="cmd">pilotctl</span> network create --name research-lab --join-rule token --token my-secret</code></pre>
 
-  <p>The <code>--join-rule</code> is one of <code>open</code>, <code>invite</code>, or <code>token</code>. Use <code>--enterprise</code> to enable RBAC, policies, audit, and blueprints. See <a href="/plans">Plans</a> for tier details.</p>
+  <p>This needs the registry admin token (<code>PILOT_ADMIN_TOKEN</code> or <code>admin_token</code> in <code>~/.pilot/config.json</code>). The <code>--join-rule</code> is one of <code>open</code> (the default), <code>invite</code>, or <code>token</code>; <code>invite</code> requires <code>--enterprise</code>, which enables roles, invites, directory sync and port policies. <code>--node-id</code> sets the creating node, which becomes the owner.</p>
 
   <h3>Add agents</h3>
 
-  <p>Admins add agents by identifier:</p>
+  <p>How a node gets in depends on the join rule. On <strong>open</strong> and <strong>token</strong> networks, agents join themselves:</p>
+
+  <pre><code><span class="cmd">pilotctl</span> network join 1
+<span class="cmd">pilotctl</span> network join 1 --token my-secret</code></pre>
+
+  <p>On <strong>invite-only</strong> networks, an owner or admin invites the agent from their own node, and the invited agent accepts. Invites expire after 30 days.</p>
+
+  <pre><code><span class="comment"># On an owner or admin node: invite by node ID, Pilot address or hostname</span>
+<span class="cmd">pilotctl</span> network invite 1 1001
+<span class="cmd">pilotctl</span> network invite 1 my-agent
+
+<span class="comment"># On the invited node</span>
+<span class="cmd">pilotctl</span> network invites
+<span class="cmd">pilotctl</span> network accept 1      <span class="comment"># or: pilotctl network reject 1</span></code></pre>
+
+  <p>With the registry admin token you can also join another node to an open or token network: <code>pilotctl network join 1 --node-id 1001</code> (add <code>--token</code> for a token network). Invite-only networks always go through the invite.</p>
 
   <table>
     <thead><tr><th>Format</th><th>Example</th><th>Where to find it</th></tr></thead>
@@ -141,12 +155,7 @@ const bodyContent = `<h1>Networks</h1>
     </tbody>
   </table>
 
-  <pre><code><span class="cmd">pilotctl</span> network invite 1 1001
-<span class="comment"># or by hostname / pilot address</span>
-<span class="cmd">pilotctl</span> network invite 1 my-agent
-<span class="cmd">pilotctl</span> network invite 1 1:0001.0000.03E9</code></pre>
-
-  <p>Once added, the agent can immediately communicate with all other network members.</p>
+  <p>Once a node is a member, it can communicate with all other network members.</p>
 
   <h3>Monitor agents</h3>
 
@@ -154,15 +163,17 @@ const bodyContent = `<h1>Networks</h1>
 
   <h3>Remove agents</h3>
 
-  <pre><code><span class="cmd">pilotctl</span> network kick 1 1001
+  <pre><code><span class="cmd">pilotctl</span> extras network kick 1 1001
 <span class="comment"># or by hostname / pilot address</span>
-<span class="cmd">pilotctl</span> network kick 1 my-agent</code></pre>
+<span class="cmd">pilotctl</span> extras network kick 1 my-agent</code></pre>
+
+  <p>Kicking needs the registry admin token or the network&rsquo;s own admin token. A member can also leave on its own with <code>pilotctl network leave 1</code>.</p>
 
   <p>Access is revoked immediately - the agent can no longer resolve, connect to, or be discovered by other network members (unless they also share bilateral trust).</p>
 
   <h3>Delete a network</h3>
 
-  <p>Owners can delete a network with <code>pilotctl network delete &lt;network_id&gt;</code>. All member associations are removed. Agents retain their backbone registration and bilateral trust relationships, but lose all network-granted permissions.</p>
+  <p>With the admin token, <code>pilotctl extras network delete &lt;network_id&gt;</code> deletes a network. All member associations are removed. Agents retain their backbone registration and bilateral trust relationships, but lose all network-granted permissions.</p>
 
   <h2 id="how-it-works">How it works under the hood</h2>
 
@@ -196,7 +207,7 @@ const bodyContent = `<h1>Networks</h1>
 
   <h3>Immediate revocation</h3>
 
-  <p>Running <code>pilotctl network kick</code> revokes the agent&rsquo;s access at the connection gate immediately: a kicked peer&rsquo;s next connection attempt re-checks the registry and is silently dropped. Membership <em>metadata</em> is not instant everywhere, though — daemons reconcile network membership on a periodic sync loop (every 5 minutes), and resolve/policy results are cached — so listings and cached lookups can briefly lag the registry, which remains the single source of truth.</p>
+  <p>Running <code>pilotctl extras network kick</code> revokes the agent&rsquo;s access at the connection gate immediately: a kicked peer&rsquo;s next connection attempt re-checks the registry and is silently dropped. Membership <em>metadata</em> is not instant everywhere, though — daemons reconcile network membership on a periodic sync loop (every 5 minutes), and resolve/policy results are cached — so listings and cached lookups can briefly lag the registry, which remains the single source of truth.</p>
 
   <h3>No transitive trust</h3>
 
@@ -204,10 +215,10 @@ const bodyContent = `<h1>Networks</h1>
 
   <h3>Enterprise port policies</h3>
 
-  <p>Enterprise networks support <a href="enterprise-policies">port-level policies</a> that restrict which ports members can access. Use <code>pilotctl network policy &lt;network_id&gt; --allowed-ports 80,443,1001</code> to limit accessible ports within a network. Other settable flags: <code>--max-members &lt;n&gt;</code>, <code>--description &lt;text&gt;</code>. Without any <code>--&lt;flag&gt;</code> argument, <code>pilotctl network policy &lt;network_id&gt;</code> shows the current policy. See <a href="enterprise-policies">Network Policies</a> for details on membership caps, port whitelists, and merge-on-update semantics.</p>
+  <p>Enterprise networks support <a href="enterprise-policies">port-level policies</a> that restrict which ports members can access. With the admin token, use <code>pilotctl extras network policy &lt;network_id&gt; --allowed-ports 80,443,1001</code> to limit accessible ports within a network. Other settable flags: <code>--max-members &lt;n&gt;</code>, <code>--description &lt;text&gt;</code>. Without any <code>--&lt;flag&gt;</code> argument, <code>pilotctl extras network policy &lt;network_id&gt;</code> shows the current policy. See <a href="enterprise-policies">Network Policies</a> for details on membership caps, port whitelists, and merge-on-update semantics.</p>
 
   <div class="callout">
-    <strong>Further reading:</strong> <a href="/blog/private-networks-now-in-testing">Private Networks: Now in Testing</a> · <a href="/blog/private-agent-network-company">Build a Private Agent Network for Your Company</a> · <a href="trust">Trust & Handshakes</a>
+    <strong>Further reading:</strong> <a href="enterprise">Self-hosting the registry</a> · <a href="/blog/private-agent-network-company">Build a Private Agent Network for Your Company</a> · <a href="trust">Trust & Handshakes</a>
   </div>`;
 ---
 <DocLayout

@@ -81,7 +81,7 @@ const bodyContent = `<script type="application/ld+json">
 <p>Autonomous AI agents do not stay in one cloud. They spawn across AWS Lambda, GCP Vertex AI, and Azure Container Apps, often within the same workflow. That distribution is intentional: you get best-of-breed services, geographic redundancy, and the ability to meet data residency requirements across jurisdictions. But it creates a hard networking problem.</p>
 <p>Every agent-to-agent call that crosses cloud boundaries needs to be fast, authenticated, and encrypted. Traditional approaches, like site-to-site VPNs or dedicated private circuits, were designed for human-operated workloads with predictable traffic patterns. Autonomous agents are different. They spin up dynamically, communicate in bursts, and need to establish trust with peers they have never contacted before.</p>
 <p><img src="https://csuxjmfbwmkxiegfpljm.supabase.co/storage/v1/object/public/blog-images/organization-24002/1776447014878_Infographic-summarizing-multi-cloud-agent-networking.jpeg" alt="Infographic summarizing multi-cloud agent networking"></p>
-<p>Multi-cloud connectivity models like IPsec VPN, private interconnects, and SD-WAN overlays each address part of this problem, but none were built with agent autonomy in mind. That gap is where <a href="https://pilotprotocol.network/docs/service-agents">service agent overlays</a> fill in.</p>
+<p>Multi-cloud connectivity models like IPsec VPN, private interconnects, and SD-WAN overlays each address part of this problem, but none were built with agent autonomy in mind. That gap is what <a href="https://pilotprotocol.network/docs/concepts">agent-centric overlays</a> fill.</p>
 <p>Here are the critical needs your multi-cloud agent network must satisfy:</p>
 <ul>
 <li><strong>Interoperability:</strong> Agents must communicate across cloud vendors without protocol translation layers.</li>
@@ -134,7 +134,7 @@ const bodyContent = `<script type="application/ld+json">
 <td>Agent overlay (e.g., Pilot Protocol)</td>
 <td>Variable</td>
 <td>Low to medium</td>
-<td>Usage-based</td>
+<td>Free (open source)</td>
 <td>Autonomous agent fleets</td>
 </tr>
 </tbody>
@@ -159,7 +159,7 @@ const bodyContent = `<script type="application/ld+json">
 <thead>
 <tr>
 <th>Solution</th>
-<th>Monthly cost (est.)</th>
+<th>Cost model</th>
 <th>Latency</th>
 <th>Scalability</th>
 </tr>
@@ -167,19 +167,19 @@ const bodyContent = `<script type="application/ld+json">
 <tbody>
 <tr>
 <td>VPN gateway (per tunnel)</td>
-<td>$150-400+</td>
+<td>Hourly gateway or connection fees, plus data transfer</td>
 <td>Medium</td>
 <td>Low (manual)</td>
 </tr>
 <tr>
 <td>Private interconnect</td>
-<td>$500-2000+</td>
+<td>Port or circuit fees, plus data transfer</td>
 <td>Low</td>
 <td>Medium</td>
 </tr>
 <tr>
 <td>Agent overlay (Pilot Protocol)</td>
-<td>Usage-based</td>
+<td>Free, open source; public backbone at no charge</td>
 <td>Low to medium</td>
 <td>High (automatic)</td>
 </tr>
@@ -213,12 +213,12 @@ const bodyContent = `<script type="application/ld+json">
 <h2 id="pilot-protocol-powering-the-next-generation-of-multi-cloud-agent-networks" tabindex="-1">Pilot Protocol: Powering the next generation of multi-cloud agent networks</h2>
 <p>If you are ready to evaluate an alternative to VPN-centric agent networking across AWS, GCP, and Azure, Pilot Protocol provides virtual addressing, NAT traversal, peer trust, and encrypted tunnels. Direct paths are preferred, with encrypted relay fallback; operators retain responsibility for application authorization and production validation.</p>
 <p><img src="https://csuxjmfbwmkxiegfpljm.supabase.co/storage/v1/object/public/blog-images/organization-24002/1774647725213_pilotprotocol.jpg" alt="https://pilotprotocol.network"></p>
-<p>Pilot Protocol wraps your existing HTTP, gRPC, and SSH traffic inside a secure overlay, which means you can integrate it with your current stack without rewriting your agent communication logic. Explore the <a href="https://pilotprotocol.network/research/WHITEPAPER.pdf">Pilot Protocol overlay network</a> specification to understand how it works under the hood, and start testing your own multi-cloud agent connectivity today.</p>
+<p>Pilot Protocol streams behave like TCP connections (the Go driver returns a <code>net.Conn</code>), so HTTP, gRPC, and SSH traffic can run over the overlay with small changes to how your agents dial each other. Explore the <a href="https://pilotprotocol.network/research/WHITEPAPER.pdf">Pilot Protocol overlay network</a> specification to understand how it works under the hood, and start testing your own multi-cloud agent connectivity today.</p>
 <h2 id="frequently-asked-questions" tabindex="-1">Frequently asked questions</h2>
 <h3 id="what-are-the-main-benefits-of-multi-cloud-networking-for-ai-agent-systems" tabindex="-1">What are the main benefits of multi-cloud networking for AI agent systems?</h3>
 <p>Multi-cloud networking gives AI agents secure, reliable, and cost-efficient communication across the best clouds, increasing autonomy and reducing downtime. It also prevents vendor lock-in and enables data residency compliance across regions.</p>
 <h3 id="how-do-overlays-like-pilot-protocol-reduce-costs-compared-to-vpns" tabindex="-1">How do overlays like Pilot Protocol reduce costs compared to VPNs?</h3>
-<p>Agent overlays eliminate VPN gateway fees and tunnel sprawl by using application-layer logic and direct agent addressing, so you only pay for what your agents actually use. There are no always-on tunnel costs or manual provisioning overhead.</p>
+<p>Agent overlays eliminate VPN gateway fees and tunnel sprawl by using application-layer logic and direct agent addressing. Pilot Protocol is open source and its public backbone is run at no charge, so there are no always-on tunnel costs or manual provisioning overhead; you pay for the compute your agents run on.</p>
 <h3 id="what-are-common-challenges-when-building-multi-cloud-agent-networks" tabindex="-1">What are common challenges when building multi-cloud agent networks?</h3>
 <p>Engineers frequently encounter non-transitive VPC peering limits, routing policy complexity, and integration friction between overlays and legacy infrastructure. Careful upfront design and automated key management reduce most of these risks.</p>
 <h3 id="are-overlays-and-enclave-networks-secure-enough-for-sensitive-ai-workloads" tabindex="-1">Are overlays and enclave networks secure enough for sensitive AI workloads?</h3>

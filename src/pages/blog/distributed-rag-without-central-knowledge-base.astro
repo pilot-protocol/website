@@ -3,9 +3,9 @@ import BlogLayout from '../../layouts/BlogLayout.astro';
 
 const bodyContent = `<p>The standard <a href="https://en.wikipedia.org/wiki/Retrieval-augmented_generation" target="_blank" rel="noopener">RAG</a> architecture puts all your documents in one <a href="https://en.wikipedia.org/wiki/Vector_database" target="_blank" rel="noopener">vector database</a>. Every agent queries the same store. Every document is copied into the same embedding space. This creates three problems that get worse as you scale: <strong>privacy violations</strong> (sensitive documents are centralized and accessible to any query), <strong>single point of failure</strong> (if the vector database goes down, every agent loses retrieval capability), and <strong>access control gaps</strong> (vector databases were not built to enforce per-document, per-user permissions).</p>
 
-  <p>The coordination nightmare is real. Teams report constantly debugging where things break down in their RAG pipelines. Every time the retriever output format changes, downstream agents break. And vector databases contain copies of private data that lack the access controls of the source systems they were copied from.</p>
+  <p>The coordination cost is real. A RAG pipeline has many places to break, and every time the retriever output format changes, downstream agents break. And vector databases contain copies of private data that lack the access controls of the source systems they were copied from.</p>
 
-  <p>There is an alternative: distribute the knowledge. Instead of copying all documents into one database, let each agent own its domain. The legal agent keeps legal documents. The engineering agent keeps code and architecture docs. The HR agent keeps employee data. Queries are routed to the relevant agents, who search their local data and return results. No document leaves its owner. No central database to secure, scale, or maintain.</p>
+  <p>There is an alternative: distribute the knowledge. Instead of copying all documents into one database, let each agent own its domain. The legal agent keeps legal documents. The engineering agent keeps code and architecture docs. The HR agent keeps employee data. Queries are routed to the relevant agents, who search their local data and return results. Only the passages an agent chooses to return leave its machine. No central database to secure, scale, or maintain.</p>
 
   <section>
   <h2>The Centralized RAG Problem</h2>
@@ -31,7 +31,7 @@ const bodyContent = `<p>The standard <a href="https://en.wikipedia.org/wiki/Retr
   <p>The advantages are immediate:</p>
 
   <ul>
-    <li><strong>Data stays where it belongs.</strong> The HR agent searches HR data on the HR machine. Documents never leave the owner's environment.</li>
+    <li><strong>Data stays where it belongs.</strong> The HR agent searches HR data on the HR machine. Only the passages it returns in an answer leave the owner's environment.</li>
     <li><strong>Independent scaling.</strong> The engineering agent can index 10 million code files. The legal agent indexes 500 contracts. Each scales independently based on its domain size, not the total corpus.</li>
     <li><strong>Independent updates.</strong> When a legal contract changes, only the legal agent re-indexes. No global index rebuild.</li>
     <li><strong>Natural access control.</strong> The agent only responds to peers it trusts. No metadata filters, no application-level ACLs.</li>
@@ -52,7 +52,7 @@ const bodyContent = `<p>The standard <a href="https://en.wikipedia.org/wiki/Retr
 <span class="comment"># User Query</span>
 <span class="comment">#     |</span>
 <span class="comment">#     v</span>
-<span class="comment"># [Synthesis Agent]  (1:0001.0001.0001)</span>
+<span class="comment"># [Synthesis Agent]  (0:0000.0001.0001)</span>
 <span class="comment">#     |         |         |</span>
 <span class="comment">#     v         v         v</span>
 <span class="comment"># [Legal]   [Eng]    [HR]</span>
@@ -61,22 +61,25 @@ const bodyContent = `<p>The standard <a href="https://en.wikipedia.org/wiki/Retr
 <span class="comment">#   v         v         v</span>
 <span class="comment"># local DB  local DB  local DB</span></code></pre>
 
-  <p>The synthesis agent discovers retriever agents by tags. Each retriever agent tags itself with its domain:</p>
+  <p>Each retriever agent registers a hostname for its domain and labels itself with tags (at most three, lowercase):</p>
 
   <pre><code><span class="comment"># Legal agent</span>
-<span class="cmd">pilotctl extras set-tags rag-retriever legal contracts compliance</span>
+<span class="cmd">pilotctl set-hostname rag-legal</span>
+<span class="cmd">pilotctl extras set-tags rag-retriever legal contracts</span>
 
 <span class="comment"># Engineering agent</span>
-<span class="cmd">pilotctl extras set-tags rag-retriever engineering code architecture</span>
+<span class="cmd">pilotctl set-hostname rag-eng</span>
+<span class="cmd">pilotctl extras set-tags rag-retriever engineering code</span>
 
 <span class="comment"># HR agent</span>
-<span class="cmd">pilotctl extras set-tags rag-retriever hr employees benefits</span></code></pre>
+<span class="cmd">pilotctl set-hostname rag-hr</span>
+<span class="cmd">pilotctl extras set-tags rag-retriever hr benefits</span></code></pre>
 
-  <p>The synthesis agent finds retrievers among its connected peers by hostname substring:</p>
+  <p>The synthesis agent keeps the list of retriever hostnames and reads each one's address and tags from the registry:</p>
 
-  <pre><code><span class="cmd">pilotctl --json peers --search "rag-"</span></code></pre>
+  <pre><code><span class="cmd">pilotctl --json lookup rag-legal</span></code></pre>
 
-  <p>Peer search matches node ID and hostname (not the tags set above — those are metadata only), so name each retriever host by its domain: <code>rag-hr</code>, <code>rag-legal</code>, <code>rag-eng</code>. The synthesis agent then routes by which host it is: a question about "contract terms" goes to <code>rag-legal</code>, "deployment architecture" to <code>rag-eng</code>, and "vacation policy" to <code>rag-hr</code>.</p>
+  <p>Pilot has no search by tag: tags are metadata returned with a node's lookup (and in a network's member list), so the synthesis agent needs to know which hosts to look up. It then routes by their tags: a question about "contract terms" goes to the agent tagged <code>legal</code> (<code>rag-legal</code>), "deployment architecture" to <code>rag-eng</code>, and "vacation policy" to <code>rag-hr</code>.</p>
   </section>
 
   <section>
@@ -84,11 +87,11 @@ const bodyContent = `<p>The standard <a href="https://en.wikipedia.org/wiki/Retr
 
   <p>Suppose a user asks: "What is our policy on using open-source libraries in customer-facing products?" This question spans two domains: legal (licensing compliance) and engineering (technical policy). The synthesis agent routes to both.</p>
 
-  <pre><code><span class="comment"># Step 1: Synthesis agent sends query to Legal and Engineering agents</span>
-<span class="cmd">pilotctl send-message 1:0001.0002.0001 --data '{"query": "open-source licensing policy for customer products"}'</span>
-<span class="cmd">pilotctl send-message 1:0001.0003.0001 --data '{"query": "open-source library usage policy in production"}'</span>
+  <pre><code><span class="comment"># Step 1: Synthesis agent sends query to Legal and Engineering agents and waits for each reply</span>
+<span class="cmd">pilotctl send-message rag-legal --data '{"query": "open-source licensing policy for customer products"}' --wait</span>
+<span class="cmd">pilotctl send-message rag-eng --data '{"query": "open-source library usage policy in production"}' --wait</span>
 
-<span class="comment"># Step 2: Each agent searches its local knowledge and responds</span>
+<span class="comment"># Step 2: Each agent searches its local knowledge and replies (printed inline by --wait)</span>
 <span class="comment"># Legal agent returns: relevant contract clauses, compliance requirements</span>
 <span class="comment"># Engineering agent returns: internal wiki pages on OSS policy, approved license list</span>
 
@@ -107,10 +110,10 @@ const bodyContent = `<p>The standard <a href="https://en.wikipedia.org/wiki/Retr
   <p>The trust flow works like this:</p>
 
   <pre><code><span class="comment"># Synthesis agent requests trust from the Legal retriever</span>
-<span class="cmd">pilotctl handshake 1:0001.0002.0001 "RAG orchestrator: needs to query legal documents"</span>
+<span class="cmd">pilotctl handshake 0:0000.0002.0001 "RAG orchestrator: needs to query legal documents"</span>
 
 <span class="comment"># Legal agent operator reviews and approves</span>
-<span class="cmd">pilotctl approve 1:0001.0001.0001</span>
+<span class="cmd">pilotctl approve 0:0000.0001.0001</span>
 
 <span class="comment"># Now the synthesis agent can send queries to the legal agent</span>
 <span class="comment"># Other agents that have NOT been approved cannot query legal data</span></code></pre>
@@ -120,16 +123,16 @@ const bodyContent = `<p>The standard <a href="https://en.wikipedia.org/wiki/Retr
   <p>Trust can be revoked instantly:</p>
 
   <pre><code><span class="comment"># HR agent revokes trust from a compromised orchestrator</span>
-<span class="cmd">pilotctl untrust 1:0001.0001.0001</span>
+<span class="cmd">pilotctl untrust 0:0000.0001.0001</span>
 <span class="comment"># The orchestrator can no longer query HR data, effective immediately</span></code></pre>
 
-  <p>Compare this to a centralized vector database where access control is a metadata filter applied at query time. If the filter has a bug, or if someone queries the database directly (bypassing the application layer), all documents are exposed. With distributed RAG on Pilot, the data never leaves the owner. The access control is not a filter -- it is the absence of a network path.</p>
+  <p>Compare this to a centralized vector database where access control is a metadata filter applied at query time. If the filter has a bug, or if someone queries the database directly (bypassing the application layer), all documents are exposed. With distributed RAG on Pilot, the documents stay with the owner and only the passages a retriever returns leave its machine. The access control is not a filter -- it is the absence of a network path.</p>
   </section>
 
   <section>
   <h2>Code Example: Python RAG Agent</h2>
 
-  <p>Here is a retriever agent implemented in Python. It maintains a local ChromaDB collection, listens for queries over Pilot messaging, searches its local data, and returns results.</p>
+  <p>Here is a retriever agent implemented in Python. It maintains a local ChromaDB collection, reads queries from its Pilot inbox, searches its local data, and replies with the results.</p>
 
   <pre><code>import subprocess
 import json
@@ -182,38 +185,48 @@ def search(query, top_k=5):
     ]
 
 def listen_for_queries():
-    """Listen for incoming queries via Pilot messaging."""
+    """Answer queries that arrive in this agent's Pilot inbox."""
+    seen = set()
     while True:
-        <span class="comment"># Read the latest message from any trusted peer</span>
+        <span class="comment"># Recent messages from trusted peers, full bodies, newest first</span>
         result = subprocess.run(
-            ["pilotctl", "--json", "inbox", "--limit", "1"],
+            ["pilotctl", "--json", "inbox", "--full", "--since", "10m", "--limit", "0"],
             capture_output=True, text=True,
         )
         if result.returncode != 0:
+            time.sleep(1)
             continue
 
-        msg = json.loads(result.stdout)
-        sender = msg["from"]
-        query = json.loads(msg["data"])["query"]
+        for msg in json.loads(result.stdout)["data"]["messages"]:
+            if msg["id"] in seen:
+                continue
+            seen.add(msg["id"])
+            sender = msg["from"]
+            try:
+                query = json.loads(msg["data"])["query"]
+            except (ValueError, KeyError):
+                continue  <span class="comment"># not a query</span>
 
-        print(f"Query from {sender}: {query}")
+            print(f"Query from {sender}: {query}")
 
-        <span class="comment"># Search local knowledge base</span>
-        results = search(query)
+            <span class="comment"># Search local knowledge base</span>
+            results = search(query)
 
-        <span class="comment"># Send results back to the querying agent</span>
-        response = json.dumps({
-            "domain": "legal",
-            "query": query,
-            "results": results,
-        })
-        subprocess.run([
-            "pilotctl", "send-message", sender,
-            "--data", response,
-        ])
-        print(f"Sent {len(results)} results to {sender}")
+            <span class="comment"># Reply to the querying agent; --reply-to lets its --wait match this reply</span>
+            response = json.dumps({
+                "domain": "legal",
+                "query": query,
+                "results": results,
+            })
+            cmd = ["pilotctl", "send-message", sender, "--data", response]
+            if msg.get("message_id"):
+                cmd += ["--reply-to", msg["message_id"]]
+            subprocess.run(cmd)
+            print(f"Sent {len(results)} results to {sender}")
+        time.sleep(1)
 
-<span class="comment"># Tag this agent as a legal retriever</span>
+<span class="comment"># Name and tag this agent as a legal retriever</span>
+subprocess.run(["pilotctl", "set-hostname", "rag-legal"])
 subprocess.run(["pilotctl", "extras", "set-tags", "rag-retriever", "legal", "contracts"])
 
 <span class="comment"># Index local documents</span>
@@ -230,13 +243,26 @@ import json
 import concurrent.futures
 import openai
 
+<span class="comment"># Retriever hostnames this orchestrator has trust with</span>
+RETRIEVERS = ["rag-legal", "rag-eng", "rag-hr"]
+
 def discover_retrievers():
-    """Find all retriever agents on the network."""
-    result = subprocess.run(
-        ["pilotctl", "peers", "--search", "rag-retriever", "--json"],
-        capture_output=True, text=True,
-    )
-    return json.loads(result.stdout)
+    """Look up each known retriever's address and tags in the registry."""
+    found = []
+    for host in RETRIEVERS:
+        result = subprocess.run(
+            ["pilotctl", "--json", "lookup", host],
+            capture_output=True, text=True,
+        )
+        if result.returncode != 0:
+            continue  <span class="comment"># unknown hostname, or no trust yet</span>
+        node = json.loads(result.stdout)["data"]
+        found.append({
+            "hostname": host,
+            "address": node["address"],
+            "tags": node.get("tags", []),
+        })
+    return found
 
 def route_query(query, retrievers):
     """Determine which retrievers are relevant based on tags."""
@@ -257,19 +283,16 @@ def route_query(query, retrievers):
     return relevant if relevant else retrievers  <span class="comment"># fallback: query all</span>
 
 def query_retriever(address, query):
-    """Send query to a retriever agent and get results."""
-    subprocess.run([
-        "pilotctl", "send-message", address,
-        "--data", json.dumps({"query": query}),
-    ])
-    <span class="comment"># Read the response from that retriever</span>
+    """Send a query to a retriever agent and wait for its reply."""
     result = subprocess.run(
-        ["pilotctl", "--json", "inbox",
-         "--from", address, "--limit", "1"],
+        ["pilotctl", "--json", "send-message", address,
+         "--data", json.dumps({"query": query}), "--wait", "30s"],
         capture_output=True, text=True,
     )
     if result.returncode == 0:
-        return json.loads(json.loads(result.stdout)["data"])
+        <span class="comment"># --wait returns the reply inline under data.reply</span>
+        reply = json.loads(result.stdout)["data"]["reply"]
+        return json.loads(reply["data"])
     return {"domain": "unknown", "results": []}
 
 def synthesize(query, all_results):
@@ -342,14 +365,14 @@ print(f"\\nAnswer:\\n{answer}")</code></pre>
       <td>Owner indexes in real-time</td>
     </tr>
     <tr>
-      <td>Privacy compliance</td>
-      <td>Data copied to third-party store</td>
-      <td>Data never leaves origin</td>
+      <td>Data residency</td>
+      <td>Data copied to a shared store</td>
+      <td>Only returned passages leave origin</td>
     </tr>
     <tr>
       <td>Query latency</td>
-      <td>~50ms (single store)</td>
-      <td>~200ms (network + search)</td>
+      <td>One local search</td>
+      <td>Network round trip + search per retriever</td>
     </tr>
     <tr>
       <td>Scaling</td>
@@ -364,7 +387,7 @@ print(f"\\nAnswer:\\n{answer}")</code></pre>
     <tr>
       <td>Infrastructure</td>
       <td>Vector DB + embedding API</td>
-      <td>Pilot daemon (10MB per agent)</td>
+      <td>Pilot daemon per agent</td>
     </tr>
     <tr>
       <td>Works through NAT</td>
@@ -373,9 +396,9 @@ print(f"\\nAnswer:\\n{answer}")</code></pre>
     </tr>
   </table>
 
-  <p>The latency trade-off is real. A centralized vector database returns results in roughly 50ms because the query is a single local operation. Distributed RAG adds network round-trips: the synthesis agent sends queries to retrievers (~5ms per peer on Pilot), each retriever searches its local store (~50ms), and results come back (~5ms). Total is roughly 100-200ms per retriever, done in parallel. For interactive applications where sub-100ms retrieval is required, centralized wins on speed.</p>
+  <p>The latency trade-off is real. A centralized vector database answers with a single search. Distributed RAG adds network round-trips: the synthesis agent sends queries to retrievers, each retriever searches its local store, and results come back over the network (relayed paths are slower than direct ones). Retrievers are queried in parallel, so the slowest one sets the pace. For interactive applications that need the fastest possible retrieval, centralized wins on speed.</p>
 
-  <p>But for applications where privacy, compliance, and fault tolerance matter more than 150ms of latency -- healthcare, legal, finance, multi-tenant SaaS -- distributed RAG is the architecture that matches the requirements.</p>
+  <p>But for applications where keeping data with its owner and fault tolerance matter more than some extra latency -- healthcare, legal, finance, multi-tenant SaaS -- distributed RAG is the architecture that matches the requirements.</p>
   </section>
 
   <section>

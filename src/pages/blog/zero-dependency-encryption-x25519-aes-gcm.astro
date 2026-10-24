@@ -62,25 +62,25 @@ sharedSecret, err := privateKey.ECDH(peerPublicKey)
 
   <h3>Key Exchange on the Wire</h3>
 
-  <p>Pilot transmits public keys using <code>PILK</code> frames (magic bytes <code>0x50494C4B</code> -- "Pilot Key exchange"). The exchange adds a single round-trip to tunnel establishment:</p>
+  <p>Pilot transmits public keys in key-exchange frames. A daemon with an Ed25519 identity, which is the normal case, sends a signed <code>PILA</code> frame (magic bytes <code>0x50494C41</code>): its X25519 public key, its Ed25519 public key, and an Ed25519 signature over its node ID and X25519 key, so the peer knows the X25519 key belongs to that node. A daemon without an identity sends the unsigned <code>PILK</code> frame (<code>0x50494C4B</code> -- "Pilot Key exchange"). Either way, the exchange adds a single round-trip to tunnel establishment:</p>
 
   <pre><code><span class="comment"># Key exchange wire format</span>
 
 Agent A                                          Agent B
    |                                                |
-   |--- PILK frame [A's 32-byte public key] ------->|
+   |--- PILA frame [A's X25519 key, signed] ------->|
    |                                                |
-   |<--- PILK frame [B's 32-byte public key] -------|
+   |<--- PILA frame [B's X25519 key, signed] -------|
    |                                                |
    |  Both sides compute:                           |
    |  sharedSecret = ECDH(myPrivate, peerPublic)    |
    |                                                |
-   |  Both derive the same 32-byte AES-256 key      |
+   |  HKDF-SHA256 turns it into the AES-256 key     |
    |                                                |
    |<========= PILS encrypted traffic ==============>|
 
-<span class="comment"># PILK = 0x50494C4B ("Pilot Key"), 4 bytes magic + 32 bytes public key</span>
-<span class="comment"># PILK frame: 4 magic + 4 nodeID + 32 pubkey = 40 bytes/direction (80 total)</span></code></pre>
+<span class="comment"># PILA frame: 4 magic + 4 nodeID + 32 X25519 + 32 Ed25519 + 64 signature = 136 bytes/direction</span>
+<span class="comment"># PILK frame (no identity): 4 magic + 4 nodeID + 32 X25519 = 40 bytes/direction</span></code></pre>
 
   <p>The X25519 computation itself is sub-millisecond; the dominant setup cost is the one network round-trip for the handshake, which is bounded by the peers' RTT. The crypto cost is paid once per tunnel, not per packet.</p>
 
@@ -96,19 +96,20 @@ Agent A                                          Agent B
 
   <p>The implementation uses Go's <code>crypto/aes</code> package for the AES block cipher and <code>crypto/cipher</code> for the GCM mode. Here is the simplified flow:</p>
 
-  <pre><code><span class="comment">// Create AES cipher from 32-byte shared secret</span>
-block, err := aes.NewCipher(sharedSecret)
+  <pre><code><span class="comment">// Create AES cipher from the 32-byte key that HKDF-SHA256 derived from the shared secret</span>
+block, err := aes.NewCipher(key)
 
 <span class="comment">// Wrap in GCM mode for authenticated encryption</span>
 aesGCM, err := cipher.NewGCM(block)
 
 <span class="comment">// Encrypt a packet (Seal)</span>
 nonce := generateNonce() <span class="comment">// 12 bytes: [4-byte random prefix][8-byte counter]</span>
-ciphertext := aesGCM.Seal(nil, nonce, plaintext, nil)
+aad := senderNodeID <span class="comment">// 4 bytes, big-endian: binds the packet to its sender</span>
+ciphertext := aesGCM.Seal(nil, nonce, plaintext, aad)
 <span class="comment">// ciphertext includes a 16-byte authentication tag appended automatically</span>
 
 <span class="comment">// Decrypt a packet (Open)</span>
-plaintext, err := aesGCM.Open(nil, nonce, ciphertext, nil)
+plaintext, err := aesGCM.Open(nil, nonce, ciphertext, aad)
 <span class="comment">// Returns error if authentication tag does not match</span>
 <span class="comment">// (packet was modified in transit or nonce was wrong)</span></code></pre>
 
@@ -124,14 +125,14 @@ plaintext, err := aesGCM.Open(nil, nonce, ciphertext, nil)
 
 <span class="comment"># PILS frame (encrypted, used after key exchange)</span>
 <span class="cmd">50 49 4C 53</span>    <span class="comment"># Magic: "PILS"</span>
-<span class="cmd">[4 bytes]</span>      <span class="comment"># Sender nodeID (big-endian)</span>
+<span class="cmd">[4 bytes]</span>      <span class="comment"># Sender nodeID (big-endian; also the GCM additional data)</span>
 <span class="cmd">[12 bytes]</span>     <span class="comment"># Nonce (4-byte random prefix + 8-byte counter)</span>
 <span class="cmd">[N bytes]</span>      <span class="comment"># AES-256-GCM ciphertext</span>
 <span class="cmd">[16 bytes]</span>     <span class="comment"># GCM authentication tag (appended by Seal)</span>
 
 <span class="comment"># Overhead per packet: 4 (magic) + 4 (nodeID) + 12 (nonce) + 16 (auth tag) = 36 bytes</span></code></pre>
 
-  <p>The 36-byte overhead per packet is modest. For a typical agent message of 1,024 bytes, encryption adds about 3.5% overhead. For larger payloads near the MTU limit, overhead drops below 2%. The per-packet encryption time is approximately <strong>5 microseconds</strong> on modern hardware -- negligible compared to network latency.</p>
+  <p>The 36-byte overhead per packet is modest. For a typical agent message of 1,024 bytes, encryption adds about 3.5% overhead. For larger payloads near the MTU limit, overhead drops below 3%. On CPUs with AES hardware support, the per-packet encryption cost is small next to network latency.</p>
 
   <h2 id="nonce-management">Nonce Management: Preventing Replay and Reuse</h2>
 
@@ -144,16 +145,16 @@ plaintext, err := aesGCM.Open(nil, nonce, ciphertext, nil)
       <tr><th>Component</th><th>Size</th><th>Purpose</th></tr>
     </thead>
     <tbody>
-      <tr><td>Random prefix</td><td>4 bytes</td><td>Unique per connection, generated from <code>crypto/rand</code></td></tr>
-      <tr><td>Counter</td><td>8 bytes</td><td>Incremented for every packet, starts at 0</td></tr>
+      <tr><td>Random prefix</td><td>4 bytes</td><td>Unique per tunnel key, generated from <code>crypto/rand</code></td></tr>
+      <tr><td>Counter</td><td>8 bytes</td><td>Incremented for every packet; the first packet uses 1</td></tr>
     </tbody>
   </table>
 
   <pre><code><span class="comment">// Nonce construction</span>
 nonce := make([]byte, 12)            <span class="comment">// 12-byte GCM nonce</span>
 copy(nonce[0:4], connectionPrefix)   <span class="comment">// 4 bytes: random, unique per connection</span>
-binary.BigEndian.PutUint64(nonce[4:12], counter) <span class="comment">// 8 bytes: monotonic counter</span>
-counter++
+counter := atomic.AddUint64(&amp;sendCounter, 1)      <span class="comment">// 8 bytes: monotonic counter</span>
+binary.BigEndian.PutUint64(nonce[4:12], counter)
 
 <span class="comment">// With 4-byte random prefix:</span>
 <span class="comment">//   - Different connections almost certainly use different prefixes</span>
@@ -177,16 +178,17 @@ Agent A                                          Agent B
    |  <span class="comment">1. Load daemon X25519 key pair</span>                |  <span class="comment">1. Load daemon X25519 key pair</span>
    |     privA, pubA = LoadDaemonKey()              |     privB, pubB = LoadDaemonKey()
    |                                                |
-   |  <span class="comment">2. Exchange public keys via PILK frames</span>        |
-   |--- PILK [pubA, 32 bytes] --------------------->|
-   |<--- PILK [pubB, 32 bytes] ---------------------|
+   |  <span class="comment">2. Exchange keys via signed PILA frames</span>        |
+   |--- PILA [pubA + Ed25519 key + signature] ----->|
+   |<--- PILA [pubB + Ed25519 key + signature] -----|
    |                                                |
    |  <span class="comment">3. Derive shared secret (both sides independently)</span>
    |     secret = ECDH(privA, pubB)                 |     secret = ECDH(privB, pubA)
    |     <span class="comment">// Both compute the same 32-byte secret</span>   |
    |                                                |
    |  <span class="comment">4. Create AES-256-GCM cipher</span>                  |
-   |     block = AES(secret)                        |     block = AES(secret)
+   |     key = HKDF-SHA256(secret)                  |     key = HKDF-SHA256(secret)
+   |     block = AES(key)                           |     block = AES(key)
    |     gcm = GCM(block)                           |     gcm = GCM(block)
    |                                                |
    |  <span class="comment">5. Generate random nonce prefix</span>                |
@@ -198,9 +200,9 @@ Agent A                                          Agent B
    |                                                |
    |  <span class="comment">All subsequent traffic is AES-256-GCM encrypted</span>
    |  <span class="comment">Authentication tags prevent tampering</span>
-   |  <span class="comment">Counter nonces prevent replay</span></code></pre>
+   |  <span class="comment">A receive window of recent nonces drops replays</span></code></pre>
 
-  <p>The entire handshake adds one round-trip (~0.3ms on typical networks). After the handshake, every packet is encrypted and authenticated with ~5 microseconds of overhead. The agent developer never calls any encryption API -- the daemon handles it automatically — tunnel encryption is a daemon-level default (the <code>-encrypt</code> flag, on by default) applied to all tunnel traffic.</p>
+  <p>The entire handshake adds one network round-trip. After the handshake, every packet is encrypted and authenticated, at a per-packet cost that is small next to network latency. The agent developer never calls any encryption API -- the daemon handles it automatically — tunnel encryption is a daemon-level default (the <code>-encrypt</code> flag, on by default) applied to all tunnel traffic.</p>
 
   <h2 id="encrypt-by-default">Encrypt by Default Across Ports</h2>
 
@@ -208,38 +210,34 @@ Agent A                                          Agent B
 
   <pre><code><span class="comment"># Port 443 rides the daemon's encrypted tunnel</span>
 <span class="cmd">$ pilotctl connect data-agent 443 --message "sensitive payload"</span>
-Connected (encrypted tunnel)
-Message delivered
+<span class="comment"># prints the service's reply, if it sends one</span>
 
 <span class="comment"># Any port — with -encrypt on (the default) all tunnel traffic is encrypted</span>
-<span class="cmd">$ pilotctl connect status-monitor 80 --message "heartbeat"</span>
-Connected (encrypted — -encrypt is on by default)
-Message delivered</code></pre>
+<span class="cmd">$ pilotctl connect status-monitor 80 --message "heartbeat"</span></code></pre>
 
   <p>Developers get tunnel encryption without writing cryptographic code or treating port choice as the security control. The Go standard library handles the primitives, the daemon handles key exchange and framing, and the application keeps its own authorization responsibilities.</p>
 
   <h2 id="performance">Performance Characteristics</h2>
 
-  <p>Encryption overhead lands at two levels: the one-time cost of key exchange, and the per-packet cost of AES-GCM operations. The figures below are illustrative orders of magnitude (crypto is CPU-bound and sub-millisecond; round-trips are network-bound), not published benchmarks.</p>
+  <p>Encryption overhead lands at two levels: the one-time cost of key exchange, and the per-packet cost of AES-GCM operations. The table shows where each cost lands; we have not published timing benchmarks, so measure on your own hardware if the numbers matter.</p>
 
   <table>
     <thead>
-      <tr><th>Operation</th><th>Time</th><th>Notes</th></tr>
+      <tr><th>Operation</th><th>When</th><th>Notes</th></tr>
     </thead>
     <tbody>
-      <tr><td>X25519 key generation</td><td>~0.05ms</td><td>One per tunnel establishment</td></tr>
-      <tr><td>ECDH shared secret derivation</td><td>~0.12ms</td><td>One per tunnel establishment</td></tr>
-      <tr><td>PILK frame round-trip</td><td>~0.15ms (LAN) / ~40ms (WAN)</td><td>Network-dominated, not CPU</td></tr>
-      <tr><td>Total key exchange</td><td>~0.3ms (LAN) / ~40ms (WAN)</td><td>One-time cost per tunnel</td></tr>
-      <tr><td>AES-GCM Seal (encrypt)</td><td>~5 microseconds / 1KB</td><td>Per-packet, hardware-accelerated (AES-NI)</td></tr>
-      <tr><td>AES-GCM Open (decrypt)</td><td>~5 microseconds / 1KB</td><td>Per-packet, includes auth tag verification</td></tr>
-      <tr><td>Per-packet overhead</td><td>32 bytes</td><td>4 (magic) + 12 (nonce) + 16 (auth tag)</td></tr>
+      <tr><td>X25519 key generation</td><td>Once per daemon start</td><td>The key pair is reused for every tunnel</td></tr>
+      <tr><td>ECDH + HKDF key derivation</td><td>Once per tunnel</td><td>CPU only</td></tr>
+      <tr><td>Key-exchange round-trip</td><td>Once per tunnel</td><td>One network RTT; network-dominated, not CPU</td></tr>
+      <tr><td>AES-GCM Seal (encrypt)</td><td>Every packet</td><td>Hardware-accelerated where the CPU supports AES instructions</td></tr>
+      <tr><td>AES-GCM Open (decrypt)</td><td>Every packet</td><td>Includes auth tag verification</td></tr>
+      <tr><td>Per-packet overhead</td><td>36 bytes</td><td>4 (magic) + 4 (nodeID) + 12 (nonce) + 16 (auth tag)</td></tr>
     </tbody>
   </table>
 
-  <p>On modern CPUs with AES-NI hardware acceleration (virtually all x86 processors since 2010 and ARM processors since ARMv8), AES-GCM runs at memory bandwidth speeds. The per-packet AES-GCM cost is on the order of microseconds — negligible compared to network transmission time, which is typically measured in milliseconds. (These are illustrative orders of magnitude, not published benchmarks.)</p>
+  <p>On CPUs with AES hardware acceleration (AES-NI on x86, the Cryptography Extensions on ARMv8), the per-packet AES-GCM cost is small next to network transmission time, which is typically measured in milliseconds.</p>
 
-  <p>The bottom line: encryption adds effectively zero observable latency to agent communication. The key exchange adds one network round-trip. Per-packet encryption is invisible at the application layer.</p>
+  <p>The bottom line: encryption adds little observable latency to agent communication. The key exchange adds one network round-trip. Per-packet encryption is invisible at the application layer.</p>
 
   <h2 id="vs-tls">Why Not Just Use TLS?</h2>
 
@@ -249,7 +247,7 @@ Message delivered</code></pre>
     <li><strong>Certificate management.</strong> TLS requires X.509 certificates. Who issues them? Who revokes them? For a fleet of dynamic agents that spin up and down, certificate lifecycle management can add operational work. Pilot derives tunnel secrets with X25519 and does not require X.509 for this layer.</li>
     <li><strong>TCP dependency.</strong> Standard TLS runs over TCP. Pilot runs over UDP. DTLS (Datagram TLS) exists but adds complexity, retransmission logic that conflicts with Pilot's own transport layer, and a much larger handshake.</li>
     <li><strong>External dependencies.</strong> Go's <code>crypto/tls</code> package handles TLS but brings in ASN.1 parsing, X.509 validation, OCSP stapling, and a dozen other features that Pilot does not need. Each feature is additional attack surface.</li>
-    <li><strong>Handshake overhead.</strong> A TLS 1.3 handshake requires 1-RTT minimum and involves multiple message types (ClientHello, ServerHello, EncryptedExtensions, Finished). Pilot's key exchange is a single PILK frame in each direction -- 40 bytes each, 80 total.</li>
+    <li><strong>Handshake overhead.</strong> A TLS 1.3 handshake requires 1-RTT minimum and involves multiple message types (ClientHello, ServerHello, EncryptedExtensions, Finished). Pilot's key exchange is a single frame in each direction: 136 bytes for the signed PILA frame, or 40 for the unsigned PILK.</li>
   </ul>
 
   <p>Pilot's encryption is narrowly scoped: X25519 for key exchange, AES-256-GCM for symmetric encryption, nothing else. There is no certificate parsing, no cipher suite negotiation, no protocol version fallback. This narrow scope is the point -- fewer features means fewer bugs, fewer CVEs, and a smaller attack surface.</p>
@@ -260,8 +258,8 @@ Message delivered</code></pre>
     <li><strong>Confidentiality:</strong> AES-256-GCM encryption. 256-bit key, no known practical attacks.</li>
     <li><strong>Integrity:</strong> GCM authentication tag on every packet. Tampered packets are detected and discarded.</li>
     <li><strong>Peer isolation:</strong> Each peer pair derives its own AES-256-GCM key via X25519 + HKDF, so one peer cannot read another pair's traffic. (The X25519 key is per-daemon-lifetime, not per-session.)</li>
-    <li><strong>Replay prevention:</strong> Random nonce prefix per connection + monotonic counter. No nonce reuse across or within connections.</li>
-    <li><strong>No external dependencies:</strong> Entire crypto stack is Go standard library (crypto/ecdh, crypto/aes, crypto/cipher, crypto/rand).</li>
+    <li><strong>Nonce uniqueness and replay prevention:</strong> Random nonce prefix per tunnel key + monotonic counter, so nonces are not reused; each receiver tracks a window of the last 256 nonces and drops repeats and packets too far behind.</li>
+    <li><strong>No third-party crypto:</strong> The tunnel crypto is Go standard library only (crypto/ecdh, crypto/ed25519, crypto/hmac, crypto/sha256, crypto/aes, crypto/cipher, crypto/rand).</li>
     <li><strong>Relay privacy:</strong> Even when traffic is relayed through the beacon for <a href="nat-traversal-ai-agents-deep-dive">NAT traversal</a>, encryption is end-to-end. The beacon sees only opaque ciphertext.</li>
   </ul>
 
@@ -290,7 +288,7 @@ Message delivered</code></pre>
 
   <div class="cta">
     <h3>Try Pilot Protocol</h3>
-    <p>End-to-end tunnel encryption for AI agents with zero external dependencies. X25519 key exchange, peer-isolated secrets, and AES-256-GCM authenticated encryption -- all built on Go's standard library.</p>
+    <p>End-to-end tunnel encryption for AI agents with no third-party crypto libraries. X25519 key exchange, peer-isolated secrets, and AES-256-GCM authenticated encryption -- all built on Go's standard library.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 

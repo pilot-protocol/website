@@ -31,7 +31,7 @@ const bodyContent = `<p>"What happens to my devices if the cloud service shuts d
 
   <p>Cloud-dependent devices send all of their data to the vendor's servers. Every sensor reading, every camera frame, every voice command, every usage pattern flows through infrastructure you do not control. The vendor's privacy policy governs your data, not your own policies. If the vendor is acquired, if they change their terms of service, or if they receive a legal request from a jurisdiction you have never heard of, your data is exposed.</p>
 
-  <p>For businesses operating under GDPR, HIPAA, or industry-specific regulations, cloud dependency creates a compliance burden. You need to audit the vendor's data handling practices, sign data processing agreements, and monitor their compliance continuously. Peer-to-peer communication eliminates this entire category of risk.</p>
+  <p>For businesses operating under GDPR, HIPAA, or industry-specific regulations, cloud dependency creates a compliance burden. You need to audit the vendor's data handling practices, sign data processing agreements, and monitor their compliance continuously. Peer-to-peer communication reduces this category of risk, because your data no longer has to pass through a vendor's servers.</p>
 
   <h3>The Account Tax</h3>
 
@@ -58,36 +58,37 @@ const bodyContent = `<p>"What happens to my devices if the cloud service shuts d
 
   <h3>Step 2: Connect Agents</h3>
 
-  <pre><code><span class="comment"># Agent 1: install and start</span>
-<span class="cmd">$ pilotctl init --hostname sensor-1</span>
-<span class="cmd">$ pilotctl daemon start --email sensor-1@example.com</span>
-Registered as sensor-1 (1:0001.0000.0001)
+  <pre><code><span class="comment"># Agent 1: start the daemon with a hostname</span>
+<span class="cmd">$ pilotctl daemon start --hostname sensor-1 --email sensor-1@example.com</span>
+Daemon running (pid 4812)
+  Address:  0:0000.0004.1A2B
+  Hostname: sensor-1
+  ...
 
-<span class="comment"># Agent 2: same network</span>
-<span class="cmd">$ pilotctl init --hostname controller</span>
-<span class="cmd">$ pilotctl daemon start --email controller@example.com</span>
-Registered as controller (1:0001.0000.0002)
+<span class="comment"># Agent 2</span>
+<span class="cmd">$ pilotctl daemon start --hostname controller --email controller@example.com</span>
 
-<span class="comment"># Agents can now discover and connect to each other</span>
-<span class="cmd">$ pilotctl find sensor-1</span>
-sensor-1  1:0001.0000.0001  public  192.168.1.50:4000</code></pre>
+<span class="comment"># Agents are private by default, so the controller uses sensor-1's address</span>
+<span class="cmd">$ pilotctl handshake 0:0000.0004.1A2B "controller for sensor-1"</span>
 
-  <p>No accounts. No API keys. No terms of service. Agents register on the network, discover each other, and communicate directly through encrypted tunnels.</p>
+<span class="comment"># On sensor-1: see the request and approve it by node ID</span>
+<span class="cmd">$ pilotctl pending</span>
+<span class="cmd">$ pilotctl approve &lt;node_id&gt;</span></code></pre>
+
+  <p>No accounts. No API keys. Agents register with the registry, establish trust, and communicate directly through encrypted tunnels. The public registry and beacon are run by Vulture Labs at no charge under the <a href="/terms">terms of service</a>; you can also run your own.</p>
 
   <h2 id="enrollment">Agent Enrollment Without Third-Party Accounts</h2>
 
   <p>In cloud-dependent systems, enrolling a new device means creating a vendor account, registering the device serial number, generating API credentials, and configuring the device with those credentials. In Pilot Protocol, enrollment is a single command.</p>
 
   <pre><code><span class="comment"># New agent enrollment -- no accounts, no credentials to manage</span>
-<span class="cmd">$ pilotctl init --hostname new-sensor</span>
-Identity created: ~/.pilot/identity.json
-Public key: 7a2c...f819 (Ed25519)
-Virtual address: 1:0001.0000.0005
+<span class="cmd">$ pilotctl daemon start --hostname new-sensor --email new-sensor@example.com</span>
+Daemon running (pid 5120)
+  Address:  0:0000.0004.1A2F
+  Hostname: new-sensor
+  ...</code></pre>
 
-<span class="cmd">$ pilotctl daemon start --email new-sensor@example.com</span>
-Registered as new-sensor (1:0001.0000.0005)</code></pre>
-
-  <p>The agent generates its own Ed25519 key pair locally. No certificate authority, no credential server, no enrollment API. The private key never leaves the device. The public key is registered on the network alongside the agent's virtual address.</p>
+  <p>On first start the agent generates its own Ed25519 key pair locally and keeps it in <code>~/.pilot/identity.json</code>. No certificate authority, no credential server, no enrollment API. The private key never leaves the device. The public key is registered on the network alongside the agent's virtual address.</p>
 
   <p>Authentication is cryptographic: the agent proves its identity by signing messages with its private key. Other agents verify the signature with the registered public key. There is no password to rotate, no token to refresh, and no OAuth flow to debug.</p>
 
@@ -95,8 +96,7 @@ Registered as new-sensor (1:0001.0000.0005)</code></pre>
 
   <pre><code><span class="comment"># Provision 50 sensors from a deployment script</span>
 for i in $(seq 1 50); do
-  ssh sensor-$i "pilotctl init --hostname sensor-$i && \\
-    pilotctl daemon start --email sensor-\\$i@example.com"
+  ssh sensor-$i "pilotctl daemon start --hostname sensor-$i --email sensor-$i@example.com"
 done</code></pre>
 
   <p>Each sensor gets its own cryptographic identity, its own virtual address, and its own hostname. No shared credentials, no master key, no single secret that compromises the entire fleet if leaked.</p>
@@ -155,27 +155,28 @@ done</code></pre>
 
   <p>Pilot publishes static binaries for supported Linux and macOS targets. For supported embedded Linux devices, cross-compile from your development machine:</p>
 
-  <pre><code><span class="comment"># Cross-compile for ARM (Raspberry Pi, IoT devices)</span>
+  <pre><code><span class="comment"># Cross-compile the CLI and the daemon for ARM (Raspberry Pi, IoT devices)</span>
+<span class="comment"># from a checkout of github.com/pilot-protocol/pilotprotocol</span>
 <span class="cmd">$ GOOS=linux GOARCH=arm64 go build -o pilotctl ./cmd/pilotctl</span>
-<span class="cmd">$ scp pilotctl sensor-device:/usr/local/bin/</span></code></pre>
+<span class="cmd">$ GOOS=linux GOARCH=arm64 go build -o pilot-daemon ./cmd/daemon</span>
+<span class="cmd">$ scp pilotctl pilot-daemon sensor-device:/usr/local/bin/</span></code></pre>
 
   <h3>Step 2: Initialize and Connect Each Device</h3>
 
   <pre><code><span class="comment"># On each device</span>
-<span class="cmd">$ pilotctl init --hostname device-name</span>
-<span class="cmd">$ pilotctl daemon start --email device@example.com</span></code></pre>
+<span class="cmd">$ pilotctl daemon start --hostname device-name --email device@example.com</span></code></pre>
 
   <h3>Step 3: Establish Trust Between Devices</h3>
 
   <p>Devices that need to communicate establish trust through the handshake protocol. For fleet deployments, script the handshakes (or enable the daemon's <code>-trust-auto-approve</code> flag in a trusted environment):</p>
 
-  <pre><code><span class="comment"># On the controller: auto-approve devices on the same network</span>
-<span class="cmd">$ pilotctl handshake sensor-1 "Fleet enrollment"</span>
-<span class="cmd">$ pilotctl handshake sensor-2 "Fleet enrollment"</span>
+  <pre><code><span class="comment"># On the controller: request trust with each sensor by address</span>
+<span class="cmd">$ pilotctl handshake 0:0000.0004.1A2B "Fleet enrollment"</span>
 
-<span class="comment"># Or script it for the entire fleet</span>
-for sensor in $(pilotctl --json peers --search "sensor" | jq -r '.[].hostname'); do
-  pilotctl handshake "$sensor" "Automated fleet enrollment"
+<span class="comment"># Or script it for the entire fleet: read each sensor's address, then handshake</span>
+for i in $(seq 1 50); do
+  addr=$(ssh sensor-$i "pilotctl --json info" | jq -r '.data.address')
+  pilotctl handshake "$addr" "Automated fleet enrollment"
 done</code></pre>
 
   <h3>Step 4: Decommission the Cloud Service</h3>
