@@ -2,7 +2,7 @@
 import DocLayout from "../../layouts/DocLayout.astro";
 
 const bodyContent = `<h1>Service Agents</h1>
-  <p class="subtitle">Always-on AI agents on the backbone - callable by name, encrypted end-to-end, reached with a handshake.</p>
+  <p class="subtitle">About 430 always-on data agents on the backbone - callable by name, encrypted end-to-end, reached with a handshake.</p>
 
   <div class="toc">
     <h4>On this page</h4>
@@ -11,6 +11,7 @@ const bodyContent = `<h1>Service Agents</h1>
       <li><a href="#network">Where service agents live</a></li>
       <li><a href="#quickstart">Quick start</a></li>
       <li><a href="#list-agents">list-agents</a></li>
+      <li><a href="#replies">Reply format</a></li>
       <li><a href="#pagination">Pagination</a></li>
       <li><a href="#responder">Responder</a></li>
       <li><a href="#dispatch-flow">Dispatch flow</a></li>
@@ -20,7 +21,9 @@ const bodyContent = `<h1>Service Agents</h1>
 
   <h2 id="overview">Overview</h2>
 
-  <p>Service agents are AI-powered microservices that run on Pilot Protocol's overlay network. They expose capabilities - market intelligence, natural-language assistance, security auditing - to any node that can reach them. No public endpoints, no API keys, no load balancers. Just a node on the network that answers when called.</p>
+  <p>Service agents are always-on nodes on Pilot Protocol's public backbone, operated by Vulture Labs. About 430 of them are live today. Each one wraps a single public data source and answers with typed JSON: crypto and FX prices, weather and air quality, news, transit and departures, sports, developer package metadata (PyPI, crates.io, CRAN…), science and papers, government statistics, health and drug data, geocoding, aviation (METAR, TAF, ADS-B) and more. No public endpoints, no API keys, no load balancers. Just a node on the network that answers when called.</p>
+
+  <p>Two agents help you find the right one: <code>list-agents</code> is the searchable directory, and <a href="pilot-mom">pilot-mom</a> turns a plain-English task into a ready-to-run plan of agent calls.</p>
 
   <p>The standard mental model for AI agents is a process that takes requests and produces results. The standard mental model for services is an HTTP endpoint that takes requests and produces results. These are the same thing - and service agents treat them as such.</p>
 
@@ -47,47 +50,60 @@ const bodyContent = `<h1>Service Agents</h1>
 
   <h2 id="quickstart">Quick start</h2>
 
-  <p>The canonical three-command pattern: discover, handshake, query. <code>--wait</code> makes <code>send-message</code> block until the reply lands in <code>~/.pilot/inbox/</code>, so you don't race the inbox poll.</p>
+  <p>The canonical pattern: discover, handshake, ask for the schema, query. <code>--wait</code> makes <code>send-message</code> block until the agent's reply arrives and print it inline; with <code>--json</code> the reply is under <code>data.reply</code>. If nothing arrives within the wait (30 seconds by default) the command exits non-zero.</p>
 
   <pre><code><span class="comment"># 1. Discover agents: handshake the directory, then query it</span>
 <span class="cmd">pilotctl</span> handshake list-agents
 <span class="cmd">pilotctl</span> send-message list-agents --data '/data {"search":"weather","limit":5}' --wait
 
-<span class="comment"># 2. Handshake the specialist you found, then call it</span>
-<span class="cmd">pilotctl</span> handshake weather
-<span class="cmd">pilotctl</span> send-message weather --data '/data {"city":"London"}' --wait
+<span class="comment"># 2. Handshake the specialist you found and read its filters</span>
+<span class="cmd">pilotctl</span> handshake open-meteo-forecast
+<span class="cmd">pilotctl</span> send-message open-meteo-forecast --data '/help' --wait
 
-<span class="comment"># 3. Read the reply that --wait blocked for</span>
-<span class="cmd">jq</span> -r '.data' "$(ls -1t ~/.pilot/inbox/*.json | head -1)"</code></pre>
+<span class="comment"># 3. Query it</span>
+<span class="cmd">pilotctl</span> send-message open-meteo-forecast --data '/data {"latitude":51.51,"longitude":-0.13,"include_current_weather":true}' --wait
+
+<span class="comment"># Same call, machine-readable</span>
+<span class="cmd">pilotctl</span> --json send-message open-meteo-forecast --data '/data {"latitude":51.51,"longitude":-0.13}' --wait | jq -r '.data.reply.data'</code></pre>
+
+  <p>A reply that arrives after the wait is still saved; read it with <code>pilotctl inbox --from &lt;agent&gt; --latest</code>.</p>
 
   <h2 id="list-agents">list-agents</h2>
 
   <p>The <code>list-agents</code> service is the directory of service agents on the backbone. It treats the <code>--data</code> payload as a typed command:</p>
 
   <ul>
-    <li><code>/data</code> — return the directory; accepts <code>{"search":"&lt;keyword&gt;","limit":N}</code> filters</li>
+    <li><code>/data</code> — return the directory; accepts <code>search</code>, <code>category</code>, <code>hostname</code> and <code>limit</code> filters (<code>limit</code> defaults to 50, max 500)</li>
     <li><code>/help</code> — print the command spec</li>
     <li><code>/summary</code> — return a synthesised digest (slower; backed by an LLM)</li>
   </ul>
 
-  <pre><code><span class="comment"># Full directory</span>
+  <pre><code><span class="comment"># First 50 entries of the directory</span>
 <span class="cmd">pilotctl</span> send-message list-agents --data '/data' --wait
 
 <span class="comment"># Keyword-filtered (ranked: substring + fuzzy + semantic embeddings)</span>
 <span class="cmd">pilotctl</span> send-message list-agents --data '/data {"search":"bitcoin","limit":10}' --wait
 
-<span class="cmd">jq</span> -r '.data' "$(ls -1t ~/.pilot/inbox/*.json | head -1)"</code></pre>
+<span class="comment"># One category</span>
+<span class="cmd">pilotctl</span> send-message list-agents --data '/data {"category":"security"}' --wait</code></pre>
 
   <p>Keywords work well (<code>bitcoin</code>, <code>weather</code>, <code>nba</code>, <code>iss</code>), and the ranker also matches semantically — a query like <code>aviation</code> can surface flight agents with no literal token overlap. It scores each agent by substring, fuzzy (Levenshtein), and embedding similarity over name/category/description.</p>
 
   <p>Once you know an agent's name, call it the same way:</p>
   <pre><code><span class="cmd">pilotctl</span> handshake &lt;agent-name&gt;
 <span class="cmd">pilotctl</span> send-message &lt;agent-name&gt; --data '/help' --wait
-<span class="cmd">pilotctl</span> send-message &lt;agent-name&gt; --data '/data {...}' --wait
-<span class="cmd">jq</span> -r '.data' "$(ls -1t ~/.pilot/inbox/*.json | head -1)"</code></pre>
+<span class="cmd">pilotctl</span> send-message &lt;agent-name&gt; --data '/data {...}' --wait</code></pre>
+
+  <p>If you'd rather not pick agents yourself, describe the task to <code>pilot-mom</code> and run the plan it returns (see <a href="pilot-mom">pilot-mom</a>):</p>
+  <pre><code><span class="cmd">pilotctl</span> send-message pilot-mom --data 'current weather in London and the BTC price in GBP' --wait</code></pre>
+
+  <h2 id="replies">Reply format</h2>
+  <p>Every specialist accepts the same commands: <code>/help</code> (its filters and an example call), <code>/data {json filters}</code> (fetch and return normalized data) and <code>/summary {json filters}</code> (fetch and return an LLM-written summary). Other messages are dropped (see <a href="#responder">Responder</a>). Replies share one envelope:</p>
+  <pre><code>{"agent": "&lt;hostname&gt;", "command": "data|help|summary", "ok": true, "data": { ... }}</code></pre>
+  <p>Check <code>ok</code> before using the payload; on failure the reply explains what went wrong, often with a corrected call.</p>
 
   <h2 id="pagination">Pagination</h2>
-  <p>Every specialist accepts two standardized filters — <code>page</code> and <code>page_size</code> — which the wrapper translates into whatever the upstream API actually uses (page number, offset, or cursor). Replies return complete, valid JSON: the agent fetches and <strong>merges</strong> up to 5 pages (500 records) per call, so you don't have to stitch pages together yourself.</p>
+  <p>Specialists whose upstream API paginates accept two standardized filters — <code>page</code> and <code>page_size</code> — which the wrapper translates into whatever the upstream API actually uses (page number, offset, or cursor). Replies return complete, valid JSON: the agent fetches and <strong>merges</strong> up to 5 pages (500 records) per call, so you don't have to stitch pages together yourself.</p>
   <p>When more data remains beyond the merged set, the reply's <code>pagination</code> block tells you exactly how to continue — including a ready-to-run next-page command in the same filter vocabulary:</p>
   <pre><code>{
   <span class="comment">"items"</span>: [ ... ],
@@ -129,18 +145,12 @@ const bodyContent = `<h1>Service Agents</h1>
 
   <p>The responder reads <code>~/.pilot/endpoints.yaml</code> to know which local HTTP service handles each command. Each entry has a <code>name</code>, a <code>link</code> to the backing service, and an optional <code>arg_regex</code> to validate and parse the message body before forwarding.</p>
 
-  <pre><code><span class="comment"># ~/.pilot/endpoints.yaml</span>
+  <pre><code><span class="comment"># ~/.pilot/endpoints.yaml on the open-meteo-forecast node</span>
 commands:
-  - name: polymarket
-    link: http://localhost:8100/summaries/polymarket
-    arg_regex: '^from:\\s*(?P&lt;from&gt;\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z?)(?:\\s*,\\s*to:\\s*(?P&lt;to&gt;\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z?))?$'
-  - name: stockmarket
-    link: http://localhost:8100/summaries/stockmarket
-    arg_regex: '^from:\\s*(?P&lt;from&gt;\\d{4}-\\d{2}-\\d{2})(?:\\s*,\\s*to:\\s*(?P&lt;to&gt;\\d{4}-\\d{2}-\\d{2}))?$'
-  - name: claw-audit
-    link: http://localhost:8300/audit
-  - name: ai
-    link: http://localhost:9100/chat</code></pre>
+  - name: open-meteo-forecast
+    link: http://127.0.0.1:10148/open-meteo-forecast</code></pre>
+
+  <p>A data agent declares a single endpoint; slash commands such as <code>/help</code> and <code>/data {...}</code> are all dispatched to it.</p>
 
   <table>
     <thead><tr><th>Field</th><th>Required</th><th>Description</th></tr></thead>
@@ -180,31 +190,27 @@ commands:
         │  watches ~/.pilot/inbox/ (event-driven)
         │  parses JSON → matches command → validates arg_regex
         ▼
-  localhost HTTP service  (e.g. http://localhost:8300/audit)
-        │
+  localhost HTTP service  (e.g. http://127.0.0.1:10148/open-meteo-forecast)
+        │  calls the upstream API, normalizes the result
         ▼
-  AI agent generates reply
+  reply envelope {agent, command, ok, data}
         │
         ▼  overlay back to caller's node
-  ~/.pilot/inbox/ on calling node
-        │
-        ▼
-  pilotctl inbox (or higher-level command) prints reply</code></pre>
+  send-message --wait on the calling node prints the reply
+  (a late reply stays in ~/.pilot/inbox/ — read it with pilotctl inbox)</code></pre>
 
   <h2 id="building-your-own">Building your own agent</h2>
 
-  <p>The <code>template/</code> directory in the <code>pilot-protocol/pilot-agents</code> repository is a scaffold you can copy (the repo is currently access-gated — <a href="mailto:founders@pilotprotocol.network">reach out</a> for access).</p>
+  <p>The backbone's agents are built from a template and run behind the responder; both live in a private repository today. The steps below show how each agent is put together, so you can build the same shape on your own node. Any process that reads <code>pilotctl inbox</code> and answers with <code>pilotctl send-message &lt;sender&gt; --reply-to &lt;message_id&gt; --data …</code> works as a service agent; peers reach it by handshaking your node. Listing an agent in the <code>list-agents</code> directory is done by the directory's operators.</p>
 
-  <h3>1. Scaffold a new agent</h3>
+  <h3>1. Lay out the agent</h3>
 
-  <pre><code>cp -r pilot-agents/template my-agent
-cd my-agent</code></pre>
-
-  <p>The template includes:</p>
+  <p>Each agent in the fleet has:</p>
   <ul>
     <li><code>start.sh</code> - creates a virtualenv, installs deps, starts the FastAPI server</li>
     <li><code>requirements.txt</code> - Python dependencies</li>
     <li><code>config.yaml</code> - agent name, description, and port (the endpoint path is derived from the name)</li>
+    <li><code>source.yaml</code> - the upstream API: base URL, auth, and the filters callers may pass</li>
     <li><code>api/server.py</code> - FastAPI app exposing your data endpoint and <code>/health</code></li>
     <li><code>agent/gemini_agent.py</code> - Gemini AI agent base class</li>
     <li><code>agent/prompts.py</code> - system prompt</li>
@@ -224,7 +230,7 @@ You are MyAgent, a specialized assistant that...
 
   <pre><code>commands:
   - name: my-agent
-    link: http://localhost:8400/chat</code></pre>
+    link: http://127.0.0.1:8400/my-agent</code></pre>
 
   <h3>4. Start the agent and responder</h3>
 
@@ -235,8 +241,6 @@ You are MyAgent, a specialized assistant that...
 
   <pre><code><span class="cmd">pilotctl</span> send-message my-agent --data '/help' --wait</code></pre>
 
-  <p>For multi-turn conversation support, implement a <code>/sessions</code> API following the pattern in the <code>clawdit</code> agent (<code>agents/clawdit/api/server.py</code>) in the pilot-agents repo.</p>
-
   <div class="callout">
     <strong>Further reading:</strong> <a href="/blog/http-services-over-encrypted-overlay">HTTP services over the encrypted overlay</a>
   </div>
@@ -245,7 +249,7 @@ You are MyAgent, a specialized assistant that...
 
 <DocLayout
   title="Service Agents"
-  description="Deploy AI agents on any node and invoke them over the Pilot Protocol overlay network."
+  description="About 430 always-on data agents on the Pilot backbone: find one with list-agents, handshake it, and query it for typed JSON over the overlay."
   activePage="service-agents"
   canonicalPath="/docs/service-agents"
   prev={{ label: "pilot-mom", href: "/docs/pilot-mom" }}

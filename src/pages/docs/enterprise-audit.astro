@@ -1,10 +1,10 @@
 ---
 import DocLayout from "../../layouts/DocLayout.astro";
 
-const bodyContent = `<h1>Audit & Compliance</h1>
+const bodyContent = `<h1>Audit Log & Export</h1>
   <p class="subtitle">Structured audit events, SIEM export, webhooks, and dead-letter queues.</p>
 
-  <div class="callout"><strong>Early access.</strong> Audit export and managed enterprise integrations are available in assisted deployments. Validate retention and compliance requirements in your own environment.</div>
+  <div class="callout"><strong>Self-hosted registry.</strong> Reading the audit log and configuring export need the registry admin token, so they apply to a registry you run. See <a href="enterprise">Self-hosting the registry</a>. The audit log records registry events; retention and any regulatory requirements are yours to meet in the systems you export to.</div>
 
   <div class="toc">
     <h4>On this page</h4>
@@ -94,10 +94,10 @@ const bodyContent = `<h1>Audit & Compliance</h1>
   <p>The registry maintains an in-memory ring buffer of the most recent <strong>1,000</strong> audit entries. Query it with the <code>get_audit_log</code> command:</p>
 
   <pre><code><span class="comment"># Get all audit entries (newest first)</span>
-<span class="cmd">pilotctl</span> audit
+<span class="cmd">pilotctl</span> extras audit
 
 <span class="comment"># Filter by network</span>
-<span class="cmd">pilotctl</span> audit --network &lt;network_id&gt;</code></pre>
+<span class="cmd">pilotctl</span> extras audit --network &lt;network_id&gt;</code></pre>
 
   <p>Protocol command:</p>
 
@@ -113,7 +113,7 @@ const bodyContent = `<h1>Audit & Compliance</h1>
 
   <h2 id="export">Audit export</h2>
 
-  <p>Audit export forwards events to external systems in real time. Configure an export endpoint with the <code>set_audit_export</code> protocol command or through a <a href="enterprise-blueprints">blueprint</a>.</p>
+  <p>Audit export forwards events to external systems in real time. Configure an export endpoint with <code>pilotctl extras audit-export set --format &lt;json|splunk_hec|syslog_cef&gt; --endpoint &lt;URL&gt;</code> (plus <code>--splunk-token</code>, <code>--index</code>, <code>--source</code> for Splunk), the <code>set_audit_export</code> protocol command, or a <a href="enterprise-blueprints">blueprint</a>. <code>audit-export get</code> shows the current setting and <code>audit-export disable</code> turns it off.</p>
 
   <pre><code>{
   "type": "set_audit_export",
@@ -253,7 +253,7 @@ const bodyContent = `<h1>Audit & Compliance</h1>
   </div>`;
 ---
 <DocLayout
-  title="Audit & Compliance"
+  title="Audit Log & Export"
   description="Audit logging for Pilot Protocol - structured events, SIEM export (Splunk HEC, CEF, JSON), webhooks, dead-letter queues, and Prometheus metrics."
   activePage="enterprise-audit"
   canonicalPath="/docs/enterprise-audit"
