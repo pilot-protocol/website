@@ -153,7 +153,9 @@ function toApp(app) {
     depends: (app.depends || []).map((dependency) => ({
       id: dependency.id, reason: dependency.reason || '', optional: !!dependency.optional,
     })),
-    protection: app.protection || 'shareable',
+    // The manifest's `protection` ("guarded" = encrypted volume + restricted
+    // namespace) is not enforced yet (app-store SideloadOSSandboxTODO), so the
+    // site doesn't carry it; the declared grants are shown instead.
     featured: !!app.featured,
     real: true,
     inCatalogue: app.in_catalogue !== false,
@@ -219,7 +221,7 @@ export interface App {
   sourceUrl: string | null; homepage: string | null;
   methods: AppMethod[]; changelog: AppChangelog[]; grants: string[];
   bundles: AppBundle[]; installedBytes: number | null;
-  depends: AppDependency[]; protection: string;
+  depends: AppDependency[];
   featured: boolean; real: boolean; inCatalogue: boolean;
   icon: AppIcon; minPilotVersion: string; runtimes: string[];
   publishedAt: string | null; updatedAt: string | null;
