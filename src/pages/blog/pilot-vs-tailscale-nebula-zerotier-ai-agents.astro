@@ -21,10 +21,10 @@ const bodyContent = `<p>Trying to decide between Nebula and Tailscale for your i
       <tr><td>OSI layer</td><td>L3 (IP)</td><td>L3 (IP)</td><td>L2 (Ethernet)</td><td>L7 (agent messaging)</td></tr>
       <tr><td>Crypto core</td><td>WireGuard</td><td>Noise framework</td><td>Custom (Curve25519/Salsa)</td><td>X25519 + AES-GCM</td></tr>
       <tr><td>Identity</td><td>SSO / OIDC accounts</td><td>Self-run CA + certs</td><td>Network ID + controller</td><td>Per-agent key + trust handshake</td></tr>
-      <tr><td>Discovery</td><td>Coordination server</td><td>Lighthouses</td><td>Roots / controllers</td><td>Rendezvous + nameserver directory</td></tr>
+      <tr><td>Discovery</td><td>Coordination server</td><td>Lighthouses</td><td>Roots / controllers</td><td>Rendezvous registry (hostname lookup)</td></tr>
       <tr><td>NAT traversal</td><td>Hole-punch + DERP relay</td><td>Lighthouse-assisted punch</td><td>Roots-assisted punch</td><td>STUN + hole-punch + relay</td></tr>
       <tr><td>What an endpoint is</td><td>A host IP</td><td>A host IP</td><td>A host on an L2 net</td><td>A named, addressable agent</td></tr>
-      <tr><td>License</td><td>BSD client; SaaS control</td><td>MIT</td><td>BSL</td><td>AGPL-3.0, static Go binary</td></tr>
+      <tr><td>License</td><td>BSD client; SaaS control</td><td>MIT</td><td>BSL</td><td>AGPL-3.0, static Go binaries</td></tr>
     </tbody>
   </table>
   <p>Two things stand out. First, the crypto is broadly similar across all four — modern elliptic-curve key exchange with authenticated encryption — so "which is most secure" is rarely the deciding factor. Second, the real differences are in <em>identity, discovery, and what an endpoint represents</em>. That is where agent workloads diverge from device workloads. (If NAT is the bottleneck, read our guide to <a href="/blog/connect-ai-agents-behind-nat-without-vpn">connecting AI agents behind NAT without a VPN</a>.)</p>
@@ -73,8 +73,8 @@ const bodyContent = `<p>Trying to decide between Nebula and Tailscale for your i
   <ul>
     <li><strong>Agents, not hosts, are addressable.</strong> Every agent gets a permanent 48-bit virtual address that survives restarts, IP changes, and moving between clouds. You message an agent, not a machine.</li>
     <li><strong>Trust is per-peer, not per-network.</strong> Joining a Tailscale tailnet or a ZeroTier network ID means you are "in." Pilot uses an explicit handshake: two agents mutually approve a trust link before they exchange data, so membership and trust are decoupled.</li>
-    <li><strong>Discovery is built in.</strong> A rendezvous directory and a nameserver let an agent resolve peers and capabilities by name or tag — closer to DNS-plus-a-service-registry than to a VPN's static host list.</li>
-    <li><strong>It is a thin application layer.</strong> Encrypted UDP tunnels (X25519 + AES-GCM) with STUN, hole-punching, and relay fallback for NAT — implemented in an AGPL-licensed Go daemon distributed as a static binary on supported platforms.</li>
+    <li><strong>Lookup is built in.</strong> The rendezvous registry resolves an agent's hostname to its address (<code>pilotctl find &lt;hostname&gt;</code>), so peers are reached by name rather than a static host list.</li>
+    <li><strong>It is a thin application layer.</strong> Encrypted UDP tunnels (X25519 + AES-GCM) with STUN, hole-punching, and relay fallback for NAT — implemented in an AGPL-licensed Go daemon and CLI distributed as static binaries on supported platforms.</li>
   </ul>
   <p>The honest framing: Pilot and a mesh VPN are not mutually exclusive. You can absolutely run agents on top of Tailscale or Nebula. You would just be solving addressing, discovery, and trust yourself, on top of a layer that does not know what an agent is.</p>
   </section>
@@ -91,20 +91,20 @@ const bodyContent = `<p>Trying to decide between Nebula and Tailscale for your i
 
   <section>
   <h2>Try it</h2>
-  <p>Pilot installs in one line and gives an agent an address on the network in under a minute:</p>
+  <p>Pilot installs in one line, and the daemon registers a permanent address the first time it starts:</p>
   <pre><code><span class="comment"># Install and start</span>
 <span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
 <span class="cmd">pilotctl daemon start --email agent@example.com</span>
-<span class="cmd">pilotctl network join 1</span>
 
-<span class="comment"># You now have a permanent address; discover and message a peer</span>
+<span class="comment"># You now have a permanent address; trust and message a peer</span>
 <span class="cmd">pilotctl handshake &lt;peer-address&gt;</span>
 <span class="cmd">pilotctl send-message &lt;peer-address&gt; --data 'hello'</span></code></pre>
+  <p>No network join is needed for this: two trusted agents talk directly. Private networks are created by a registry operator; on a rendezvous you run yourself, that is you.</p>
   </section>
 
   <div class="cta">
     <h3>Networking built for agents, not just machines</h3>
-    <p>Permanent addresses, a trust handshake, and built-in discovery — over encrypted UDP, with no external dependencies.</p>
+    <p>Permanent addresses, a trust handshake, and built-in discovery — over encrypted UDP. Static binaries, no runtime dependencies.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 
@@ -123,7 +123,7 @@ const faqItems = [
   },
   {
     question: "Do AI agents need a VPN?",
-    answer: "Not necessarily. A VPN gives a machine a private IP, but agents need three things a VPN does not provide: a durable address that survives restarts and cloud moves, a way to discover other agents by capability, and per-peer trust rather than blanket network membership. You can run agents over a VPN, but the agent layer (addressing, discovery, trust) still has to come from somewhere.",
+    answer: "Not necessarily. A VPN gives a machine a private IP, but agents need three things a VPN does not provide: a durable address that survives restarts and cloud moves, a way to find other agents by name, and per-peer trust rather than blanket network membership. You can run agents over a VPN, but the agent layer (addressing, discovery, trust) still has to come from somewhere.",
   },
   {
     question: "What is the best overlay network for agent-to-agent communication?",
@@ -131,7 +131,7 @@ const faqItems = [
   },
   {
     question: "How do MCP tunnels compare to VPNs for AI agents?",
-    answer: "MCP servers over VPN tunnels is a common pattern, but the tunnel only connects two machines at the IP layer — the MCP client still needs to know the server's address ahead of time. An agent-native overlay like Pilot Protocol gives each MCP server a permanent reachable address that survives restarts and network moves, and the rendezvous directory makes discovery automatic rather than requiring static configuration.",
+    answer: "MCP servers over VPN tunnels is a common pattern, but the tunnel only connects two machines at the IP layer — the MCP client still needs to know the server's address ahead of time. An agent-native overlay like Pilot Protocol gives each MCP server a permanent reachable address that survives restarts and network moves, and clients look the server up by hostname instead of a hard-coded IP.",
   },
   {
     question: "What is the difference between an overlay network and a VPN?",
