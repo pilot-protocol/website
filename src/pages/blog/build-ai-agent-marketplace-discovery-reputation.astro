@@ -1,201 +1,253 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>The agent ecosystem has a marketplace problem. There are thousands of AI agents available across GitHub repositories, Hugging Face spaces, LangChain hubs, and proprietary platforms. Finding the right one for a specific task is an exercise in frustration. There is no universal directory, no standard way to describe capabilities, no trust signal beyond star counts, and no mechanism for one agent to hire another agent to do work.</p>
+const bodyContent = `<p>The agent ecosystem has a marketplace problem. AI agents are scattered across GitHub repositories, model hubs, framework registries and proprietary platforms. Finding the right one for a task is hard. There is no universal directory, no standard way to describe capabilities, no trust signal beyond star counts, and no common way for one agent to hire another and pay it.</p>
 
-  <p>Developer forums surface the same complaints repeatedly. "There is still no good way to find agents scattered across GitHub repos and registries." "If my code review agent needs a security audit, it can't hire another agent -- why not?" The infrastructure for agents to transact with each other simply does not exist outside of walled gardens.</p>
+  <p>The closest things to agent marketplaces today are catalogues run by a single company: a cloud provider's marketplace, a model vendor's connector directory, a framework's hub. They share a structural problem. One operator decides who gets listed, what is searchable and what the trust rules are. Agents outside the catalogue cannot take part, and a track record built inside it does not travel.</p>
 
-  <p>The closest things to agent marketplaces today are centralized platforms: AWS Agent Marketplace, Anthropic's tool marketplace, and various startup attempts. They all share the same structural problem -- a gatekeeper decides who gets listed, what capabilities are searchable, and what the trust rules are. Agents outside the platform cannot participate. Agents inside the platform cannot leave without losing their reputation.</p>
+  <p>This post looks at what an agent marketplace needs, which of those pieces Pilot Protocol provides today, and which you have to build yourself. Short version: Pilot gives you stable identities, explicit trust, encrypted messaging and, through the Wallet app, payments. It does not give you a search engine for agents or a reputation score. Those are yours to build, and the primitives make them straightforward.</p>
 
-  <h2 id="ghost-agents">The Ghost Agent Problem</h2>
+  <h2 id="ghost-agents">Why Agent Marketplaces Are Hard</h2>
 
-  <p>Before solving discovery and reputation, it is worth understanding the specific failure modes that make agent marketplaces hard.</p>
+  <p>Before building anything, it is worth naming the failure modes.</p>
 
-  <p><strong>Ghost agents</strong> are agents that register on a platform, claim capabilities, and then never actually perform work. In traditional API marketplaces, this manifests as services that respond to health checks but return errors on real requests, or services that are listed but unmaintained. In agent marketplaces, the problem is worse because agents are expected to be autonomous -- a ghost agent that accepts a task and then silently fails wastes the requester's time and degrades the entire marketplace's reliability signal.</p>
+  <p><strong>Ghost agents</strong> register, claim capabilities and never do the work. In API marketplaces this looks like a service that passes health checks but fails real requests. In an agent marketplace it is worse: a ghost agent that accepts a job and silently fails wastes the requester's time and erodes trust in every other listing.</p>
 
-  <p><strong>Protocol fragmentation</strong> means that agents built on different frameworks cannot interact. A LangChain agent cannot natively call a CrewAI agent. An AutoGen group cannot delegate work to a standalone Python script. Each framework has its own message format, tool schema, and execution model. The result is that "agent marketplace" usually means "marketplace for agents built on our specific framework."</p>
+  <p><strong>Protocol fragmentation</strong> means agents built on different frameworks cannot talk to each other. Each framework has its own message format, tool schema and execution model, so "agent marketplace" usually means "marketplace for agents built on our framework".</p>
 
-  <p><strong>Context explosion</strong> is the onboarding cost problem. A newly deployed agent needs to understand its environment -- what other agents exist, what they can do, what protocols they speak, what credentials are needed. One developer described the situation: "50K tokens just for onboarding." When the context window is consumed by environment discovery, there is less room for actual work.</p>
+  <p><strong>Context explosion</strong> is the onboarding cost. A new agent has to learn what other agents exist, what they do and how to reach them. If that description is dumped into the context window, there is less room for the actual work.</p>
 
-  <p><strong>No reputation portability</strong> means that an agent's track record on one platform does not transfer to another. An agent that has completed 10,000 tasks on Platform A starts from zero on Platform B. There is no standard for representing or verifying agent reputation across systems.</p>
+  <p><strong>No reputation portability</strong> means an agent's track record on one platform does not transfer to another. Part of the reason is identity: if the same agent has a different account on every platform, there is nothing stable to attach a history to.</p>
 
-  <h2 id="three-pillars">Three Things a Marketplace Needs</h2>
+  <h2 id="three-pillars">What a Marketplace Needs</h2>
 
-  <p>Strip away the complexity and an agent marketplace needs exactly three capabilities: discovery (how agents find each other), trust (how agents verify each other), and reputation (how agents evaluate each other). Everything else -- payment, SLAs, dispute resolution -- is built on top of these three.</p>
+  <p>Strip it down and a marketplace needs four things: <strong>discovery</strong> (how requesters find workers), <strong>trust</strong> (who may talk to whom), <strong>reputation</strong> (how requesters judge workers) and <strong>payment</strong>. Pricing, refunds and disputes sit on top.</p>
 
-  <p>Pilot Protocol provides all three as protocol-level features. Discovery uses tags. Trust uses cryptographic handshakes. Reputation is tracked through behavioral signals. Here is how each works in the context of a marketplace.</p>
+  <table>
+    <thead>
+      <tr><th>Need</th><th>What Pilot provides</th><th>What you build</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Identity</td><td>An Ed25519 key and a permanent 48-bit address per node</td><td>Nothing</td></tr>
+      <tr><td>Discovery</td><td><code>pilotctl find</code> for public hostnames; member lists on a registry you run; two curated catalogues (service agents, App Store)</td><td>A listing or search for your own workers</td></tr>
+      <tr><td>Trust</td><td>Handshakes with a signed justification; approve, reject, untrust; private by default</td><td>Your approval rules</td></tr>
+      <tr><td>Messaging</td><td><code>send-message</code> with <code>--wait</code>, the inbox, <code>--reply-to</code>, <code>send-file</code></td><td>Your job format</td></tr>
+      <tr><td>Payment</td><td>The Wallet app in the App Store (x402, USDC)</td><td>Pricing, refunds, disputes</td></tr>
+      <tr><td>Reputation</td><td>Nothing beyond a stable identity to key it on</td><td>Your own records and scoring</td></tr>
+    </tbody>
+  </table>
 
-  <h2 id="discovery">Discovery via Tags</h2>
+  <h2 id="existing-directories">The Directories That Already Exist</h2>
 
-  <p>Agents on the Pilot network self-describe their capabilities using tags -- short string labels (max 3) stored on the node in the registry. Capability discovery across the network is done through the <code>list-agents</code> directory service.</p>
+  <p>Two catalogues on Pilot are often mistaken for a general agent marketplace. Neither is one, but both are useful to a marketplace builder.</p>
 
-  <pre><code><span class="comment"># Agent advertises its capabilities</span>
-<span class="cmd">$ pilotctl extras set-tags code-review security-audit python</span>   <span class="comment"># max 3 tags</span>
-Tags updated: code-review, security-audit, python
+  <p><strong>The service-agent directory.</strong> About 430 specialist agents run on the public backbone (finance, weather, news, transit, dev metadata, science, government data and more). <code>list-agents</code> is their directory and <code>pilot-mom</code> turns a plain-English task into a plan of calls. The directory is curated by its operators: it lists those service agents, not every node on the network, and there is no command to add your own agent to it.</p>
 
-<span class="comment"># Another agent searches for a code reviewer</span>
-<span class="comment"># Discover agents by capability via the list-agents directory</span>
-<span class="cmd">$ pilotctl send-message list-agents --data '/data {"search":"code-review"}' --wait</span>
-# → returns matching directory agents (hostname, category, description)
-<span class="comment"># Note: pilotctl peers --search filters your CONNECTED peers by node-ID substring, not tags.</span></code></pre>
+  <pre><code><span class="comment"># Search the service-agent directory</span>
+<span class="cmd">$ pilotctl send-message list-agents --data '/data {"search":"weather","limit":5}' --wait</span>
 
-  <p>Tags solve the "how do I find an agent" problem without requiring a centralized directory, a standardized capability ontology, or a registration process. An agent joins the network, tags itself, and becomes discoverable to any peer that has the trust credentials to search. There is no listing fee, no approval process, and no gatekeeper.</p>
+<span class="comment"># Or describe the task and get a plan back</span>
+<span class="cmd">$ pilotctl send-message pilot-mom --data 'current weather and a 3-day forecast for Oslo' --wait</span></code></pre>
 
-  <p>Tags also solve the context explosion problem. Instead of dumping a 50K-token environment description into the agent's context, you give it a search command. The agent queries for the capabilities it needs, gets back a short list of candidates, and picks one. The discovery context is a few hundred tokens, not fifty thousand.</p>
+  <p><strong>The App Store.</strong> 30 apps that an agent installs on its own daemon and calls over local IPC: databases, sandboxes, email and phone, search, the wallet and more. Each app is made by its publisher; packages are reviewed, signature-verified and SHA-256 pinned. Most run locally and are free; a few are metered against a per-user USD 5 budget. Publishers submit through <a href="https://github.com/pilot-protocol/app-template" target="_blank" rel="noopener">pilot-protocol/app-template</a>.</p>
+
+  <pre><code><span class="cmd">$ pilotctl appstore catalogue</span>
+<span class="cmd">$ pilotctl appstore view io.pilot.wallet</span></code></pre>
+
+  <p>A useful lesson from <code>list-agents</code>: a directory on Pilot is just an agent that answers queries over <code>send-message</code>. Your marketplace can run its own directory agent the same way, with whatever listing rules you choose.</p>
+
+  <h2 id="discovery">Discovery for Your Own Workers</h2>
+
+  <p>There is no network-wide search for agents by capability. Discovery for your own workers comes from three real mechanisms.</p>
+
+  <p><strong>Known hostnames and addresses.</strong> <code>pilotctl find &lt;hostname&gt;</code> resolves a hostname to a Pilot address. A public node's hostname resolves for anyone. A private node's hostname resolves only for peers it trusts and for members of a network it shares. Anything else needs the address, passed out of band (your website, your directory agent, a config file).</p>
+
+  <pre><code><span class="comment"># Worker: pick a name and make it resolvable by anyone</span>
+<span class="cmd">$ pilotctl set-hostname review-worker-01</span>
+<span class="cmd">$ pilotctl set-public</span>
+
+<span class="comment"># Requester: resolve it</span>
+<span class="cmd">$ pilotctl find review-worker-01</span></code></pre>
+
+  <p><strong>A network's member list on your own registry.</strong> The open-source rendezvous (<a href="https://github.com/pilot-protocol/rendezvous" target="_blank" rel="noopener">pilot-protocol/rendezvous</a>) supports private networks. Run your own registry, create a network for the marketplace, and every worker that joins shows up in its member list with its hostname, visibility and tags. On the public backbone only its operators can create networks (it needs the registry admin token), so this path means running your own. See the <a href="/docs/networks">networks documentation</a>.</p>
+
+  <pre><code><span class="comment"># On a registry you run (admin token required to create a network)</span>
+<span class="cmd">$ PILOT_ADMIN_TOKEN=... pilotctl network create --name marketplace --join-rule token --token $JOIN_TOKEN</span>
+
+<span class="comment"># Each worker and requester joins</span>
+<span class="cmd">$ pilotctl network join &lt;network_id&gt; --token $JOIN_TOKEN</span>
+
+<span class="comment"># Anyone in the network lists the members</span>
+<span class="cmd">$ pilotctl --json network members &lt;network_id&gt;</span></code></pre>
+
+  <p><strong>Tags as labels.</strong> A node can carry up to three tags (lowercase letters, digits and hyphens), set with <code>pilotctl extras set-tags</code>. Tags appear in <code>pilotctl lookup</code> output and in network member lists, so a requester can filter the member list on its own side. They are labels on a node record, not a search index.</p>
+
+  <pre><code><span class="comment"># Worker labels itself (max 3 tags)</span>
+<span class="cmd">$ pilotctl extras set-tags code-review python security</span>
+
+<span class="comment"># Requester filters the member list locally</span>
+<span class="cmd">$ pilotctl --json network members &lt;network_id&gt; \\
+    | jq '.data.nodes[] | select((.tags // []) | index("code-review")) | {hostname, address}'</span></code></pre>
+
+  <p>This also keeps onboarding cheap. Instead of a long description of the environment, a new agent gets one command that returns a short list of candidates.</p>
 
   <div class="callout">
-    <p><strong>Tags vs. Agent Cards:</strong> Google's A2A protocol uses Agent Cards -- structured JSON documents that describe capabilities, supported protocols, and authentication requirements. Agent Cards are richer but more rigid. You need to conform to the schema. Tags are simpler but more flexible. There is no wrong tag. The trade-off is precision vs. adoption speed. For a marketplace that needs to onboard agents quickly, tags win. For a marketplace that needs semantic interoperability, Agent Cards win.</p>
+    <p><strong>Tags vs. Agent Cards:</strong> Google's A2A protocol uses Agent Cards, structured JSON documents that describe capabilities, protocols and authentication. Three short tags are far less expressive. A common split is to use tags to narrow the member list, then ask each candidate for its full capability description over <code>send-message</code>. See <a href="a2a-agent-cards-over-pilot-tunnels">A2A Agent Cards over Pilot tunnels</a>.</p>
   </div>
 
   <h2 id="trust">Trust via Handshakes</h2>
 
-  <p>Discovery tells you who is out there. Trust tells you whether to work with them. In Pilot Protocol, trust is established through a cryptographic handshake where both agents must explicitly agree to interact.</p>
+  <p>Discovery tells you who is out there. Trust decides who may talk to whom. Nodes are private by default: a private node rejects incoming streams from peers it does not trust, unless they share a network. Trust is established with a handshake that the other side must approve.</p>
 
-  <p>For a marketplace, the handshake serves as a lightweight contract: "I want to transact with you, and here is why."</p>
+  <p>For a marketplace, the handshake works as a lightweight contract: "I want to work with you, and here is why."</p>
 
-  <pre><code><span class="comment"># Requester agent initiates a marketplace handshake</span>
-<span class="cmd">$ pilotctl handshake audit-bot "Requesting security review of auth module, ~500 LOC Python"</span>
-Handshake request sent to audit-bot (1:0001.0000.0042)
-Waiting for approval...
+  <pre><code><span class="comment"># Requester asks to work with the worker</span>
+<span class="cmd">$ pilotctl handshake review-worker-01 "Security review of an auth module, about 500 lines of Python"</span>
 
-<span class="comment"># audit-bot reviews the request (can be automated via policy)</span>
+<span class="comment"># Worker sees the request and its justification</span>
 <span class="cmd">$ pilotctl pending</span>
-PENDING HANDSHAKES:
-  1:0001.0000.0100 (deploy-agent)
-  Justification: "Requesting security review of auth module, ~500 LOC Python"
-  Signed by: 8c3a...f7d2 (verified)
 
+<span class="comment"># Worker approves (trust is now mutual) or rejects</span>
+<span class="cmd">$ pilotctl approve &lt;node_id&gt;</span>
+<span class="cmd">$ pilotctl reject &lt;node_id&gt; "not taking new clients"</span></code></pre>
 
-<span class="cmd">$ pilotctl approve 1:0001.0000.0100</span>
-Trust established with deploy-agent</code></pre>
+  <p>The justification travels with the signed request, so the worker (or its operator) can read it and decide. After approval, traffic between the two is authenticated and encrypted end to end, and either side can end it with <code>pilotctl untrust</code>.</p>
 
-  <p>The handshake justification is not a comment field. It is a signed, auditable statement covered by the requester's Ed25519 signature. The worker agent (or its operator) can inspect it, verify the requester's identity, and make an informed decision. After approval, both agents store each other's public keys. Every subsequent message is authenticated and encrypted.</p>
+  <p>A worker that needs a human to approve every request does not scale. There are two options. The daemon's <code>--trust-auto-approve</code> flag approves every incoming handshake, which is what always-on public service agents use; it is all-or-nothing. Or you script your own rules: <code>pilotctl --json pending</code> returns each request's node ID and justification, and your script calls <code>approve</code> or <code>reject</code>. For example, approve only nodes that are members of your marketplace network:</p>
 
-  <p>For a marketplace, handshake automation is critical. A worker agent that requires manual approval for every connection request does not scale. Pilot supports blanket handshake auto-approval via the daemon's <code>--trust-auto-approve</code> flag (approves all incoming handshakes — used by always-on service agents), plus an embedded trusted-agents list for well-known services. There is no per-tag or time-of-day handshake policy today; auto-approval is all-or-nothing.</p>
+  <pre><code><span class="comment"># approve_members.py: approve handshakes from marketplace members only</span>
+import json, subprocess
 
-  <h2 id="python-agent">Code Example: Python Agent That Advertises and Accepts Work</h2>
+NETWORK_ID = "7"  <span class="comment"># your marketplace network</span>
 
-  <p>Here is a complete Python agent that joins the Pilot network, advertises its capabilities, and accepts tasks via a polling loop. This is the minimal viable marketplace worker.</p>
+def pilotctl(*args):
+    out = subprocess.run(["pilotctl", "--json", *args], capture_output=True, text=True, check=True)
+    return json.loads(out.stdout)["data"]
+
+members = {n["node_id"] for n in pilotctl("network", "members", NETWORK_ID).get("nodes", [])}
+for req in pilotctl("pending")["pending"]:
+    node = str(req["node_id"])
+    if req["node_id"] in members:
+        pilotctl("approve", node)
+    else:
+        pilotctl("reject", node, "members of the marketplace network only")</code></pre>
+
+  <h2 id="python-agent">Code Example: A Worker That Accepts Jobs</h2>
+
+  <p>Here is a minimal marketplace worker in Python. It reads job requests from its Pilot inbox and answers each one with <code>--reply-to</code>, so the requester's <code>send-message --wait</code> picks up the answer. It shells out to <code>pilotctl</code>; the <a href="/docs/python-sdk">Python SDK</a> is the other option.</p>
 
   <pre><code><span class="comment">#!/usr/bin/env python3</span>
-<span class="comment">"""Marketplace worker agent that accepts code review tasks."""</span>
-import subprocess
+<span class="comment">"""Marketplace worker: answers code-review jobs that arrive in the Pilot inbox."""</span>
 import json
+import subprocess
 import time
 
-HOSTNAME = "review-worker-01"
-TAGS = ["code-review", "python", "security-audit"]
 POLL_INTERVAL = 5  <span class="comment"># seconds</span>
 
-def run(cmd):
-    <span class="comment">"""Run a pilotctl command and return parsed JSON."""</span>
-    result = subprocess.run(
-        ["pilotctl"] + cmd + ["--json"],
-        capture_output=True, text=True
-    )
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr)
-    return json.loads(result.stdout) if result.stdout.strip() else None
+def pilotctl(*args):
+    <span class="comment">"""Run pilotctl --json and return the "data" field of its output."""</span>
+    out = subprocess.run(["pilotctl", "--json", *args], capture_output=True, text=True)
+    if out.returncode != 0:
+        raise RuntimeError(out.stderr.strip())  <span class="comment"># JSON with code, message and hint</span>
+    return json.loads(out.stdout)["data"]
 
-def setup():
-    <span class="comment">"""Initialize the agent and advertise capabilities."""</span>
-    run(["init", "--hostname", HOSTNAME])
-    run(["daemon", "start"])
-    run(["extras", "set-tags"] + TAGS)
-    <span class="comment"># Make agent public so requesters can discover it</span>
-    run(["set-public"])
-    print(f"Agent {HOSTNAME} online. Tags: {TAGS}")
+def review(job):
+    <span class="comment"># Your actual review logic: call a model, run static analysis, etc.</span>
+    return {"type": "review_result", "job": job.get("job"), "findings": [], "summary": "no findings"}
 
-def process_message(msg):
-    <span class="comment">"""Execute a code review and send results back."""</span>
-    sender = msg.get("from", "unknown")
-    payload = msg.get("data", "")
-
-    <span class="comment"># --- Your actual review logic here ---</span>
-    <span class="comment"># This is where you call an LLM, run static analysis, etc.</span>
-    review = {
-        "findings": [
-            {"severity": "high", "line": 42, "message": "SQL injection via string formatting"},
-            {"severity": "medium", "line": 87, "message": "Hardcoded timeout value"}
-        ],
-        "summary": "2 findings: 1 high, 1 medium"
-    }
-
-    <span class="comment"># Send results back to requester</span>
-    run(["send", sender, json.dumps(review)])
-    print(f"Review sent to {sender}: {review['summary']}")
-
-def recv_loop():
-    <span class="comment">"""Main loop: receive messages and process them."""</span>
-    print("Waiting for review requests...")
+def main():
+    seen = set()
     while True:
-        msg = run(["recv", "1001", "--json"])   # recv requires a port
-        if msg:
-            process_message(msg)
+        inbox = pilotctl("inbox", "--full", "--limit", "0")
+        for msg in inbox["messages"]:
+            if msg["id"] in seen:
+                continue
+            seen.add(msg["id"])
+            try:
+                job = json.loads(msg.get("data", ""))
+            except ValueError:
+                continue
+            if job.get("type") != "review_request":
+                continue
+            result = review(job)
+            pilotctl("send-message", msg["from"], "--type", "json",
+                     "--data", json.dumps(result),
+                     "--reply-to", msg.get("message_id", msg["id"]))
         time.sleep(POLL_INTERVAL)
 
 if __name__ == "__main__":
-    setup()
-    recv_loop()</code></pre>
+    main()</code></pre>
 
-  <p>The agent is ~50 lines of Python. No framework, no SDK, no dependencies beyond the <code>pilotctl</code> binary. The marketplace participation logic is just a receive loop and a subprocess call. This is deliberate -- the protocol handles discovery, trust, and encryption. The agent handles the actual work.</p>
+  <p>On the requester's side, one command sends the job and waits for the matching answer, which comes back inline under <code>data.reply</code>:</p>
 
-  <h2 id="comparison">Comparison: Pilot Marketplace vs. Centralized Alternatives</h2>
+  <pre><code><span class="cmd">$ pilotctl --json send-message review-worker-01 --type json \\
+    --data '{"type":"review_request","job":"42","repo":"https://example.com/acme/auth.git","focus":"security"}' \\
+    --wait 2m</span></code></pre>
 
-  <table>
-    <thead>
-      <tr><th>Property</th><th>Pilot Protocol</th><th>AWS Agent Marketplace</th><th>Centralized Platforms</th></tr>
-    </thead>
-    <tbody>
-      <tr><td>Listing requirement</td><td>Set tags (1 command)</td><td>Vendor application + review</td><td>Platform-specific onboarding</td></tr>
-      <tr><td>Discovery</td><td>Tag search (decentralized)</td><td>Catalog search (centralized)</td><td>Platform search</td></tr>
-      <tr><td>Trust model</td><td>Mutual Ed25519 handshake</td><td>AWS IAM</td><td>Platform-managed credentials</td></tr>
-      <tr><td>Reputation</td><td>Behavior-based (per-connection)</td><td>Reviews + ratings</td><td>Star ratings / reviews</td></tr>
-      <tr><td>Reputation portability</td><td>Tied to Ed25519 identity</td><td>AWS account only</td><td>Platform-locked</td></tr>
-      <tr><td>Anti-spam</td><td>Trust gating (handshake required)</td><td>Rate limits + billing</td><td>Rate limits + moderation</td></tr>
-      <tr><td>Ghost agent handling</td><td>No trust = no connections</td><td>Delisting by review</td><td>Manual moderation</td></tr>
-      <tr><td>Framework lock-in</td><td>None (any language, CLI)</td><td>AWS Bedrock agents</td><td>Platform SDK required</td></tr>
-      <tr><td>Cross-platform</td><td>Any agent with pilotctl</td><td>AWS only</td><td>Single platform</td></tr>
-      <tr><td>Open source</td><td>Yes (AGPL-3.0)</td><td>No</td><td>No</td></tr>
-      <tr><td>Cost</td><td>Free (open source)</td><td>AWS pricing + fees</td><td>Platform fees</td></tr>
-    </tbody>
-  </table>
+  <p>Large inputs go with <code>pilotctl send-file</code> and land in the worker's <code>~/.pilot/received/</code> (<code>pilotctl received</code> lists them). Clear handled messages from time to time with <code>pilotctl inbox --clear --before 24h</code>. The protocol handles addressing, NAT traversal, trust and encryption; the worker only handles the work.</p>
 
-  <h2 id="newly-deployed">How New Agents Onboard Quickly</h2>
+  <h2 id="reputation">Reputation: Yours to Build</h2>
 
-  <p>"How do newly deployed agents quickly understand their environment?" This is the cold-start problem, and tag search provides a practical answer.</p>
+  <p>Pilot has no reputation system, ratings or task scores. What it gives you is the thing a reputation system needs most: an identity that does not change. Every node has an Ed25519 key and a permanent address, and <code>pilotctl --json lookup &lt;address&gt;</code> returns its public key. Keep your own record of outcomes keyed on that identity, and it stays meaningful for as long as the worker keeps its key.</p>
 
-  <pre><code><span class="comment"># New agent's first 3 commands after initialization</span>
-<span class="cmd">$ pilotctl extras set-tags data-processing csv-parsing etl</span>
-<span class="cmd">$ pilotctl set-public</span>
-<span class="cmd">$ pilotctl send-message list-agents --data '/data {"search":"etl"}' --wait</span>
-# → returns matching directory agents from the registry</code></pre>
+  <pre><code><span class="comment"># ledger.py: the requester's own record of how each worker did</span>
+import sqlite3, time
 
-  <p>Within seconds, the new agent knows who else in the network does similar work and what their capabilities are. There is no 50K-token environment dump. The search result is a concise, structured list. The agent can immediately initiate handshakes and begin exchanging work.</p>
+db = sqlite3.connect("ledger.db")
+db.execute("CREATE TABLE IF NOT EXISTS jobs (worker TEXT, public_key TEXT, ok INTEGER, seconds REAL, at REAL)")
+
+def record(worker, public_key, ok, seconds):
+    db.execute("INSERT INTO jobs VALUES (?, ?, ?, ?, ?)", (worker, public_key, int(ok), seconds, time.time()))
+    db.commit()
+
+def score(worker):
+    <span class="comment"># (success rate, jobs seen)</span>
+    return db.execute("SELECT AVG(ok), COUNT(*) FROM jobs WHERE worker = ?", (worker,)).fetchone()</code></pre>
+
+  <p>A record like this is private to the requester. To share reputation across a marketplace, run an agent that collects signed outcome reports and answers queries about them, with whatever rules you need to resist fake reports. That is application design, not something the protocol decides for you.</p>
+
+  <h2 id="payments">Payments with the Wallet App</h2>
+
+  <p>Payment is an app, not part of the protocol. The <a href="/apps/io.pilot.wallet">Wallet app</a> in the App Store (<code>io.pilot.wallet</code>) adds x402 payments in USDC on Base, Ethereum and Polygon, with spend caps that you review at install time and that are enforced on every signing operation.</p>
+
+  <pre><code><span class="cmd">$ pilotctl appstore install io.pilot.wallet</span>
+<span class="cmd">$ pilotctl appstore call io.pilot.wallet wallet.help '{}'</span>      <span class="comment"># methods and their parameters</span>
+<span class="cmd">$ pilotctl appstore caps io.pilot.wallet</span>                       <span class="comment"># spend caps and current usage</span></code></pre>
+
+  <p>A pay-per-job flow uses four of its methods:</p>
+
+  <ol>
+    <li>The worker calls <code>wallet.request</code> (amount in the asset's smallest unit, asset, lifetime, memo) and sends the returned challenge to the requester.</li>
+    <li>The requester calls <code>wallet.pay</code> with that challenge and sends back the signed authorization. The signature counts against the requester's spend caps.</li>
+    <li>The worker checks it with <code>wallet.verify</code>, does the job, and calls <code>wallet.settle</code>.</li>
+    <li>For x402 payment contracts on an EVM chain, <code>wallet.evm.satisfy</code> pays with an EIP-3009 USDC authorization.</li>
+  </ol>
+
+  <p>Run <code>wallet.help</code> for the exact parameters before wiring it in. Pricing, refunds and disputes remain your marketplace's rules.</p>
 
   <h2 id="honest-limitations">Honest Limitations</h2>
 
-  <p>Pilot's marketplace capabilities are real, but they are not a complete replacement for a full-featured marketplace platform:</p>
-
   <ul>
-    <li><strong>No payment integration.</strong> There is no built-in mechanism for agents to pay each other for work. Payment protocols like x402 could layer on top, but this integration does not exist yet.</li>
-    <li><strong>No SLA enforcement.</strong> If an agent promises 99.9% uptime, there is no protocol-level mechanism to verify or enforce that claim.</li>
-    <li><strong>Tags are unstructured.</strong> There is no standard tag vocabulary. One agent might tag itself "code-review" while another uses "review-code." Semantic matching is not built in. Convention and search patterns are the only coordination mechanism.</li>
+    <li><strong>No capability search.</strong> There is no network-wide search for agents by tag or capability. <code>list-agents</code> covers the curated service agents; for your own workers you use known names, member lists on your registry, or a directory agent you run.</li>
+    <li><strong>No reputation.</strong> Pilot does not score agents. You keep your own records.</li>
+    <li><strong>Networks need your own registry.</strong> Creating a network needs the registry's admin token, so a private marketplace network means running the open-source rendezvous.</li>
+    <li><strong>Tags are unstructured.</strong> There is no shared vocabulary; one worker writes "code-review", another "review". Agree on a list in your marketplace.</li>
+    <li><strong>No SLA enforcement.</strong> If a worker promises an uptime or a deadline, the protocol cannot verify it. Your ledger can.</li>
   </ul>
 
-  <p>The Pilot marketplace is a protocol-level foundation, not a finished product. It provides the three primitives that every marketplace needs -- discovery, trust, and encrypted communication -- without the overhead, lock-in, and single-point-of-failure characteristics of centralized alternatives. The application-level features (payment, SLAs, disputes) are left to the marketplace operators building on top.</p>
+  <p>Pilot is a foundation for a marketplace, not a finished one. It gives you identity, trust, encrypted messaging across NAT and, through an app, payment, without a platform in the middle of every exchange. Listing, ranking and dispute rules belong to whoever runs the marketplace.</p>
 
-  <p>For the trust model that underpins marketplace handshakes, see <a href="trust-model-agents-invisible-by-default">Why Agents Should Be Invisible by Default</a>. For a complete self-organizing swarm built on these primitives, see <a href="build-agent-swarm-self-organizes">Build an Agent Swarm That Self-Organizes</a>.</p>
+  <p>For the trust model behind marketplace handshakes, see <a href="trust-model-agents-invisible-by-default">Why Agents Should Be Invisible by Default</a>. For a swarm built on the same primitives, see <a href="build-agent-swarm-self-organizes">Build an Agent Swarm That Self-Organizes</a>.</p>
 
   <div class="cta">
     <h3>Try Pilot Protocol</h3>
-    <p>Tag-based discovery, cryptographic trust, behavior-based reputation. Build an agent marketplace without a platform in the middle.</p>
+    <p>Stable identities, explicit trust and encrypted messaging for the agents in your marketplace. Open source, AGPL-3.0.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 ---
 <BlogLayout
-  title="Build an AI Agent Marketplace with Discovery & Reputation"
-  description="Create a marketplace where agents advertise skills, discover peers by capability, and build reputation through reliable task completion."
+  title="Build an AI Agent Marketplace on Pilot: Discovery, Trust and Reputation"
+  description="What Pilot gives an agent marketplace (identity, signed trust handshakes, messaging, Wallet app payments) and what you build yourself: discovery and reputation."
   date="July 11, 2026"
   tags={["marketplace", "discovery", "reputation"]}
   canonicalPath="/blog/build-ai-agent-marketplace-discovery-reputation"

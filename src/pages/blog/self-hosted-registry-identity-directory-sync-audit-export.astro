@@ -1,0 +1,256 @@
+---
+import BlogLayout from "../../layouts/BlogLayout.astro";
+
+const bodyContent = `
+<div class="callout"><strong>Updated October 2026.</strong> This post was first published in March 2026 as an implementation milestone. It now describes the open-source rendezvous at <a href="https://github.com/pilot-protocol/rendezvous">github.com/pilot-protocol/rendezvous</a> as used with <code>pilotctl</code> v1.18.0. Every command here needs the registry's admin token. On the public backbone that token is held by its operators, so these features are for a registry you run yourself. There is no managed or hosted version.</div>
+
+<p>Beyond roles and policies, the Pilot rendezvous can validate OIDC tokens, bind nodes to identities from your directory, sync directory membership into network roles, provision a whole network from one JSON blueprint, and export its audit trail to Splunk, a CEF collector or any JSON endpoint. This post walks through each, with the commands and messages that drive them.</p>
+
+<p>Setting up your own registry and pointing daemons at it is covered in <a href="/blog/enterprise-phase-3-rbac-policies-audit-fleet">RBAC, policies and audit trail in the open-source rendezvous</a>. The admin commands below read the token from <code>PILOT_ADMIN_TOKEN</code> and talk to the registry directly.</p>
+
+<h2 id="enterprise-gating">The Enterprise Flag</h2>
+
+<p>These features act on networks that carry the registry's <code>enterprise</code> flag, a per-network switch in the open-source code. Set it at creation (<code>pilotctl network create --enterprise</code>) or later with <code>set_network_enterprise</code>. Networks without it behave as before.</p>
+
+<p>The registry checks the flag in the handlers for promote, demote, kick, transfer ownership, set policy, invite, respond to invite, set key expiry and directory sync. Against a network without the flag each returns an error that starts with <code>enterprise feature</code>.</p>
+
+<h2 id="identity">Identity Providers</h2>
+
+<p>The registry stores one identity-provider configuration for the whole registry. Its type is one of <code>oidc</code>, <code>saml</code>, <code>entra_id</code>, <code>ldap</code> or <code>webhook</code>, but the check the registry performs itself is the same for all of them: it validates a JWT against the configured JWKS URL. Providers that issue OIDC tokens (Entra ID and most cloud identity services) work through that path. SAML, LDAP and anything else need a bridge you run, described below.</p>
+
+<pre><code><span class="comment"># Configure an OIDC provider</span>
+pilotctl extras idp set --type oidc \\
+  --url https://login.example.com/.well-known/jwks.json \\
+  --issuer https://login.example.com/ \\
+  --client-id pilot-prod
+
+<span class="comment"># Show the current configuration</span>
+pilotctl extras idp get</code></pre>
+
+<h3>Built-in JWT Validation</h3>
+
+<p>The <code>validate_token</code> registry message checks a token directly, with no sidecar or proxy. Two algorithms are supported:</p>
+
+<ul>
+  <li><strong>RS256</strong> - RSA PKCS#1 v1.5 with SHA-256, with keys from the provider's JWKS endpoint.</li>
+  <li><strong>HS256</strong> - HMAC-SHA256 with a symmetric key from the JWKS document.</li>
+</ul>
+
+<p>Claims checked: <code>iss</code> against the configured issuer, <code>aud</code> against the client ID (string or array), <code>exp</code> and <code>nbf</code>, with 60 seconds of clock skew allowed. The registry also requires the JWKS key type and algorithm to match the token header, so an HS256 token can't be verified with an RSA public key used as an HMAC secret.</p>
+
+<p>JWKS keys are cached for 5 minutes, keyed by URL and <code>kid</code>. A non-200 response from the JWKS endpoint is an error, and the response body is capped at 64 KB.</p>
+
+<pre><code><span class="comment"># Validate a token (registry message, admin token required)</span>
+{
+  "type": "validate_token",
+  "admin_token": "$TOKEN",
+  "token": "eyJhbGciOiJSUzI1NiI..."
+}
+
+<span class="comment"># Response for a valid token</span>
+{
+  "type": "validate_token_ok",
+  "verified": true,
+  "subject": "alice@example.com",
+  "issuer": "https://login.example.com/"
+}</code></pre>
+
+<h3>Binding Nodes to External Identities</h3>
+
+<p>Directory sync and role pre-assignments match nodes by <code>external_id</code>. A node gets one in either of two ways:</p>
+
+<ul>
+  <li><strong>Set it directly.</strong> A process that holds the admin token sends <code>set_external_id</code> with the node ID and the identity. Typically that is a small bridge you run: it checks the user's token (with <code>validate_token</code> or your provider's own library) and then records the mapping.</li>
+  <li><strong>Identity webhook.</strong> Configure a URL with <code>set_identity_webhook</code>. When a registration carries an <code>identity_token</code>, the registry posts it to your webhook and stores the <code>external_id</code> it returns. With a shared secret configured on the registry, the request and the response are both signed with HMAC-SHA256 in <code>X-Pilot-Signature-256</code>, and unsigned responses are rejected. The stock <code>pilot-daemon</code> does not send an identity token when it registers, so this path is for clients you build.</li>
+</ul>
+
+<p>Either way, the identity check happens in code you control. The registry does not speak SAML or LDAP itself.</p>
+
+<h2 id="directory-sync">Directory Sync</h2>
+
+<p>A directory export (from Active Directory, Entra ID, LDAP or anything else you can script) is pushed to the registry as a list of entries. The registry maps entries to nodes by <code>external_id</code> and applies the changes:</p>
+
+<ul>
+  <li><strong>Role updates.</strong> An entry with a role (owner, admin or member) sets that node's role in the network.</li>
+  <li><strong>Disable.</strong> An entry marked <code>disabled</code> removes the node from the network.</li>
+  <li><strong>Remove unlisted.</strong> Optionally, members whose <code>external_id</code> is missing from the listing are removed. Members without an external ID are left alone.</li>
+  <li><strong>Pre-assignment.</strong> An entry with no matching node yet becomes a role pre-assignment, applied when a node with that external ID joins.</li>
+  <li><strong>Hostnames.</strong> A <code>display_name</code> becomes the node's hostname if it has none and the name is free.</li>
+</ul>
+
+<pre><code><span class="comment"># directory.json</span>
+{
+  "entries": [
+    {"external_id": "alice@example.com", "role": "admin", "display_name": "alice"},
+    {"external_id": "bob@example.com", "role": "member"},
+    {"external_id": "charlie@example.com", "disabled": true}
+  ]
+}
+
+<span class="comment"># Push it to network 3, removing members not in the listing</span>
+pilotctl extras directory-sync directory.json --network 3 --remove-unlisted
+
+<span class="comment"># Current state: members, mapped, unmapped, pre-assignments</span>
+pilotctl extras directory-status 3</code></pre>
+
+<p>The command prints how many entries were mapped, updated, disabled and left unmapped, followed by one line per change. Directory sync requires the enterprise flag on the network.</p>
+
+<h2 id="blueprint">Blueprint Provisioning</h2>
+
+<p>A blueprint declares a network's configuration in one JSON document. The <code>provision_network</code> message (or <code>pilotctl extras provision</code>) creates the network or finds it by name, sets the enterprise flag, applies the policy, configures the identity provider, sets webhooks and audit export, and stores role pre-assignments.</p>
+
+<pre><code><span class="comment"># prod-fleet.json</span>
+{
+  "name": "prod-fleet",
+  "join_rule": "invite",
+  "enterprise": true,
+  "policy": {
+    "max_members": 100,
+    "allowed_ports": [7, 80, 443, 1001],
+    "description": "Production agent fleet"
+  },
+  "identity_provider": {
+    "type": "oidc",
+    "url": "https://login.example.com/.well-known/jwks.json",
+    "issuer": "https://login.example.com/",
+    "client_id": "pilot-prod"
+  },
+  "webhooks": {
+    "audit_url": "https://siem.example.com/pilot/events"
+  },
+  "audit_export": {
+    "format": "splunk_hec",
+    "endpoint": "https://splunk.example.com:8088/services/collector",
+    "token": "HEC-TOKEN",
+    "index": "pilot_audit",
+    "source": "pilot-registry"
+  },
+  "roles": [
+    {"external_id": "alice@example.com", "role": "owner"},
+    {"external_id": "bob@example.com", "role": "admin"},
+    {"external_id": "charlie@example.com", "role": "member"}
+  ]
+}
+
+<span class="comment"># Apply it</span>
+pilotctl extras provision prod-fleet.json
+provisioned network 3 (prod-fleet)
+  - created network 3 (prod-fleet)
+  - enabled enterprise features
+  - applied network policy
+  - configured oidc identity provider
+  - configured audit webhook
+  - configured splunk_hec audit export to https://splunk.example.com:8088/services/collector
+  - stored 3 RBAC pre-assignments</code></pre>
+
+<p>The blueprint is validated before anything changes: unknown join rules, a token-gated network without <code>join_token</code>, unknown roles or identity-provider types, unknown audit export formats and unsafe URLs are rejected. Running the same blueprint again finds the network by name and reapplies the settings. <code>pilotctl extras provision-status</code> summarises the registry's networks and the identity provider, webhook and audit export in use, and <code>pilotctl extras deprovision prod-fleet</code> deletes one by name.</p>
+
+<h2 id="audit-export">Audit Export</h2>
+
+<p>Audit events go to the structured log, the registry webhook and, when configured, the audit exporter. The exporter posts each event over HTTP in one of three formats:</p>
+
+<h3>Splunk HEC</h3>
+
+<p>An HTTP Event Collector payload with <code>time</code> (epoch seconds), <code>source</code> (default <code>pilot-registry</code>), <code>sourcetype</code> <code>pilot:audit</code>, an optional <code>index</code>, and the <code>event</code> object. The token is sent as <code>Authorization: Splunk &lt;token&gt;</code>.</p>
+
+<h3>CEF</h3>
+
+<p>One Common Event Format line per event, posted as <code>text/plain</code>: <code>CEF:0|Pilot|Registry|1.0|&lt;action&gt;|&lt;action&gt;|&lt;severity&gt;|&lt;extensions&gt;</code>. Severity is 6 for kick and delete actions, 4 for promote and demote, and 3 for everything else. Extensions carry the action, network ID and node ID, and user-controlled fields are escaped so they can't inject extra fields.</p>
+
+<h3>JSON</h3>
+
+<p>The plain audit entry: <code>timestamp</code>, <code>action</code>, <code>network_id</code>, <code>node_id</code> and a <code>details</code> string.</p>
+
+<pre><code><span class="comment"># Send audit events to Splunk</span>
+pilotctl extras audit-export set --format splunk_hec \\
+  --endpoint https://splunk.example.com:8088/services/collector \\
+  --splunk-token HEC-TOKEN --index pilot_audit
+
+<span class="comment"># Show the configuration and exported/dropped counts</span>
+pilotctl extras audit-export get
+
+<span class="comment"># Turn it off</span>
+pilotctl extras audit-export disable</code></pre>
+
+<p>The exporter runs in the background with a 1,024-event buffer. Each event gets up to three attempts on network errors and 5xx responses, waiting 1 s and then 2 s. If the buffer is full, events are dropped and counted rather than blocking the registry.</p>
+
+<h2 id="webhooks">Registry Webhook and Dead Letter Queue</h2>
+
+<p>The registry has its own webhook, set with <code>set_webhook</code> or the blueprint's <code>audit_url</code>, separate from each daemon's. It retries the same way as the exporter. A 4xx response goes straight to a dead letter queue without retry, and so does an event that fails every attempt. The queue keeps the last 100 failed events for inspection with <code>get_webhook_dlq</code>. With a secret configured on the registry, each body is signed with HMAC-SHA256 in <code>X-Pilot-Signature-256</code>, and webhook URLs must be http or https and cannot point at link-local addresses or cloud metadata endpoints.</p>
+
+<pre><code><span class="comment"># Inspect the dead letter queue (registry message)</span>
+{
+  "type": "get_webhook_dlq",
+  "admin_token": "$TOKEN"
+}</code></pre>
+
+<h2 id="ownership">Ownership Transfer</h2>
+
+<p>The owner of a network can hand it to another member with the <code>transfer_ownership</code> registry message; there is no CLI command for it. The previous owner becomes an admin and the new owner gets the owner role. Only the owner (or an admin token) can transfer, the new owner must already be a member, and transferring to the current owner is rejected. Each transfer is recorded as <code>network.ownership_transferred</code>, and transfers can be chained.</p>
+
+<h2 id="metrics">Per-Network Prometheus Metrics</h2>
+
+<p>The registry's <code>/metrics</code> endpoint (served on the <code>-http</code> listener, to localhost only) includes per-network gauges for dashboards:</p>
+
+<table>
+  <thead><tr><th>Metric</th><th>Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>pilot_network_members{network="prod"}</code></td><td>Gauge</td><td>Members per network</td></tr>
+    <tr><td><code>pilot_network_admins{network="prod"}</code></td><td>Gauge</td><td>Admins per network</td></tr>
+    <tr><td><code>pilot_network_owners{network="prod"}</code></td><td>Gauge</td><td>Owners per network</td></tr>
+    <tr><td><code>pilot_network_enterprise{network="prod"}</code></td><td>Gauge</td><td>Enterprise flag (0/1)</td></tr>
+    <tr><td><code>pilot_network_policy_set{network="prod"}</code></td><td>Gauge</td><td>Policy configured (0/1)</td></tr>
+  </tbody>
+</table>
+
+<p>Counters track operational volume:</p>
+
+<table>
+  <thead><tr><th>Metric</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>pilot_invites_sent_total</code></td><td>Invites sent</td></tr>
+    <tr><td><code>pilot_invites_accepted_total</code></td><td>Invites accepted</td></tr>
+    <tr><td><code>pilot_rbac_operations_total{op="promote"}</code></td><td>Role operations by type</td></tr>
+    <tr><td><code>pilot_policy_changes_total</code></td><td>Policy changes</td></tr>
+    <tr><td><code>pilot_key_rotations_total</code></td><td>Key rotations</td></tr>
+    <tr><td><code>pilot_provisions_total</code></td><td>Blueprint provisions</td></tr>
+    <tr><td><code>pilot_audit_exports_total</code></td><td>Audit events exported</td></tr>
+    <tr><td><code>pilot_idp_verifications_total</code></td><td>Successful token validations</td></tr>
+    <tr><td><code>pilot_directory_synced_networks</code></td><td>Networks with directory sync</td></tr>
+  </tbody>
+</table>
+
+<p>Status gauges show configuration at a glance: <code>pilot_idp_configured</code>, <code>pilot_webhook_configured</code> and <code>pilot_audit_export_active</code>. The exposition format is written by the registry itself; it has no Prometheus client dependency.</p>
+
+<h2 id="security">Security Notes</h2>
+
+<ul>
+  <li><strong>Algorithm confusion.</strong> The JWKS key type (<code>kty</code>) and algorithm (<code>alg</code>) must match the token header, so a public RSA key can't be used as an HMAC secret.</li>
+  <li><strong>Clock skew.</strong> 60 seconds of tolerance on <code>exp</code> and <code>nbf</code>.</li>
+  <li><strong>JWKS responses.</strong> Non-200 responses are errors, and bodies are capped at 64 KB.</li>
+  <li><strong>Directory sync.</strong> Members to remove are collected before any removal, so none are skipped while the list changes.</li>
+  <li><strong>Replication.</strong> Hot-standby registries authenticate with a shared token (<code>-repl-token</code>), compared in constant time. Without one, replication is off.</li>
+  <li><strong>Rate limits.</strong> Per-IP token buckets, a process-wide request cap, and a cutoff for any single connection above 500 requests per second.</li>
+</ul>
+
+<div class="cta">
+  <h3>Run It on Your Own Registry</h3>
+  <p>Build the open-source rendezvous, configure an identity provider, and provision a network from a blueprint.</p>
+  <a href="/docs/networks">Network Docs</a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://github.com/pilot-protocol/rendezvous">Rendezvous Source</a>
+  &nbsp;&middot;&nbsp;
+  <a href="/docs/getting-started">Get Started</a>
+</div>`;
+---
+<BlogLayout
+  title="Identity, Directory Sync and Audit Export in the Open-Source Rendezvous"
+  description="OIDC/JWT validation, identity bridges, directory sync, blueprint provisioning and Splunk, CEF or JSON audit export in the Pilot rendezvous you run yourself."
+  date="March 29, 2026"
+  dateModified="2026-10-23"
+  tags={["self-hosting", "identity", "audit", "directory-sync", "siem"]}
+  canonicalPath="/blog/self-hosted-registry-identity-directory-sync-audit-export"
+  bannerImage="/blog/banners/enterprise-production-complete-identity-directory-audit-export.webp"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>

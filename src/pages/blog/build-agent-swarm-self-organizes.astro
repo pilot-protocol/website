@@ -1,9 +1,9 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>This tutorial shows you how to build a self-organizing agent swarm that coordinates work without an orchestrator. Most multi-agent systems have one central process that decides who does what — but that fails when the orchestrator goes down, gets overloaded, or becomes a trust bottleneck. Here, we build something different: <strong>10 agents that discover each other, establish trust, exchange messages, and self-organize based on capability matching</strong>. No orchestrator. No central scheduler. The swarm figures it out.</p>
+const bodyContent = `<p>This tutorial shows you how to build an agent swarm that organizes its own work. Most multi-agent systems have one central process that decides who does what, and that process becomes the bottleneck: when it goes down, gets overloaded, or has to be trusted with everything, the whole system suffers. Here, every agent runs the same code and makes its own decisions: <strong>agents announce their role, build their own view of who else is around, set up trust with each other in pairs, and send work straight to a peer with the right role</strong>. One Pilot daemon acts as a meeting point for announcements, but it never assigns work.</p>
 
-  <p>By the end, you will have a working Python codebase that spawns agents, lets them find peers via Pilot Protocol's registry, exchange data through encrypted tunnels, and route work to the right agents by role.</p>
+  <p>By the end, you will have a Python script that you run once per machine. Each copy joins the swarm, finds peers through announcements on a pub/sub topic, exchanges work with them through Pilot's encrypted tunnels, and favours the peers that answer fastest.</p>
 
   <section>
   <h2>What We Are Building</h2>
@@ -11,23 +11,27 @@ const bodyContent = `<p>This tutorial shows you how to build a self-organizing a
   <p>The system has these properties:</p>
 
   <ul>
-    <li><strong>10 agents</strong>, each running as a separate process with its own Pilot daemon</li>
-    <li><strong>Peer discovery</strong> via the registry, using hostname and tag-based lookups</li>
-    <li><strong>Mutual trust</strong> established through Ed25519 handshakes (no pre-shared keys)</li>
-    <li><strong>Data exchange</strong> over encrypted tunnels using Pilot's messaging ports</li>
+    <li><strong>Any number of agents</strong>, one per machine or container, each with its own Pilot daemon and a role (summarizer, analyzer, reviewer, translator)</li>
+    <li><strong>A hub</strong>: one Pilot daemon whose built-in pub/sub broker carries a roster topic. It relays announcements and does nothing else.</li>
+    <li><strong>A roster</strong> that each agent builds for itself from those announcements, with entries that expire when an agent goes quiet</li>
+    <li><strong>Pairwise trust</strong>: every agent asks every peer for a trust handshake; when both sides have asked, the daemons approve it on their own</li>
+    <li><strong>Direct work requests</strong> with <code>pilotctl send-message --wait</code>, answered with <code>--reply-to</code></li>
     <li><strong>LLM integration</strong> for task execution (each agent calls an LLM to process work)</li>
-    <li><strong>Role-based routing</strong> that directs work to agents with matching capabilities</li>
-    <li><strong>No central orchestrator</strong> -- every agent runs the same code and makes its own decisions</li>
+    <li><strong>Routing that adapts</strong>: each agent picks among peers with the right role, weighted toward the ones that answered fastest, and retries elsewhere when one does not answer</li>
   </ul>
 
-  <p>The architecture relies on two Pilot Protocol features: the <strong>registry</strong> for discovery and the <strong>data exchange port</strong> (port 1001) for passing work between agents.</p>
+  <p>The architecture relies on three Pilot Protocol features: <strong>trust handshakes</strong>, the <strong>event stream</strong> (port 1002) for the roster, and <strong>data exchange</strong> (port 1001, used by <code>send-message</code>) for passing work between agents.</p>
+
+  <div class="callout">
+    <p><strong>Why a roster and not a search?</strong> Pilot has no network-wide search for your own nodes. <code>pilotctl extras set-tags</code> attaches up to three labels to a node, but nothing queries the network by tag. <code>list-agents</code> is the directory of the public data service agents, not of your machines. A private node's hostname resolves only for itself, for peers that trust it, and for members of a network it belongs to. So agents have to tell each other who they are, and a pub/sub topic is the simplest place to do that.</p>
+  </div>
 
   <h3>Prerequisites</h3>
 
   <ul>
     <li>Python 3.10+</li>
-    <li>Pilot Protocol installed (<code>go install github.com/pilot-protocol/pilotprotocol/cmd/...</code>)</li>
-    <li>A Pilot network (the default at pilotprotocol.network is available for all users)</li>
+    <li>Pilot Protocol on every machine (<code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code>), with the daemon running (<code>pilotctl daemon start</code>)</li>
+    <li>The public backbone (the default registry) or a registry you run yourself</li>
     <li>An OpenAI API key (or any LLM API) for task execution</li>
   </ul>
   </section>
@@ -35,559 +39,638 @@ const bodyContent = `<p>This tutorial shows you how to build a self-organizing a
   <section>
   <h2>Agent Architecture</h2>
 
-  <p>Each agent is a Python script that wraps <code>pilotctl</code> via subprocess calls. This is intentional. Pilot Protocol's CLI is the stable interface. You do not need Go bindings or a Python SDK. If you can call a subprocess, you can participate in the network.</p>
+  <p>Each agent is a Python script that drives <code>pilotctl</code> through subprocess calls. With <code>--json</code>, a command prints one JSON document of the form <code>{"status":"ok","data":{...}}</code> and exits non-zero on failure, so a small helper is all the integration you need (<code>subscribe</code> is the exception: it streams one JSON object per event). (There is also a Python SDK; the CLI keeps the example short and works from any language.)</p>
+
+  <h3>The Helpers</h3>
+
+  <pre><code>import json
+import os
+import random
+import subprocess
+import sys
+import threading
+import time
+
+HUB = os.environ["SWARM_HUB"]   <span class="comment"># the hub daemon's address, e.g. 0:0000.0000.1A2B</span>
+ROSTER = "swarm.roster"          <span class="comment"># exact topic name on the hub's broker</span>
+ANNOUNCE_EVERY = 30              <span class="comment"># seconds between announcements</span>
+ROSTER_TTL = 90                  <span class="comment"># forget peers not heard from for this long</span>
+ASK_AGAIN = 300                  <span class="comment"># re-send an unanswered handshake after this long</span>
+TASK_FOR_ROLE = {
+    "summarizer": "summarize",
+    "analyzer": "analyze",
+    "reviewer": "code_review",
+    "translator": "translate",
+}
+
+
+def pilotctl(*args, timeout=30):
+    """Run pilotctl --json and return the "data" part of its reply."""
+    out = subprocess.run(["pilotctl", "--json", *args],
+                         capture_output=True, text=True, timeout=timeout)
+    if out.returncode != 0:
+        raise RuntimeError(out.stderr.strip() or out.stdout.strip())
+    return json.loads(out.stdout)["data"]
+
+
+def node_id(address):
+    """'0:0000.0000.1A2B' -&gt; 0x1A2B (the last two groups are the node ID)."""
+    return int(address.split(":", 1)[1].split(".", 1)[1].replace(".", ""), 16)
+
+
+def trusted_ids():
+    return {int(t["node_id"]) for t in pilotctl("trust")["trusted"]}</code></pre>
 
   <h3>The Agent Class</h3>
 
-  <pre><code>import subprocess
-import json
-import time
-import random
-import os
-
-class SwarmAgent:
-    def __init__(self, agent_id, role, registry_addr):
-        self.agent_id = agent_id
+  <pre><code>class SwarmAgent:
+    def __init__(self, role):
         self.role = role
-        self.registry_addr = registry_addr
-        self.hostname = f"swarm-{role}-{agent_id}"
-        self.peers = {}
-        self.tasks_completed = 0
+        me = pilotctl("info")
+        self.address = me["address"]
+        self.node_id = int(me["node_id"])
+        self.hostname = f"swarm-{role}-{self.node_id}"
+        self.peers = {}        <span class="comment"># address -&gt; role, hostname, node_id, seen, latency, asked</span>
+        self.lock = threading.Lock()
+        self.handled = set()   <span class="comment"># message IDs of requests already answered</span></code></pre>
 
-    def pilotctl(self, *args):
-        """Run a pilotctl command and return parsed output."""
-        cmd = ["pilotctl"] + list(args)
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=30
-        )
-        if result.returncode != 0:
-            raise RuntimeError(f"pilotctl failed: {result.stderr}")
-        return result.stdout.strip()
+  <p><code>pilotctl --json info</code> returns this daemon's address and node ID. The hostname is only a readable label; it includes the node ID because hostnames are unique on a registry.</p>
+  </section>
 
-    def start_daemon(self):
-        """Start the Pilot daemon for this agent."""
-        subprocess.Popen([
-            "pilot-daemon",
-        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        time.sleep(2)  <span class="comment"># Wait for daemon startup + STUN</span>
+  <section>
+  <h2>The Hub</h2>
 
-    def register(self):
-        """Register hostname and set agent tags."""
-        self.pilotctl("set-hostname", self.hostname)
-        self.pilotctl(
-            "extras", "set-tags",
-            f"role={self.role},swarm=demo,capacity=medium"
-        )
-        print(f"[{self.hostname}] Registered with tags")</code></pre>
+  <p>The hub is an ordinary Pilot daemon. Every daemon runs a small pub/sub broker on port 1002, so any machine all your agents can reach will do; a small VM is fine. Keep it private (the default): a private daemon only accepts tunnels from peers it trusts, so only agents you approved can read or write the roster.</p>
 
-  <p>Each agent starts its own daemon, registers a hostname, and sets descriptive tags. The tags make the agent discoverable to peers searching for specific capabilities.</p>
+  <pre><code><span class="comment"># On the hub</span>
+<span class="cmd">pilotctl daemon start</span>
+<span class="cmd">pilotctl --json info</span>        <span class="comment"># note "address": the agents get it as SWARM_HUB</span>
 
-  <h3>Discovering Peers</h3>
+<span class="comment"># As agents ask to join</span>
+<span class="cmd">pilotctl pending</span>             <span class="comment"># node IDs and their justification</span>
+<span class="cmd">pilotctl approve &lt;node_id&gt;</span></code></pre>
 
-  <p>Agents find each other through the registry. No hardcoded addresses, no configuration files, no service mesh. You query by tag and get back a list of matching agents.</p>
+  <p>Approving by hand is the safe default. For a demo on machines you control, a short loop on the hub can approve requests that carry the swarm's join text:</p>
 
-  <pre><code>    def discover_peers(self):
-        """Find other agents in the swarm by tag."""
-        output = self.pilotctl("send-message", "list-agents", "--data", '/data {"search":"swarm-demo"}', "--wait")
-        peers = json.loads(output)
-        for peer in peers:
-            addr = peer["address"]
-            if addr != self.my_address():
-                self.peers[addr] = {
-                    "hostname": peer.get("hostname", "unknown"),
-                    "role": peer.get("tags", {}).get("role", "unknown"),
-                    "trusted": False,
-                }
-        print(f"[{self.hostname}] Discovered {len(self.peers)} peers")
-        return self.peers
+  <pre><code><span class="comment"># hub_approver.py: on the hub, approve handshakes from swarm workers</span>
+import json
+import subprocess
+import time
 
-    def my_address(self):
-        """Get this agent's Pilot address."""
-        output = self.pilotctl("daemon", "status")
-        status = json.loads(output)
-        return status["address"]</code></pre>
+JOIN = "swarm worker, role "
 
-  <p>The <code>list-agents</code> directory service is how agents find each other by capability; <code>pilotctl peers</code> lists your currently-connected peers (its <code>--search</code> filters that local list by node-ID substring, not tags). Query the directory to ask "who else does this?" without an orchestrator.</p>
+while True:
+    out = subprocess.run(["pilotctl", "--json", "pending"], capture_output=True, text=True)
+    for req in json.loads(out.stdout)["data"]["pending"]:
+        if req.get("justification", "").startswith(JOIN):
+            subprocess.run(["pilotctl", "approve", str(int(req["node_id"]))])
+    time.sleep(5)</code></pre>
 
-  <h3>Establishing Trust</h3>
+  <div class="callout">
+    <p><strong>The justification is plain text.</strong> Anyone who knows the hub's address and the phrase gets in with this loop. Outside a demo, approve by hand or keep an allowlist of node IDs.</p>
+  </div>
 
-  <p>Discovery is not the same as trust. By default, agents are <a href="trust-model-agents-invisible-by-default">invisible</a>. Before an agent can send tasks to a peer, they must complete a mutual Ed25519 handshake.</p>
+  <h3>Joining</h3>
 
-  <pre><code>    def establish_trust(self):
-        """Initiate handshake with all discovered peers."""
-        for addr, info in self.peers.items():
-            if info["trusted"]:
+  <pre><code>    def join_hub(self):
+        """Ask the hub for trust and wait until it is approved."""
+        pilotctl("handshake", HUB, f"swarm worker, role {self.role}")
+        while node_id(HUB) not in trusted_ids():
+            time.sleep(5)
+        print(f"[{self.hostname}] trusted by the hub")</code></pre>
+
+  <p>A handshake is a request, not a connection: it waits on the hub until the hub approves it. Once approved, both daemons hold a trust record bound to each other's Ed25519 key, and the agent can open tunnels to the hub.</p>
+  </section>
+
+  <section>
+  <h2>The Roster</h2>
+
+  <p>Every agent publishes a small announcement to <code>swarm.roster</code> on the hub every 30 seconds and keeps a subscription to the same topic open. Topics match exactly, so the name just has to be the same everywhere.</p>
+
+  <pre><code>    def announce_forever(self):
+        msg = json.dumps({"address": self.address, "node_id": self.node_id,
+                          "hostname": self.hostname, "role": self.role})
+        while True:
+            try:
+                pilotctl("publish", HUB, ROSTER, "--data", msg)
+            except RuntimeError as e:
+                print(f"[{self.hostname}] announce failed: {e}")
+            time.sleep(ANNOUNCE_EVERY)
+
+    def watch_roster(self):
+        """Keep a local roster from the announcements on the hub's broker."""
+        while True:
+            proc = subprocess.Popen(["pilotctl", "--json", "subscribe", HUB, ROSTER],
+                                    stdout=subprocess.PIPE, text=True)
+            for line in proc.stdout:
+                try:
+                    peer = json.loads(json.loads(line)["data"])
+                    addr = peer["address"]
+                except (ValueError, KeyError, TypeError):
+                    continue
+                if addr == self.address:
+                    continue
+                with self.lock:
+                    entry = self.peers.setdefault(addr, {"latency": None, "asked": 0})
+                    entry.update(role=peer["role"], hostname=peer["hostname"],
+                                 node_id=int(peer["node_id"]), seen=time.time())
+            proc.wait()
+            time.sleep(5)   <span class="comment"># subscription ended (hub restarted?): subscribe again</span>
+
+    def live_peers(self):
+        now = time.time()
+        with self.lock:
+            return [(a, dict(p)) for a, p in self.peers.items()
+                    if now - p.get("seen", 0) &lt; ROSTER_TTL]</code></pre>
+
+  <p><code>pilotctl --json subscribe</code> prints one JSON object per event, with the payload in <code>data</code>. An agent that stops announcing drops out of everyone's roster after 90 seconds, and nobody has to tell the others. Each agent also sees its own announcements, which it skips.</p>
+  </section>
+
+  <section>
+  <h2>Trust Between Agents</h2>
+
+  <p>The roster tells an agent who exists. It does not let them talk: by default, agents are <a href="trust-model-agents-invisible-by-default">invisible</a>, and a private daemon refuses tunnels from peers it does not trust. Each pair of agents needs its own trust record.</p>
+
+  <pre><code>    def trust_peers(self):
+        """Ask every live peer for trust. Every agent does the same, so each
+        pair ends up with requests in both directions, and the daemons
+        approve a mutual request on their own."""
+        trusted = trusted_ids()
+        for addr, p in self.live_peers():
+            if p["node_id"] in trusted or time.time() - p["asked"] &lt; ASK_AGAIN:
                 continue
             try:
-                self.pilotctl("handshake", addr)
-                self.peers[addr]["trusted"] = True
-                print(f"[{self.hostname}] Trusted: {info['hostname']}")
+                pilotctl("handshake", addr, f"swarm peer, role {self.role}")
+                with self.lock:
+                    self.peers[addr]["asked"] = time.time()
             except RuntimeError as e:
-                print(f"[{self.hostname}] Handshake failed with {addr}: {e}")</code></pre>
+                print(f"[{self.hostname}] handshake to {addr} failed: {e}")</code></pre>
 
-  <p>The handshake is mutual. Both sides sign a challenge with their Ed25519 identity key. If either side rejects (or if the agent has not opted into the handshake), the connection fails. This means an agent can refuse trust from unknown peers, and a compromised agent can be revoked from the network by removing its trust entries.</p>
+  <p>This is where the swarm sets itself up without an operator. When agent X asks Y for trust, the request waits on Y. When Y asks X in turn, X's daemon sees that it has an open request to Y, treats the pair as mutual, approves on its own and tells Y, and both sides are trusted. Because every agent asks every peer it sees, each pair ends up mutual within one or two rounds, and nobody approves anything by hand after the hub.</p>
+
+  <p>The flip side is that trust follows the roster: any agent the hub approved can join every pair. That is why the hub's approval is the real admission control for the swarm.</p>
   </section>
 
   <section>
   <h2>The Work Handoff</h2>
 
-  <p>Agents exchange work over port 1001 (data exchange). The flow is: <strong>send work payload, receive and process it, return results</strong>. Here is how each step works.</p>
-
-  <h3>Sending Work to a Peer</h3>
-
-  <pre><code>    def send_work(self, target_addr, task_data):
-        """Send a work payload to a peer agent via data exchange."""
-        task_json = json.dumps({
-            "type": task_data["type"],
-            "payload": task_data["payload"],
-            "sender": self.my_address(),
-        })
-
-        self.pilotctl(
-            "send-file",
-            target_addr,
-            "--stdin",
-        )
-        print(f"[{self.hostname}] Sent work to {target_addr}")</code></pre>
+  <p>Work goes directly from one agent to another over data exchange (port 1001). The flow is: <strong>send a task with <code>send-message --wait</code>, answer it with <code>--reply-to</code>, and the sender gets the answer inline</strong>.</p>
 
   <h3>Choosing the Right Peer</h3>
 
-  <p>This is where the self-organization begins. Instead of randomly routing work, each agent chooses a peer whose role matches the work type.</p>
+  <p>Each agent keeps a running average of how long each peer took to answer and picks among trusted peers with the right role, weighted toward the fastest. A peer that has not answered yet counts as one second. A failure is recorded as a 120-second answer, so a failing peer is still tried now and then and can earn its way back.</p>
 
-  <pre><code>    def select_peer(self, role):
-        """Select a trusted peer for a given role."""
-        candidates = [
-            (addr, info) for addr, info in self.peers.items()
-            if info["role"] == role and info["trusted"]
-        ]
-        if not candidates:
+  <pre><code>    def pick_peer(self, role, exclude=()):
+        """Choose a trusted peer with the role, favouring fast responders."""
+        trusted = trusted_ids()
+        cands = [(a, p) for a, p in self.live_peers()
+                 if p["role"] == role and p["node_id"] in trusted and a not in exclude]
+        if not cands:
             return None
+        weights = [1.0 / (p["latency"] or 1.0) for _, p in cands]
+        return random.choices([a for a, _ in cands], weights=weights)[0]
 
-        <span class="comment"># Round-robin across available trusted peers for that role</span>
-        return random.choice(candidates)[0]</code></pre>
+    def record_latency(self, addr, seconds):
+        with self.lock:
+            old = self.peers[addr]["latency"]
+            self.peers[addr]["latency"] = seconds if old is None else 0.7 * old + 0.3 * seconds</code></pre>
+
+  <h3>Sending Work to a Peer</h3>
+
+  <pre><code>    def request(self, role, task, attempts=3):
+        """Send a task to a peer with the role and wait for its answer."""
+        tried = set()
+        for _ in range(attempts):
+            addr = self.pick_peer(role, exclude=tried)
+            if addr is None:
+                return None
+            tried.add(addr)
+            start = time.time()
+            try:
+                out = pilotctl("send-message", addr, "--data", json.dumps(task),
+                               "--wait", "120s", timeout=150)
+                self.record_latency(addr, time.time() - start)
+                return json.loads(out["reply"]["data"])
+            except (RuntimeError, subprocess.TimeoutExpired, KeyError, ValueError) as e:
+                print(f"[{self.hostname}] {addr} did not answer: {e}")
+                self.record_latency(addr, 120.0)   <span class="comment"># push it to the back</span>
+        return None</code></pre>
+
+  <p><code>--wait 120s</code> blocks until the peer's answer arrives and returns it inline under <code>data.reply</code>; its body is in <code>data.reply.data</code>. There is no need to read the inbox for it. If the peer does not answer in time, <code>pilotctl</code> exits non-zero and the agent tries another peer with the same role.</p>
+
+  <h3>Answering Work</h3>
+
+  <pre><code>    def serve(self):
+        """Answer work requests that arrive in the inbox."""
+        while True:
+            try:
+                msgs = pilotctl("inbox", "--full", "--limit", "0")["messages"]
+            except RuntimeError:
+                time.sleep(5)
+                continue
+            for m in reversed(msgs):                       <span class="comment"># oldest first</span>
+                mid = m.get("message_id")
+                if not mid or mid in self.handled or m.get("reply_to"):
+                    continue    <span class="comment"># already answered, or an answer to one of our own requests</span>
+                self.handled.add(mid)
+                try:
+                    task = json.loads(m["data"])
+                    if task.get("type") not in TASK_FOR_ROLE.values():
+                        continue
+                    result = execute_with_llm(self.role, task)
+                    pilotctl("send-message", m["from"], "--data", json.dumps(result),
+                             "--reply-to", mid)
+                except Exception as e:
+                    print(f"[{self.hostname}] could not answer {mid}: {e}")
+            try:
+                pilotctl("inbox", "--clear", "--before", "10m")   <span class="comment"># keep the inbox small</span>
+            except RuntimeError:
+                pass
+            time.sleep(2)</code></pre>
+
+  <p>Incoming requests land in the inbox. Every message carries a <code>message_id</code>, and answering with <code>--reply-to</code> is what lets the sender's <code>--wait</code> match the answer to its request. Messages that have a <code>reply_to</code> are answers to this agent's own requests; the serving loop leaves those alone.</p>
 
   <h3>Executing Tasks with LLMs</h3>
 
-  <pre><code>    def listen_for_work(self):
-        """Receive incoming data and process it."""
-        while True:
-            try:
-                <span class="comment"># Receive incoming data payload</span>
-                output = self.pilotctl("recv", "1001", "--json")
-                if not output:
-                    continue
+  <pre><code>def execute_with_llm(role, task):
+    """Call an LLM to process the task."""
+    import openai
 
-                msg = json.loads(output)
-                sender = msg.get("from", "unknown")
+    client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": f"You are a {role} agent. Task type: {task['type']}."},
+            {"role": "user", "content": task["payload"]},
+        ],
+        max_tokens=1024,
+    )
+    return {"output": response.choices[0].message.content, "by": role}</code></pre>
 
-                print(f"[{self.hostname}] Received work from {sender}")
-
-                <span class="comment"># Execute with LLM</span>
-                start_time = time.time()
-                result = self.execute_with_llm(msg["data"])
-                elapsed = time.time() - start_time
-
-                <span class="comment"># Send results back to sender</span>
-                result_json = json.dumps(result)
-                self.pilotctl("send", sender, "1000", "--data", result_json)  # send <addr> <port> --data
-
-                self.tasks_completed += 1
-                print(f"[{self.hostname}] Responded in {elapsed:.1f}s")
-
-            except subprocess.TimeoutExpired:
-                continue
-            except Exception as e:
-                print(f"[{self.hostname}] Processing error: {e}")</code></pre>
-
-  <h3>The LLM Execution Function</h3>
-
-  <pre><code>    def execute_with_llm(self, task_data):
-        """Call an LLM to process the task."""
-        import openai
-
-        client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-
-        task_type = task_data.get("type", "general")
-        payload = task_data.get("payload", "")
-
-        prompts = {
-            "summarize": f"Summarize this text concisely:\\n\\n{payload}",
-            "analyze": f"Analyze this data and provide key insights:\\n\\n{payload}",
-            "code_review": f"Review this code for bugs and improvements:\\n\\n{payload}",
-            "translate": f"Translate this to English:\\n\\n{payload}",
-            "general": f"Process this request:\\n\\n{payload}",
-        }
-
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": f"You are a {task_type} specialist agent."},
-                {"role": "user", "content": prompts.get(task_type, prompts["general"])},
-            ],
-            max_tokens=1024,
-        )
-
-        return {
-            "output": response.choices[0].message.content,
-            "model": "gpt-4o-mini",
-            "tokens_used": response.usage.total_tokens,
-        }</code></pre>
-
-  <p>Each agent is a specialist. One handles summarization, another does code review, another translates. The work type in the payload determines which prompt template is used. The routing decision -- which agent gets the work -- is based on role matching.</p>
+  <p>Each agent is a specialist: the role goes into the system prompt, and the task type tells it what to do with the payload.</p>
   </section>
 
   <section>
-  <h2>The Emergence: Self-Organization in Action</h2>
+  <h2>Putting It Together</h2>
 
-  <p>Now we wire it all together. Here is the main loop that each agent runs.</p>
+  <pre><code>    def run(self):
+        pilotctl("set-hostname", self.hostname)
+        self.join_hub()
+        for job in (self.watch_roster, self.announce_forever, self.serve):
+            threading.Thread(target=job, daemon=True).start()
 
-  <pre><code>import threading
-import math
+        while True:
+            self.trust_peers()
+            role = random.choice([r for r in TASK_FOR_ROLE if r != self.role])
+            task = {"type": TASK_FOR_ROLE[role], "payload": f"Sample input for a {role}."}
+            result = self.request(role, task)
+            if result:
+                print(f"[{self.hostname}] {role} answered: {result['output'][:80]}")
+            time.sleep(random.uniform(10, 30))</code></pre>
 
-def run_agent(agent_id, role, registry_addr):
-    agent = SwarmAgent(agent_id, role, registry_addr)
-    agent.start_daemon()
-    agent.register()
+  <p>Start one copy per machine, each with its own role and the hub's address:</p>
 
-    time.sleep(5)  <span class="comment"># Let other agents register</span>
+  <pre><code><span class="cmd">SWARM_HUB=0:0000.0000.1A2B python swarm_agent.py summarizer</span>   <span class="comment"># machine 1</span>
+<span class="cmd">SWARM_HUB=0:0000.0000.1A2B python swarm_agent.py analyzer</span>     <span class="comment"># machine 2</span>
+<span class="cmd">SWARM_HUB=0:0000.0000.1A2B python swarm_agent.py reviewer</span>     <span class="comment"># machine 3</span>
+<span class="cmd">SWARM_HUB=0:0000.0000.1A2B python swarm_agent.py translator</span>   <span class="comment"># machine 4</span></code></pre>
 
-    agent.discover_peers()
-    agent.establish_trust()
+  <p>Add more agents with the same roles and the work spreads across them. Replace <code>0:0000.0000.1A2B</code> with your hub's address.</p>
+  </section>
 
-    <span class="comment"># Start work listener in background</span>
-    listener = threading.Thread(
-        target=agent.listen_for_work, daemon=True
-    )
-    listener.start()
+  <section>
+  <h2>What Organizes Itself, and What Does Not</h2>
 
-    <span class="comment"># Main loop: periodically send work to peers</span>
-    work_types = ["summarize", "analyze", "code_review", "translate"]
-
-    while True:
-        <span class="comment"># Refresh peer list</span>
-        agent.discover_peers()
-
-        <span class="comment"># Pick a work type and find a peer for it</span>
-        work_type = random.choice(work_types)
-        role_for_work = {
-            "summarize": "summarizer",
-            "analyze": "analyzer",
-            "code_review": "reviewer",
-            "translate": "translator",
-        }.get(work_type, "general")
-
-        target = agent.select_peer(role_for_work)
-        if target is None:
-            time.sleep(5)
-            continue
-
-        <span class="comment"># Send work to selected peer</span>
-        try:
-            agent.send_work(target, {
-                "type": work_type,
-                "payload": generate_sample_payload(work_type),
-            })
-        except Exception as e:
-            print(f"[{agent.hostname}] Send failed: {e}")
-
-        time.sleep(random.uniform(10, 30))  <span class="comment"># Stagger sends</span></code></pre>
-
-  <h3>Spawning the Swarm</h3>
-
-  <pre><code>def main():
-    registry_addr = "rendezvous.example.com:9000"
-
-    <span class="comment"># Define the swarm: 10 agents with different roles</span>
-    agents = [
-        (0, "summarizer"),
-        (1, "summarizer"),
-        (2, "analyzer"),
-        (3, "analyzer"),
-        (4, "reviewer"),
-        (5, "reviewer"),
-        (6, "translator"),
-        (7, "translator"),
-        (8, "general"),    <span class="comment"># Generalist: accepts any task type</span>
-        (9, "general"),
-    ]
-
-    threads = []
-    for agent_id, role in agents:
-        t = threading.Thread(
-            target=run_agent,
-            args=(agent_id, role, registry_addr),
-        )
-        t.start()
-        threads.append(t)
-        time.sleep(1)  <span class="comment"># Stagger daemon startups</span>
-
-    for t in threads:
-        t.join()
-
-if __name__ == "__main__":
-    main()</code></pre>
-
-  <h3>What Happens Over Time</h3>
-
-  <p>Run this for 30 minutes and observe the work distribution. Here is what typically emerges:</p>
+  <p>Run the swarm for a while and this is what the code does on its own:</p>
 
   <ol>
-    <li><strong>Minutes 0-5:</strong> All agents come online and discover each other. Work routing goes to random trusted peers.</li>
-    <li><strong>Minutes 5-10:</strong> Agents with lower latency to the LLM API respond faster and accumulate more completed requests.</li>
-    <li><strong>Minutes 10-20:</strong> Peers that respond quickly get routed more work. Agents with connectivity issues get fewer requests. The swarm self-corrects without manual intervention.</li>
-    <li><strong>Minutes 20-30:</strong> The swarm has self-organized. If any agent goes down, peers detect the lost tunnel and stop routing to it. No failover logic needed.</li>
+    <li><strong>Membership.</strong> New agents appear in every roster within one announcement interval of being approved by the hub. Agents that stop announcing disappear after 90 seconds.</li>
+    <li><strong>Trust.</strong> Each pair of agents becomes mutually trusted once both have asked, with no operator involved.</li>
+    <li><strong>Routing.</strong> Work for a role spreads across the agents that have it, and shifts toward the ones that answer fastest. An agent that stops answering gets less work until it recovers.</li>
   </ol>
 
+  <p>What it does not do: there is no queue, so a request that fails three times is dropped and the caller decides what to do. There is no global view of load; each agent only knows the latencies it has measured itself. And the hub is a shared dependency for membership. If it goes down, agents keep their trust records and keep working with the peers in their rosters until those entries expire; new agents cannot join until it is back. Raise <code>ROSTER_TTL</code> to ride out longer hub outages, or run two hubs and subscribe to both.</p>
+
   <div class="callout">
-    <p><strong>This is the key insight:</strong> The swarm does not need an orchestrator because role-based routing and tunnel health replace central scheduling. Emergence happens automatically.</p>
+    <p><strong>The point:</strong> the only central piece is a relay for announcements. Who works with whom, who trusts whom, and who gets the next task are decided by the agents themselves.</p>
   </div>
   </section>
 
   <section>
   <h2>Monitoring the Swarm</h2>
 
-  <p>You can watch the self-organization happen in real time by polling the registry for peer status. For a more robust monitoring setup that works across NAT boundaries without a centralized Prometheus stack, see <a href="/blog/distributed-monitoring-without-prometheus">Distributed Monitoring Without Prometheus or Grafana</a>.</p>
+  <p>Any daemon the hub trusts can watch the roster directly, for example from one of the agents:</p>
 
-  <pre><code>def monitor_swarm(registry_addr):
-    """Print peer activity every 30 seconds."""
-    while True:
-        output = subprocess.run(
-            ["pilotctl", "send-message", "list-agents", "--data", '/data {"search":"swarm-demo"}', "--wait"],
-            capture_output=True, text=True
-        ).stdout
-        agents = json.loads(output)
+  <pre><code><span class="cmd">pilotctl subscribe 0:0000.0000.1A2B swarm.roster</span></code></pre>
 
-        print("\\n--- Swarm Status ---")
-        print(f"{'Hostname':<25} {'Role':<12} {'Status':<8}")
-        print("-" * 47)
-        for a in agents:
-            print(f"{a.get('hostname', 'unknown'):<25} "
-                  f"{a.get('tags', {}).get('role', '?'):<12} "
-                  f"{a.get('status', 'unknown'):<8}")
-
-        time.sleep(30)</code></pre>
-
-  <section>
-  <h2>Scaling to 100 Agents</h2>
-
-  <p>Ten agents is a demo. Can this approach scale? We tested with 100 agents on 5 VMs (20 agents per VM) and found two things that matter.</p>
-
-  <h3>Memory: 10 MB Per Daemon</h3>
-
-  <p>Each Pilot daemon uses approximately <strong>10 MB of RSS</strong>. On a 16 GB VM, you can run 200+ daemons comfortably. The registry handles 100 concurrent agents without measurable latency increase. The <a href="benchmarking-http-vs-udp-overlay">benchmark data</a> confirms the per-connection memory stays flat.</p>
-
-  <pre><code><span class="comment"># Memory usage across 100 daemons on a single VM</span>
-<span class="cmd">ps aux | grep pilot-daemon | awk '{sum += $6} END {print sum/1024 "MB"}'</span>
-1024MB  <span class="comment"># ~10 MB per daemon average</span></code></pre>
-
-  <h3>Network Topology at Scale</h3>
-
-  <p>With 100 agents, the trust mesh becomes important. Full mesh (every agent trusts every other) means 4,950 handshake pairs. That is expensive. In practice, agents should trust only peers they actually interact with. The swarm naturally converges on a sparse trust graph where each agent trusts 10-20 peers based on role affinity.</p>
-
-  <pre><code>    def selective_trust(self):
-        """Only trust peers in roles we send work to."""
-        needed_roles = self.get_target_roles()
-        for addr, info in self.peers.items():
-            if info["role"] in needed_roles and not info["trusted"]:
-                self.pilotctl("handshake", addr)
-                self.peers[addr]["trusted"] = True</code></pre>
+  <p>Each announcement prints as <code>[swarm.roster] {...}</code>. <code>pilotctl trust</code> on an agent shows which peers it trusts, and <code>pilotctl inbox</code> shows the requests it has received. For a fuller monitoring setup that works across NAT boundaries without a centralized Prometheus stack, see <a href="/blog/distributed-monitoring-without-prometheus">Distributed Monitoring Without Prometheus or Grafana</a>.</p>
   </section>
 
   <section>
-  <h2>Adding Fault Tolerance</h2>
+  <h2>If You Run Your Own Registry</h2>
 
-  <p>A real swarm needs to handle agent failures. Pilot makes this straightforward because the registry tracks liveness via keepalive probes.</p>
+  <p>On a registry you operate, a private network can replace the hub. Creating a network needs that registry's admin token, which is why this only works on your own registry; on the public backbone only its operators can create networks. Start every daemon with <code>--registry</code> pointing at your registry, then:</p>
 
-  <pre><code>    def send_with_retry(self, work_data, role, max_retries=3):
-        """Send work with automatic failover to next peer."""
-        for attempt in range(max_retries):
-            target = self.select_peer(role)
-            if target is None:
-                print(f"[{self.hostname}] No peers available for {role}")
-                return None
+  <pre><code><span class="comment"># Once, with the registry's admin token</span>
+<span class="cmd">PILOT_ADMIN_TOKEN=... pilotctl network create --name swarm --join-rule token --token &lt;join-secret&gt;</span>
 
-            try:
-                self.send_work(target, work_data)
-                return True
-            except Exception as e:
-                print(f"[{self.hostname}] Attempt {attempt+1} failed: {e}")
-                <span class="comment"># Remove from peers temporarily</span>
-                self.peers[target]["trusted"] = False
+<span class="comment"># On each agent</span>
+<span class="cmd">pilotctl network join &lt;network_id&gt; --token &lt;join-secret&gt;</span>
+<span class="cmd">pilotctl --json network members &lt;network_id&gt;</span></code></pre>
+
+  <p>Three things change. The member list is the roster: it returns every member's node ID and hostname, so put the role in the hostname (as the script already does) and read it from there. Hostnames of members resolve for each other. And a handshake between two members of the same network is approved automatically, so the pairwise trust step still runs but never waits. See the <a href="/docs/networks">networks documentation</a> for join rules and roles.</p>
+  </section>
+
+  <section>
+  <h2>Scaling Up</h2>
+
+  <p>A few things grow with the size of the swarm:</p>
+
+  <ul>
+    <li><strong>Trust pairs.</strong> Full mesh trust is n(n-1)/2 pairs: 45 for 10 agents, 4,950 for 100. For a large swarm, only ask for trust from peers in roles you exchange work with.</li>
+    <li><strong>Roster traffic.</strong> Every announcement goes to every subscriber, so the hub's fan-out grows with the square of the swarm size. Announce less often as the swarm grows.</li>
+    <li><strong>Broker limits.</strong> A topic can have up to 1,000 subscribers, and each publishing connection may send 100 events per second (bursts of 200). One announcement every 30 seconds per agent is far below that.</li>
+  </ul>
+
+  <p>Narrowing trust to the roles you use is a small change in <code>trust_peers</code>:</p>
+
+  <pre><code>    def trust_peers(self, roles):
+        """Ask for trust only from peers in the given roles."""
+        trusted = trusted_ids()
+        for addr, p in self.live_peers():
+            if p["role"] not in roles or p["node_id"] in trusted:
                 continue
+            ...</code></pre>
 
-        return None</code></pre>
-
-  <p>When a send fails, the agent marks the peer as temporarily untrusted and retries with the next available peer. If the peer recovers, the next discovery refresh will re-add it to the candidates list.</p>
+  <p>Both sides of a pair must ask for the request to become mutual, so pick the roles symmetrically: if summarizers send work to analyzers, analyzers should also ask summarizers.</p>
   </section>
 
   <section>
   <h2>The Complete Agent Script</h2>
 
-  <p>Here is the full script that ties everything together. Save it as <code>swarm_agent.py</code> and run with the agent ID and role as arguments.</p>
+  <p>Here is the full script. Save it as <code>swarm_agent.py</code> and run it with the role as its argument and the hub's address in <code>SWARM_HUB</code>.</p>
 
-  <pre><code>#!/usr/bin/env python3
-"""Pilot Protocol swarm agent with reputation-based self-organization."""
+  <pre><code><span class="comment">#!/usr/bin/env python3</span>
+"""Pilot Protocol swarm agent: a roster over pub/sub, pairwise trust, direct work requests."""
 
-import subprocess
 import json
-import time
-import random
-import threading
 import os
+import random
+import subprocess
 import sys
-import math
+import threading
+import time
 
-REGISTRY_ADDR = os.environ.get("REGISTRY_ADDR", "rendezvous.example.com:9000")
+HUB = os.environ["SWARM_HUB"]   <span class="comment"># the hub daemon's address, e.g. 0:0000.0000.1A2B</span>
+ROSTER = "swarm.roster"          <span class="comment"># exact topic name on the hub's broker</span>
+ANNOUNCE_EVERY = 30              <span class="comment"># seconds between announcements</span>
+ROSTER_TTL = 90                  <span class="comment"># forget peers not heard from for this long</span>
+ASK_AGAIN = 300                  <span class="comment"># re-send an unanswered handshake after this long</span>
+TASK_FOR_ROLE = {
+    "summarizer": "summarize",
+    "analyzer": "analyze",
+    "reviewer": "code_review",
+    "translator": "translate",
+}
+
+
+def pilotctl(*args, timeout=30):
+    """Run pilotctl --json and return the "data" part of its reply."""
+    out = subprocess.run(["pilotctl", "--json", *args],
+                         capture_output=True, text=True, timeout=timeout)
+    if out.returncode != 0:
+        raise RuntimeError(out.stderr.strip() or out.stdout.strip())
+    return json.loads(out.stdout)["data"]
+
+
+def node_id(address):
+    """'0:0000.0000.1A2B' -&gt; 0x1A2B (the last two groups are the node ID)."""
+    return int(address.split(":", 1)[1].split(".", 1)[1].replace(".", ""), 16)
+
+
+def trusted_ids():
+    return {int(t["node_id"]) for t in pilotctl("trust")["trusted"]}
+
+
+def execute_with_llm(role, task):
+    """Call an LLM to process the task."""
+    import openai
+
+    client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": f"You are a {role} agent. Task type: {task['type']}."},
+            {"role": "user", "content": task["payload"]},
+        ],
+        max_tokens=1024,
+    )
+    return {"output": response.choices[0].message.content, "by": role}
+
 
 class SwarmAgent:
-    def __init__(self, agent_id, role):
-        self.agent_id = agent_id
+    def __init__(self, role):
         self.role = role
-        self.hostname = f"swarm-{role}-{agent_id}"
-        self.peers = {}
-        self.tasks_completed = 0
+        me = pilotctl("info")
+        self.address = me["address"]
+        self.node_id = int(me["node_id"])
+        self.hostname = f"swarm-{role}-{self.node_id}"
+        self.peers = {}        <span class="comment"># address -&gt; role, hostname, node_id, seen, latency, asked</span>
+        self.lock = threading.Lock()
+        self.handled = set()   <span class="comment"># message IDs of requests already answered</span>
 
-    def pilotctl(self, *args):
-        cmd = ["pilotctl"] + list(args)
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        if result.returncode != 0:
-            raise RuntimeError(result.stderr)
-        return result.stdout.strip()
+    <span class="comment"># --- joining -----------------------------------------------------</span>
 
-    def start(self):
-        subprocess.Popen([
-            "pilot-daemon",
-        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        time.sleep(2)
-        self.pilotctl("set-hostname", self.hostname)
-        self.pilotctl("extras", "set-tags", f"role-{self.role}", "swarm-demo")  # space-separated, max 3
+    def join_hub(self):
+        """Ask the hub for trust and wait until it is approved."""
+        pilotctl("handshake", HUB, f"swarm worker, role {self.role}")
+        while node_id(HUB) not in trusted_ids():
+            time.sleep(5)
+        print(f"[{self.hostname}] trusted by the hub")
 
-    def discover(self):
-        output = self.pilotctl("send-message", "list-agents", "--data", '/data {"search":"swarm-demo"}', "--wait")
-        my_addr = self.my_address()
-        for peer in json.loads(output):
-            addr = peer["address"]
-            if addr != my_addr:
-                self.peers[addr] = {
-                    "hostname": peer.get("hostname", "?"),
-                    "role": peer.get("tags", {}).get("role", "?"),
-                    "trusted": self.peers.get(addr, {}).get("trusted", False),
-                }
+    <span class="comment"># --- the roster ----------------------------------------------------</span>
 
-    def my_address(self):
-        return json.loads(self.pilotctl("daemon", "status"))["address"]
-
-    def trust_peers(self):
-        for addr, info in self.peers.items():
-            if not info["trusted"]:
-                try:
-                    self.pilotctl("handshake", addr)
-                    info["trusted"] = True
-                except RuntimeError:
-                    pass
-
-    def select_peer(self, role):
-        candidates = [
-            a for a, i in self.peers.items()
-            if i["role"] == role and i["trusted"]
-        ]
-        return random.choice(candidates) if candidates else None
-
-    def run(self):
-        self.start()
-        time.sleep(5)
-        self.discover()
-        self.trust_peers()
-        threading.Thread(target=self.listen, daemon=True).start()
-
-        roles = ["summarizer", "analyzer", "reviewer", "translator"]
-        while True:
-            self.discover()
-            role = random.choice(roles)
-            target = self.select_peer(role)
-            if target:
-                try:
-                    self.pilotctl("send-file", target,
-                        "--stdin")
-                except RuntimeError:
-                    pass
-            time.sleep(random.uniform(10, 30))
-
-    def listen(self):
+    def announce_forever(self):
+        msg = json.dumps({"address": self.address, "node_id": self.node_id,
+                          "hostname": self.hostname, "role": self.role})
         while True:
             try:
-                output = self.pilotctl("recv", "1001", "--json")
-                if not output:
+                pilotctl("publish", HUB, ROSTER, "--data", msg)
+            except RuntimeError as e:
+                print(f"[{self.hostname}] announce failed: {e}")
+            time.sleep(ANNOUNCE_EVERY)
+
+    def watch_roster(self):
+        """Keep a local roster from the announcements on the hub's broker."""
+        while True:
+            proc = subprocess.Popen(["pilotctl", "--json", "subscribe", HUB, ROSTER],
+                                    stdout=subprocess.PIPE, text=True)
+            for line in proc.stdout:
+                try:
+                    peer = json.loads(json.loads(line)["data"])
+                    addr = peer["address"]
+                except (ValueError, KeyError, TypeError):
                     continue
-                msg = json.loads(output)
-                sender = msg.get("from", "unknown")
-                result = {"output": f"Processed by {self.hostname}"}
-                self.pilotctl("send", sender, json.dumps(result))
-                self.tasks_completed += 1
-            except Exception:
+                if addr == self.address:
+                    continue
+                with self.lock:
+                    entry = self.peers.setdefault(addr, {"latency": None, "asked": 0})
+                    entry.update(role=peer["role"], hostname=peer["hostname"],
+                                 node_id=int(peer["node_id"]), seen=time.time())
+            proc.wait()
+            time.sleep(5)   <span class="comment"># subscription ended (hub restarted?): subscribe again</span>
+
+    def live_peers(self):
+        now = time.time()
+        with self.lock:
+            return [(a, dict(p)) for a, p in self.peers.items()
+                    if now - p.get("seen", 0) &lt; ROSTER_TTL]
+
+    <span class="comment"># --- trust ---------------------------------------------------------</span>
+
+    def trust_peers(self):
+        """Ask every live peer for trust. Every agent does the same, so each
+        pair ends up with requests in both directions, and the daemons
+        approve a mutual request on their own."""
+        trusted = trusted_ids()
+        for addr, p in self.live_peers():
+            if p["node_id"] in trusted or time.time() - p["asked"] &lt; ASK_AGAIN:
                 continue
+            try:
+                pilotctl("handshake", addr, f"swarm peer, role {self.role}")
+                with self.lock:
+                    self.peers[addr]["asked"] = time.time()
+            except RuntimeError as e:
+                print(f"[{self.hostname}] handshake to {addr} failed: {e}")
+
+    <span class="comment"># --- sending work --------------------------------------------------</span>
+
+    def pick_peer(self, role, exclude=()):
+        """Choose a trusted peer with the role, favouring fast responders."""
+        trusted = trusted_ids()
+        cands = [(a, p) for a, p in self.live_peers()
+                 if p["role"] == role and p["node_id"] in trusted and a not in exclude]
+        if not cands:
+            return None
+        weights = [1.0 / (p["latency"] or 1.0) for _, p in cands]
+        return random.choices([a for a, _ in cands], weights=weights)[0]
+
+    def record_latency(self, addr, seconds):
+        with self.lock:
+            old = self.peers[addr]["latency"]
+            self.peers[addr]["latency"] = seconds if old is None else 0.7 * old + 0.3 * seconds
+
+    def request(self, role, task, attempts=3):
+        """Send a task to a peer with the role and wait for its answer."""
+        tried = set()
+        for _ in range(attempts):
+            addr = self.pick_peer(role, exclude=tried)
+            if addr is None:
+                return None
+            tried.add(addr)
+            start = time.time()
+            try:
+                out = pilotctl("send-message", addr, "--data", json.dumps(task),
+                               "--wait", "120s", timeout=150)
+                self.record_latency(addr, time.time() - start)
+                return json.loads(out["reply"]["data"])
+            except (RuntimeError, subprocess.TimeoutExpired, KeyError, ValueError) as e:
+                print(f"[{self.hostname}] {addr} did not answer: {e}")
+                self.record_latency(addr, 120.0)   <span class="comment"># push it to the back</span>
+        return None
+
+    <span class="comment"># --- answering work ------------------------------------------------</span>
+
+    def serve(self):
+        """Answer work requests that arrive in the inbox."""
+        while True:
+            try:
+                msgs = pilotctl("inbox", "--full", "--limit", "0")["messages"]
+            except RuntimeError:
+                time.sleep(5)
+                continue
+            for m in reversed(msgs):                       <span class="comment"># oldest first</span>
+                mid = m.get("message_id")
+                if not mid or mid in self.handled or m.get("reply_to"):
+                    continue    <span class="comment"># already answered, or an answer to one of our own requests</span>
+                self.handled.add(mid)
+                try:
+                    task = json.loads(m["data"])
+                    if task.get("type") not in TASK_FOR_ROLE.values():
+                        continue
+                    result = execute_with_llm(self.role, task)
+                    pilotctl("send-message", m["from"], "--data", json.dumps(result),
+                             "--reply-to", mid)
+                except Exception as e:
+                    print(f"[{self.hostname}] could not answer {mid}: {e}")
+            try:
+                pilotctl("inbox", "--clear", "--before", "10m")   <span class="comment"># keep the inbox small</span>
+            except RuntimeError:
+                pass
+            time.sleep(2)
+
+    <span class="comment"># --- main loop -----------------------------------------------------</span>
+
+    def run(self):
+        pilotctl("set-hostname", self.hostname)
+        self.join_hub()
+        for job in (self.watch_roster, self.announce_forever, self.serve):
+            threading.Thread(target=job, daemon=True).start()
+
+        while True:
+            self.trust_peers()
+            role = random.choice([r for r in TASK_FOR_ROLE if r != self.role])
+            task = {"type": TASK_FOR_ROLE[role], "payload": f"Sample input for a {role}."}
+            result = self.request(role, task)
+            if result:
+                print(f"[{self.hostname}] {role} answered: {result['output'][:80]}")
+            time.sleep(random.uniform(10, 30))
+
 
 if __name__ == "__main__":
-    agent_id = int(sys.argv[1])
-    role = sys.argv[2]
-    SwarmAgent(agent_id, role).run()</code></pre>
-
-  <p>Run 10 instances:</p>
-
-  <pre><code><span class="cmd">python swarm_agent.py 0 summarizer &</span>
-<span class="cmd">python swarm_agent.py 1 summarizer &</span>
-<span class="cmd">python swarm_agent.py 2 analyzer &</span>
-<span class="cmd">python swarm_agent.py 3 analyzer &</span>
-<span class="cmd">python swarm_agent.py 4 reviewer &</span>
-<span class="cmd">python swarm_agent.py 5 reviewer &</span>
-<span class="cmd">python swarm_agent.py 6 translator &</span>
-<span class="cmd">python swarm_agent.py 7 translator &</span>
-<span class="cmd">python swarm_agent.py 8 general &</span>
-<span class="cmd">python swarm_agent.py 9 general &</span></code></pre>
+    SwarmAgent(sys.argv[1]).run()</code></pre>
   </section>
 
   <section>
   <h2>What You Have Built</h2>
 
-  <p>This is not a toy demo. The patterns here -- discovery, trust, data exchange, role-based routing, fault tolerance -- are the building blocks of production multi-agent systems. The difference from conventional architectures is what is <em>missing</em>: no orchestrator, no message queue, no service mesh, no load balancer, no health check infrastructure. For a simpler introduction to the same concepts, see <a href="/blog/build-multi-agent-network-five-minutes">Build a Multi-Agent Network in Five Minutes</a>.</p>
+  <p>The patterns here (a shared announcement topic, pairwise trust, direct requests with replies, and routing that learns from latency) are building blocks for larger multi-agent systems. What is missing is just as important: no scheduler, no work queue, no service mesh and no load balancer. For a simpler introduction to the same concepts, see <a href="/blog/build-multi-agent-network-five-minutes">Build a Multi-Agent Network in Five Minutes</a>.</p>
 
-  <p>The swarm self-organizes because role-based discovery replaces central scheduling. Agents know which peers have the capabilities they need. Tunnel health replaces health checks. If a peer disappears, its tunnel drops and the agent routes to the next available match.</p>
-
-  <p>To extend this pattern into a marketplace with capability advertising and reputation-based routing, see <a href="/blog/build-ai-agent-marketplace-discovery-reputation">Build an AI Agent Marketplace With Discovery and Reputation</a>. For chaining specialized models across agent roles, see <a href="/blog/chain-ai-models-across-machines">Chain AI Models Across Machines With Pilot Protocol</a>. For the network fundamentals, see <a href="how-pilot-protocol-works">How Pilot Protocol Works</a>.</p>
+  <p>For the event stream itself, see <a href="/blog/replace-message-broker-twelve-lines-go">agent pub/sub in Go</a>. For a marketplace-style take on finding agent services, see <a href="/blog/build-ai-agent-marketplace-discovery-reputation">building an agent marketplace on Pilot</a>. For chaining specialized models across agent roles, see <a href="/blog/chain-ai-models-across-machines">Chain AI Models Across Machines With Pilot Protocol</a>. For the network fundamentals, see <a href="how-pilot-protocol-works">How Pilot Protocol Works</a>.</p>
   </section>
 
   <div class="cta">
     <h3>Build Your Own Swarm</h3>
-    <p>Everything in this tutorial runs on the open-source Pilot Protocol. Clone the repo and start swarming.</p>
+    <p>Everything in this tutorial runs on the open-source Pilot Protocol daemon and CLI. Install it on two machines and start with two roles.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 
 const faqItems = [
   {
     question: "What is a self-organizing agent swarm?",
-    answer: "A self-organizing agent swarm is a group of AI agents that discover each other, establish trust, and coordinate work without a central orchestrator. Each agent runs the same code and makes independent decisions about which peer to route work to based on capability matching and tunnel health."
+    answer: "Here it means a group of agents that run the same code and decide for themselves who to work with: they announce their roles, build their own roster from each other's announcements, set up trust in pairs, and send each task directly to a peer with the right role. A single Pilot daemon relays the announcements, but nothing assigns work centrally."
   },
   {
-    question: "How do agents discover each other without an orchestrator?",
-    answer: "Agents discover each other through Pilot Protocol's registry using tag-based lookups. Each agent registers with capability tags (e.g., role=summarizer, swarm=demo) and queries <code>list-agents</code> by tag to find peers. No hardcoded addresses, no configuration files, no service mesh required."
+    question: "How do agents find each other?",
+    answer: "Each agent publishes a short announcement (address, node ID, role) to an exact pub/sub topic on a hub daemon every 30 seconds and subscribes to the same topic. Pilot has no network-wide search for your own nodes, and <code>list-agents</code> only lists the public data service agents, so the agents tell each other who they are. On a registry you run, a private network's member list can serve as the roster instead."
   },
   {
     question: "How is trust established between agents in the swarm?",
-    answer: "Trust is established through mutual Ed25519 handshakes. Each agent initiates a handshake with discovered peers, and both sides sign a challenge with their identity key. If either side rejects, the connection fails. This means agents can refuse trust from unknown peers and compromised agents can be revoked from the network."
+    answer: "Each agent sends <code>pilotctl handshake</code> to every peer in its roster. When two agents have both asked, the daemons treat the request as mutual and approve it automatically. The hub's approval of each new agent is the admission control: once an agent is in the roster, it can form trust with the others."
   },
   {
     question: "What happens when an agent in the swarm goes offline?",
-    answer: "When an agent goes offline, its Pilot tunnel drops. Peers detect the lost connection, mark the agent as temporarily untrusted, and route work to the next available peer with matching capabilities. No failover logic or health check infrastructure is needed — the swarm self-corrects automatically."
+    answer: "Requests to it time out, the sender records it as slow and retries with another peer that has the same role, and it drops out of every roster 90 seconds after its last announcement. When it comes back and announces again, peers start routing work to it again."
   },
   {
-    question: "Can a self-organizing agent swarm scale beyond 10 agents?",
-    answer: "Yes. Each Pilot daemon uses roughly 10 MB of memory, so a single VM can run 200+ agents comfortably. At scale, agents use selective trust — only handshaking peers in roles they actually interact with — which naturally converges on a sparse trust graph rather than a full mesh."
+    question: "Can the swarm scale beyond a handful of agents?",
+    answer: "Yes, with two adjustments. Full-mesh trust grows as n(n-1)/2 pairs, so larger swarms should only form trust between roles that exchange work. The roster topic fans every announcement out to every subscriber, so announce less often as the swarm grows; the built-in broker allows up to 1,000 subscribers per topic."
   }
 ];
 ---
 <BlogLayout
-  title="Build a Self-Organizing Agent Swarm: Multi-Agent System Without an Orchestrator"
-  description="Build 10 AI agents that discover each other, establish trust, and route work by capability - no orchestrator, no central scheduler, no single point of failure."
+  title="Build a Self-Organizing Agent Swarm: No Central Scheduler"
+  description="Agents announce roles on a pub/sub topic, form trust in pairs, and send work straight to the fastest peer with the right role. A Python tutorial on Pilot."
   date="May 23, 2026"
   tags={["tutorial", "swarm"]}
   canonicalPath="/blog/build-agent-swarm-self-organizes"
