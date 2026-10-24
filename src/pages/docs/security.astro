@@ -7,7 +7,7 @@ import DocLayout from "../../layouts/DocLayout.astro";
   activePage="security"
   canonicalPath="/docs/security"
   prev={{ label: "Consent & Privacy", href: "/docs/consent" }}
-  next={{ label: "Enterprise Overview", href: "/docs/enterprise" }}
+  next={{ label: "Self-hosting the registry", href: "/docs/enterprise" }}
 >
 <h1>Security</h1>
   <p class="subtitle">The whole posture on one page — cryptography, trust, transparency, audit, and reporting.</p>
@@ -18,7 +18,7 @@ import DocLayout from "../../layouts/DocLayout.astro";
       <li><a href="#crypto">Cryptography</a></li>
       <li><a href="#trust">Trust model</a></li>
       <li><a href="#transparency">Data &amp; consent transparency</a></li>
-      <li><a href="#enterprise">Enterprise controls</a></li>
+      <li><a href="#enterprise">Self-hosted registry controls</a></li>
       <li><a href="#reporting">Reporting a vulnerability</a></li>
     </ul>
   </div>
@@ -28,7 +28,7 @@ import DocLayout from "../../layouts/DocLayout.astro";
   <ul>
     <li><strong>Identity</strong> — every node holds a persistent Ed25519 keypair (<code>~/.pilot/identity.json</code>); the public key registers with the <a href="concepts#rendezvous">registry</a> and signs trust handshakes.</li>
     <li><strong>Tunnels</strong> — X25519 key exchange, AES-256-GCM per tunnel, over UDP (or a single outbound TLS/443 connection in <a href="firewalls">compat mode</a>).</li>
-    <li><strong>Implementation</strong> — Go standard-library cryptography; no external crypto dependencies. The <a href="/research/WHITEPAPER.pdf">technical whitepaper</a> and public implementation document the wire format.</li>
+    <li><strong>Implementation</strong> — identity and tunnel cryptography use the Go standard library (Ed25519, X25519 through <code>crypto/ecdh</code>, AES-GCM). The <a href="/research/WHITEPAPER.pdf">technical whitepaper</a> and public implementation document the wire format.</li>
   </ul>
 
   <p>The daemon enables tunnel encryption by default. An explicit <code>--no-encrypt</code> client override exists for controlled testing and should not be used in a production profile.</p>
@@ -37,11 +37,11 @@ import DocLayout from "../../layouts/DocLayout.astro";
 
   <h2 id="trust">Trust model</h2>
 
-  <p>Private nodes reject incoming application streams and datagrams unless the peer has an approved <a href="trust">trust relationship</a> or shares an applicable network. Network policy is evaluated before admission, and open directory lookups withhold private endpoints. Service agents run on an isolated network with open trust so their auto-approval never affects your personal peer connections. The daemon and protocol implementation are open source under AGPL-3.0: <a href="https://github.com/pilot-protocol">github.com/pilot-protocol</a>. The default public registry and beacon are Pilot-operated coordination services; their endpoints are configurable. See the <a href="/trust#architecture">Trust Center architecture boundary</a>.</p>
+  <p>Private nodes reject incoming application streams and datagrams unless the peer has an approved <a href="trust">trust relationship</a> or shares an applicable network. Network policy is evaluated before admission, and open directory lookups withhold private endpoints. Service agents are ordinary nodes on the public backbone that auto-approve incoming handshakes; your daemon in turn auto-approves the well-known agents in its embedded list (<code>pilotctl trusted list</code>) once the registry confirms their keys. A trust link to a service agent is a trust link like any other: remove it with <code>pilotctl untrust &lt;node_id&gt;</code>. The daemon and protocol implementation are open source under AGPL-3.0: <a href="https://github.com/pilot-protocol">github.com/pilot-protocol</a>. The default public registry and beacon are coordination services operated by Vulture Labs; their endpoints are configurable, and you can <a href="enterprise">run your own</a>.</p>
 
   <h3>Deployment hardening</h3>
 
-  <p>Version 1.13.9 includes three opt-in controls that extend the trust boundary before application traffic begins:</p>
+  <p>Since v1.13.9, three opt-in controls extend the trust boundary before application traffic begins. The first is a daemon flag; the other two are flags on the registry and beacon, so on the public backbone they are the operators&rsquo; setting, and on your own registry they are yours:</p>
 
   <table class="hardening-table">
     <thead><tr><th>Control</th><th>Technical behavior</th><th>Enable</th></tr></thead>
@@ -58,9 +58,9 @@ import DocLayout from "../../layouts/DocLayout.astro";
 
   <p>Pilot exposes four consent controls: app-store telemetry, network broadcasts, review behavior, and skill injection (the daemon writes a Pilot skill into detected agent toolchains — Claude Code, OpenClaw, OpenHands, PicoClaw, Hermes, Goose, OpenCode). The review consent flag is enabled by default, while automatic review prompts currently remain off behind feature flags. <a href="consent">Consent &amp; Privacy</a> documents each default, the files written, the threat model, and one-line opt-outs; <code>pilotctl skills status</code> previews pending changes. Specialist messages use encrypted transport; direct paths avoid a third-party data hop, while relay and brokered app paths are documented separately.</p>
 
-  <h2 id="enterprise">Enterprise controls</h2>
+  <h2 id="enterprise">Self-hosted registry controls</h2>
 
-  <p>Enterprise controls are <strong>early access</strong>. <a href="enterprise-rbac">RBAC</a>, <a href="enterprise-identity">SSO / identity integration</a>, <a href="enterprise-policies">network policies</a>, and <a href="enterprise-audit">audit export</a> (Splunk HEC, CEF/Syslog, JSON) are covered in the Enterprise section. The <a href="/enterprise-readiness-report.pdf">Enterprise Readiness Report (PDF)</a> is the consolidated evaluator document.</p>
+  <p>The open-source registry also has <a href="enterprise-rbac">RBAC</a>, <a href="enterprise-identity">OIDC/JWT identity integration</a>, <a href="enterprise-policies">network policies</a>, and <a href="enterprise-audit">audit export</a> (Splunk HEC, CEF/Syslog, JSON). They need the registry admin token, so you use them on a registry you run; see <a href="enterprise">Self-hosting the registry</a>.</p>
 
   <h2 id="reporting">Reporting a vulnerability</h2>
 

@@ -4,7 +4,7 @@ import DocLayout from "../../layouts/DocLayout.astro";
 const bodyContent = `<h1>Network Policies</h1>
   <p class="subtitle">Membership caps, port whitelists, and network metadata for enterprise networks.</p>
 
-  <div class="callout"><strong>Early access.</strong> Enterprise policy controls are available in assisted deployments and may evolve during rollout.</div>
+  <div class="callout"><strong>Self-hosted registry.</strong> Setting a policy needs the registry admin token (or the network&rsquo;s own admin token), so it applies to networks on a registry you run. See <a href="enterprise">Self-hosting the registry</a>.</div>
 
   <div class="toc">
     <h4>On this page</h4>
@@ -41,7 +41,7 @@ const bodyContent = `<h1>Network Policies</h1>
   </table>
 
   <pre><code><span class="comment"># Set a membership cap of 50 agents</span>
-<span class="cmd">pilotctl</span> network policy &lt;network_id&gt; --max-members 50</code></pre>
+<span class="cmd">pilotctl</span> extras network policy &lt;network_id&gt; --max-members 50</code></pre>
 
   <h2 id="allowed-ports">AllowedPorts</h2>
 
@@ -57,7 +57,7 @@ const bodyContent = `<h1>Network Policies</h1>
   </table>
 
   <pre><code><span class="comment"># Allow only HTTP, HTTPS, and data exchange ports</span>
-<span class="cmd">pilotctl</span> network policy &lt;network_id&gt; --allowed-ports 80,443,1001</code></pre>
+<span class="cmd">pilotctl</span> extras network policy &lt;network_id&gt; --allowed-ports 80,443,1001</code></pre>
   <p>To reset the port whitelist (allow all ports again), set an empty list directly via the registry RPC <code>set_network_policy</code> with <code>"allowed_ports": []</code>.</p>
 
   <p>Port policies are enforced at the connection acceptance layer. The daemon checks the destination port against the network&rsquo;s allowed ports list before accepting the connection.</p>
@@ -74,13 +74,13 @@ const bodyContent = `<h1>Network Policies</h1>
     </tbody>
   </table>
 
-  <pre><code><span class="cmd">pilotctl</span> network policy &lt;network_id&gt; --description "Production fleet - US East region"</code></pre>
+  <pre><code><span class="cmd">pilotctl</span> extras network policy &lt;network_id&gt; --description "Production fleet - US East region"</code></pre>
 
   <h2 id="setting">Setting policies</h2>
 
   <h3>Set a policy</h3>
 
-  <pre><code><span class="cmd">pilotctl</span> network policy &lt;network_id&gt; --max-members 50 --allowed-ports 80,443</code></pre>
+  <pre><code><span class="cmd">pilotctl</span> extras network policy &lt;network_id&gt; --max-members 50 --allowed-ports 80,443</code></pre>
 
   <p>Protocol command: <code>set_network_policy</code>. Requires owner or admin role (or admin token).</p>
 
@@ -93,13 +93,13 @@ const bodyContent = `<h1>Network Policies</h1>
   "admin_token": "your-admin-token"
 }</code></pre>
 
-  <p>The message is dispatched on <code>type</code>, and policy fields (<code>max_members</code>, <code>allowed_ports</code>, <code>description</code>) sit flat at the top level - not nested under a <code>policy</code> object. The <code>pilotctl network policy</code> CLI builds this message for you.</p>
+  <p>The message is dispatched on <code>type</code>, and policy fields (<code>max_members</code>, <code>allowed_ports</code>, <code>description</code>) sit flat at the top level - not nested under a <code>policy</code> object. The <code>pilotctl extras network policy</code> CLI builds this message for you and sends the admin token from <code>PILOT_ADMIN_TOKEN</code>.</p>
 
   <p>Merge-on-update: only include the fields you want to change. Omitted fields are preserved.</p>
 
   <h3>Get a policy</h3>
 
-  <pre><code><span class="cmd">pilotctl</span> network policy &lt;network_id&gt;</code></pre>
+  <pre><code><span class="cmd">pilotctl</span> extras network policy &lt;network_id&gt;</code></pre>
 
   <p>Protocol command: <code>get_network_policy</code>. Returns the current policy for the network.</p>
 
@@ -116,7 +116,7 @@ const bodyContent = `<h1>Network Policies</h1>
 
   <h2 id="expr">Programmable (expr) policies</h2>
 
-  <p>Beyond the static caps above, an enterprise network can carry a <strong>programmable expression policy</strong> - a versioned document of rules (using the <code>expr-lang</code> expression language) that the managed-network policy runner evaluates on membership events to gate joins and to prune or fill trust links. This is a separate slot from the static <code>set_network_policy</code> record and is managed with its own RPCs.</p>
+  <p>Beyond the static caps above, an enterprise network can carry a <strong>programmable expression policy</strong> - a versioned document of rules (using the <code>expr-lang</code> expression language) that the policy runner evaluates on membership events to gate joins and to prune or fill trust links. This is a separate slot from the static <code>set_network_policy</code> record and is managed with its own RPCs.</p>
 
   <h3>Set an expr policy</h3>
 
@@ -178,11 +178,11 @@ const bodyContent = `<h1>Network Policies</h1>
 ---
 <DocLayout
   title="Network Policies"
-  description="Network policies for Pilot Protocol enterprise networks - membership caps, port whitelists, descriptions, and merge-on-update semantics."
+  description="Network policies on a self-hosted Pilot Protocol registry - membership caps, port whitelists, descriptions, and merge-on-update semantics."
   activePage="enterprise-policies"
   canonicalPath="/docs/enterprise-policies"
   prev={{ label: "Identity & SSO", href: "/docs/enterprise-identity" }}
-  next={{ label: "Audit & Compliance", href: "/docs/enterprise-audit" }}
+  next={{ label: "Audit Log & Export", href: "/docs/enterprise-audit" }}
 >
   <Fragment set:html={bodyContent} />
 </DocLayout>

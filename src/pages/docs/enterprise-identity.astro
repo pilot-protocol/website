@@ -4,13 +4,13 @@ import DocLayout from "../../layouts/DocLayout.astro";
 const bodyContent = `<h1>Identity & SSO</h1>
   <p class="subtitle">Identity providers, JWT validation, JWKS caching, external IDs, and directory sync.</p>
 
-  <div class="callout"><strong>Early access.</strong> Identity integration is available in assisted enterprise deployments. Confirm the validation and admission path for your provider with the Pilot team before rollout.</div>
+  <div class="callout"><strong>Self-hosted registry.</strong> Every command on this page needs the registry admin token, so it applies to a registry you run. See <a href="enterprise">Self-hosting the registry</a>.</div>
 
   <div class="toc">
     <h4>On this page</h4>
     <ul>
       <li><a href="#overview">Overview</a></li>
-      <li><a href="#providers">Supported providers</a></li>
+      <li><a href="#providers">Supported mechanisms</a></li>
       <li><a href="#configuration">Configuration</a></li>
       <li><a href="#jwt">JWT validation</a></li>
       <li><a href="#jwks">JWKS caching</a></li>
@@ -24,39 +24,42 @@ const bodyContent = `<h1>Identity & SSO</h1>
 
   <h2 id="overview">Overview</h2>
 
-  <p>Enterprise registries can connect Pilot identities to external identity systems. The documented native validation path covers OIDC/JWT; SAML, Entra ID, LDAP, and other systems can be connected through an external identity bridge or custom webhook. Network admission remains subject to the network&rsquo;s configured join rule and Pilot identity checks.</p>
+  <p>A registry you run can tie Pilot identities to an external identity system. Two mechanisms are native: validating OIDC/JWT tokens (RS256 or HS256, with keys from a JWKS URL) and a verification webhook you host. SAML, Entra ID, LDAP and other systems connect only through a bridge you run: a service that issues JWTs signed with keys in a JWKS, or that answers the webhook. Network admission remains subject to the network&rsquo;s configured join rule and Pilot identity checks.</p>
 
   <p>Identity integration is registry-global: a single IDP configuration applies across the registry, and setting a new one replaces the previous config. (Blueprint provisioning writes the same global store.)</p>
 
-  <h2 id="providers">Supported providers</h2>
+  <h2 id="providers">Supported mechanisms</h2>
 
   <table>
-    <thead><tr><th>Provider</th><th>Type value</th><th>Description</th></tr></thead>
+    <thead><tr><th>Mechanism</th><th>Configured with</th><th>What the registry does</th></tr></thead>
     <tbody>
-      <tr><td><strong>OIDC</strong></td><td><code>oidc</code></td><td>OpenID Connect - standard JWT-based SSO. Works with Auth0, Okta, Google, etc.</td></tr>
-      <tr><td><strong>SAML</strong></td><td><code>saml</code></td><td>Connected through an external identity bridge or webhook.</td></tr>
-      <tr><td><strong>Entra ID</strong></td><td><code>entra_id</code></td><td>Connected through OIDC or an external identity bridge.</td></tr>
-      <tr><td><strong>LDAP</strong></td><td><code>ldap</code></td><td>Connected through a directory or webhook bridge.</td></tr>
-      <tr><td><strong>Webhook</strong></td><td><code>webhook</code></td><td>Custom HTTP callback - your own verification endpoint for non-standard systems.</td></tr>
+      <tr><td><strong>OIDC/JWT</strong> (native)</td><td><code>set_idp_config</code>, type <code>oidc</code></td><td>Validates RS256 or HS256 tokens against the keys published at the JWKS URL, plus issuer, audience and time claims.</td></tr>
+      <tr><td><strong>Webhook</strong> (native)</td><td><code>set_identity_webhook</code></td><td>Sends a registration&rsquo;s identity token to your HTTPS endpoint and stores the external ID it returns.</td></tr>
+      <tr><td><strong>SAML, Entra ID, LDAP</strong></td><td>A bridge you run</td><td>Not native. Run a service that issues JWTs or answers the webhook. <code>set_idp_config</code> accepts <code>saml</code>, <code>entra_id</code> and <code>ldap</code> as type values, but they are stored as labels only: validation is always JWT against the JWKS URL.</td></tr>
     </tbody>
   </table>
 
   <h2 id="configuration">Configuration</h2>
 
-  <p>Configure an identity provider with the <code>set_idp_config</code> protocol command:</p>
+  <p>Configure an identity provider with <code>pilotctl extras idp set</code> or the <code>set_idp_config</code> protocol command. The <code>url</code> is the JWKS endpoint itself (the <code>jwks_uri</code> in your provider&rsquo;s discovery document), not the discovery document:</p>
 
-  <pre><code><span class="comment"># OIDC example</span>
+  <pre><code><span class="cmd">pilotctl</span> extras idp set --type oidc \\
+  --url https://accounts.example.com/.well-known/jwks.json \\
+  --issuer https://accounts.example.com --client-id pilot-network-prod
+
+<span class="comment"># The same as a protocol command</span>
 {
   "type": "set_idp_config",
   "idp_type": "oidc",
-  "url": "https://accounts.example.com/.well-known/openid-configuration",
+  "url": "https://accounts.example.com/.well-known/jwks.json",
+  "issuer": "https://accounts.example.com",
   "client_id": "pilot-network-prod",
   "admin_token": "your-admin-token"
 }</code></pre>
 
   <p>The IDP configuration is stored in the registry and persists across restarts. You can also set the IDP through a <a href="enterprise-blueprints">blueprint</a> using the <code>identity_provider</code> field.</p>
 
-  <p>To query the current configuration:</p>
+  <p>To query the current configuration (<code>pilotctl extras idp get</code>):</p>
 
   <pre><code>{
   "type": "get_idp_config",
@@ -128,29 +131,17 @@ const bodyContent = `<h1>Identity & SSO</h1>
 
   <h2 id="webhook-identity">Webhook identity</h2>
 
-  <p>For systems that don&rsquo;t support OIDC or SAML, configure a <strong>webhook</strong> identity provider. The registry sends the agent&rsquo;s credentials to your HTTP endpoint, and your endpoint returns an approval or rejection.</p>
+  <p>For systems that don&rsquo;t issue JWTs, set a verification webhook. When a registration carries an <code>identity_token</code> field, the registry POSTs <code>{"token": "..."}</code> to your endpoint. Your endpoint answers HTTP 200 with <code>{"verified": true, "external_id": "..."}</code>, or <code>{"verified": false, "error": "..."}</code> to refuse. The registry stores the returned external ID on the node; a refusal, a non-200 status or an empty external ID fails the registration.</p>
 
-  <pre><code><span class="comment"># Configure a webhook IDP</span>
-{
-  "type": "set_idp_config",
-  "idp_type": "webhook",
+  <pre><code>{
+  "type": "set_identity_webhook",
   "url": "https://auth.example.com/verify-agent",
   "admin_token": "your-admin-token"
 }</code></pre>
 
-  <p>Your endpoint receives a POST with the agent&rsquo;s identity information and must return a JSON response indicating whether the agent is authorized.</p>
+  <p>Returns <code>{"type": "set_identity_webhook_ok", "status": "enabled"}</code> (or <code>"disabled"</code> when the URL is empty). The URL is validated for SSRF safety before it is stored, and it can also be set through the <code>identity_url</code> field of a blueprint&rsquo;s <code>webhooks</code> object.</p>
 
-  <h3>Outbound identity webhook</h3>
-
-  <p>Separately from the webhook IDP above, the registry can <em>push</em> identity events (joins, external-ID changes) to an endpoint you own. Set that URL with the <code>set_identity_webhook</code> command (also settable via the <code>identity_url</code> field of a blueprint's <code>webhooks</code> object):</p>
-
-  <pre><code>{
-  "type": "set_identity_webhook",
-  "url": "https://ops.example.com/pilot-identity",
-  "admin_token": "your-admin-token"
-}</code></pre>
-
-  <p>Returns <code>{"type": "set_identity_webhook_ok", "status": "enabled"}</code> (or <code>"disabled"</code> when the URL is empty). The URL is validated for SSRF safety before it is stored.</p>
+  <p>The stock daemon doesn&rsquo;t send an identity token, so this path is for clients you build against your registry. If you embed the registry with a webhook secret (<code>Server.SetIdentityWebhookSecret</code> in Go), requests and responses carry an <code>X-Pilot-Signature-256</code> HMAC-SHA256 header and unsigned responses are rejected.</p>
 
   <h2 id="external-ids">External IDs</h2>
 
@@ -186,7 +177,7 @@ const bodyContent = `<h1>Identity & SSO</h1>
 
   <h2 id="directory-sync">Directory sync</h2>
 
-  <p>Directory sync pushes entries from an external directory (AD, Entra ID, LDAP) to the registry. It updates roles for existing members, removes members no longer in the directory, and stores role pre-assignments for identities that have not joined yet — it does not itself add (join) new members.</p>
+  <p>Directory sync takes entries you export from your directory (AD, Entra ID, LDAP or any other system) and pushes them to the registry, with <code>pilotctl extras directory-sync &lt;directory.json&gt; --network &lt;id&gt; [--remove-unlisted]</code> or the <code>directory_sync</code> protocol command. The registry doesn&rsquo;t connect to the directory itself. It updates roles for existing members, removes members no longer in the directory, and stores role pre-assignments for identities that have not joined yet — it does not itself add (join) new members.</p>
 
   <h3>Sync operation</h3>
 
@@ -226,6 +217,8 @@ const bodyContent = `<h1>Identity & SSO</h1>
 
   <h3>Query sync status</h3>
 
+  <p><code>pilotctl extras directory-status &lt;network_id&gt;</code>, or:</p>
+
   <pre><code>{
   "type": "directory_status",
   "network_id": 1,
@@ -242,7 +235,7 @@ const bodyContent = `<h1>Identity & SSO</h1>
 ---
 <DocLayout
   title="Identity & SSO"
-  description="Identity integration for Pilot Protocol - native OIDC/JWT validation, bridged provider support, JWKS caching, and directory sync."
+  description="Identity integration on a self-hosted Pilot Protocol registry - native OIDC/JWT validation, a verification webhook, JWKS caching, and directory sync."
   activePage="enterprise-identity"
   canonicalPath="/docs/enterprise-identity"
   prev={{ label: "RBAC & Access Control", href: "/docs/enterprise-rbac" }}

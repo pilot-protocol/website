@@ -4,7 +4,7 @@ import DocLayout from "../../layouts/DocLayout.astro";
 const bodyContent = `<h1>RBAC & Access Control</h1>
   <p class="subtitle">Roles, permissions, invites, and the authorization chain for enterprise networks.</p>
 
-  <div class="callout"><strong>Early access.</strong> Enterprise RBAC and managed invite controls are available in assisted deployments and may evolve during rollout.</div>
+  <div class="callout"><strong>Self-hosted registry.</strong> Roles and invites live on the registry that hosts the network. On the public backbone only the operators can create networks, so to use them you run your own registry. See <a href="enterprise">Self-hosting the registry</a>.</div>
 
   <div class="toc">
     <h4>On this page</h4>
@@ -57,27 +57,29 @@ const bodyContent = `<h1>RBAC & Access Control</h1>
 
   <h2 id="managing">Managing roles</h2>
 
+  <p><code>promote</code>, <code>demote</code> and <code>kick</code> go straight to the registry and authenticate with the admin token in <code>PILOT_ADMIN_TOKEN</code> (or <code>admin_token</code> in <code>~/.pilot/config.json</code>): either the registry&rsquo;s global token or the network&rsquo;s own admin token.</p>
+
   <h3>Promote a member to admin</h3>
 
-  <pre><code><span class="cmd">pilotctl</span> network promote &lt;network_id&gt; &lt;node_id&gt;</code></pre>
+  <pre><code><span class="cmd">pilotctl</span> extras network promote &lt;network_id&gt; &lt;node_id&gt;</code></pre>
 
   <p>Protocol command: <code>promote_member</code>. Only the owner can promote. The target must be a current member of the network.</p>
 
   <h3>Demote an admin to member</h3>
 
-  <pre><code><span class="cmd">pilotctl</span> network demote &lt;network_id&gt; &lt;node_id&gt;</code></pre>
+  <pre><code><span class="cmd">pilotctl</span> extras network demote &lt;network_id&gt; &lt;node_id&gt;</code></pre>
 
   <p>Protocol command: <code>demote_member</code>. Only the owner can demote.</p>
 
   <h3>Kick a member</h3>
 
-  <pre><code><span class="cmd">pilotctl</span> network kick &lt;network_id&gt; &lt;node_id&gt;</code></pre>
+  <pre><code><span class="cmd">pilotctl</span> extras network kick &lt;network_id&gt; &lt;node_id&gt;</code></pre>
 
   <p>Protocol command: <code>kick_member</code>. Owners can kick anyone. Admins can kick members but not other admins or the owner. The kicked agent loses all network access immediately.</p>
 
   <h3>Check a member&rsquo;s role</h3>
 
-  <pre><code><span class="cmd">pilotctl</span> network role &lt;network_id&gt; &lt;node_id&gt;</code></pre>
+  <pre><code><span class="cmd">pilotctl</span> extras network role &lt;network_id&gt; &lt;node_id&gt;</code></pre>
 
   <p>Protocol command: <code>get_member_role</code>. Returns the role (<code>owner</code>, <code>admin</code>, or <code>member</code>) for the given node in the given network.</p>
 
@@ -91,23 +93,23 @@ const bodyContent = `<h1>RBAC & Access Control</h1>
 
   <p>The global admin token controls registry-level operations. For delegated administration, enterprise networks support <strong>per-network admin tokens</strong> that grant admin-level access to a specific network without global privileges.</p>
 
-  <p>Per-network admin tokens can be set during blueprint provisioning via the <code>network_admin_token</code> field. They authorize the holder to perform admin-level operations (kick, invite, set policies) on that specific network.</p>
+  <p>Per-network admin tokens can be set at creation (<code>pilotctl network create ... --network-admin-token &lt;token&gt;</code>) or during blueprint provisioning via the <code>network_admin_token</code> field. They authorize the holder to perform admin-level operations (kick, invite, set policies) on that specific network.</p>
 
   <h2 id="invites">Invite flow</h2>
 
-  <p>Enterprise networks support a consent-based invite flow. Instead of adding agents directly, owners and admins send invitations that the target agent must accept.</p>
+  <p>Enterprise networks created with <code>--join-rule invite</code> use a consent-based invite flow. Instead of adding agents directly, owners and admins send invitations that the target agent must accept. Invite-only networks can&rsquo;t be joined with <code>network join</code>.</p>
 
   <h3>Send an invite</h3>
 
   <pre><code><span class="cmd">pilotctl</span> network invite &lt;network_id&gt; &lt;target_node_id&gt;</code></pre>
 
-  <p>Protocol command: <code>invite_to_network</code>. The inviter must be an owner or admin. The target receives the invitation in their inbox.</p>
+  <p>Protocol command: <code>invite_to_network</code>, signed by your node. The network must be in enterprise mode with the <code>invite</code> join rule, and your node must be its owner or an admin. The target receives the invitation in its invite inbox on the registry.</p>
 
   <h3>Check inbox</h3>
 
   <pre><code><span class="cmd">pilotctl</span> network invites</code></pre>
 
-  <p>Protocol command: <code>poll_invites</code>. Returns pending invitations with <code>network_id</code>, <code>inviter_id</code>, and <code>timestamp</code> (invite creation time).</p>
+  <p>Run on the invited node. Protocol command: <code>poll_invites</code>. Returns pending invitations with <code>network_id</code>, <code>inviter_id</code>, and <code>timestamp</code> (invite creation time).</p>
 
   <h3>Accept or reject</h3>
 
@@ -161,10 +163,10 @@ const bodyContent = `<h1>RBAC & Access Control</h1>
 ---
 <DocLayout
   title="RBAC & Access Control"
-  description="Role-based access control for Pilot Protocol enterprise networks - roles, permissions, invites, and the authorization chain."
+  description="Role-based access control for networks on a self-hosted Pilot Protocol registry - roles, permissions, invites, and the authorization chain."
   activePage="enterprise-rbac"
   canonicalPath="/docs/enterprise-rbac"
-  prev={{ label: "Enterprise Overview", href: "/docs/enterprise" }}
+  prev={{ label: "Self-hosting the registry", href: "/docs/enterprise" }}
   next={{ label: "Identity & SSO", href: "/docs/enterprise-identity" }}
 >
   <Fragment set:html={bodyContent} />

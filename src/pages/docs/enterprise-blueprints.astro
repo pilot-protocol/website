@@ -4,7 +4,7 @@ import DocLayout from "../../layouts/DocLayout.astro";
 const bodyContent = `<h1>Blueprints</h1>
   <p class="subtitle">Declarative network provisioning - one JSON document, one command, full network setup.</p>
 
-  <div class="callout"><strong>Early access.</strong> Enterprise blueprints are available in assisted deployments and may evolve during rollout. Review generated changes before applying them to a managed registry.</div>
+  <div class="callout"><strong>Self-hosted registry.</strong> Applying a blueprint needs the registry admin token, so it applies to your registry. See <a href="enterprise">Self-hosting the registry</a>. Review a blueprint before applying it to a registry other nodes depend on.</div>
 
   <div class="toc">
     <h4>On this page</h4>
@@ -67,7 +67,7 @@ const bodyContent = `<h1>Blueprints</h1>
       <tr><td><code>join_rule</code></td><td>string</td><td>No</td><td>One of <code>open</code>, <code>token</code>, or <code>invite</code>. Defaults to <code>open</code>.</td></tr>
       <tr><td><code>enterprise</code></td><td>bool</td><td>No</td><td>Enable enterprise features. Defaults to <code>false</code>.</td></tr>
       <tr><td><code>policy</code></td><td>object</td><td>No</td><td>Network policy: <code>max_members</code>, <code>allowed_ports</code>, <code>description</code>. See <a href="enterprise-policies">Network Policies</a>.</td></tr>
-      <tr><td><code>expr_policy</code></td><td>object</td><td>No</td><td>Programmable expression policy applied to the network (versioned rules evaluated by the managed-network policy runner). Same document as the <code>set_expr_policy</code> RPC. See <a href="enterprise-policies#expr">Programmable policies</a>.</td></tr>
+      <tr><td><code>expr_policy</code></td><td>object</td><td>No</td><td>Programmable expression policy applied to the network (versioned rules evaluated by the policy runner). Same document as the <code>set_expr_policy</code> RPC. See <a href="enterprise-policies#expr">Programmable policies</a>.</td></tr>
       <tr><td><code>identity_provider</code></td><td>object</td><td>No</td><td>IDP configuration: <code>type</code>, <code>url</code>, <code>client_id</code>. See <a href="enterprise-identity">Identity &amp; SSO</a>.</td></tr>
       <tr><td><code>webhooks</code></td><td>object</td><td>No</td><td>Webhook endpoints: <code>audit_url</code> and <code>identity_url</code>.</td></tr>
       <tr><td><code>audit_export</code></td><td>object</td><td>No</td><td>Export config: <code>format</code>, <code>endpoint</code>, <code>token</code>. See <a href="enterprise-audit#export">Audit Export</a>.</td></tr>
@@ -120,6 +120,8 @@ const bodyContent = `<h1>Blueprints</h1>
   <h2 id="command">Protocol command</h2>
 
   <h3>Apply a blueprint</h3>
+
+  <p>From the CLI, <code>pilotctl extras provision &lt;blueprint.json&gt;</code> sends the file with the admin token from <code>PILOT_ADMIN_TOKEN</code>. <code>pilotctl extras provision-status</code> and <code>pilotctl extras deprovision &lt;network-name&gt;</code> cover the rest. The protocol command:</p>
 
   <pre><code>{
   "type": "provision_network",
@@ -182,10 +184,10 @@ result, err := c.ProvisionNetwork(blueprintMap, adminToken)</code></pre>
 ---
 <DocLayout
   title="Blueprints"
-  description="Blueprint provisioning for Pilot Protocol - declarative JSON documents that provision entire enterprise networks in one command."
+  description="Blueprint provisioning on a self-hosted Pilot Protocol registry - declarative JSON documents that provision entire enterprise networks in one command."
   activePage="enterprise-blueprints"
   canonicalPath="/docs/enterprise-blueprints"
-  prev={{ label: "Audit & Compliance", href: "/docs/enterprise-audit" }}
+  prev={{ label: "Audit Log & Export", href: "/docs/enterprise-audit" }}
   next={{ label: "Firewalls & Compat Mode", href: "/docs/firewalls" }}
 >
   <Fragment set:html={bodyContent} />
