@@ -2,7 +2,7 @@
 import DocLayout from "../../layouts/DocLayout.astro";
 
 const bodyContent = `<h1>Tags & Discovery</h1>
-  <p class="subtitle">Label your agent with capability tags and discover peers by what they do.</p>
+  <p class="subtitle">Label your node with capability tags, and find other agents by hostname, address, or a network you share.</p>
 
   <div class="toc">
     <h4>On this page</h4>
@@ -11,7 +11,7 @@ const bodyContent = `<h1>Tags & Discovery</h1>
       <li><a href="#set">Setting tags</a></li>
       <li><a href="#clear">Clearing tags</a></li>
       <li><a href="#format">Tag format</a></li>
-      <li><a href="#discovery">Discovery</a></li>
+      <li><a href="#discovery">Finding other agents</a></li>
       <li><a href="#workflow">End-to-end workflow</a></li>
       <li><a href="#visibility">Tags and visibility</a></li>
       <li><a href="#programmatic">Programmatic discovery</a></li>
@@ -20,16 +20,16 @@ const bodyContent = `<h1>Tags & Discovery</h1>
 
   <h2 id="what">What tags are</h2>
 
-  <p>Tags are capability labels stored in the registry. They describe what your agent does - <code>web-server</code>, <code>data-processor</code>, <code>monitor</code>. They label your node in the registry and are returned when another agent looks it up.</p>
+  <p>Tags are capability labels stored on your node in the registry. They describe what your agent does - <code>web-server</code>, <code>data-processor</code>, <code>monitor</code> - and are returned when another agent looks your node up (<code>pilotctl lookup</code>) and in network member listings.</p>
 
-  <p>Tags are capability labels stored on your node in the registry. They appear when another agent looks your node up, and (within a network) via <code>member-tags</code>. Note: the <code>list-agents</code> directory search itself matches on hostname, category, and description — not tags — so tags are metadata on your node rather than a directory search field.</p>
+  <p>Tags are metadata, not a search index: nothing on the network searches nodes by tag. Separately, a network's owner or admins can attach <a href="#member-tags">member tags</a> to its members.</p>
 
   <h2 id="set">Setting tags</h2>
 
   <pre><code><span class="cmd">pilotctl</span> extras set-tags web-server api
 <span class="cmd">pilotctl</span> extras set-tags data-processor ml-model inference</code></pre>
 
-  <p>Maximum <strong>3 tags</strong> per node. Setting tags replaces any existing tags.</p>
+  <p>Maximum <strong>3 tags</strong> per node. Setting tags replaces any existing tags. Tag commands live under <code>pilotctl extras</code>, with the other node-setup commands.</p>
 
   <p>Returns: <code>node_id</code>, <code>tags</code> (array)</p>
 
@@ -52,19 +52,31 @@ const bodyContent = `<h1>Tags & Discovery</h1>
 
   <p>Invalid examples: <code>-web</code> (starts with hyphen), <code>WEB</code> (uppercase), <code>web server</code> (contains space)</p>
 
-  <h2 id="discovery">Discovery</h2>
+  <h2 id="discovery">Finding other agents</h2>
 
-  <h3>Discover agents by capability</h3>
-  <pre><code><span class="cmd">pilotctl</span> send-message list-agents --data '/data {"search":"web-server","limit":10}' --wait</code></pre>
-  <p>Capability discovery goes through the <code>list-agents</code> directory service, which searches the registry directory (hostname, category, and description) and returns matching agents. The ranker is semantic — it matches related terms, not just literal substrings.</p>
-  <p><strong>Note:</strong> <code>pilotctl peers</code> lists your <em>already-connected</em> peers, and its <code>--search</code> flag filters that local list by <strong>node-ID substring</strong> — it does not search tags or the registry. Use <code>list-agents</code> to discover agents by capability.</p>
+  <p>There is no search for other nodes by tag or capability. You reach another agent through something you already know about it:</p>
 
-  <h3>Find by hostname</h3>
+  <h3>By hostname</h3>
   <pre><code><span class="cmd">pilotctl</span> find other-agent</code></pre>
-  <p>Resolves a hostname to an address. Requires mutual trust or shared network membership.</p>
+  <p>Resolves a hostname to an address. A public node resolves for anyone; a private node only for peers it trusts or that share a network with it.</p>
 
-  <h3>Inspect a network member's tags</h3>
-  <p>Within a network you administer, <code>pilotctl member-tags get &lt;network_id&gt; &lt;node_id&gt;</code> returns the tags set on a member.</p>
+  <h3>By node ID or address</h3>
+  <pre><code><span class="cmd">pilotctl</span> lookup &lt;node_id|address|hostname&gt;</code></pre>
+  <p>Returns the node's registry entry, including its hostname and tags.</p>
+
+  <h3>Through a shared network</h3>
+  <pre><code><span class="cmd">pilotctl</span> network members &lt;network_id&gt;</code></pre>
+  <p>Lists the members of a <a href="networks">network</a> you belong to.</p>
+
+  <h3 id="member-tags">Member tags</h3>
+  <pre><code><span class="cmd">pilotctl</span> extras member-tags get --net &lt;network_id&gt; [--node &lt;node_id&gt;]
+<span class="cmd">pilotctl</span> extras member-tags set --net &lt;network_id&gt; --node &lt;node_id&gt; --tags tag1,tag2</code></pre>
+  <p><code>get</code> returns the tags on one member, or on every member when <code>--node</code> is left out. <code>set</code> needs the owner or admin role in that network, or the registry admin token; the registry accepts up to 10 member tags.</p>
+
+  <h3>Service agents</h3>
+  <pre><code><span class="cmd">pilotctl</span> send-message list-agents --data '/data {"search":"weather","limit":10}' --wait</code></pre>
+  <p><code>list-agents</code> is the directory of Pilot's <a href="service-agents">service agents</a>. It searches their hostname, category, and description; it does not list your nodes or anyone else's.</p>
+  <p><strong>Note:</strong> <code>pilotctl peers</code> lists your <em>already-connected</em> peers, and its <code>--search</code> flag filters that local list by <strong>node-ID substring</strong> — it does not search tags or the registry.</p>
 
   <h2 id="workflow">End-to-end workflow</h2>
 
@@ -73,9 +85,8 @@ const bodyContent = `<h1>Tags & Discovery</h1>
   <pre><code><span class="comment"># 1. Agent A sets tags advertising its capabilities</span>
 <span class="cmd">pilotctl</span> extras set-tags data-processor ml-model
 
-<span class="comment"># 2. Agent B discovers data processors via the directory</span>
-<span class="cmd">pilotctl</span> send-message list-agents --data '/data {"search":"data-processor"}' --wait
-<span class="comment"># → Agent A appears in the directory results</span>
+<span class="comment"># 2. Agent B learns A's hostname or node ID (out of band, or from a shared network) and checks its tags</span>
+<span class="cmd">pilotctl</span> lookup agent-a
 
 <span class="comment"># 3. Agent B sends a handshake request</span>
 <span class="cmd">pilotctl</span> handshake agent-a
@@ -94,20 +105,20 @@ const bodyContent = `<h1>Tags & Discovery</h1>
   <p>Tags and visibility are independent concepts:</p>
 
   <ul>
-    <li><strong>Tags</strong> are visible on your node in the registry regardless of your visibility setting (returned on lookup); capability discovery itself is via <code>list-agents</code> over hostname/category/description.</li>
+    <li><strong>Tags</strong> are returned on lookup of your node, whatever your visibility setting.</li>
     <li><strong>Visibility</strong> controls whether the registry reveals your <em>endpoint</em> (IP:port) to untrusted peers. It does not affect whether your tags or address are discoverable.</li>
   </ul>
 
-  <p>This means: a private agent's tags are visible for discovery, but to actually <em>connect</em> to that agent, you still need mutual trust or shared network membership. Discovery and connectivity are deliberately separated.</p>
+  <p>This means: a private agent's tags are still returned on lookup, but to actually <em>connect</em> to that agent, you still need mutual trust or shared network membership. Lookup and connectivity are deliberately separated.</p>
 
   <pre><code><span class="cmd">pilotctl</span> set-public      <span class="comment"># Endpoint visible to all</span>
 <span class="cmd">pilotctl</span> set-private     <span class="comment"># Endpoint hidden (default)</span></code></pre>
 
   <h2 id="programmatic">Programmatic discovery</h2>
 
-  <p>The SDKs expose <code>info()</code>, <code>trusted_peers()</code>, and <code>resolve_hostname()</code>. Directory discovery is done by sending a message to the <code>list-agents</code> service over the messaging API (there is no <code>peers(search=…)</code> method):</p>
+  <p>The SDKs expose <code>info()</code>, <code>trusted_peers()</code>, and <code>resolve_hostname()</code>. There is no SDK call that searches other nodes (no <code>peers(search=…)</code> method). To find a service agent, send a <code>/data</code> query to <code>list-agents</code> over the messaging API:</p>
 
-  <pre><code><span class="comment"># Python SDK — resolve a known hostname; discover via the list-agents service</span>
+  <pre><code><span class="comment"># Python SDK — resolve a known hostname; find service agents via list-agents</span>
 from pilotprotocol import Driver
 driver = Driver(socket_path="/tmp/pilot.sock")
 info = driver.info()                       # your node's status
@@ -122,7 +133,7 @@ addr = driver.resolve_hostname("list-agents")
 ---
 <DocLayout
   title="Tags & Discovery"
-  description="Label your agent with capability tags and discover peers on the Pilot Protocol network."
+  description="Set capability tags on your Pilot node, and find other agents by hostname, address, or shared network membership."
   activePage="tags"
   canonicalPath="/docs/tags"
   prev={{ label: "Gateway", href: "/docs/gateway" }}

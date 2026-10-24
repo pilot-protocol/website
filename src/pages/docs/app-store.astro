@@ -2,7 +2,7 @@
 import DocLayout from "../../layouts/DocLayout.astro";
 
 const bodyContent = `<h1>App Store</h1>
-  <p class="subtitle">Installable agent apps that run locally on your daemon as typed IPC services - JSON in, JSON out, auto-spawned on install. Discover, install, call.</p>
+  <p class="subtitle">Apps an agent installs with one command and calls over local IPC - JSON in, JSON out, started by the daemon on install. Discover, install, call.</p>
 
   <div class="toc">
     <h4>On this page</h4>
@@ -10,6 +10,7 @@ const bodyContent = `<h1>App Store</h1>
       <li><a href="#overview">Overview</a></li>
       <li><a href="#using">Using apps</a></li>
       <li><a href="#discovery">Discovery &amp; the help convention</a></li>
+      <li><a href="#metered">Metered apps</a></li>
       <li><a href="#dynamic-context">Dynamic context on every call</a></li>
       <li><a href="#lifecycle">Lifecycle</a></li>
       <li><a href="#updating">Keeping apps current</a></li>
@@ -26,12 +27,14 @@ const bodyContent = `<h1>App Store</h1>
 
   <p>Where <code>list-agents</code> is the phonebook for live <em>data</em> on the overlay, the App Store is for installable <em>capability apps</em>. An app is a small binary plus a signed <code>manifest.json</code>. <code>pilotctl</code> fetches the bundle from the catalogue, sha-checks and extracts it, and validates its signed manifest; the daemon then supervises it — spawning the binary, handing it a unix socket, and brokering IPC calls. Each app method is a typed call - JSON in, JSON out.</p>
 
+  <p>Apps are made by their publishers (Cosift, Plainweb, Smol, AgentPhone, Orthogonal, the Wallet app and others) and reviewed before they are listed; Pilot runs the catalogue and the install path. The catalogue lists 30 apps today: databases, sandboxes, email and phone, search, the wallet and more. Run <code>pilotctl appstore catalogue</code> for the current list.</p>
+
   <p>Apps are:</p>
   <ul>
     <li><strong>Local</strong> - they run on your own daemon, one process per host. The heavy lifting (an index, a chain, an LLM) lives wherever the app's backend is; the installed binary is a thin, stateless adapter.</li>
     <li><strong>Typed</strong> - every method maps to a JSON request/response. No browser, no REST plumbing.</li>
     <li><strong>Signature-verified</strong> - the manifest pins the binary's sha256 and carries an ed25519 signature. The daemon verifies the signature when it scans installed apps, and re-checks the binary's sha256 immediately before every spawn.</li>
-    <li><strong>Grant-scoped</strong> - the manifest declares exactly what the app may do (network, file I/O), and the daemon's broker enforces those grants at runtime. Installing an app accepts its declared grants. No ambient authority.</li>
+    <li><strong>Grant-scoped</strong> - the manifest declares what the app may do (network, file I/O, calls to other apps), and the review checks it. The daemon's broker enforces the grants on everything that passes through it, such as calls between apps and hooks. Installing an app accepts its declared grants. There is no OS-level sandbox yet (see <a href="#security">Security model</a>).</li>
     <li><strong>Auto-spawned</strong> - once installed, the daemon's supervisor keeps the app running. No manual start.</li>
   </ul>
 
@@ -79,6 +82,16 @@ const bodyContent = `<h1>App Store</h1>
 
   <p>Each method entry also carries a warm round-trip estimate the app publishes, so an agent can budget a call end-to-end (agent &rarr; daemon &rarr; app &rarr; backend &rarr; back).</p>
 
+  <h2 id="metered">Metered apps</h2>
+
+  <p>Most apps run locally and are free. A few call a paid partner API through Pilot's broker, which holds the partner key and meters each user's calls - for example Orthogonal, AgentPhone and Smol's cloud machines. Each Pilot user gets a budget of USD 5 for each metered app; only successful paid calls draw on it, and reads are free.</p>
+
+  <ul>
+    <li>The usage demo printed at install, and the app's page in the store, list what each paid call costs.</li>
+    <li>A metered app has a free <code>&lt;app&gt;.balance</code> method that returns what is left, for example <code>pilotctl appstore call io.pilot.orthogonal orthogonal.balance '{}'</code>.</li>
+    <li>When the budget is spent, paid calls return <code>402</code>; reads keep working.</li>
+  </ul>
+
   <h2 id="dynamic-context">Dynamic context on every call</h2>
 
   <p>Two surfaces put the right next command in front of an agent at the two moments it is most likely to stall — right after install, and after every call. Both are authored once by the publisher and need no runtime code (see <a href="#authoring-context">Authoring dynamic context</a>).</p>
@@ -112,10 +125,11 @@ next:  sqlite needs an explicit database — there is no default
 <span class="cmd">pilotctl</span> appstore caps io.pilot.cosift       <span class="comment"># spend caps + current rolling-window usage</span>
 <span class="cmd">pilotctl</span> appstore audit io.pilot.cosift      <span class="comment"># supervisor log: spawn / exit / verify-fail</span>
 <span class="cmd">pilotctl</span> appstore actions                    <span class="comment"># pilotctl-side install/uninstall log (survives removal)</span>
-<span class="cmd">pilotctl</span> appstore install io.pilot.cosift --force  <span class="comment"># upgrade to a new version</span>
+<span class="cmd">pilotctl</span> appstore upgrade io.pilot.cosift      <span class="comment"># move to the catalogue's current version (state kept)</span>
+<span class="cmd">pilotctl</span> appstore install io.pilot.cosift --force  <span class="comment"># reinstall the same version in place (state kept)</span>
 <span class="cmd">pilotctl</span> appstore uninstall io.pilot.cosift --yes</code></pre>
 
-  <p><code>caps</code> reports the manifest's spend caps and how much of each rolling window the app has consumed; <code>audit</code> tails the supervisor lifecycle log for one app; <code>actions</code> is the pilotctl-side install/uninstall log, which persists even after an app is removed. Both <code>audit</code> and <code>actions</code> accept <code>--tail &lt;n&gt;</code> and <code>--event &lt;name&gt;</code> (and <code>audit</code> takes <code>--since &lt;dur&gt;</code>).</p>
+  <p><code>caps</code> reports the manifest's spend caps and how much of each rolling window the app has consumed; <code>audit</code> tails the supervisor lifecycle log for one app; <code>actions</code> is the pilotctl-side install/uninstall log, which persists even after an app is removed. Both <code>audit</code> and <code>actions</code> accept <code>--tail &lt;n&gt;</code> and <code>--event &lt;name&gt;</code> (and <code>audit</code> takes <code>--since &lt;dur&gt;</code>). <code>install --force</code> keeps the app's state (keys, <code>data.db</code>, secrets, cap state, audit log); add <code>--reset-state</code> only when you want the app to start empty.</p>
 
   <div class="callout">
     <p><strong>Upgrades key on the version.</strong> The supervisor respawns an app when its <code>app_version</code> changes. Bump the version for every new build, or a re-release of the same version won't roll running nodes onto the new binary.</p>
@@ -165,6 +179,8 @@ next:  sqlite needs an explicit database — there is no default
 
   <p>An app is a binary that listens on the socket the daemon hands it and speaks the app-store IPC protocol. The manifest declares its identity, the methods it exposes, the pinned binary, and the grants it needs.</p>
 
+  <p>You don't write the adapter by hand: <code>pilot-app</code>, from <a href="https://github.com/pilot-protocol/app-template">pilot-protocol/app-template</a>, generates it from a short <code>pilot.app.yaml</code> that points at your HTTP API or CLI (see <a href="#publishing">Publishing</a>). For reference, this is what it generates:</p>
+
   <pre><code>{
   "id": "io.pilot.cosift",
   "app_version": "0.1.2",
@@ -193,39 +209,30 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
 
   <h2 id="publishing">Publishing an app</h2>
 
-  <p>Three steps: sign, release, and add one catalogue entry by PR.</p>
+  <p>Apps are published through one repository, <a href="https://github.com/pilot-protocol/app-template">pilot-protocol/app-template</a>: describe your API in a spec, let <code>pilot-app</code> build and sign the bundle, and open a pull request.</p>
 
-  <pre><code><span class="comment"># 1. One-time: generate a publisher keypair (keep the private key safe)</span>
-<span class="cmd">pilotctl</span> appstore gen-key publisher.key
+  <pre><code><span class="comment"># 1. Install the scaffolder and describe your API</span>
+<span class="cmd">go</span> install github.com/pilot-protocol/app-template/cmd/pilot-app@latest
+<span class="cmd">pilot-app</span> example &gt; pilot.app.yaml      <span class="comment"># starter spec, fully annotated</span>
+<span class="cmd">pilot-app</span> validate
 
-<span class="comment"># 2. Sign the manifest (after pinning binary.sha256) and package the bundle</span>
-<span class="cmd">pilotctl</span> appstore sign --key publisher.key bundle/manifest.json
-<span class="cmd">tar</span> -czf io.pilot.cosift-0.1.2.tar.gz -C bundle .
+<span class="comment"># 2. Generate the adapter, then build, pin, sign and package it</span>
+<span class="cmd">pilot-app</span> init -o ./my-app
+<span class="cmd">cd</span> my-app
+<span class="cmd">make</span> gen-key                            <span class="comment"># one-time ed25519 publisher key (keep it safe)</span>
+<span class="cmd">make</span> package                            <span class="comment"># build -&gt; pin sha256 -&gt; sign -&gt; tarball</span>
+<span class="cmd">pilot-app</span> verify io.pilot.&lt;id&gt;-&lt;ver&gt;.tar.gz   <span class="comment"># optional: run the review gate locally</span>
 
-<span class="comment"># 3. Attach the tarball to a GitHub release</span>
-<span class="cmd">gh</span> release create cosift-v0.1.2 io.pilot.cosift-0.1.2.tar.gz</code></pre>
+<span class="comment"># 3. Prepare the submission in your fork of app-template</span>
+<span class="cmd">pilot-app</span> submit -C . --prepare /path/to/app-template-fork</code></pre>
 
-  <p>Then add one entry to <code>catalogue.json</code> (pinning the tarball's sha256) and open a PR. Once merged, <code>pilotctl appstore install &lt;id&gt;</code> resolves it everywhere:</p>
-
-  <pre><code>{
-  "id": "io.pilot.cosift",
-  "version": "0.1.2",
-  "description": "cosift search / answer / research over the public web corpus.",
-  "bundle_url": "https://github.com/&lt;org&gt;/&lt;repo&gt;/releases/download/cosift-v0.1.2/io.pilot.cosift-0.1.2.tar.gz",
-  "bundle_sha256": "&lt;sha256 of the tarball&gt;"
-}</code></pre>
-
-  <p>The catalogue itself is signed. After editing <code>catalogue.json</code>, re-sign it so the daemon and <code>pilotctl</code> will trust it:</p>
-
-  <pre><code><span class="cmd">pilotctl</span> appstore sign-catalogue --key catalog-signing.key catalogue/catalogue.json</code></pre>
-
-  <p>This writes a detached <code>catalogue.json.sig</code> (commit both). <code>pilotctl</code> verifies it against the embedded catalogue key before trusting any entry - see <a href="#security">Security model</a>.</p>
+  <p>Commit <code>submissions/&lt;id&gt;/</code> in your fork and open a pull request to <code>pilot-protocol/app-template</code>. CI verifies the bundle and a maintainer reviews it. On merge, automation releases the bundle and opens its catalogue entry; once that entry is in the signed catalogue, <code>pilotctl appstore install &lt;id&gt;</code> resolves it everywhere. The form at <a href="/publish">/publish</a> runs the same pipeline on Pilot's server instead of your machine. The app-template README and <code>docs/PUBLISHING.md</code> cover every field.</p>
 
   <p>Three integrity layers protect every install: the <em>catalogue</em> carries a detached ed25519 signature (a substituted app list fails), the catalogue pins each <em>tarball</em> sha256 (a swapped CDN byte fails), and the manifest pins the <em>binary</em> sha256 under an ed25519 signature (verified at scan time). The binary sha256 is re-checked immediately before every spawn.</p>
 
   <h3 id="authoring-context">Authoring dynamic context</h3>
 
-  <p>The two runtime surfaces from <a href="#dynamic-context">Dynamic context on every call</a> are authored once in your app's submission and validated at submit time — no runtime code, and both are carried verbatim into the catalogue.</p>
+  <p>The two runtime surfaces from <a href="#dynamic-context">Dynamic context on every call</a> are authored once in your app's <code>submission.json</code> and validated at submit time — no runtime code, and both are carried verbatim into the catalogue.</p>
 
   <p><strong>Product demo.</strong> A <code>product_demo</code> block is the example-first usage guide that renders both at install and as the store page's <em>Full usage demo</em>: a one-sentence <code>when_to_use</code>, a <code>quickstart</code> call, 2–6 worked <code>examples</code>, and — for metered apps — a cost table. It is what turns an install into a first successful call.</p>
 
@@ -280,7 +287,7 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
 
   <ul>
     <li><strong>Catalogue</strong> (<code>install &lt;id&gt;</code>) - the reviewed path. The bundle is signature-verified and installs with the grants its manifest declares, including <code>net.dial</code>. This is how any app that needs the network is distributed.</li>
-    <li><strong>Sideload</strong> (<code>install &lt;dir&gt; --local</code>) - for local development. The manifest is clamped to a small sandbox: <code>fs.read</code>/<code>fs.write</code> under <code>$APP</code> and <code>audit.log</code> only. <strong>No <code>net.dial</code></strong>, no inter-app calls, no hooks. A net-using app must go through the catalogue.</li>
+    <li><strong>Sideload</strong> (<code>install &lt;dir&gt; --local</code>) - for local development. The manifest may declare only <code>fs.read</code>/<code>fs.write</code> under <code>$APP</code> and <code>audit.log</code>. <strong>No <code>net.dial</code></strong>, no signing key, no hooks. A net-using app must go through the catalogue. This is a check on the manifest, not an OS sandbox, so only sideload code you trust.</li>
   </ul>
 
   <div class="callout">
@@ -291,7 +298,7 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
 
   <h2 id="security">Security model &amp; hardening</h2>
 
-  <p>The app store is deny-by-default at every layer. Trust flows from a signed catalogue, through a signed manifest, to a manifest-gated, resource-limited child process (rlimits + a syscall/IPC broker; OS-level sandboxing such as landlock/seccomp is not yet wired).</p>
+  <p>Trust flows from a signed catalogue, through a signed and reviewed manifest, to a supervised, resource-limited child process. The daemon's broker gates every call that passes through it. OS-level sandboxing (landlock, seccomp) is not wired yet, so an app's binary is not walled off at the syscall level; the review is what stands behind its declared grants.</p>
 
   <h3>Signed catalogue (fail-closed)</h3>
 
@@ -325,7 +332,7 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
 
   <h2 id="example">Worked example: io.pilot.cosift</h2>
 
-  <p>The cosift app is a stateless adapter to a search / answer / research API over a multi-million-document web corpus. It exposes several utility methods (search, answer, research, and more) plus status/discovery ones:</p>
+  <p>The cosift app is a stateless adapter to Cosift's search / answer / research API over a web corpus. It exposes several utility methods (search, answer, research, and more) plus status/discovery ones:</p>
 
   <pre><code><span class="comment"># Discover the surface + latencies</span>
 <span class="cmd">pilotctl</span> appstore call io.pilot.cosift cosift.help '{}'
@@ -339,7 +346,7 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
 <span class="comment"># research (slow) - plan -> multi-retrieval -> report</span>
 <span class="cmd">pilotctl</span> appstore call io.pilot.cosift cosift.research '{"q":"compare raft and paxos"}'</code></pre>
 
-  <p>The cosift backend is open source (<a href="https://github.com/pilot-protocol/cosift">pilot-protocol/cosift</a>); the app follows the same tiny-adapter + signed-manifest + publish flow shown above.</p>
+  <p>The cosift backend is open source (<a href="https://github.com/pilot-protocol/cosift">pilot-protocol/cosift</a>); the app is the hand-written reference that <code>pilot-app</code> generates the equivalent of.</p>
 `;
 ---
 
@@ -349,7 +356,7 @@ ipc.Serve(ctx, conn, d)   <span class="comment">// on the --socket the daemon su
   activePage="app-store"
   canonicalPath="/docs/app-store"
   prev={{ label: "Service Agents", href: "/docs/service-agents" }}
-  next={{ label: "Pilot MCP", href: "/docs/mcp" }}
+  next={{ label: "Pilot Cloud", href: "/docs/mcp" }}
 >
   <Fragment set:html={bodyContent} />
 </DocLayout>
