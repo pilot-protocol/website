@@ -93,9 +93,9 @@ const bodyContent = `
 
 <ul>
 <li><strong>Per-agent addressing.</strong> Agents restart, migrate, and scale up and down. Their IP address changes. A multicloud network that routes by IP needs constant DNS or load-balancer updates to keep agent-to-agent paths alive. What agents need is a stable address that follows them across restarts and cloud moves.</li>
-<li><strong>Agent discovery.</strong> A VM in AWS us-east-1 does not need to discover a VM in GCP europe-west1 — the operator configures the peering, and they are connected. An agent needs to discover other agents by capability, not by CIDR block. Discovery is an application-layer function that multicloud networking does not provide.</li>
+<li><strong>Agent discovery.</strong> A VM in AWS us-east-1 does not need to discover a VM in GCP europe-west1 — the operator configures the peering, and they are connected. An agent needs to find other agents by name, not by CIDR block. Discovery is an application-layer function that multicloud networking does not provide.</li>
 <li><strong>Per-peer trust.</strong> VPN membership is binary: you are on the network or you are not. Agents need per-connection trust — handshake this peer but not that one, even though both are on the same overlay. This requires identity at the agent level, not the machine level.</li>
-<li><strong>NAT traversal without cloud-specific config.</strong> An agent running in an AWS Lambda function behind a NAT gateway cannot accept inbound connections. An agent on a Kubernetes pod in Azure with a cluster-internal IP cannot be reached from outside the cluster by IP alone. Each cloud has its own NAT behavior, and a general solution cannot depend on cloud-specific networking features.</li>
+<li><strong>NAT traversal without cloud-specific config.</strong> An agent on an EC2 instance in a private subnet behind a NAT gateway cannot accept inbound connections. An agent on a Kubernetes pod in Azure with a cluster-internal IP cannot be reached from outside the cluster by IP alone. Each cloud has its own NAT behavior, and a general solution cannot depend on cloud-specific networking features.</li>
 </ul>
 
 <p>These requirements are not satisfied by adding another VPN tunnel or configuring another VPC peering. They require a networking layer designed for agents, not for machines.</p>
@@ -106,29 +106,29 @@ const bodyContent = `
 
 <ul>
 <li><strong>Permanent virtual addresses.</strong> Every agent gets a stable address that survives restarts, IP changes, and cloud migrations. Other agents address it by this virtual address, not by its ephemeral cloud IP.</li>
-<li><strong>Encrypted tunnels over UDP.</strong> Agents communicate through encrypted tunnels that work over any IP network — public internet, cloud interconnect, or direct peering. No cloud-specific VPN gateway configuration is needed.</li>
+<li><strong>Encrypted tunnels over UDP.</strong> Agents communicate through encrypted tunnels that work over any IP network — public internet, cloud interconnect, or direct peering — with a fallback over TCP port 443 where UDP is blocked. No cloud-specific VPN gateway configuration is needed.</li>
 <li><strong>NAT traversal as a built-in feature.</strong> The overlay handles STUN-based hole-punching for direct peer connections and falls back to relay nodes when direct connectivity is not possible. Long-running agents behind NAT or on Kubernetes pods can remain reachable by virtual address; short-lived serverless runtimes are not currently supported.</li>
 <li><strong>Mutual trust handshake.</strong> Before two agents exchange data, they complete a cryptographically signed handshake. Trust is per-peer and explicit — joining the overlay does not grant blanket access to every other agent.</li>
-<li><strong>Built-in discovery.</strong> Agents can announce their capabilities and find peers by capability or tag, without a centralized directory that becomes a single point of failure.</li>
+<li><strong>Name-based discovery.</strong> Agents register a hostname and look peers up by name instead of by IP. The lookup goes through a registry, which is a central service; the data between agents flows over the tunnels, not through it.</li>
 </ul>
 
-<p>These properties directly address the multicloud fragmentation problems listed earlier. IP overlap does not matter because agents are addressed by virtual identity, not by IP. Ephemeral endpoints do not break connectivity because the virtual address stays the same. Policy fragmentation is replaced by a single trust model that applies uniformly across every cloud the overlay touches.</p>
+<p>These properties address the multicloud fragmentation problems listed earlier. IP overlap does not matter because agents are addressed by virtual identity, not by IP. Ephemeral endpoints do not break connectivity because the virtual address stays the same. The per-peer trust model applies the same way in every cloud the overlay touches.</p>
 
 <h2 id="pilot-protocol-in-a-multicloud-agent-network">Pilot Protocol in a multicloud agent network</h2>
 
-<p><a href="https://pilotprotocol.network">Pilot Protocol</a> is an open-source overlay network built around exactly these principles: per-agent virtual addresses, encrypted UDP tunnels with NAT traversal, a mutual trust handshake, and a built-in discovery directory. It is implemented in Go with zero external dependencies and is available under AGPL-3.0.</p>
+<p><a href="https://pilotprotocol.network">Pilot Protocol</a> is an open-source overlay network built around exactly these principles: per-agent virtual addresses, encrypted UDP tunnels with NAT traversal, a mutual trust handshake, and a registry for looking agents up by name. It is written in Go, ships as static binaries with no runtime dependencies, and is available under AGPL-3.0. The public registry and beacon are run by Vulture Labs at no charge; you can also run your own.</p>
 
 <p>In a multicloud deployment, Pilot Protocol acts as the agent-native networking layer that connects AI agents across cloud boundaries without requiring cloud-specific networking features:</p>
 
 <ul>
-<li>An agent on AWS Lambda can discover and connect to an agent on an Azure Kubernetes pod by virtual address, with the overlay handling NAT traversal transparently.</li>
+<li>An agent on an AWS EC2 instance can look up and connect to an agent on an Azure Kubernetes pod by virtual address, with the overlay handling NAT traversal. The daemon is a long-lived process, so it runs on VMs, containers and pods, not inside short-lived functions such as AWS Lambda.</li>
 <li>A model-serving agent on GCP can establish a direct encrypted tunnel to a data-processing agent on a bare-metal server behind a residential ISP connection — no VPN, no port forwarding, no cloud-specific configuration.</li>
 <li>Trust is established per-pair: even though both agents are on the same overlay network, they must complete a mutual handshake before communicating. Membership and trust are decoupled.</li>
 </ul>
 
-<p>The result is that teams building distributed agent systems can treat multicloud networking as a solved infrastructure concern and focus on agent logic. The overlay handles the addressing, transport, and trust that traditional cloud networking cannot provide at the agent level.</p>
+<p>The overlay handles the addressing, transport, and trust that traditional cloud networking does not provide at the agent level, so less of that work lands in agent code. Authorization inside your application, and what each agent may do once connected, remain yours to build.</p>
 
-<p>For a deeper look at how agents discover each other on such a network — including capability announcement, semantic querying, and trust verification — read the <a href="https://pilotprotocol.network/blog/ai-agent-discovery-process-p2p-networks">AI agent discovery process in P2P networks</a>. For an architectural overview of how direct peer-to-peer connectivity differs from VPN-based approaches, see <a href="https://pilotprotocol.network/blog/direct-communication-protocols-ai-agents-guide">direct communication protocols for AI agents</a>.</p>
+<p>For a deeper look at how agents find each other on such a network, read the <a href="https://pilotprotocol.network/blog/ai-agent-discovery-process-p2p-networks">AI agent discovery process in P2P networks</a>. For an architectural overview of how direct peer-to-peer connectivity differs from VPN-based approaches, see <a href="https://pilotprotocol.network/blog/direct-communication-protocols-ai-agents-guide">direct communication protocols for AI agents</a>.</p>
 
 <p>Get started with one command:</p>
 
@@ -140,7 +140,7 @@ const bodyContent = `
 <p>AI in networking for multicloud refers to two related areas: (1) using AI and ML to optimize network operations across multiple clouds — including intent-based routing, anomaly detection, and traffic classification — and (2) providing a networking layer that lets AI agents communicate across cloud boundaries, which is a distinct problem from traditional network management.</p>
 
 <h3 id="does-traditional-vpn-or-sd-wan-work-for-ai-agents-across-clouds">Does traditional VPN or SD-WAN work for AI agents across clouds?</h3>
-<p>A VPN or SD-WAN connects networks at the IP layer. It gives machines reachability, but it does not give agents per-agent identity, capability-based discovery, or per-peer trust. You can run agents over a VPN, but you still need to build addressing, discovery, and trust on top of it — which is the same problem an agent-native overlay solves directly.</p>
+<p>A VPN or SD-WAN connects networks at the IP layer. It gives machines reachability, but it does not give agents per-agent identity, discovery by name, or per-peer trust. You can run agents over a VPN, but you still need to build addressing, discovery, and trust on top of it — which is the same problem an agent-native overlay solves directly.</p>
 
 <h3 id="how-does-nat-traversal-work-in-multicloud-agent-networking">How does NAT traversal work in multicloud agent networking?</h3>
 <p>An agent-native overlay uses STUN-based UDP hole-punching to establish direct connections between agents behind different NATs, regardless of cloud provider. When direct connectivity fails — for example, with symmetric NATs — the overlay falls back to relaying through a beacon node. No cloud-specific NAT gateway or port-forwarding configuration is needed at the agent level.</p>
@@ -149,7 +149,7 @@ const bodyContent = `
 <p>Container networking (e.g. CNI plugins, service meshes) connects pods within or across clusters using IP addressing and DNS. Agent networking needs to work across clusters, clouds, and non-container environments. It requires agent-level identity that survives restarts and migrations, application-layer discovery, and explicit trust — none of which container networking provides out of the box.</p>
 
 <h3 id="can-you-use-pilot-protocol-with-kubernetes-in-multicloud">Can you use Pilot Protocol with Kubernetes in multicloud?</h3>
-<p>Yes. Pilot runs as a Go binary with zero dependencies, making it straightforward to deploy as a sidecar or DaemonSet in Kubernetes clusters across any cloud. Each agent pod gets a persistent Pilot address, and the overlay handles inter-cluster and inter-cloud connectivity without requiring cluster networking features like Submariner or Cilium ClusterMesh.</p>
+<p>Yes. Pilot's daemon is a static Go binary with no runtime dependencies, so it deploys as a sidecar or DaemonSet in Kubernetes clusters across any cloud. Each agent pod keeps its Pilot address as long as its identity file is on a persistent volume, and the overlay handles inter-cluster and inter-cloud connectivity without requiring cluster networking features like Submariner or Cilium ClusterMesh.</p>
 `;
 
 const faqItems = [
@@ -159,7 +159,7 @@ const faqItems = [
   },
   {
     question: "Does traditional VPN or SD-WAN work for AI agents across clouds?",
-    answer: "A VPN or SD-WAN connects networks at the IP layer. It gives machines reachability, but it does not give agents per-agent identity, capability-based discovery, or per-peer trust. You can run agents over a VPN, but you still need to build addressing, discovery, and trust on top of it — which is the same problem an agent-native overlay solves directly.",
+    answer: "A VPN or SD-WAN connects networks at the IP layer. It gives machines reachability, but it does not give agents per-agent identity, discovery by name, or per-peer trust. You can run agents over a VPN, but you still need to build addressing, discovery, and trust on top of it — which is the same problem an agent-native overlay solves directly.",
   },
   {
     question: "How does NAT traversal work in multicloud agent networking?",
@@ -171,7 +171,7 @@ const faqItems = [
   },
   {
     question: "Can you use Pilot Protocol with Kubernetes in multicloud?",
-    answer: "Yes. Pilot runs as a Go binary with zero dependencies, making it straightforward to deploy as a sidecar or DaemonSet in Kubernetes clusters across any cloud. Each agent pod gets a persistent Pilot address, and the overlay handles inter-cluster and inter-cloud connectivity without requiring cluster networking features like Submariner or Cilium ClusterMesh.",
+    answer: "Yes. Pilot's daemon is a static Go binary with no runtime dependencies, so it deploys as a sidecar or DaemonSet in Kubernetes clusters across any cloud. Each agent pod keeps its Pilot address as long as its identity file is on a persistent volume, and the overlay handles inter-cluster and inter-cloud connectivity without requiring cluster networking features like Submariner or Cilium ClusterMesh.",
   },
 ];
 ---

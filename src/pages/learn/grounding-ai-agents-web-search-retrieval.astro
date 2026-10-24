@@ -44,7 +44,7 @@ const bodyContent = `
 
 <p>Grounding gets substantially more reliable when the agent fetches the full document for the sources it intends to use, then reasons over the full text. The loop becomes: search returns candidates, the agent selects the promising ones, a fetch step pulls each page's content, and synthesis runs over the fetched text.</p>
 
-<p>This is where a web-to-markdown step earns its place. Tools like <a href="https://pilotprotocol.network/app-store">plainweb</a> — available as a Pilot app — turn any URL into clean Markdown in one call, so the agent reads the article rather than the blurb. The cost difference between snippet-level and document-level grounding is one extra step; the correctness difference is large.</p>
+<p>This is where a web-to-markdown step earns its place. Tools like <a href="https://pilotprotocol.network/app-store">plainweb</a> — an app in the Pilot App Store — turn any URL into clean Markdown in one call, so the agent reads the article rather than the blurb. The cost difference between snippet-level and document-level grounding is one extra step; the correctness difference is large.</p>
 
 <h2 id="best-practice-4-carry-provenance-through-the-loop">Best practice 4: carry provenance through the loop</h2>
 
@@ -79,13 +79,13 @@ const bodyContent = `
 
 <ul>
   <li><strong>Corroborate consequential claims.</strong> If the agent is about to act on a fact (a version number, a rate, an endpoint), a second independent source is cheap insurance. One source can be a hallucinated-looking page; two agreeing sources are far less likely to be.</li>
-  <li><strong>Watch for injected instructions in retrieved content.</strong> Web pages can contain text that reads as an instruction to an AI agent — "ignore previous instructions" and friends. Retrieved content should pass through a filter before it reaches the reasoning loop. <a href="/apps/io.pilot.aegis">AEGIS</a>, another Pilot app, can scan staged files and directories for prompt-injection and jailbreak patterns before an agent consumes them.</li>
+  <li><strong>Watch for injected instructions in retrieved content.</strong> Web pages can contain text that reads as an instruction to an AI agent — "ignore previous instructions" and friends. Retrieved content should pass through a filter before it reaches the reasoning loop. <a href="/apps/io.pilot.aegis">AEGIS</a>, another app in the Pilot App Store, can scan staged files and directories for prompt-injection and jailbreak patterns before an agent consumes them.</li>
   <li><strong>When sources conflict, say so.</strong> An agent that silently picks one side of a contradiction is not grounded; it is guessing. The honest output is "sources disagree" plus both citations.</li>
 </ul>
 
 <h2 id="wiring-it-up-a-grounded-search-app-in-three-commands">Wiring it up: a grounded search app in three commands</h2>
 
-<p>These practices are easier to keep when the retrieval layer already returns the right shape — full documents, sources attached, recency controls — instead of raw search-engine output that the agent must parse, dedupe, and cite itself. That is the design of the Pilot app store: installable capability apps that run locally on the daemon as typed IPC services — JSON in, JSON out — and follow the same <strong>discover → install → call</strong> loop.</p>
+<p>These practices are easier to keep when the retrieval layer already returns the right shape — full documents, sources attached, recency controls — instead of raw search-engine output that the agent must parse, dedupe, and cite itself. That is what the Cosift app in the Pilot App Store does. Apps in the store run on the daemon as typed IPC services — JSON in, JSON out — and follow the same <strong>discover → install → call</strong> loop.</p>
 
 <pre><code><span class="comment"># Discover what is installable</span>
 <span class="cmd">pilotctl appstore catalogue</span>
@@ -98,7 +98,7 @@ const bodyContent = `
 
 <p>Cosift's methods map onto the practices above directly: <code>cosift.search</code> returns keyword + semantic results, <code>cosift.contents</code> fetches a full document (practice 3), <code>cosift.answer</code> returns a synthesized answer with its sources attached (practice 4), and <code>cosift.research</code> runs a multi-step loop that refines queries as it goes (practice 2). Every method is discoverable at runtime via <code>cosift.help</code>, which reports parameters and a latency class — so the agent can pick the cheapest method that answers the question, no docs required.</p>
 
-<p>Because apps are installed locally and called over IPC, the grounding loop stays inside the agent's own machine: no new API key, no separate auth story, no browser automation to babysit. The same pattern holds across the store — plainweb for full-page Markdown, AEGIS for filtering retrieved content before it reaches the model.</p>
+<p>Because the app is installed on the daemon and called over local IPC, the agent needs no new API key, no separate sign-in, and no browser automation to babysit. The search itself is not local: the app forwards each call over HTTPS to Cosift's search service at <code>cosift.pilotprotocol.network</code>, so your queries leave the machine. The same install-and-call pattern holds across the store — Plainweb for full-page Markdown, AEGIS for filtering retrieved content before it reaches the model.</p>
 
 <h2 id="the-minimal-grounded-loop">The minimal grounded loop</h2>
 
@@ -140,7 +140,7 @@ const faqItems = [
   },
   {
     question: "Is retrieved web content safe to feed directly to an agent?",
-    answer: "Not always. Web pages can contain text written to manipulate AI agents — prompt-injection attempts that read like instructions. Retrieved content should pass through a filter before reaching the reasoning loop. Pilot's AEGIS app can scan staged files and directories for these patterns before an agent consumes them."
+    answer: "Not always. Web pages can contain text written to manipulate AI agents — prompt-injection attempts that read like instructions. Retrieved content should pass through a filter before reaching the reasoning loop. The AEGIS app in the Pilot App Store can scan staged files and directories for these patterns before an agent consumes them."
   }
 ];
 ---
