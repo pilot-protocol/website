@@ -2,20 +2,21 @@
 // homepage (src/pages/index.astro) and the plain/bot homepage
 // (src/pages/plain/index.astro), so the two can never drift.
 //
-// Fetched once at build time with a graceful fallback. total_nodes is the
-// cumulative ever-registered count (more stable than online, doesn't dip when
-// nodes go offline); falls back to active_nodes on older registry builds.
+// Fetched once at build time. total_nodes is the cumulative count of
+// registered addresses; active_nodes is daemons with a heartbeat in the last
+// 30 minutes. If the fetch fails, each figure shows "—" rather than a guess;
+// the homepage script fills in live values in the browser.
 
 export interface LiveStats {
-  /** Total agents ever on the network (total_nodes), compact e.g. "~250,000". */
+  /** Registered addresses, all time (total_nodes), compact e.g. "~250,000". */
   liveAgents: string;
   /** Exact grouped total, e.g. "248,113". */
   liveAgentsExact: string;
-  /** Agents currently online (active_nodes), compact e.g. "219". */
+  /** Daemons seen in the last 30 minutes (active_nodes), compact e.g. "~219,000". */
   liveAgentsOnline: string;
   /** Compact routed-request total, e.g. "~104B". */
   liveRequests: string;
-  /** Requests-per-second, grouped, e.g. "20,000" — hero throughput chip. */
+  /** Registry requests per second, grouped, e.g. "20,000". */
   liveRps: string;
   /** Compact requests-per-hour (rps × 3600), e.g. "~72M". */
   liveRequestsPerHour: string;
@@ -31,12 +32,12 @@ function fmtCompact(n: number): string {
 
 export async function getLiveStats(): Promise<LiveStats> {
   const stats: LiveStats = {
-    liveAgents: '~240,000',
-    liveAgentsExact: '240,000',
-    liveAgentsOnline: '~430',
-    liveRequests: '~5B',
-    liveRps: '20,000',
-    liveRequestsPerHour: fmtCompact(20_000 * 3600),
+    liveAgents: '—',
+    liveAgentsExact: '—',
+    liveAgentsOnline: '—',
+    liveRequests: '—',
+    liveRps: '—',
+    liveRequestsPerHour: '—',
   };
 
   try {
@@ -45,12 +46,9 @@ export async function getLiveStats(): Promise<LiveStats> {
     });
     if (res.ok) {
       const s: any = await res.json();
-      const agentsN = typeof s.total_nodes === 'number'
-        ? s.total_nodes
-        : (typeof s.active_nodes === 'number' ? s.active_nodes : null);
-      if (agentsN != null) {
-        stats.liveAgents = fmtCompact(agentsN);
-        stats.liveAgentsExact = agentsN.toLocaleString('en-US');
+      if (typeof s.total_nodes === 'number') {
+        stats.liveAgents = fmtCompact(s.total_nodes);
+        stats.liveAgentsExact = s.total_nodes.toLocaleString('en-US');
       }
       if (typeof s.active_nodes === 'number') {
         stats.liveAgentsOnline = fmtCompact(s.active_nodes);
