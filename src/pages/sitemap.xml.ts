@@ -1,10 +1,8 @@
 import { allPosts } from '../data/blogPosts';
 import { apps } from '../data/apps';
-import { solutions } from '../data/solutions';
 import { learnGuides } from '../data/learnGuides';
 
 const site = 'https://pilotprotocol.network';
-const CAMPAIGN_LASTMOD = '2026-08-05';
 
 // Enumerate every page module so the sitemap reflects the real route
 // tree — no hand-maintained list to drift out of date. New pages appear
@@ -30,12 +28,15 @@ function routeFromKey(key: string): string {
 const REFERENCE = new Set(['error-codes', 'troubleshooting', 'diagnostics', 'configuration']);
 const LEGAL = new Set(['/privacy', '/cookies', '/terms', '/aup', '/publisher-agreement']);
 
+// The four offerings: the protocol (home), the service agents, the App Store
+// and Pilot Cloud.
+const OFFERINGS = new Set(['/service-agents', '/app-store', '/cloud']);
+
 function priorityFor(loc: string): { p: number; freq: string } {
   if (loc === '/') return { p: 1.0, freq: 'weekly' };
   if (loc === '/blog/') return { p: 0.9, freq: 'weekly' };
   if (loc === '/docs/' || loc === '/docs/getting-started') return { p: 0.9, freq: 'monthly' };
-  if (loc === '/plans' || loc === '/app-store') return { p: 0.9, freq: 'monthly' };
-  if (loc.startsWith('/enterprise/')) return { p: 0.8, freq: 'monthly' };
+  if (OFFERINGS.has(loc.replace(/\/$/, ''))) return { p: 0.9, freq: 'monthly' };
   if (loc.startsWith('/blog/')) return { p: 0.8, freq: 'monthly' };
   if (loc.startsWith('/docs/')) {
     const slug = loc.replace('/docs/', '').replace(/\/$/, '');
@@ -76,30 +77,15 @@ export async function GET() {
       ? postDates.get(datedPostSlug)!
       : learnSlug && learnDates.has(learnSlug)
         ? learnDates.get(learnSlug)!
-      : loc.startsWith('/enterprise/')
-        ? CAMPAIGN_LASTMOD
         : '';
     const { p, freq } = priorityFor(loc);
     add(loc, lastmod, p, freq);
   }
 
   // 2. Dynamic public routes.
-  for (const solution of [...solutions].sort((a, b) => a.slug.localeCompare(b.slug))) {
-    add(`/solutions/${solution.slug}`, CAMPAIGN_LASTMOD, 0.7);
-  }
-
   for (const app of [...apps].sort((a, b) => a.id.localeCompare(b.id))) {
     add(`/apps/${app.id}`, app.publishedAt || '', 0.7);
   }
-
-  try {
-    const response = await fetch('https://raw.githubusercontent.com/TeoSlayer/pilot-skills/main/setups.json');
-    if (response.ok) {
-      const catalog = await response.json() as { setups?: { slug: string }[] };
-      const setups = [...(catalog.setups || [])].sort((a, b) => a.slug.localeCompare(b.slug));
-      for (const setup of setups) add(`/for/setups/${setup.slug}`, '', 0.7);
-    }
-  } catch { /* The collection pages still remain in the sitemap offline. */ }
 
   // 3. Indexable HTML served from public/ that isn't an Astro route.
   add('/brand/', '2026-07-31', 0.6);
