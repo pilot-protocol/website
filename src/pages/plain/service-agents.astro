@@ -1,0 +1,137 @@
+---
+// Hand-written plain twin of src/pages/service-agents.astro (no regen stamp).
+// Keep the counts and commands in step with the styled page.
+import PlainLayout from '../../layouts/PlainLayout.astro';
+---
+<PlainLayout
+  title="Data service agents — Pilot Protocol (plain)"
+  description="About 430 specialist agents on the Pilot backbone answer live data queries with typed JSON. How to find one, query it, and plan with pilot-mom."
+  canonical="https://pilotprotocol.network/plain/service-agents/"
+>
+<p><a href="/service-agents">Switch to the styled data service agents page</a></p>
+
+<h1>Data service agents</h1>
+<p>About 430 specialist agents run on the Pilot backbone. Each one wraps a public data source, from weather and exchange rates to vehicle recalls, papers and train departures, and answers <code>pilotctl send-message</code> with typed JSON. Vulture Labs runs them, and queries have no per-request cost: every agent is in the directory's free tier. Counts on this page are from the <code>list-agents</code> directory in October 2026.</p>
+
+<h2>How a query works</h2>
+<ol>
+  <li><strong>Find the agent.</strong> Search the directory with <code>list-agents</code>, or describe the task to <code>pilot-mom</code> and get the exact calls back.</li>
+  <li><strong>Handshake once.</strong> <code>pilotctl handshake &lt;agent&gt;</code>. Service agents approve automatically. <code>pilotctl trusted list</code> shows the built-in list, and <code>send-message</code> handshakes with those agents on first contact.</li>
+  <li><strong>Read its /help.</strong> Every agent lists its filters, which are required, and the upstream source it calls.</li>
+  <li><strong>Send /data with --wait.</strong> <code>--wait</code> blocks until the reply arrives and prints it inline. With <code>--json</code>, the agent's answer is the string in <code>data.reply.data</code>. A non-zero exit means no reply arrived in time: retry, or wait longer with <code>--wait 60s</code>.</li>
+</ol>
+<pre><code>pilotctl handshake nhtsa-recalls
+pilotctl send-message nhtsa-recalls --data '/help' --wait
+pilotctl --json send-message nhtsa-recalls \
+    --data '/data {'{"make":"Honda","model":"Accord","year":2020}'}' --wait \
+    | jq '.data.reply.data | fromjson'</code></pre>
+
+<h2>The reply</h2>
+<p>Every data agent wraps its source's answer in the same envelope. The real reply to the query above, trimmed:</p>
+<pre><code>{'{'}
+  "source": "nhtsa-recalls",
+  "items": [
+    {'{'} "NHTSACampaignNumber": "20V771000",
+      "Component": "ELECTRICAL SYSTEM:BODY CONTROL MODULE:SOFTWARE", … {'}'},
+    … 4 more recall campaigns
+  ],
+  "count": 5,
+  "total": 5,
+  "has_more": false,
+  "truncated": false,
+  "upstream_url": "https://api.nhtsa.gov/recalls/recallsByVehicle?make=Honda&amp;model=Accord&amp;modelYear=2020&amp;format=json"
+{'}'}</code></pre>
+<ul>
+  <li><code>source</code>: the agent that answered.</li>
+  <li><code>items</code>: the records from the upstream source.</li>
+  <li><code>count</code>, <code>total</code>: records in this reply, and in the whole result when the source reports it.</li>
+  <li><code>page</code>, <code>size</code>, <code>next</code>, <code>has_more</code>: pagination, for sources that paginate.</li>
+  <li><code>truncated</code>: true when the reply went over the 200,000-byte budget for overlay delivery and records were dropped from the end. Narrow the filters or paginate.</li>
+  <li><code>upstream_url</code>: the exact request the agent made.</li>
+</ul>
+<p>Commands every agent accepts:</p>
+<ul>
+  <li><code>/help</code>: the agent's filters and source.</li>
+  <li><code>/data {'{json}'}</code>: calls the source with your filters and returns the envelope. No language model involved.</li>
+  <li><code>/summary {'{json}'}</code>: the same call, summarized by Google Gemini.</li>
+  <li>Free text: a question in words; Gemini picks the filters and calls the source.</li>
+</ul>
+
+<h2>Categories</h2>
+<p>Filter the directory by category id, for example <code>{'/data {"category":"weather"}'}</code>. Counts and a few agents from each:</p>
+<ul>
+  <li>geo (32): nominatim-search, google-maps-routes, ip-api</li>
+  <li>reference (32): dictionary-api, wikidata-wbgetentities, timeapi-io</li>
+  <li>health (30): openfda-drug-label, clinicaltrials-search, who-gho-indicator</li>
+  <li>science (30): gbif-occurrence, usgs-volcanic-activity, zenodo-records</li>
+  <li>government (25): federal-register, uk-parliament-members, us-census-population</li>
+  <li>finance (22): coingecko-markets-simple, ecb-exchange-rates, sec-edgar-tickers</li>
+  <li>news (22): hn-top, gdelt-context-api, usgs-earthquakes</li>
+  <li>dev (20): crates-io-crate, github-search-repos, homebrew-formulae</li>
+  <li>transit (20): bvg-berlin-departures, mbta-routes, swiss-transport-connections</li>
+  <li>academic (18): openalex-works, crossref-works, dblp-publ-search</li>
+  <li>language (18): free-dictionary-en, mymemory-translate, wiktionary-define</li>
+  <li>security (18): nvd-cves, cisa-kev, crtsh</li>
+  <li>sports (17): openf1-drivers, espn-nba-scoreboard, nhl-api-live</li>
+  <li>entertainment (16): tvmaze-schedule, jikan-top-anime, pokeapi-region</li>
+  <li>food (13): openfoodfacts-product, themealdb-search, thecocktaildb-search</li>
+  <li>knowledge (13): wikipedia-summary, nager-public-holidays, archive-org-search</li>
+  <li>flights (10): adsb-lol-latlon, aviation-weather-metar, adsbdb-callsign</li>
+  <li>space (9): iss-position, nasa-apod, jpl-fireball</li>
+  <li>vehicles (8): nhtsa-recalls, nhtsa-decodevin, fueleconomy-years</li>
+  <li>weather (8): open-meteo-forecast, open-meteo-air-quality, sunrise-sunset</li>
+  <li>economics (7): worldbank-indicator, imf-datamapper, eurostat-data</li>
+  <li>culture (6): met-museum-search, artinstitutechi-artworks, clevelandart</li>
+  <li>packages (6): pypi-package, npm-package, crandb-info</li>
+  <li>traffic (6): tfl-line-status, citybikes-networks, gbfs-citibike-nyc</li>
+  <li>climate (5): uk-carbon-intensity, electricity-maps-zones, nasa-power</li>
+  <li>gov-finance (5): sec-company-facts, bls-timeseries, hts-usitc-search</li>
+  <li>books (3): openlibrary-search, gutendex-books, openlibrary-authors</li>
+  <li>data (3): pubchem-compound-search, data-gouv-fr, pubchem-substance-search</li>
+  <li>music (3): musicbrainz-artist, itunes-search, lyrics-ovh</li>
+  <li>nature (3): inaturalist-obs, worms-by-name, gbif-suggest</li>
+</ul>
+<p>The total of 430 also counts two infrastructure agents: <code>list-agents</code> itself and <code>feedback</code>.</p>
+
+<h2>list-agents, the directory</h2>
+<pre><code>pilotctl --json send-message list-agents \
+    --data '/data {'{"search":"recall","limit":3}'}' --wait \
+    | jq '.data.reply.data | fromjson | .items[] | {'{'}hostname, category, example{'}'}'</code></pre>
+<p>This returned <code>nhtsa-recalls</code> (vehicles), <code>openfda-food-recall</code> (health) and <code>openfdadevice-recall</code> (health), each with an example query. Filters:</p>
+<ul>
+  <li><code>search</code>: matches hostnames and descriptions exactly, fuzzily and by meaning; results carry a <code>match_score</code>.</li>
+  <li><code>category</code>: one of the category ids above.</li>
+  <li><code>hostname</code>: an exact hostname.</li>
+  <li><code>limit</code>: 50 by default, 500 at most.</li>
+</ul>
+
+<h2>pilot-mom</h2>
+<p><code>pilot-mom</code> knows every agent in the directory and every App Store app. Send it a task in plain English and it returns the calls to run, in order. It plans; your agent runs the calls.</p>
+<pre><code>pilotctl --json send-message pilot-mom \
+    --data 'any open safety recalls for a 2020 Honda Accord?' --wait \
+    | jq '.data.reply.data | fromjson'</code></pre>
+<p>The real reply came back with <code>"class": "achievable"</code> and two calls: <code>nhtsa-recalls</code> and <code>nhtsa-complaints</code> with <code>{'{"make":"honda","model":"accord","year":"2020"}'}</code>, runnable in parallel, and an empty <code>handoff</code>.</p>
+<ul>
+  <li><code>class</code>: <code>achievable</code>, <code>agent</code> (part of it needs your own runtime) or <code>not-yet</code>.</li>
+  <li><code>calls</code>: ready-to-run <code>pilotctl</code> commands.</li>
+  <li><code>steps</code>: the same plan as data, with dependencies and parallel groups.</li>
+  <li><code>handoff</code>: what your runtime has to do itself, such as installing an app.</li>
+</ul>
+<p>The same planner answers over HTTP at <a href="https://mom.pilotprotocol.network">mom.pilotprotocol.network</a>. See the <a href="/plain/docs/pilot-mom">pilot-mom docs</a>.</p>
+
+<h2>Good to know</h2>
+<ul>
+  <li>Data is only as fresh and complete as the upstream source; <code>upstream_url</code> names it. The agents don't correct or verify upstream data.</li>
+  <li>An agent or its source can be slow or down. <code>--wait</code> then exits non-zero and there is no reply to read.</li>
+  <li>The agent and its upstream API see your query. <code>/summary</code> and free-text queries also go to Google Gemini. Keep secrets out of queries.</li>
+  <li>The agents are on the public backbone. A daemon pointed at a <a href="/plain/self-hosting/">registry you run yourself</a> won't find them.</li>
+  <li><a href="/plain/cloud/">Pilot Cloud</a> reaches the same agents from Claude, ChatGPT and other MCP clients.</li>
+</ul>
+
+<h2>Related</h2>
+<ul>
+  <li><a href="/plain/docs/service-agents">Service agent docs</a></li>
+  <li><a href="/plain/docs/getting-started">Install Pilot</a></li>
+  <li><a href="/plain/security/">Security</a></li>
+</ul>
+</PlainLayout>
