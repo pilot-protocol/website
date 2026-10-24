@@ -1,9 +1,9 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>You have three agents. Agent A monitors CPU. Agent B monitors memory. Agent C needs to aggregate both streams and trigger alerts. The conventional answer is <a href="https://kafka.apache.org" target="_blank" rel="noopener">Kafka</a>, <a href="https://www.rabbitmq.com" target="_blank" rel="noopener">RabbitMQ</a>, or <a href="https://redis.io" target="_blank" rel="noopener">Redis</a> Streams. That means another service to deploy, configure, secure, and keep running. For fewer than 1,000 agents, that is infrastructure overkill.</p>
+const bodyContent = `<p>You have three agents. Agent A monitors CPU. Agent B monitors memory. Agent C needs to aggregate both streams and trigger alerts. The conventional answer is <a href="https://kafka.apache.org" target="_blank" rel="noopener">Kafka</a>, <a href="https://www.rabbitmq.com" target="_blank" rel="noopener">RabbitMQ</a>, or <a href="https://redis.io" target="_blank" rel="noopener">Redis</a> Streams. That means another service to deploy, configure, secure, and keep running. For a handful of agents exchanging status events, that is a lot of infrastructure.</p>
 
-  <p>Pilot Protocol has a built-in event stream on <strong>port 1002</strong>. It supports topic-based routing, wildcard subscriptions, and persistent connections. Pub/sub is a few commands: <code>pilotctl publish &lt;peer&gt; &lt;topic&gt; --data …</code> and <code>pilotctl subscribe &lt;peer&gt; &lt;topic&gt;</code>, with encrypted transport and NAT traversal included. (The Go snippets below use an illustrative <code>stream</code> API for the pattern; the shipped Go SDK exposes datagram primitives — wire the pattern to the CLI publish/subscribe or the messaging API.)</p>
+  <p>Every Pilot daemon already runs a small pub/sub broker on <strong>port 1002</strong> (the <a href="https://github.com/pilot-protocol/eventstream" target="_blank" rel="noopener">eventstream</a> plugin, on unless the daemon is started with <code>-no-eventstream</code>). Pick one daemon as the meeting point, and the other agents subscribe and publish to it over Pilot's encrypted tunnels. From the shell that is <code>pilotctl subscribe &lt;peer&gt; &lt;topic&gt;</code> and <code>pilotctl publish &lt;peer&gt; &lt;topic&gt; --data …</code>. From Go it is the <code>eventstream</code> package, and a working subscriber fits in about a dozen lines.</p>
 
   <section>
   <h2>The Problem with Brokers for Agents</h2>
@@ -17,76 +17,95 @@ const bodyContent = `<p>You have three agents. Agent A monitors CPU. Agent B mon
     <li>You need persistence, replay, and exactly-once delivery</li>
   </ul>
 
-  <p>Agent networks break every assumption. Agents sit behind NAT. They run on laptops, VMs, and edge devices. They join and leave dynamically. And most agent communication is fire-and-forget: metrics, status updates, task completion signals. You do not need Kafka's durability guarantees for a CPU utilization event that is stale in 10 seconds.</p>
+  <p>Agent networks break most of these assumptions. Agents sit behind NAT. They run on laptops, VMs, and edge devices. They join and leave dynamically. And most agent communication is fire-and-forget: metrics, status updates, task completion signals. You do not need Kafka's durability guarantees for a CPU utilization event that is stale in 10 seconds.</p>
 
-  <p>What you need is <strong>topic routing between agents that can find each other</strong>, over connections that work through NAT, with encryption that does not require certificate management. That is what port 1002 provides.</p>
+  <p>What you need is <strong>topic routing between agents that can reach each other</strong>, over connections that work through NAT, with encryption that does not require certificate management. Port 1002 gives you that, with one condition: one of the daemons acts as the broker.</p>
   </section>
 
   <section>
-  <h2>The 12-Line Solution</h2>
+  <h2>How the Built-In Broker Works</h2>
 
-  <p>Here is the publisher. Six lines of application logic (excluding imports and error handling).</p>
+  <p>There is still a broker. It is just not a separate service: it is part of the Pilot daemon you already run. The rules are short, and all of them come from the broker's source (<code>service.go</code> in the eventstream repository):</p>
 
-  <pre><code>package main
+  <ul>
+    <li><strong>The first event on a connection is its subscription.</strong> Its topic is either an exact topic name or <code>*</code> for every topic. Every later event on that connection is a publication.</li>
+    <li><strong>Topics match exactly.</strong> A subscriber to <code>metrics.cpu</code> gets <code>metrics.cpu</code> and nothing else. There are no prefix wildcards: <code>metrics.*</code> is just a topic called <code>metrics.*</code>. Only <code>*</code> on its own means "everything".</li>
+    <li><strong>Fan-out, not queues.</strong> A publication goes to every subscriber of its topic plus every <code>*</code> subscriber, except the connection that sent it.</li>
+    <li><strong>Fire-and-forget.</strong> Nothing is stored. A subscriber that is not connected when an event is published never sees it.</li>
+    <li><strong>Limits.</strong> Each publishing connection may send 100 events per second, with bursts of up to 200; events over the limit are dropped. A topic can have up to 1,000 subscribers. Topic names are capped at 1,024 bytes and payloads at 16 MiB.</li>
+    <li><strong>Slow subscribers.</strong> A failed write is retried once. After three failed or timed-out (5 s) writes in a row, the broker closes that subscriber's connection.</li>
+  </ul>
 
-import (
-    "github.com/pilot-protocol/common/driver"
-    "encoding/json"
-    "time"
-)
+  <p>Who can connect depends on the hub daemon's visibility. Port 1002 is reached over a Pilot tunnel, and a private daemon (the default) only accepts tunnels from peers it trusts or shares a network with. So a private hub serves only agents that have completed a <a href="trust-model-agents-invisible-by-default">trust handshake</a> with it. A public daemon accepts tunnels from anyone, and the broker's default topic policy allows any topic, so keep a hub private unless you want an open channel.</p>
+  </section>
 
-func main() {
-    d, _ := driver.Connect("")            <span class="comment">// Connect to local daemon</span>
-    stream, _ := d.OpenEventStream()     <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
+  <section>
+  <h2>The Twelve-Line Subscriber</h2>
 
-    for {
-        event := map[string]any{
-            "topic": "metrics.cpu",
-            "value": getCPUPercent(),
-            "ts":    time.Now().Unix(),
-        }
-        data, _ := json.Marshal(event)
-        stream.Publish("metrics.cpu", data)  <span class="comment">// Publish to topic</span>
-        time.Sleep(5 * time.Second)
-    }
-}</code></pre>
-
-  <p>And the subscriber. Six lines.</p>
+  <p>Here is a complete subscriber. The body of <code>main</code> is twelve lines plus a closing brace, with the error checks written on one line each (<code>gofmt</code> would spread them out).</p>
 
   <pre><code>package main
 
 import (
-    "github.com/pilot-protocol/common/driver"
     "fmt"
+    "log"
+    "os"
+
+    "github.com/pilot-protocol/common/driver"
+    "github.com/pilot-protocol/common/protocol"
+    "github.com/pilot-protocol/eventstream"
 )
 
 func main() {
-    d, _ := driver.Connect("")             <span class="comment">// Connect to local daemon</span>
-    stream, _ := d.OpenEventStream()     <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
-    ch, _ := stream.Subscribe("metrics.*") <span class="comment">// Wildcard subscription</span>
-
-    for event := range ch {
-        fmt.Printf("[%s] %s\\n", event.Topic, string(event.Data))
+    d, err := driver.Connect("")                       <span class="comment">// local daemon's IPC socket</span>
+    if err != nil { log.Fatal(err) }
+    defer d.Close()
+    hub, err := protocol.ParseAddr(os.Args[1])         <span class="comment">// e.g. 0:0000.0000.1A2B</span>
+    if err != nil { log.Fatal(err) }
+    sub, err := eventstream.Subscribe(d, hub, "metrics.cpu")
+    if err != nil { log.Fatal(err) }
+    defer sub.Close()
+    for {
+        evt, err := sub.Recv()
+        if err != nil { log.Fatal(err) }
+        fmt.Printf("[%s] %s\\n", evt.Topic, evt.Payload)
     }
 }</code></pre>
 
-  <p>That is the complete pub/sub system. The <code>driver.Connect("")</code> call connects to the local Pilot daemon via IPC socket. <code>OpenEventStream()</code> opens the event stream on port 1002. <code>Publish</code> sends a message to a topic. <code>Subscribe</code> returns a channel that delivers matching events.</p>
+  <p><code>driver.Connect("")</code> connects to the local Pilot daemon over its IPC socket (the default path when the argument is empty). <code>eventstream.Subscribe</code> opens a stream to port 1002 on the hub and sends the subscription. <code>Recv</code> blocks until the next event and returns its <code>Topic</code> and <code>Payload</code>.</p>
+
+  <p>The publisher is the same connection used the other way. A connection must subscribe before it publishes, so a publish-only process subscribes to a topic of its own (here a control topic for that agent) and then calls <code>Publish</code> with any topic it likes:</p>
+
+  <pre><code>    c, err := eventstream.Subscribe(d, hub, "control.agent-a")
+    if err != nil { log.Fatal(err) }
+    defer c.Close()
+    for {
+        c.Publish("metrics.cpu", []byte(\`{"percent":42.0}\`))
+        time.Sleep(5 * time.Second)
+    }</code></pre>
 
   <div class="callout">
-    <p><strong>What you get for free:</strong> Encryption (AES-256-GCM tunnel), NAT traversal (STUN + hole-punching), peer discovery (registry lookup), and access control (only trusted peers can subscribe). No broker configuration, no TLS certificates, no firewall rules.</p>
+    <p><strong>Why not subscribe the publisher to <code>metrics.cpu</code>?</strong> It would then receive every other agent's <code>metrics.cpu</code> events on that connection. If the process never reads them, they pile up, and the broker drops a connection whose writes keep failing. Subscribe a publish-only connection to a topic nobody else publishes on, or read and discard what arrives.</p>
+  </div>
+
+  <div class="callout">
+    <p><strong>What comes with the tunnel:</strong> encryption (X25519 key agreement, AES-256-GCM), NAT traversal (STUN, hole punching, relay fallback), address resolution through the registry, and trust: a private hub only talks to peers it has approved. No TLS certificates and no firewall rules.</p>
   </div>
   </section>
 
   <section>
   <h2>Build a Monitoring Pipeline</h2>
 
-  <p>Let us build something concrete. Three agents forming a monitoring pipeline:</p>
+  <p>Let us build something concrete. Three agents and a hub:</p>
 
   <ul>
+    <li><strong>Hub</strong>: any Pilot daemon all three agents trust, for example a small VM that only runs <code>pilotctl daemon start</code>. Its address is passed to each agent as the first argument.</li>
     <li><strong>Agent A</strong> (us-east): publishes CPU metrics every 5 seconds to <code>metrics.cpu</code></li>
     <li><strong>Agent B</strong> (eu-west): publishes memory metrics every 5 seconds to <code>metrics.memory</code></li>
-    <li><strong>Agent C</strong> (us-central): subscribes to <code>metrics.*</code>, aggregates, and alerts</li>
+    <li><strong>Agent C</strong> (us-central): subscribes to both topics, aggregates, and publishes alerts to <code>alerts.cpu</code></li>
   </ul>
+
+  <p>Each agent runs on its own daemon and has completed a handshake with the hub (<code>pilotctl handshake &lt;hub-address&gt;</code> on the agent, <code>pilotctl approve &lt;node_id&gt;</code> on the hub).</p>
 
   <h3>Agent A: CPU Publisher</h3>
 
@@ -94,16 +113,19 @@ func main() {
 
 import (
     "encoding/json"
+    "log"
+    "os"
     "os/exec"
     "strconv"
     "strings"
     "time"
 
     "github.com/pilot-protocol/common/driver"
+    "github.com/pilot-protocol/common/protocol"
+    "github.com/pilot-protocol/eventstream"
 )
 
 type CPUMetric struct {
-    Topic   string  \`json:"topic"\`
     Host    string  \`json:"host"\`
     Percent float64 \`json:"percent"\`
     Ts      int64   \`json:"ts"\`
@@ -112,31 +134,38 @@ type CPUMetric struct {
 func main() {
     d, err := driver.Connect("")
     if err != nil {
-        panic(err)
+        log.Fatal(err)
     }
-    stream, err := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
-    if err != nil {
-        panic(err)
-    }
+    defer d.Close()
 
-    hostname, _ := d.Hostname()
+    hub, err := protocol.ParseAddr(os.Args[1])
+    if err != nil {
+        log.Fatal(err)
+    }
+    host, _ := os.Hostname()
+
+    <span class="comment">// Subscribe to this agent's own control topic, then publish metrics.</span>
+    c, err := eventstream.Subscribe(d, hub, "control."+host)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer c.Close()
 
     for {
-        pct := readCPU()
-        metric := CPUMetric{
-            Topic:   "metrics.cpu",
-            Host:    hostname,
-            Percent: pct,
+        data, _ := json.Marshal(CPUMetric{
+            Host:    host,
+            Percent: readCPU(),
             Ts:      time.Now().Unix(),
+        })
+        if err := c.Publish("metrics.cpu", data); err != nil {
+            log.Fatal(err) <span class="comment">// connection closed; restart and resubscribe</span>
         }
-        data, _ := json.Marshal(metric)
-        stream.Publish("metrics.cpu", data)
         time.Sleep(5 * time.Second)
     }
 }
 
 func readCPU() float64 {
-    <span class="comment">// Read from /proc/stat or use runtime on macOS</span>
+    <span class="comment">// Linux: user CPU percentage from top</span>
     out, _ := exec.Command("sh", "-c",
         "top -bn1 | grep 'Cpu(s)' | awk '{print $2}'").Output()
     val, _ := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
@@ -149,59 +178,75 @@ func readCPU() float64 {
 
 import (
     "encoding/json"
+    "log"
+    "os"
     "runtime"
     "time"
 
     "github.com/pilot-protocol/common/driver"
+    "github.com/pilot-protocol/common/protocol"
+    "github.com/pilot-protocol/eventstream"
 )
 
 type MemMetric struct {
-    Topic    string \`json:"topic"\`
-    Host     string \`json:"host"\`
-    AllocMB  uint64 \`json:"alloc_mb"\`
-    TotalMB  uint64 \`json:"total_mb"\`
-    Ts       int64  \`json:"ts"\`
+    Host    string \`json:"host"\`
+    AllocMB uint64 \`json:"alloc_mb"\`
+    TotalMB uint64 \`json:"total_mb"\`
+    Ts      int64  \`json:"ts"\`
 }
 
 func main() {
     d, err := driver.Connect("")
     if err != nil {
-        panic(err)
+        log.Fatal(err)
     }
-    stream, err := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
-    if err != nil {
-        panic(err)
-    }
+    defer d.Close()
 
-    hostname, _ := d.Hostname()
+    hub, err := protocol.ParseAddr(os.Args[1])
+    if err != nil {
+        log.Fatal(err)
+    }
+    host, _ := os.Hostname()
+
+    c, err := eventstream.Subscribe(d, hub, "control."+host)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer c.Close()
 
     for {
         var m runtime.MemStats
         runtime.ReadMemStats(&m)
 
-        metric := MemMetric{
-            Topic:   "metrics.memory",
-            Host:    hostname,
+        data, _ := json.Marshal(MemMetric{
+            Host:    host,
             AllocMB: m.Alloc / 1024 / 1024,
             TotalMB: m.TotalAlloc / 1024 / 1024,
             Ts:      time.Now().Unix(),
+        })
+        if err := c.Publish("metrics.memory", data); err != nil {
+            log.Fatal(err)
         }
-        data, _ := json.Marshal(metric)
-        stream.Publish("metrics.memory", data)
         time.Sleep(5 * time.Second)
     }
 }</code></pre>
 
   <h3>Agent C: Aggregator and Alerter</h3>
 
+  <p>Topics match exactly, so Agent C opens one subscription per topic and merges them into one channel.</p>
+
   <pre><code>package main
 
 import (
     "encoding/json"
     "fmt"
+    "log"
+    "os"
     "time"
 
     "github.com/pilot-protocol/common/driver"
+    "github.com/pilot-protocol/common/protocol"
+    "github.com/pilot-protocol/eventstream"
 )
 
 type Alert struct {
@@ -214,29 +259,48 @@ type Alert struct {
 func main() {
     d, err := driver.Connect("")
     if err != nil {
-        panic(err)
+        log.Fatal(err)
     }
-    stream, err := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
+    defer d.Close()
+
+    hub, err := protocol.ParseAddr(os.Args[1])
     if err != nil {
-        panic(err)
+        log.Fatal(err)
     }
 
-    <span class="comment">// Subscribe to ALL metrics with wildcard</span>
-    ch, err := stream.Subscribe("metrics.*")
-    if err != nil {
-        panic(err)
+    <span class="comment">// One connection per exact topic, merged into one channel.</span>
+    events := make(chan *eventstream.Event)
+    var cpu *eventstream.Client
+    for _, topic := range []string{"metrics.cpu", "metrics.memory"} {
+        c, err := eventstream.Subscribe(d, hub, topic)
+        if err != nil {
+            log.Fatal(err)
+        }
+        defer c.Close()
+        if topic == "metrics.cpu" {
+            cpu = c
+        }
+        go func(c *eventstream.Client) {
+            for {
+                evt, err := c.Recv()
+                if err != nil {
+                    log.Fatal(err)
+                }
+                events <- evt
+            }
+        }(c)
     }
 
-    fmt.Println("Aggregator listening on metrics.*")
+    fmt.Println("Aggregator listening on metrics.cpu and metrics.memory")
 
-    for event := range ch {
-        switch event.Topic {
+    for evt := range events {
+        switch evt.Topic {
         case "metrics.cpu":
             var m struct {
                 Host    string  \`json:"host"\`
                 Percent float64 \`json:"percent"\`
             }
-            json.Unmarshal(event.Data, &m)
+            json.Unmarshal(evt.Payload, &m)
             fmt.Printf("[CPU] %s: %.1f%%\\n", m.Host, m.Percent)
 
             if m.Percent > 90.0 {
@@ -247,7 +311,8 @@ func main() {
                     Ts:      time.Now().Unix(),
                 }
                 data, _ := json.Marshal(alert)
-                stream.Publish("alerts.cpu", data)
+                <span class="comment">// Any connection can publish to any topic.</span>
+                cpu.Publish("alerts.cpu", data)
                 fmt.Printf("[ALERT] %s\\n", alert.Message)
             }
 
@@ -256,13 +321,13 @@ func main() {
                 Host    string \`json:"host"\`
                 AllocMB uint64 \`json:"alloc_mb"\`
             }
-            json.Unmarshal(event.Data, &m)
+            json.Unmarshal(evt.Payload, &m)
             fmt.Printf("[MEM] %s: %d MB\\n", m.Host, m.AllocMB)
         }
     }
 }</code></pre>
 
-  <p>Agent C subscribes to <code>metrics.*</code>, which matches both <code>metrics.cpu</code> and <code>metrics.memory</code>. When CPU exceeds 90%, it publishes an alert to <code>alerts.cpu</code>. Another agent could subscribe to <code>alerts.*</code> to trigger remediation -- scale down workload, notify humans, or restart the offending process.</p>
+  <p>When CPU exceeds 90%, Agent C publishes an alert to <code>alerts.cpu</code>. Another agent can subscribe to <code>alerts.cpu</code> on the same hub to trigger remediation: scale down a workload, notify a human, or restart the offending process. If the hub carries nothing else, Agent C could instead subscribe once to <code>*</code> and switch on <code>evt.Topic</code>; with <code>*</code> it also receives every other topic on that hub.</p>
   </section>
 
   <section>
@@ -275,8 +340,8 @@ func main() {
   <ol>
     <li><strong>Agent 1 (Ingestion):</strong> Receives raw data, normalizes it, publishes <code>pipeline.stage1.complete</code></li>
     <li><strong>Agent 2 (Analysis):</strong> Subscribes to <code>pipeline.stage1.complete</code>, runs analysis, publishes <code>pipeline.stage2.complete</code></li>
-    <li><strong>Agent 3 (Summary):</strong> Subscribes to <code>pipeline.stage2.complete</code>, generates summary with LLM, publishes <code>pipeline.stage3.complete</code></li>
-    <li><strong>Agent 4 (Output):</strong> Subscribes to <code>pipeline.stage3.complete</code>, writes final report</li>
+    <li><strong>Agent 3 (Summary):</strong> Subscribes to <code>pipeline.stage2.complete</code>, generates a summary with an LLM, publishes <code>pipeline.stage3.complete</code></li>
+    <li><strong>Agent 4 (Output):</strong> Subscribes to <code>pipeline.stage3.complete</code>, writes the final report</li>
   </ol>
 
   <p>Here is Agent 2 as an example. The others follow the same pattern.</p>
@@ -286,8 +351,12 @@ func main() {
 import (
     "encoding/json"
     "fmt"
+    "log"
+    "os"
 
     "github.com/pilot-protocol/common/driver"
+    "github.com/pilot-protocol/common/protocol"
+    "github.com/pilot-protocol/eventstream"
 )
 
 type StageEvent struct {
@@ -297,33 +366,47 @@ type StageEvent struct {
 }
 
 func main() {
-    d, _ := driver.Connect("")
-    stream, _ := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
+    d, err := driver.Connect("")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer d.Close()
+    hub, err := protocol.ParseAddr(os.Args[1])
+    if err != nil {
+        log.Fatal(err)
+    }
 
     <span class="comment">// Wait for stage 1 to complete</span>
-    ch, _ := stream.Subscribe("pipeline.stage1.complete")
+    c, err := eventstream.Subscribe(d, hub, "pipeline.stage1.complete")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer c.Close()
 
     fmt.Println("Agent 2 (Analysis) waiting for stage 1...")
 
-    for event := range ch {
+    for {
+        evt, err := c.Recv()
+        if err != nil {
+            log.Fatal(err)
+        }
         var prev StageEvent
-        json.Unmarshal(event.Data, &prev)
+        json.Unmarshal(evt.Payload, &prev)
 
         fmt.Printf("Received job %s from stage 1\\n", prev.JobID)
 
         <span class="comment">// Do analysis work</span>
         result := analyze(prev.Payload)
 
-        <span class="comment">// Signal next stage</span>
-        next := StageEvent{
+        <span class="comment">// Signal the next stage on the same connection</span>
+        data, _ := json.Marshal(StageEvent{
             Stage:   2,
             JobID:   prev.JobID,
             Payload: result,
-        }
-        data, _ := json.Marshal(next)
-        stream.Publish("pipeline.stage2.complete", data)
+        })
+        c.Publish("pipeline.stage2.complete", data)
 
-        fmt.Printf("Job %s: stage 2 complete, published to stage 3\\n", prev.JobID)
+        fmt.Printf("Job %s: stage 2 complete\\n", prev.JobID)
     }
 }
 
@@ -337,146 +420,96 @@ func analyze(raw json.RawMessage) json.RawMessage {
     return data
 }</code></pre>
 
-  <p>Each agent is independent. Agent 2 does not know about Agent 3. It just publishes a completion event. If Agent 3 is down, the event is lost (this is fire-and-forget pub/sub, not a durable queue). When Agent 3 comes back up and resubscribes, it picks up new events. For many agent workflows -- especially LLM pipelines where results are non-deterministic anyway -- this is fine.</p>
+  <p>Each agent is independent. Agent 2 does not know about Agent 3. It just publishes a completion event. If Agent 3 is down, the event is lost: this is fire-and-forget pub/sub, not a durable queue. When Agent 3 comes back and subscribes again, it picks up new events. If a lost job matters, have the stage that owns it re-publish until the next stage confirms, or keep jobs in a store and use events only as wake-up signals.</p>
 
   <h3>Branching Pipelines</h3>
 
-  <p>The wildcard subscription makes branching trivial. Suppose stage 2 can produce two kinds of output: normal results and anomalies. Publish to different sub-topics:</p>
+  <p>Suppose stage 2 can produce two kinds of output: normal results and anomalies. Publish them to different topics:</p>
 
   <pre><code><span class="comment">// Normal result</span>
-stream.Publish("pipeline.stage2.result.normal", data)
+c.Publish("pipeline.stage2.result.normal", data)
 
 <span class="comment">// Anomaly detected</span>
-stream.Publish("pipeline.stage2.result.anomaly", data)</code></pre>
+c.Publish("pipeline.stage2.result.anomaly", data)</code></pre>
 
-  <p>An agent that handles all results subscribes to <code>pipeline.stage2.result.*</code>. An agent that only handles anomalies subscribes to <code>pipeline.stage2.result.anomaly</code>. The topic hierarchy <em>is</em> the routing logic. No broker configuration needed.</p>
+  <p>An agent that handles only anomalies subscribes to <code>pipeline.stage2.result.anomaly</code>. An agent that handles both opens one subscription per topic, as Agent C does above. Because there are no prefix wildcards, the routing table is the explicit list of topics each agent subscribes to, which also makes it easy to read.</p>
   </section>
 
   <section>
   <h2>CLI Equivalent for Quick Testing</h2>
 
-  <p>You do not need to write Go to test the event stream. The <code>pilotctl</code> CLI has publish and subscribe commands for quick prototyping.</p>
+  <p>You do not need to write Go to test the event stream. <code>pilotctl</code> has publish and subscribe commands that speak the same protocol.</p>
 
-  <pre><code><span class="comment"># Terminal 1: subscribe to all metrics</span>
-<span class="cmd">pilotctl subscribe <broker-addr> "metrics.*"</span>
+  <pre><code><span class="comment"># Terminal 1: subscribe to CPU metrics on the hub</span>
+<span class="cmd">pilotctl subscribe &lt;hub-address&gt; metrics.cpu</span>
 
 <span class="comment"># Terminal 2: publish a CPU metric</span>
-<span class="cmd">pilotctl publish <broker-addr> metrics.cpu --data '{"host":"agent-a","percent":73.2}'</span>
+<span class="cmd">pilotctl publish &lt;hub-address&gt; metrics.cpu --data '{"host":"agent-a","percent":73.2}'</span>
 
-<span class="comment"># Terminal 3: publish a memory metric</span>
-<span class="cmd">pilotctl publish <broker-addr> metrics.memory --data '{"host":"agent-b","alloc_mb":256}'</span></code></pre>
+<span class="comment"># Terminal 3: publish a memory metric (terminal 1 does not see this one)</span>
+<span class="cmd">pilotctl publish &lt;hub-address&gt; metrics.memory --data '{"host":"agent-b","alloc_mb":256}'</span></code></pre>
 
-  <p>Terminal 1 will print both events as they arrive. Use this to test your topic hierarchy before writing Go code.</p>
+  <p>Terminal 1 prints each matching event as <code>[topic] payload</code>:</p>
 
-  <pre><code><span class="comment"># Subscribe to everything (useful for debugging)</span>
-<span class="cmd">pilotctl subscribe <broker-addr> "*"</span>
+  <pre><code>[metrics.cpu] {"host":"agent-a","percent":73.2}</code></pre>
 
-<span class="comment"># Subscribe to all pipeline events</span>
-<span class="cmd">pilotctl subscribe <broker-addr> "pipeline.*"</span>
+  <pre><code><span class="comment"># Subscribe to everything on the hub (useful for debugging)</span>
+<span class="cmd">pilotctl subscribe &lt;hub-address&gt; '*'</span>
 
-<span class="comment"># Subscribe to only anomalies</span>
-<span class="cmd">pilotctl subscribe <broker-addr> "pipeline.stage2.result.anomaly"</span></code></pre>
+<span class="comment"># Stop after 10 events, or after 60 s</span>
+<span class="cmd">pilotctl subscribe &lt;hub-address&gt; pipeline.stage2.result.anomaly --count 10 --timeout 60s</span>
 
-  <p>The <code>pilotctl publish</code>/<code>subscribe</code> commands are the supported way to use the event stream; the Go snippets above illustrate the pattern.</p>
-  </section>
+<span class="comment"># Machine-readable: one JSON object per event</span>
+<span class="cmd">pilotctl --json subscribe &lt;hub-address&gt; metrics.cpu</span></code></pre>
 
-  <section>
-  <h2>Performance Characteristics</h2>
-
-  <p>How does Pilot's event stream compare to a real broker on throughput? We measured on two agents in the same region (us-east1):</p>
-
-  <table>
-    <tr>
-      <th>Metric</th>
-      <th>Pilot Event Stream</th>
-      <th>Redis Pub/Sub</th>
-      <th>Kafka</th>
-    </tr>
-    <tr>
-      <td>Latency (p50)</td>
-      <td>0.3ms</td>
-      <td>0.2ms</td>
-      <td>2ms</td>
-    </tr>
-    <tr>
-      <td>Latency (p99)</td>
-      <td>1.2ms</td>
-      <td>0.8ms</td>
-      <td>8ms</td>
-    </tr>
-    <tr>
-      <td>Throughput</td>
-      <td>45K msg/s</td>
-      <td>120K msg/s</td>
-      <td>80K msg/s</td>
-    </tr>
-    <tr>
-      <td>Memory (broker)</td>
-      <td>0 MB (no broker)</td>
-      <td>50 MB</td>
-      <td>500 MB+</td>
-    </tr>
-    <tr>
-      <td>NAT traversal</td>
-      <td>Built-in</td>
-      <td>No</td>
-      <td>No</td>
-    </tr>
-    <tr>
-      <td>Encryption</td>
-      <td>AES-256-GCM</td>
-      <td>Optional TLS</td>
-      <td>Optional TLS</td>
-    </tr>
-  </table>
-
-  <p>Pilot is slower on raw throughput because it is peer-to-peer (each publish goes directly to each subscriber) rather than going through an optimized broker process. For agent workloads where you are publishing 10-100 events per second, not 100,000, this is irrelevant. The latency is comparable, and the operational cost is zero.</p>
+  <p>The hub can be given as an address or, once you trust it, as its hostname. Use the CLI to try out your topic names before writing Go code.</p>
   </section>
 
   <section>
   <h2>When You Still Need Kafka</h2>
 
-  <p>Honesty matters. Pilot's event stream is <strong>not</strong> a replacement for Kafka in all scenarios. You still need a real broker when:</p>
+  <p>Pilot's event stream is <strong>not</strong> a replacement for Kafka in all scenarios. You still need a real broker when:</p>
 
   <ul>
-    <li><strong>Persistence:</strong> Events must survive agent restarts. Pilot's stream is ephemeral. If the subscriber is offline when an event is published, that event is gone.</li>
-    <li><strong>Replay:</strong> You need to re-process events from a specific offset. Pilot has no event log.</li>
-    <li><strong>Consumer groups:</strong> Multiple instances of the same subscriber need to split the workload. Pilot delivers to all subscribers (broadcast), not one-of-many (queue).</li>
-    <li><strong>Exactly-once delivery:</strong> Pilot provides at-most-once semantics. If the UDP packet is lost during a congestion event and the retry window expires, the event is lost.</li>
-    <li><strong>Throughput above 50K msg/s:</strong> If you are publishing at Kafka-scale volumes, you need Kafka-scale infrastructure.</li>
+    <li><strong>Persistence:</strong> Events must survive restarts. Pilot's stream keeps nothing. If the subscriber is offline when an event is published, that event is gone.</li>
+    <li><strong>Replay:</strong> You need to re-process events from a specific offset. There is no event log.</li>
+    <li><strong>Consumer groups:</strong> Multiple instances of the same subscriber need to split the workload. Pilot delivers every event to every subscriber of its topic, not to one of many.</li>
+    <li><strong>Delivery guarantees:</strong> The broker gives at-most-once delivery. Events published during a disconnect, over the rate limit, or to a subscriber whose writes keep failing are dropped.</li>
+    <li><strong>Volume:</strong> Each publishing connection is limited to 100 events per second (bursts of 200). Workloads far beyond that belong on infrastructure built for them.</li>
+    <li><strong>Pattern subscriptions:</strong> If you depend on topic wildcards or hierarchies, use a broker that has them.</li>
   </ul>
 
-  <p>But here is the question to ask yourself: does your agent system actually need any of those? Most agent event architectures are:</p>
+  <p>But here is the question to ask yourself: does your agent system actually need any of those? Most agent event traffic is:</p>
 
   <ul>
     <li>Status updates (fire-and-forget)</li>
-    <li>Task completion signals (at-most-once is fine; the application handles retries)</li>
+    <li>Task completion signals (at-most-once is fine when the application handles retries)</li>
     <li>Metrics (stale data is replaced by fresh data)</li>
     <li>Coordination signals ("I am ready", "start next phase")</li>
   </ul>
 
-  <p>For these patterns, a couple of Pilot pub/sub commands and zero broker infrastructure is the right answer. Save Kafka for when you actually need Kafka.</p>
+  <p>For these patterns, the broker already in your Pilot daemon is often enough. Save Kafka for when you actually need Kafka.</p>
   </section>
 
   <section>
   <h2>Putting It Together</h2>
 
-  <p>Start with the CLI to prototype your topic hierarchy. Move to Go when you need programmatic control. Use wildcard subscriptions to build fan-in aggregators. Use topic hierarchies to build branching pipelines. And when your agent count grows past the point where peer-to-peer pub/sub is efficient, add a broker for the high-volume topics while keeping Pilot for the coordination layer.</p>
+  <p>Start with the CLI to try out your topic names. Move to Go when you need programmatic control. Pick a hub daemon every agent can trust, open one subscription per exact topic, and publish completion events to chain stages. When a topic outgrows the rate limit or needs durability, move that topic to a dedicated broker and keep Pilot for the coordination traffic.</p>
 
-  <p>The event stream is one piece of Pilot's service stack. Port 80 handles <a href="http-services-over-encrypted-overlay">HTTP services</a>. Port 1001 handles structured data exchange. Port 1000 handles stdio-based communication. Together, they give agents a complete communication toolkit without external dependencies.</p>
+  <p>The event stream is one of the daemon's built-in services. Port 1001 carries <code>send-message</code> and <code>send-file</code> (data exchange), port 1002 carries pub/sub, and the <a href="http-services-over-encrypted-overlay">gateway</a> can carry ordinary HTTP over the overlay.</p>
 
-  <p>For the full API reference, see the <a href="/docs/">documentation</a>. For the Go driver source, check the <code>pkg/driver</code> package in the repository.</p>
+  <p>For the reference, see the <a href="/docs/pubsub">pub/sub documentation</a>. The Go sources are the <code>eventstream</code> package (<a href="https://github.com/pilot-protocol/eventstream" target="_blank" rel="noopener">github.com/pilot-protocol/eventstream</a>) and the driver in <code>common/driver</code> (<a href="https://github.com/pilot-protocol/common" target="_blank" rel="noopener">github.com/pilot-protocol/common</a>).</p>
   </section>
 
   <div class="cta">
     <h3>Try the Event Stream</h3>
-    <p>Two terminals, two commands, zero infrastructure. See events flow between agents in under a minute.</p>
-    <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
+    <p>Three terminals and two commands: subscribe in one, publish from another, and watch the event arrive.</p>
+    <a href="https://github.com/pilot-protocol/eventstream">View on GitHub</a>
   </div>`;
 ---
 <BlogLayout
-  title="Replace Your Message Broker in 12 Lines of Go"
-  description="Why AI agents don't need RabbitMQ or Kafka. Direct P2P pub/sub over Pilot Protocol in 12 lines of Go."
+  title="Agent Pub/Sub in Twelve Lines of Go, With the Broker Built In"
+  description="Every Pilot daemon runs a small pub/sub broker on port 1002. Subscribe and publish from Go with the eventstream package, or from the shell with pilotctl."
   date="February 24, 2026"
   tags={["tutorial", "pub-sub", "go"]}
   canonicalPath="/blog/replace-message-broker-twelve-lines-go"

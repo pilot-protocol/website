@@ -1,202 +1,189 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>The OpenClaw agents that adopted Pilot Protocol did so through a single entry point: the <code>SKILLS.md</code> file on ClawHub. This file is the interface between Pilot Protocol and autonomous AI agents. It defines every command, every argument, every error code, and every workflow pattern. This article explains how to build custom Pilot skills for OpenClaw agents -- extending the default skill set with domain-specific commands and workflows.</p>
+const bodyContent = `<p>An OpenClaw skill is a folder with a <code>SKILL.md</code> file: YAML frontmatter that says what the skill is for, and Markdown instructions the agent follows. When the Pilot daemon is running, it already installs one skill into OpenClaw for you, a general guide to <code>pilotctl</code>. This article shows how to write your own skill on top of it, one that teaches an agent a specific workflow over Pilot Protocol, and how to publish it on ClawHub.</p>
 
   <section>
-  <h2 id="anatomy">Anatomy of a Pilot Skill</h2>
+  <h2 id="anatomy">Anatomy of a Skill</h2>
 
-  <p>A Pilot skill is a <code>SKILLS.md</code> file that follows a specific structure. OpenClaw agents parse this file to understand what tools are available and how to use them. The structure has four sections:</p>
+  <p>OpenClaw loads a skill from any folder under its skill roots that contains a <code>SKILL.md</code>. Your own skills usually go in the workspace's <code>skills/</code> folder or in the shared <code>~/.openclaw/skills</code>. The file has two parts:</p>
 
-  <pre><code><span class="comment"># SKILLS.md Structure
+  <ul>
+    <li><strong>Frontmatter.</strong> <code>name</code> and <code>description</code> are required. OpenClaw puts each skill's name and description into the agent's system prompt, so the description is what the agent reads to decide when to use the skill. Say plainly when it applies, and keep it short. Runtime requirements go under <code>metadata.openclaw</code>: <code>requires.bins</code> lists binaries that must be on <code>PATH</code> before OpenClaw loads the skill.</li>
+    <li><strong>Body.</strong> Plain Markdown: when to use the skill, the steps, the exact commands, and what to do when something fails.</li>
+  </ul>
 
-## Commands
-&lt;command-name&gt;
-  Description: &lt;what it does&gt;
-  Arguments:
-    --arg1 &lt;type&gt; (required|optional) : &lt;description&gt;
-    --arg2 &lt;type&gt; (optional, default: &lt;value&gt;) : &lt;description&gt;
-  Returns: &lt;return type and structure&gt;
-  Errors:
-    E001: &lt;description&gt; | hint: &lt;what to do&gt;
-    E002: &lt;description&gt; | hint: &lt;what to do&gt;
+  <pre><code>pilot-code-review/
+  SKILL.md        <span class="comment"># required</span>
+  examples/       <span class="comment"># optional supporting files</span></code></pre>
 
-## Workflows
-&lt;workflow-name&gt;
-  1. &lt;step&gt;
-  2. &lt;step&gt;
-  3. &lt;step&gt;
+  <p>The skill Pilot installs lives at <code>~/.openclaw/skills/pilotctl/SKILL.md</code>. The daemon refreshes it every 15 minutes, so do not edit it; your changes would be overwritten. Put your own skills in their own folders. To see where the daemon installs its skill for each agent tool, and whether it is up to date:</p>
 
-## Heartbeat
-  - &lt;periodic check description&gt;
-  - &lt;periodic check description&gt;
-
-## Context
-  pilotctl --json context returns machine-readable manifest</span></code></pre>
-
-  <p>The key design principle: <strong>everything is explicit</strong>. No implicit defaults that require human knowledge. No "see the docs for details" references. Every piece of information an agent needs is in the file.</p>
+  <pre><code><span class="cmd">pilotctl skills</span>          <span class="comment"># per-tool install state</span>
+<span class="cmd">pilotctl skills paths</span>    <span class="comment"># install paths only</span></code></pre>
   </section>
 
   <section>
   <h2 id="custom-workflow">Building a Custom Workflow Skill</h2>
 
-  <p>Suppose you want OpenClaw agents to use Pilot Protocol for a specific use case: distributed code review. Agents should be able to submit code for review, receive review results, and track review quality. Here is how to build that skill:</p>
+  <p>Suppose you want OpenClaw agents to use Pilot Protocol for distributed code review: one agent sends a file to a reviewer agent and gets findings back. The general <code>pilotctl</code> skill already covers the commands. A custom skill adds the workflow: the message format, the order of steps, and what to do on each error.</p>
 
-  <pre><code><span class="comment"># SKILLS.md - Code Review over Pilot Protocol</span>
+  <pre><code>---
+name: pilot-code-review
+description: >
+  Send a source file to a reviewer agent over Pilot Protocol and collect its
+  findings, or answer review requests that arrive in the Pilot inbox. Use when
+  the user asks for another agent to review code, or when a message with
+  "type": "review_request" is waiting in pilotctl inbox.
+version: 1.0.0
+metadata:
+  openclaw:
+    requires:
+      bins:
+        - pilotctl
+    homepage: https://pilotprotocol.network/docs/
+---
 
-## Commands
+# Code review over Pilot Protocol
 
-### submit-review
-  Description: Submit code for peer review over Pilot Protocol
-  Arguments:
-    --to &lt;pilot-address&gt; (required) : Address of the review agent
-    --file &lt;path&gt; (required) : Path to the file to review
-    --language &lt;string&gt; (optional, default: auto-detect) : Programming language
-    --focus &lt;string&gt; (optional) : Review focus area (security|performance|style|all)
-  Returns: JSON {"review_id": string, "status": "submitted"}
-  Errors:
-    E101: Peer not trusted | hint: Run pilotctl handshake &lt;address&gt; first
-    E102: File not found | hint: Check the file path exists
-    E103: Peer offline | hint: Retry in 30 seconds
+Messages are JSON.
+- Request: {"type": "review_request", "file": "&lt;file name&gt;", "focus": "security|performance|style|all"}
+- Result:  {"type": "review_result", "file": "&lt;file name&gt;", "severity": "clean|minor|major|critical", "findings": [...]}
 
-  Implementation:
-    pilotctl send-file $TO $FILE
-    pilotctl send $TO 1002 --data '{"description":"Review code: $FILE","params":{"language":"$LANGUAGE","focus":"$FOCUS"}}'
-    pilotctl --json inbox --from $TO
+## Before you start
+1. Check the daemon: \`pilotctl --json daemon status\`. If it is not running, run \`pilotctl daemon start\`.
+2. You need the reviewer's Pilot address (N:NNNN.HHHH.LLLL). If you only have a
+   hostname, resolve it: \`pilotctl --json find &lt;hostname&gt;\`.
+3. Check trust: \`pilotctl --json trust\`. If the reviewer is not listed, run
+   \`pilotctl handshake &lt;address&gt; "code review requests"\` and tell the user the
+   reviewer must approve. Continue only once it appears in \`pilotctl trust\`.
 
-### recv-review
-  Description: Receive and process an incoming code review request
-  Arguments:
-    (none - reads from incoming message queue)
-  Returns: JSON {"from": string, "file": string, "params": object}
-  Errors:
-    E201: No messages available | hint: Retry after a few seconds
+## Request a review
+1. Send the file: \`pilotctl --json send-file &lt;address&gt; &lt;path&gt;\`
+2. Send the request and wait for the answer:
+   \`pilotctl --json send-message &lt;address&gt; --type json --data '{"type":"review_request","file":"&lt;file name&gt;","focus":"security"}' --wait 10m\`
+3. The answer is in data.reply.data (a JSON string). Parse it and show the findings to the user.
+4. If the wait times out, the answer may still arrive later. Check with
+   \`pilotctl --json inbox --from &lt;address&gt; --since 1h --full\`. Do not send the file again.
 
-  Implementation:
-    pilotctl recv 1001 --count 1  # received files land in ~/.pilot/received/
-    pilotctl --json recv 1002
+## Answer a review request
+1. List messages: \`pilotctl --json inbox --full --limit 0\`. Pick those whose data has "type": "review_request".
+2. Find the file: \`pilotctl --json received --since 1h\` (files land in ~/.pilot/received/).
+3. Review it, then answer the sender (the message's "from") and name the request it answers:
+   \`pilotctl --json send-message &lt;from&gt; --type json --reply-to &lt;message_id&gt; --data '&lt;result JSON&gt;'\`
 
-### send-review-result
-  Description: Return code review results to the requester
-  Arguments:
-    --to &lt;pilot-address&gt; (required) : Address of the requester
-    --result &lt;string&gt; (required) : Review findings as structured text
-    --severity &lt;string&gt; (required) : Overall severity (clean|minor|major|critical)
-  Returns: JSON {"status": "sent"}
+## Errors
+Failed commands exit non-zero and print JSON on stderr with "code", "message" and "hint".
+- trust_required: run the command in "hint" (a handshake), then wait for the reviewer to approve.
+- not_found: the hostname is unknown, or the node is private and does not trust you yet. Ask the user for the address.
+- timeout: no answer within the wait. Check the inbox later; do not resend.
+- not_running or connection_failed: run \`pilotctl daemon start\`, then retry once.</code></pre>
 
-  Implementation:
-    pilotctl send $TO 1002 --data '{"review": "$RESULT", "severity": "$SEVERITY"}'
+  <p>The skill wraps a few generic commands, <code>send-file</code>, <code>send-message --wait</code> and <code>inbox</code>, into one task the agent can follow from start to finish. The <code>--reply-to</code> step matters: it ties the result to the request's message ID, which is how the requester's <code>--wait</code> picks out the right answer.</p>
 
-## Workflows
+  <p>Two things the skill cannot do for you. Trust is per pair of nodes, so a private reviewer has to approve each new requester (or run its daemon with <code>--trust-auto-approve</code>, which approves everyone). And the reviewer only answers when its agent runs a turn and reads the inbox, so give <code>--wait</code> enough time, or have the requester check the inbox later.</p>
+  </section>
 
-### Full Review Cycle
-  1. Submitter: submit-review --to &lt;reviewer&gt; --file ./src/handler.go --focus security
-  2. Reviewer: recv-review (blocks until message arrives)
-  3. Reviewer: Analyze the code, produce findings
-  4. Reviewer: send-review-result --to &lt;submitter&gt; --result &lt;findings&gt; --severity minor
-  5. Submitter: Receives results via recv step in submit-review
+  <section>
+  <h2 id="testing">Testing It Locally</h2>
 
-### Find a Reviewer
-  1. pilotctl --json peers --search "review"  # matches connected peers by node ID / hostname
-  2. Pick an online agent and initiate trust if needed
-  3. pilotctl handshake &lt;address&gt; (if not already trusted)
-  4. submit-review --to &lt;address&gt; --file ./src/handler.go
+  <p>Before publishing, install the skill by copying the folder into one of OpenClaw's skill roots:</p>
 
-## Heartbeat
-  - Every 60s: pilotctl daemon status --json (verify daemon alive)
-  - Every 300s: pilotctl lookup &lt;self-address&gt; --json (verify registry connected)
-  - On task failure: Check pilotctl subscribe output for error patterns</code></pre>
+  <pre><code><span class="cmd">cp -r ./pilot-code-review ~/.openclaw/skills/</span>
+<span class="cmd">openclaw skills check</span>   <span class="comment"># if it does not show up for the agent</span></code></pre>
 
-  <p>This custom skill wraps Pilot Protocol's generic commands into a domain-specific interface. The agent does not need to think about <code>pilotctl send-file</code>, <code>pilotctl send</code>, and <code>pilotctl recv</code> as separate concepts. It sees <code>submit-review</code> as a single operation.</p>
+  <p>With <code>skills.load.watch</code> on, OpenClaw rescans skill folders when files change, and existing sessions pick up the change on their next turn; restarting the Gateway also refreshes skills. Because the frontmatter lists <code>pilotctl</code> under <code>requires.bins</code>, OpenClaw only loads the skill on hosts where <code>pilotctl</code> is on <code>PATH</code>. It does not install Pilot; install it first with <code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code>.</p>
+
+  <p>Then try it the way it will be used: give an agent the task without extra instructions and watch where it gets stuck. Every place it hesitates is a gap in the skill.</p>
   </section>
 
   <section>
   <h2 id="publishing">Publishing to ClawHub</h2>
 
-  <p>Once your skill file is ready, publishing to ClawHub makes it available to every OpenClaw agent:</p>
+  <p>ClawHub is OpenClaw's skill registry. Log in with the <code>clawhub</code> CLI, then publish the folder that contains <code>SKILL.md</code>:</p>
 
-  <pre><code><span class="comment"># Publish your custom skill</span>
-<span class="cmd">clawhub publish pilot-code-review \\
-  --skill-file ./SKILLS.md \\
-  --description "Peer code review over Pilot Protocol encrypted tunnels" \\
-  --tags "code-review,security,pilot-protocol" \\
-  --requires pilotprotocol</span></code></pre>
+  <pre><code><span class="cmd">clawhub login</span>
+<span class="cmd">clawhub skill publish ./pilot-code-review \\
+  --slug pilot-code-review \\
+  --name "Pilot Code Review" \\
+  --version 1.0.0 \\
+  --changelog "First release"</span></code></pre>
 
-  <p>The <code>--requires pilotprotocol</code> flag declares a dependency. When an agent installs your skill, ClawHub automatically installs Pilot Protocol first if it is not already present. This ensures the underlying networking layer is available before your skill tries to use it.</p>
+  <p>ClawHub keeps semver versions, tags (<code>latest</code> by default) and changelogs; publish again with a new <code>--version</code> to release an update. Publishing needs a GitHub account old enough to pass ClawHub's upload gate. A <code>.clawhubignore</code> file in the folder keeps files out of the bundle.</p>
 
-  <p>After publishing, any OpenClaw agent can install and use your skill:</p>
+  <p>Anyone can then install it into their OpenClaw workspace:</p>
 
-  <pre><code><span class="comment"># Agent installs the custom skill</span>
-<span class="cmd">clawhub install pilot-code-review</span>
+  <pre><code><span class="cmd">openclaw skills install @&lt;owner&gt;/pilot-code-review</span>
+<span class="comment"># or, with the ClawHub CLI</span>
+<span class="cmd">clawhub install @&lt;owner&gt;/pilot-code-review</span></code></pre>
 
-<span class="comment"># Agent now has both pilotprotocol and pilot-code-review skills
-# It can use submit-review, accept-review, send-review-result</span></code></pre>
+  <p>OpenClaw's own guidance is to treat third-party skills as untrusted code and read them before enabling them. Keep yours short enough to read, and keep secrets out of it. The exact flags are in the <a href="https://docs.openclaw.ai/tools/clawhub" target="_blank" rel="noopener">ClawHub documentation</a> and the <a href="https://docs.openclaw.ai/clawhub/skill-format" target="_blank" rel="noopener">skill format reference</a>.</p>
   </section>
 
   <section>
   <h2 id="error-handling">Error Handling for Autonomous Agents</h2>
 
-  <p>The most important part of a skill file is the error section. Autonomous agents cannot ask a human what to do when something fails. Every error code must have a clear, actionable hint:</p>
+  <p>The most important part of a skill is what it says about failure. An autonomous agent cannot ask a human what to do, so every error the agent can hit needs a clear next step:</p>
 
   <ul>
-    <li><strong>Bad:</strong> <code>E101: Trust error</code> -- What should the agent do? It does not know.</li>
-    <li><strong>Good:</strong> <code>E101: Peer not trusted | hint: Run pilotctl handshake &lt;address&gt; first</code> -- The agent knows exactly what command to run.</li>
+    <li><strong>Bad:</strong> "If something fails, check the docs." The agent does not know what to do.</li>
+    <li><strong>Good:</strong> "trust_required: run the command in hint, then wait for the reviewer to approve." The agent knows exactly what to run.</li>
   </ul>
 
-  <p>Error hints should be:</p>
+  <p><code>pilotctl</code> helps here. With <code>--json</code>, a failed command exits non-zero and prints an object with a stable <code>code</code> (for example <code>trust_required</code>, <code>not_found</code>, <code>timeout</code>, <code>connection_failed</code>), a <code>message</code> and usually a <code>hint</code> with the command to run next. A skill can key its instructions on those codes instead of on error text.</p>
+
+  <p>Good error instructions are:</p>
 
   <ol>
-    <li><strong>Actionable.</strong> Tell the agent what to do, not just what went wrong.</li>
-    <li><strong>Self-contained.</strong> The hint should include the full command or action, not reference external docs.</li>
-    <li><strong>Retriable.</strong> Indicate whether the error is transient ("retry in 30 seconds") or permanent ("check configuration").</li>
+    <li><strong>Actionable.</strong> Say what to do, not just what went wrong.</li>
+    <li><strong>Self-contained.</strong> Include the full command, not a reference to other docs.</li>
+    <li><strong>Clear about retries.</strong> Say whether an error is transient (retry once) or permanent (stop and ask the user), and what must not be repeated, such as resending a large file.</li>
   </ol>
-
-  <p>The Pilot Protocol base skill includes retry guidance for every error. Network timeouts say "retry after 5 seconds." Trust errors say "run pilotctl handshake first." Invalid format errors say "check argument syntax." This pattern is why agents were able to onboard autonomously -- they could handle every error without human help.</p>
   </section>
 
   <section>
   <h2 id="runtime-context">Runtime Context Discovery</h2>
 
-  <p>Beyond the static SKILLS.md file, agents can query Pilot Protocol's capabilities at runtime:</p>
+  <p>Beyond the static skill file, an agent can ask <code>pilotctl</code> what it supports:</p>
 
-  <pre><code><span class="comment"># Get a machine-readable manifest of all commands</span>
-<span class="cmd">pilotctl --json context</span></code></pre>
+  <pre><code><span class="comment"># Machine-readable metadata for every command</span>
+<span class="cmd">pilotctl --json context</span>
 
-  <p>This returns a JSON object with every command, its arguments, a description, and its return field names. The advantage over reading SKILLS.md is that the runtime context reflects the actual installed version -- if Pilot Protocol is updated with new commands, <code>--json context</code> returns the updated manifest immediately.</p>
+<span class="comment"># Just one command</span>
+<span class="cmd">pilotctl context send-message</span></code></pre>
 
-  <p>Agents can use runtime context discovery for dynamic capability negotiation. When two agents connect, they can exchange context manifests to understand what the peer supports:</p>
+  <p>This returns each command's name, description, argument templates and return field names. Its advantage over a skill file is that it always matches the installed version. A skill can tell the agent to check <code>pilotctl context &lt;command&gt;</code> when a flag it expects is rejected.</p>
 
-  <pre><code><span class="comment"># "What can you do?"</span>
-<span class="cmd">pilotctl send 1:0001.0B22.4E19 1002 --data '{"type":"capability_query"}'</span>
+  <p>Agents can also tell each other what they support, as long as both sides follow the same convention. Your skill can define one, for example a <code>capability_query</code> message that agents with the skill answer with the request and result formats they accept:</p>
 
-<span class="comment"># Peer responds with its context manifest
-# The querying agent now knows exactly what tasks it can delegate</span></code></pre>
+  <pre><code><span class="comment"># "What can you do?" (the peer must know to answer this)</span>
+<span class="cmd">pilotctl --json send-message &lt;address&gt; --type json --data '{"type":"capability_query"}' --wait 2m</span></code></pre>
 
-  <p>This is the foundation for autonomous skill negotiation -- agents that discover each other's capabilities at runtime and compose multi-agent workflows on the fly.</p>
+  <p>Nothing in the protocol answers that message for you; the agent on the other side does, because its skill tells it to.</p>
   </section>
 
   <section>
   <h2 id="best-practices">Skill Design Best Practices</h2>
 
-  <p>From analyzing how agents used the base Pilot Protocol skill, several design patterns emerged:</p>
-
   <ul>
-    <li><strong>Keep commands composable.</strong> Small, single-purpose commands that agents can chain together are better than large, monolithic commands. Agents are good at composing workflows from simple primitives.</li>
-    <li><strong>Use JSON everywhere.</strong> Every command should accept <code>--json</code> for machine-readable output. Agents parse JSON reliably; they struggle with human-formatted text tables.</li>
-    <li><strong>Include the full command in workflow examples.</strong> Do not use shorthand or abbreviations. Write out every flag. Agents will copy workflow examples verbatim as a starting point.</li>
-    <li><strong>Test with actual agents.</strong> Publish a beta version on ClawHub, have an OpenClaw agent try to use it without any additional instructions, and observe where it gets stuck. The failure points reveal gaps in your skill specification.</li>
+    <li><strong>Write the description for the agent.</strong> It decides when the skill loads. Name the situations and the words a user would use.</li>
+    <li><strong>Keep steps small and ordered.</strong> Single-purpose steps that the agent can follow and check are better than one long paragraph.</li>
+    <li><strong>Use JSON everywhere.</strong> Tell the agent to pass <code>--json</code> and say where the answer is (for example <code>data.reply.data</code>). Agents parse JSON reliably; they struggle with text tables.</li>
+    <li><strong>Write out full commands.</strong> No shorthand. Agents copy examples verbatim.</li>
+    <li><strong>Declare what you need.</strong> List <code>pilotctl</code> under <code>requires.bins</code> so the skill does not load where it cannot work.</li>
+    <li><strong>Test with an agent before publishing.</strong> Install the folder locally, give an agent the task with no extra help, and fix the skill wherever it gets stuck.</li>
   </ul>
   </section>
 
   <div class="cta">
     <h3>Build Skills for Agents</h3>
-    <p>Extend Pilot Protocol with domain-specific skills. Publish on ClawHub for autonomous adoption.</p>
+    <p>Teach agents a workflow over Pilot Protocol with one SKILL.md, then share it on ClawHub.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 ---
 <BlogLayout
   title="Building Custom Pilot Skills with OpenClaw"
-  description="Create and distribute custom agent skills using OpenClaw and Pilot Protocol. Package capabilities as reusable agent modules."
+  description="Write a SKILL.md that teaches an OpenClaw agent a workflow over Pilot Protocol, require pilotctl in its frontmatter, test it locally and publish it on ClawHub."
   date="March 7, 2026"
   tags={["openclaw", "skills", "tutorial"]}
   canonicalPath="/blog/building-custom-pilot-skills-openclaw"
