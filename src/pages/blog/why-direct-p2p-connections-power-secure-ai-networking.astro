@@ -132,7 +132,7 @@ const bodyContent = `<script type="application/ld+json">
 <tr>
 <td>Pilot Protocol</td>
 <td>Auto, zero-config</td>
-<td>Built-in overlay</td>
+<td>Registry hostname lookup</td>
 <td>E2E by default</td>
 <td>Multi-cloud AI agent fleets</td>
 </tr>
@@ -159,13 +159,13 @@ const bodyContent = `<script type="application/ld+json">
 <p>The compliance dimension deserves specific attention. If your AI agents operate in financial services, healthcare, or regulated trading environments, pure P2P often cannot satisfy audit requirements. These workflows may require actions to be logged, attributable, and tamper-evident. Pure P2P architectures typically lack the centralized logging infrastructure to satisfy those requirements out of the box.</p>
 <p>In these cases, a hybrid architecture often delivers the best outcome. You retain P2P for data plane communication, where agents exchange payloads directly, while using a lightweight centralized component for control plane logging and audit. This gives you the latency and resilience benefits of P2P without sacrificing regulatory posture.</p>
 <p>Read more about <a href="https://pilotprotocol.network/blog/cloud-networking-secure-peer-to-peer-distributed-ai">secure cloud P2P</a> to see how this hybrid approach applies to cloud-native deployments. For a deeper look at foundational principles, <a href="https://pilotprotocol.network/blog/trust-network-protocols-secure-decentralized-systems">trust in decentralized protocols</a> covers the theoretical and practical dimensions of building reliable trust systems at scale.</p>
-<p>Pro Tip: Do not rely on transport encryption alone. Implement application-layer E2EE between agents so that even if a proxy or relay node is compromised, it cannot read the payload. In Pilot Protocol, this is on by default. In DIY stacks, you need to engineer it explicitly.</p>
+<p>Pro Tip: Do not rely on transport encryption alone. Implement end-to-end encryption between agents so that even if a proxy or relay node is compromised, it cannot read the payload. In Pilot Protocol, tunnels are encrypted end to end between the two daemons by default, so a relay cannot read them; on each host, the data is in the clear between the daemon and the application. In DIY stacks, you need to engineer it explicitly.</p>
 <h2 id="practical-deployment-getting-ai-agents-connected-peer-to-peer" tabindex="-1">Practical deployment: Getting AI agents connected peer-to-peer</h2>
 <p>Now, let’s pull everything together with a hands-on deployment strategy and practical applications for your AI agents.</p>
 <p>Getting agents connected via P2P in a multi-cloud environment breaks down into five concrete steps:</p>
 <ol>
 <li><strong>Assign persistent addresses.</strong> Each agent needs a stable identity that survives restarts, IP changes, and cloud migrations. Pilot Protocol provides virtual addresses for this purpose. With libp2p, you use peer IDs derived from public keys.</li>
-<li><strong>Configure peer discovery.</strong> Agents need to find each other before they can connect. In multi-cloud environments, DHT-based discovery or a rendezvous server solves this. Pilot’s overlay handles discovery automatically within the private network.</li>
+<li><strong>Configure peer discovery.</strong> Agents need to find each other before they can connect. In multi-cloud environments, DHT-based discovery or a rendezvous server solves this. In Pilot, the registry resolves hostnames, so agents look each other up by name (<code>pilotctl find</code>) rather than through a DHT.</li>
 <li><strong>Establish NAT traversal.</strong> Most agents sit behind NAT in cloud environments. Use auto NAT traversal libraries like Pilot to punch through network boundaries without firewall rule changes. WebRTC with STUN/TURN works well as a fallback.</li>
 <li><strong>Negotiate trust.</strong> On first connection, exchange public keys and apply your TOFU policy. Store verified peer identities locally. Rotate keys on a defined schedule.</li>
 <li><strong>Begin encrypted data exchange.</strong> Once the encrypted tunnel is established, wrap your existing protocols (HTTP, gRPC, or SSH) inside the P2P overlay. This preserves your existing agent logic while giving it a secure, direct communication path.</li>
@@ -226,7 +226,7 @@ const bodyContent = `<script type="application/ld+json">
 <p>If you’re ready to explore further, here’s where you can find actionable guides and next steps.</p>
 <p>Direct-preferred networking for AI agents is deployable today, with encrypted relay fallback for paths where NAT traversal cannot establish a direct tunnel. Production adoption still requires application authorization, observability, and deployment-specific testing.</p>
 <p><img src="https://csuxjmfbwmkxiegfpljm.supabase.co/storage/v1/object/public/blog-images/organization-24002/1774647725213_pilotprotocol.jpg" alt="https://pilotprotocol.network"></p>
-<p>Pilot Protocol for AI agents gives your agent fleet persistent addresses, encrypted tunnels, automatic NAT traversal, and mutual trust establishment without requiring you to build any of that infrastructure yourself. You get Go and Python SDKs, a CLI, and a web console to manage your network from day one. For engineers who want to understand the underlying design principles, the <a href="https://pilotprotocol.network/research/WHITEPAPER.pdf">network-layer infrastructure overview</a> details the technical problem Pilot was built to solve, written for engineers who want to go deep before committing to a platform.</p>
+<p>Pilot Protocol for AI agents gives your agent fleet persistent addresses, encrypted tunnels, automatic NAT traversal, and mutual trust establishment without requiring you to build any of that infrastructure yourself. You get a CLI and SDKs for Go, Node.js, Python, and Swift. For engineers who want to understand the underlying design principles, the <a href="https://pilotprotocol.network/research/WHITEPAPER.pdf">network-layer infrastructure overview</a> details the technical problem Pilot was built to solve, written for engineers who want to go deep before committing to a platform.</p>
 <p>Start building your secure, autonomous agent network today.</p>
 <h2 id="frequently-asked-questions" tabindex="-1">Frequently asked questions</h2>
 <h3 id="what-are-the-main-security-risks-in-peer-to-peer-connections" tabindex="-1">What are the main security risks in peer-to-peer connections?</h3>

@@ -81,11 +81,11 @@ done</span></code></pre>
 
   <p>With hundreds of agents, you need visibility. Pilot Protocol's built-in event stream enables lightweight monitoring without external tools:</p>
 
-  <pre><code><span class="comment"># Monitor agent on a dedicated monitoring node</span>
-<span class="cmd">pilotctl subscribe <broker-addr> "fleet.*"</span>
+  <pre><code><span class="comment"># Monitor agent on a dedicated monitoring node (topics match exactly; "*" means all)</span>
+<span class="cmd">pilotctl subscribe &lt;broker-addr&gt; fleet.health</span>
 
 <span class="comment"># Each agent publishes periodic health events</span>
-<span class="cmd">pilotctl publish <broker-addr> "fleet.health" \\
+<span class="cmd">pilotctl publish &lt;broker-addr&gt; fleet.health \\
   --data '{"agent":"worker-42","status":"healthy","tasks_completed":127,"uptime_hours":48}'</span></code></pre>
 
   <p>For large fleets, aggregate health events on a monitoring agent that tracks:</p>
@@ -97,7 +97,7 @@ done</span></code></pre>
     <li><strong>Trust graph changes:</strong> New connections or revocations</li>
   </ul>
 
-  <p>Use <code>pilotctl peers</code> for a real-time view of your currently connected peers (encrypted/relay/direct breakdown); for network-wide public-agent discovery, query the <code>list-agents</code> directory. For private fleets, the monitoring agent can stream metrics directly to your existing monitoring stack.</p>
+  <p>Use <code>pilotctl peers</code> for a real-time view of your currently connected peers (encrypted/relay/direct breakdown). The <code>list-agents</code> directory lists only Pilot's data service agents, not your fleet, so keep your own inventory of agent hostnames or use a network's member list. For private fleets, the monitoring agent can stream metrics directly to your existing monitoring stack.</p>
   </section>
 
   <section>
@@ -108,8 +108,8 @@ done</span></code></pre>
   <h3>Startup and Reconnect Bursts</h3>
   <p>Many agents registering, resolving names, or rebuilding paths at once can create a thundering herd. Add jitter, bound retries, and test a coordinated restart before production.</p>
 
-  <h3>Discovery Result Size</h3>
-  <p>Broad tag searches become more expensive as the directory and result set grow. Use specific tags, pagination, caching, and staggered refresh intervals.</p>
+  <h3>Lookup Volume</h3>
+  <p>Pilot has no tag search: agents resolve peers one hostname at a time (<code>pilotctl find</code>) or read a network's member list. Thousands of agents resolving at once still add up at the registry. Cache resolved addresses, and stagger refresh intervals.</p>
 
   <h3>Relay and Event Fan-Out</h3>
   <p>Relay bandwidth and high-fan-out event streams can concentrate load. Measure direct-versus-relayed paths and size coordination, relay, and monitoring components independently.</p>
@@ -120,7 +120,7 @@ done</span></code></pre>
 
   <p>Three common fleet patterns are useful starting points:</p>
 
-  <p><strong>Hub-and-spoke.</strong> One orchestrator agent with many worker agents. The orchestrator discovers workers by tag, submits tasks, collects results. Workers are stateless and interchangeable. This is the most common pattern for batch processing jobs.</p>
+  <p><strong>Hub-and-spoke.</strong> One orchestrator agent with many worker agents. The orchestrator knows its workers by hostname or from a network's member list, sends them work with <code>send-message</code> or a stream, and collects results. Workers are stateless and interchangeable. This is the most common pattern for batch processing jobs.</p>
 
   <p><strong>Mesh.</strong> Every agent may connect to every other agent. This can suit small teams, but pairwise relationships grow as O(n&sup2;) and become difficult to govern as the fleet expands.</p>
 

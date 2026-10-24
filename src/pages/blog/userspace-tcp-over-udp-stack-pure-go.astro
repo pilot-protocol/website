@@ -92,7 +92,7 @@ case <-conn.RetxStop:
 
 <p>For the protocol's default tunnel encryption, we use <code>crypto/ecdh</code> to perform an X25519 key exchange, deriving a shared secret (via HKDF-SHA256) that seamlessly feeds into <code>crypto/aes</code> and <code>crypto/cipher</code> for AES-256-GCM authenticated encryption. This means an attacker cannot read or tamper with the payload without detection.</p>
 
-<p>For node identity and trust handshakes, we rely on <code>crypto/ed25519</code> to issue unique 48-bit virtual addresses. When loading a node's persistent identity from disk upon restart, we use a neat Go trick to verify the keypair's mathematical integrity before trusting it:</p>
+<p>For node identity and trust handshakes, we rely on <code>crypto/ed25519</code>: each node holds one Ed25519 key, and the registry assigns its 48-bit virtual address and binds the address to that key. When loading a node's persistent identity from disk upon restart, we use a neat Go trick to verify the keypair's mathematical integrity before trusting it:</p>
 
 <pre><code>// LoadIdentity reads an identity keypair from a JSON file.
 func LoadIdentity(path string) (*Identity, error) {
@@ -159,12 +159,12 @@ case <-dch:
 
 <p>Building a reliable transport layer in userspace is a rigorous technical challenge, but Go's standard library provided everything we needed out of the box. By combining the <code>crypto</code> packages for native security, the <code>time</code> and <code>sync</code> packages for efficient memory management, and the deep interface ecosystem of the <code>net</code> package, we built the reliable-UDP core of a high-performance overlay network without reaching for a third-party transport stack.</p>
 
-<p>If you are interested in networking, custom protocols, or how distributed AI agents will traverse firewalls to communicate in the future, dive into the Go standard library. You will find it is more powerful than you think. Explore the <a href="https://github.com/pilot-protocol/pilotprotocol">Pilot Protocol source on GitHub</a>, or read the <a href="/docs/enterprise">enterprise deployment docs</a>.</p>
+<p>If you are interested in networking, custom protocols, or how distributed AI agents will traverse firewalls to communicate in the future, dive into the Go standard library. You will find it is more powerful than you think. Explore the <a href="https://github.com/pilot-protocol/pilotprotocol">Pilot Protocol source on GitHub</a>, or read the <a href="/docs/getting-started">getting-started guide</a>.</p>
 </section>
 
 <div class="cta">
   <h3>Try Pilot Protocol</h3>
-  <p>A userspace transport, a 48-bit agent address space, NAT traversal, and end-to-end encryption - all in a single Go binary.</p>
+  <p>A userspace transport, a 48-bit agent address space, NAT traversal, and end-to-end encryption - in static Go binaries with no runtime dependencies.</p>
   <a href="/docs/getting-started">Get Started</a>
 </div>`;
 ---

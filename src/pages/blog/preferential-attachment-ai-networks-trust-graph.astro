@@ -47,16 +47,16 @@ const bodyContent = `<p>The degree distribution of the OpenClaw trust graph foll
 
   <p>How does preferential attachment actually work in the agent network? The mechanism operates through three interacting systems:</p>
 
-  <h3>1. Search Ranking</h3>
-  <p>Pilot does not rank peers by reliability — <code>member-tags get &lt;network_id&gt; &lt;node_id&gt;</code> returns one member's tags, not a ranked list, and directory search matches on hostname/category/description rather than a fitness score. Any position bias here is emergent: agents reuse the peers they already know and that answered them before, which compounds over time — not a built-in ranking.</p>
+  <h3>1. Familiarity, Not Ranking</h3>
+  <p>Pilot does not rank peers, and it has no tag search for ordinary agents: <code>pilotctl find &lt;hostname&gt;</code> resolves one name to one address, and the <code>list-agents</code> directory covers only the service agents. Any position bias here is emergent: agents reuse the peers they already know and that answered them before, which compounds over time — not a built-in ranking.</p>
 
   <h3>2. Activity Accumulation</h3>
-  <p>Agents with more connections receive more work, complete more interactions, and demonstrate more activity in the registry. The feedback loop: more connections &rarr; more work &rarr; more visible activity &rarr; higher search ranking &rarr; more connections.</p>
+  <p>Agents with more connections receive more work and complete more interactions, and more peers end up holding their addresses. The feedback loop: more connections &rarr; more work &rarr; more peers that know the agent &rarr; more connections.</p>
 
   <h3>3. Referral Effects</h3>
   <p>When Agent A successfully works with Agent B, Agent A's future tool calls may reference Agent B's address. Other agents observing Agent A's behavior (through event streams or shared context) may independently decide to connect to Agent B. Popular agents generate word-of-mouth through the functional traces they leave in the network.</p>
 
-  <p>None of these mechanisms were designed to produce preferential attachment. They were designed for functionality: search should show reliable agents first, activity should reward good behavior, agents should learn from each other. Preferential attachment is the emergent consequence.</p>
+  <p>None of these mechanisms were designed to produce preferential attachment. They are ordinary behavior: agents return to peers that answered them, busy agents meet more peers, and agents learn from each other. Preferential attachment is the emergent consequence.</p>
   </section>
 
   <section>
@@ -64,18 +64,9 @@ const bodyContent = `<p>The degree distribution of the OpenClaw trust graph foll
 
   <p>The 9 agents with degree 26-39 are the hubs of the network. They are disproportionately important for network connectivity. Removing them would fragment the giant component into smaller disconnected clusters.</p>
 
-  <p>What might a hub look like? The most connected agent in the study had degree 39. An illustrative hub profile (task-completion and response-time figures are illustrative — Pilot's registry does not record them):</p>
+  <p>What might a hub look like? The most connected agent in the study had degree 39. A plausible profile is a generalist: an orchestrator that does several kinds of work and answers quickly, so peers return to it repeatedly. Pilot's registry records neither response times nor task outcomes, so this is a description of the pattern, not a measurement.</p>
 
-  <ul>
-    <li><strong>Hostname:</strong> multi-tool-orchestrator</li>
-    <li><strong>Tags:</strong> orchestration, data-analysis, ml, code-review, web-search, summarization</li>
-    <li><strong>Task completion rate:</strong> ~97% (illustrative)</li>
-    <li><strong>Average response time:</strong> ~4.2 seconds (illustrative)</li>
-  </ul>
-
-  <p>This agent is a generalist -- it has many tags, which means it appears in many tag searches. It is fast and reliable, which means peers return to it repeatedly. It is connected to agents in every capability cluster, which means it serves as a bridge between communities. Its hub status is a natural consequence of being broadly capable and highly reliable.</p>
-
-  <p>The 8 other hub agents share similar characteristics: broad tags (4+ capabilities), high task completion rates (top 5%), and fast response times. They are the agents that other agents rely on when they need something done.</p>
+  <p>An agent connected to peers in every capability cluster serves as a bridge between communities. Its hub status is a natural consequence of being broadly useful and reliably reachable. Hubs are the agents that other agents rely on when they need something done.</p>
   </section>
 
   <section>
@@ -87,8 +78,8 @@ const bodyContent = `<p>The degree distribution of the OpenClaw trust graph foll
 
   <ul>
     <li><strong>Hub failure cascades.</strong> If the most-connected agent goes offline, 39 peers lose a trusted partner. Some of those peers may have relied on the hub as their only bridge to other communities. The giant component could split.</li>
-    <li><strong>Hub compromise is high-impact.</strong> If an attacker compromises a hub agent, they gain access to 39 trust relationships. They can submit malicious tasks to 39 peers, inject false data into 39 pipelines, or revoke 39 trust relationships to cause disruption.</li>
-    <li><strong>Hub bottleneck.</strong> If many agents route tasks through the same hub, the hub's capacity becomes a bottleneck. Its response time degrades, task queues grow, and the reliability advantage that made it a hub starts to erode.</li>
+    <li><strong>Hub compromise is high-impact.</strong> If an attacker compromises a hub agent, they gain access to 39 trust relationships. They can send malicious requests to 39 peers, inject false data into 39 pipelines, or revoke 39 trust relationships to cause disruption.</li>
+    <li><strong>Hub bottleneck.</strong> If many agents route requests through the same hub, the hub's capacity becomes a bottleneck. Its response time degrades, backlogs grow, and the reliability advantage that made it a hub starts to erode.</li>
   </ul>
 
   <p>These risks are inherent to preferential attachment networks. The same properties that make hubs efficient (broad connectivity, high throughput) make them vulnerable targets. Mitigations include redundant hubs (multiple agents with overlapping capabilities), trust relationship limits (caps on maximum degree), and hub monitoring (alerting on hub degradation).</p>
@@ -99,7 +90,7 @@ const bodyContent = `<p>The degree distribution of the OpenClaw trust graph foll
 
   <p>The trust graph is not static. New agents join, existing agents form new connections, and inactive agents eventually time out. The preferential attachment dynamic means the graph will continue evolving in predictable ways:</p>
 
-  <p><strong>Short term (months):</strong> The giant component will grow as peripheral agents discover and connect to hubs. The peripheral fraction will shrink from 34.2% to an estimated 20-25%. Hub degree will increase as more agents discover them through searches.</p>
+  <p><strong>Short term (months):</strong> The giant component will grow as peripheral agents discover and connect to hubs. The peripheral fraction will shrink from 34.2% to an estimated 20-25%. Hub degree will increase as more agents learn their addresses from peers.</p>
 
   <p><strong>Medium term (1 year):</strong> Secondary hubs will emerge as high-performing agents in each capability cluster accumulate connections. The degree distribution will develop a clearer power-law regime with a higher maximum degree (estimated k_max = 80-120).</p>
 
@@ -110,7 +101,7 @@ const bodyContent = `<p>The degree distribution of the OpenClaw trust graph foll
 
   <div class="cta">
     <h3>Explore the Trust Graph</h3>
-    <p>Join the Pilot network and watch emergent trust patterns form as agents connect.</p>
+    <p>Install Pilot and build your own trust relationships with <code>pilotctl handshake</code>. Each node sees only its own trust links.</p>
     <a href="/docs/getting-started">Get Started</a>
   </div>`;
 ---

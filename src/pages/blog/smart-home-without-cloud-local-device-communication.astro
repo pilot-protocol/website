@@ -48,20 +48,21 @@ const bodyContent = `<p>In January 2026, Belkin shut down the Wemo cloud service
 
   <h2 id="pilot-approach">The Pilot Protocol Approach</h2>
 
-  <p>Pilot Protocol is an overlay network originally designed for AI agent communication. It provides virtual addresses, encrypted tunnels, NAT traversal, and a trust model -- all over UDP, with zero cloud dependencies. The same properties that make it useful for agents make it applicable to local-first IoT.</p>
+  <p>Pilot Protocol is an overlay network originally designed for AI agent communication. It provides virtual addresses, encrypted tunnels, NAT traversal, and a trust model -- all over UDP -- and its coordination servers (a registry and a beacon) are open source, so you can run them on your own hardware. The same properties that make it useful for agents make it applicable to local-first IoT.</p>
 
-  <p>The key difference: Pilot runs entirely on your local network. There is no external service to depend on, no account to create, and no subscription to maintain.</p>
+  <p>The key difference: Pilot can run entirely on your local network. By default a daemon registers with the public backbone that Vulture Labs runs. For a smart home, run the open-source rendezvous server (registry and beacon in one process) on a hub in your house and point every device at it; then there is no external service to depend on, no account to create, and no subscription to maintain. The daemon also polls a message-of-the-day feed and sends telemetry by default; start <code>pilot-daemon</code> with <code>-motd-feed-url ""</code> and <code>-telemetry-url ""</code> to turn both off.</p>
 
-  <pre><code><span class="comment"># Initialize a device agent (e.g., a temperature sensor)</span>
-<span class="cmd">$ pilotctl init --hostname kitchen-temp</span>
-Identity created: ~/.pilot/identity.json
-Virtual address: 1:0001.0000.0001
+  <pre><code><span class="comment"># Point a device agent (e.g., a temperature sensor) at the hub's registry and beacon</span>
+<span class="cmd">$ pilotctl init --hostname kitchen-temp --registry hub.local:9000 --beacon hub.local:9001</span>
 
-<span class="comment"># Start the daemon</span>
+<span class="comment"># Start the daemon (it creates the identity on first start)</span>
 <span class="cmd">$ pilotctl daemon start --email admin@home.local</span>
-Agent online: kitchen-temp (1:0001.0000.0001)</code></pre>
+Daemon running (pid 812)
+  Address:  0:0000.0000.0002
+  Hostname: kitchen-temp
+  ...</code></pre>
 
-  <p>The device now has a permanent 48-bit virtual address (<code>1:0001.0000.0001</code>) and an Ed25519 cryptographic identity. That address and identity persist across reboots, firmware updates, and network changes. The address is not tied to an IP, a MAC address, or a DHCP lease. It is a logical identifier that maps to the device's current physical location on the network.</p>
+  <p>The device now has a permanent 48-bit virtual address (<code>0:0000.0000.0002</code>) and an Ed25519 cryptographic identity. That address and identity persist across reboots, firmware updates, and network changes. The address is not tied to an IP, a MAC address, or a DHCP lease. It is a logical identifier that maps to the device's current physical location on the network.</p>
 
   <h2 id="architecture">Architecture: Lightweight Daemons</h2>
 
@@ -69,33 +70,32 @@ Agent online: kitchen-temp (1:0001.0000.0001)</code></pre>
 
   <pre><code><span class="comment"># Home network layout:</span>
 <span class="comment">#</span>
-<span class="comment"># Raspberry Pi (hub)      -- runs the local network</span>
-<span class="comment"># Kitchen temp sensor     -- pilotctl daemon, addr 1:0001.0000.0001</span>
-<span class="comment"># Living room light       -- pilotctl daemon, addr 1:0001.0000.0002</span>
-<span class="comment"># Thermostat controller   -- pilotctl daemon, addr 1:0001.0000.0003</span>
-<span class="comment"># Door lock               -- pilotctl daemon, addr 1:0001.0000.0004</span>
-<span class="comment"># Automation engine       -- pilotctl daemon, addr 1:0001.0000.0005</span>
+<span class="comment"># Raspberry Pi (hub)      -- rendezvous server (registry + beacon), plus a daemon, addr 0:0000.0000.0001</span>
+<span class="comment"># Kitchen temp sensor     -- pilot daemon, addr 0:0000.0000.0002</span>
+<span class="comment"># Living room light       -- pilot daemon, addr 0:0000.0000.0003</span>
+<span class="comment"># Thermostat controller   -- pilot daemon, addr 0:0000.0000.0004</span>
+<span class="comment"># Door lock               -- pilot daemon, addr 0:0000.0000.0005</span>
+<span class="comment"># Automation engine       -- pilot daemon, addr 0:0000.0000.0006</span>
 <span class="comment">#</span>
-<span class="comment"># All communication is local. Nothing leaves the LAN.</span></code></pre>
+<span class="comment"># All communication is local: the registry and beacon run on the hub.</span></code></pre>
 
   <p>The automation engine is just another agent on the network. It establishes trust with each device through the handshake protocol, subscribes to sensor events, and sends commands to actuators. Here is what the event flow looks like:</p>
 
-  <pre><code><span class="comment"># Temperature sensor publishes readings via event stream (port 1002)</span>
-<span class="cmd">$ pilotctl publish "sensors/temperature/kitchen" --data '{"value": 72.4, "unit": "F"}'</span>
+  <pre><code><span class="comment"># Temperature sensor publishes readings to the hub's event stream (port 1002)</span>
+<span class="cmd">$ pilotctl publish hub "sensors/temperature/kitchen" --data '{"value": 72.4, "unit": "F"}'</span>
 
-<span class="comment"># Automation engine subscribes to all sensor topics</span>
-<span class="cmd">$ pilotctl subscribe "sensors/*"</span>
+<span class="comment"># Automation engine subscribes to every topic on the hub</span>
+<span class="cmd">$ pilotctl subscribe hub "*"</span>
 [sensors/temperature/kitchen] {"value": 72.4, "unit": "F"}
 [sensors/temperature/kitchen] {"value": 73.1, "unit": "F"}
-[sensors/humidity/bathroom]   {"value": 65, "unit": "%"}
+[sensors/humidity/bathroom] {"value": 65, "unit": "%"}
 
 <span class="comment"># Automation engine sends a command to the thermostat</span>
-<span class="cmd">$ pilotctl send-message thermostat-ctrl '{"action": "set_temp", "target": 70}'</span>
-Message delivered (encrypted, 52 bytes)</code></pre>
+<span class="cmd">$ pilotctl send-message thermostat-ctrl --data '{"action": "set_temp", "target": 70}'</span></code></pre>
 
-  <p>The event stream uses Pilot's built-in pub/sub on port 1002. Topics are hierarchical strings with wildcard support. The automation engine subscribes to <code>sensors/*</code> and receives events from every sensor type. When a threshold is crossed, it sends a command via the data exchange port (1001). All communication is encrypted end-to-end with X25519 + AES-256-GCM.</p>
+  <p>The event stream uses Pilot's built-in pub/sub on port 1002; here the hub's daemon is the broker. Topics are plain strings matched exactly, and <code>*</code> subscribes to every topic, which is how the automation engine receives events from every sensor type. When a threshold is crossed, it sends a command via the data exchange port (1001). All communication is encrypted end-to-end with X25519 + AES-256-GCM.</p>
 
-  <p>The Pilot daemon runs at approximately 10MB RSS idle. On a Raspberry Pi 4 with 4GB RAM, you could run 300+ device daemons simultaneously. For a typical home with 20-50 smart devices, resource usage is negligible.</p>
+  <p>Each device runs one daemon. Measure its memory and CPU on your own hardware before packing many daemons onto one board.</p>
 
   <h2 id="comparison">Comparison: Pilot vs. Zigbee vs. Matter/Thread vs. MQTT</h2>
 
@@ -106,14 +106,14 @@ Message delivered (encrypted, 52 bytes)</code></pre>
     <tbody>
       <tr><td>Cloud required</td><td>No</td><td>No (coordinator)</td><td>Commissioning only</td><td>No (self-hosted broker)</td></tr>
       <tr><td>Account required</td><td>No</td><td>No</td><td>Yes (manufacturer)</td><td>No</td></tr>
-      <tr><td>Encryption</td><td>X25519 + AES-256-GCM (mandatory)</td><td>AES-128-CCM</td><td>AES-128-CCM</td><td>TLS (optional)</td></tr>
+      <tr><td>Encryption</td><td>X25519 + AES-256-GCM (on by default)</td><td>AES-128-CCM</td><td>AES-128-CCM</td><td>TLS (optional)</td></tr>
       <tr><td>NAT traversal</td><td>Built-in (STUN + hole-punch + relay)</td><td>N/A (local mesh)</td><td>N/A (local mesh)</td><td>Requires VPN or port forwarding</td></tr>
       <tr><td>Remote access</td><td>Yes (tunnels through NAT)</td><td>Requires cloud bridge</td><td>Requires cloud bridge</td><td>Requires port forwarding</td></tr>
       <tr><td>Device identity</td><td>Ed25519 key pair</td><td>64-bit IEEE address</td><td>Device Attestation Certificate</td><td>Username/password</td></tr>
       <tr><td>Transport</td><td>UDP overlay (IP network)</td><td>IEEE 802.15.4 (radio)</td><td>Thread (radio) or Wi-Fi</td><td>TCP (IP network)</td></tr>
       <tr><td>Pub/sub</td><td>Built-in (port 1002)</td><td>Group commands</td><td>Group commands</td><td>Core feature</td></tr>
       <tr><td>Trust model</td><td>Mutual handshake + revocation</td><td>Network key</td><td>Certificate-based</td><td>ACL lists</td></tr>
-      <tr><td>Survives vendor shutdown</td><td>Yes (fully local)</td><td>Yes (local coordinator)</td><td>Partially (commissioning may break)</td><td>Yes (self-hosted broker)</td></tr>
+      <tr><td>Survives vendor shutdown</td><td>Yes, with a self-hosted registry and beacon</td><td>Yes (local coordinator)</td><td>Partially (commissioning may break)</td><td>Yes (self-hosted broker)</td></tr>
     </tbody>
   </table>
 
@@ -124,19 +124,17 @@ Message delivered (encrypted, 52 bytes)</code></pre>
   <p>Pilot Protocol includes built-in NAT traversal: STUN discovers the public endpoint, UDP hole-punching establishes direct connections where possible, and the configured beacon provides ciphertext relay fallback. A phone running the daemon can reach home devices without opening router ports or deploying a VPN, but relay-backed traffic still transits that beacon.</p>
 
   <pre><code><span class="comment"># From your phone (connected to mobile data, behind carrier NAT)</span>
-<span class="cmd">$ pilotctl send-message door-lock '{"action": "lock"}'</span>
-Message delivered (encrypted, relay via beacon, 145ms RTT)
+<span class="cmd">$ pilotctl send-message door-lock --data '{"action": "lock"}'</span>
 
-<span class="comment"># Check thermostat status</span>
-<span class="cmd">$ pilotctl send-message thermostat-ctrl --data '{"action": "get_status"}'</span>
-{"current_temp": 70.2, "target_temp": 70, "mode": "auto", "state": "idle"}</code></pre>
+<span class="comment"># Check thermostat status: --wait prints the reply, if the thermostat's software sends one</span>
+<span class="cmd">$ pilotctl send-message thermostat-ctrl --data '{"action": "get_status"}' --wait</span></code></pre>
 
   <p>The connection is end-to-end encrypted. If the traffic is relayed through the beacon (because your carrier NAT is symmetric), the beacon sees only encrypted bytes. It cannot read the commands or the responses. Your home automation data never touches a third-party server in cleartext.</p>
 
-  <p>For this to work from outside your home network, the beacon needs to be reachable from the internet. You have two options: run the beacon on a small cloud VM (a $5/month VPS is more than sufficient) or use a publicly reachable machine as a relay point. The beacon is stateless -- it does not store data, it does not require authentication from relayed parties, and it does not decrypt traffic. It is a dumb packet forwarder.</p>
+  <p>For this to work from outside your home network, the phone has to reach your registry and beacon. You have two options: forward the hub's TCP port 9000 and UDP port 9001, or run the rendezvous server (registry and beacon together) on a small VPS. The beacon does not store data and does not decrypt traffic; for relayed paths it forwards ciphertext.</p>
 
   <div class="callout">
-    <p><strong>Key distinction:</strong> A beacon relay is not a cloud dependency. It does not store state, it does not require accounts, and it can be replaced by any other beacon at any time. If your beacon VM goes offline, local communication continues uninterrupted. Only remote access is affected, and it resumes the moment you point to a different beacon. This is fundamentally different from a cloud service that owns your device graph.</p>
+    <p><strong>Key distinction:</strong> a rendezvous server you run is not a cloud dependency. It stores registrations, not your data, needs no account, and can be moved to another machine. If it goes offline, established direct tunnels keep working; new lookups and relayed paths wait until it is back. This is fundamentally different from a cloud service that owns your device graph.</p>
   </div>
 
   <h2 id="device-setup">Device Setup: No Accounts, No Registration</h2>
@@ -145,51 +143,44 @@ Message delivered (encrypted, relay via beacon, 145ms RTT)
 
   <pre><code><span class="comment"># On the new device (e.g., a smart plug running Linux)</span>
 <span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
-<span class="cmd">$ pilotctl init --hostname office-plug</span>
+<span class="cmd">$ pilotctl init --hostname office-plug --registry hub.local:9000 --beacon hub.local:9001</span>
 <span class="cmd">$ pilotctl daemon start --email admin@home.local</span>
-Agent online: office-plug (1:0001.0000.0006)
+Daemon running (pid 640)
+  Address:  0:0000.0000.0007
+  Hostname: office-plug
+  ...
 
-<span class="comment"># On the automation engine -- establish trust</span>
-<span class="cmd">$ pilotctl handshake office-plug "Home automation control"</span>
-Handshake request sent. Waiting for approval...
+<span class="comment"># On the automation engine -- request trust by the plug's address</span>
+<span class="cmd">$ pilotctl handshake 0:0000.0000.0007 "Home automation control"</span>
+handshake request sent to node 7
 
-<span class="comment"># On the new device -- approve (can be auto-approved via policy)</span>
-<span class="cmd">$ pilotctl approve 1:0001.0000.0005</span>
-Trust established with home-automation
+<span class="comment"># On the new device -- approve the automation engine (node 6)</span>
+<span class="comment"># (or start daemons with --trust-auto-approve on a registry where every node is yours)</span>
+<span class="cmd">$ pilotctl approve 6</span>
+trust established with node 6</code></pre>
 
-<span class="comment"># Tag the device (metadata) and give it a function-named hostname</span>
-<span class="cmd">$ pilotctl extras set-tags smart-plug office power-control</span>
-Tags updated: smart-plug, office, power-control
+  <p>No accounts created. No manufacturer registration. Apart from downloading the installer, no outside service is involved once the device points at your hub. The device has a permanent address, a cryptographic identity, and an encrypted connection to the automation engine. If the manufacturer goes bankrupt tomorrow, nothing changes.</p>
 
-<span class="comment"># Peer search matches node ID + hostname substring, so name devices by function</span>
-<span class="cmd">$ pilotctl peers --search "plug"</span>
-1:0001.0000.0006  office-plug  online</code></pre>
-
-  <p>Total time: under two minutes. No accounts created. No websites visited. No manufacturer registration. No cloud service contacted. The device has a permanent address, a cryptographic identity, and an encrypted connection to the automation engine. If the manufacturer goes bankrupt tomorrow, nothing changes.</p>
-
-  <h2 id="tags-discovery">Capability Discovery With Hostnames and Tags</h2>
+  <h2 id="tags-discovery">Finding Devices by Name</h2>
 
   <p>In a traditional smart home, device discovery relies on protocol-specific mechanisms: Zigbee device interviews, Matter commissioning, mDNS broadcasting. Each protocol has its own discovery format, and devices from different protocols cannot discover each other without a bridge.</p>
 
-  <p>Pilot uses a simpler approach: give each device a function-named hostname and tag it with human-readable descriptors. <code>set-tags</code> stores the tags as metadata; <code>peers --search</code> then matches on the node ID and hostname substring, so encoding the function in the hostname lets the automation engine find devices by role rather than by protocol or manufacturer.</p>
+  <p>Pilot uses a simpler approach: give each device a function-named hostname and resolve it by name. There is no tag or capability search, so a group such as "all lights" is a list you keep yourself.</p>
 
-  <pre><code><span class="comment"># Tag devices (metadata) and name them by function</span>
-<span class="cmd">$ pilotctl extras set-tags temperature-sensor kitchen sensors</span>
-<span class="cmd">$ pilotctl extras set-tags smart-light living-room lights dimmable</span>
-<span class="cmd">$ pilotctl extras set-tags door-lock front-door security locks</span>
+  <pre><code><span class="comment"># Name devices by function (on each device)</span>
+<span class="cmd">$ pilotctl set-hostname living-room-light</span>
 
-<span class="comment"># Find all lights (hostnames contain "light")</span>
-<span class="cmd">$ pilotctl peers --search "light"</span>
-1:0001.0000.0002  living-room-light  online
-1:0001.0000.0007  bedroom-light      online
-1:0001.0000.0008  kitchen-light      online
+<span class="comment"># Resolve one device by name (it must trust you, share a network with you, or be public)</span>
+<span class="cmd">$ pilotctl find living-room-light</span>
+Hostname:  living-room-light
+Node ID:   3
+Address:   0:0000.0000.0003
+Visible:   private
 
-<span class="comment"># Find all security devices (hostnames prefixed "security-")</span>
-<span class="cmd">$ pilotctl peers --search "security"</span>
-1:0001.0000.0004  security-door-lock  online
-1:0001.0000.0009  security-camera     online</code></pre>
+<span class="comment"># "All lights" is your own inventory, for example a file of hostnames</span>
+<span class="cmd">$ for h in $(cat lights.txt); do pilotctl find "$h"; done</span></code></pre>
 
-  <p>Tags are stored in the local registry. They require no schema, no ontology, and no central authority defining what "light" means. The convention is up to you. This is less structured than a formal device model, but it is also less brittle. When a new device type appears that did not exist when the standard was written, you just invent a tag.</p>
+  <p>You can also attach up to three tags to a device with <code>pilotctl extras set-tags</code> (lowercase letters, digits and hyphens). The registry stores them as metadata, but nothing searches them for you. Hostnames need no schema, no ontology, and no central authority defining what "light" means. The convention is up to you. This is less structured than a formal device model, but it is also less brittle. When a new device type appears that did not exist when the standard was written, you just pick a new name.</p>
 
   <h2 id="limitations">Honest Limitations</h2>
 
@@ -199,11 +190,11 @@ Tags updated: smart-plug, office, power-control
     <li><strong>No radio support.</strong> Pilot runs over IP networks (Wi-Fi or Ethernet). It cannot talk to Zigbee radios, Z-Wave chips, or Thread border routers directly. Devices need to be IP-capable. For battery-powered sensors that use Zigbee or Thread for power efficiency, you still need a Zigbee coordinator or Thread border router. Pilot can coordinate the coordinators, but it does not replace the radio layer.</li>
     <li><strong>No device drivers.</strong> Pilot does not know how to dim a light or read a temperature sensor. It provides the communication channel. The application logic that translates "set brightness to 50%" into the correct GPIO command lives in the device firmware, not in Pilot.</li>
     <li><strong>No out-of-the-box UI.</strong> There is no phone app with a nice dashboard showing your rooms and devices. The Pilot CLI shows node status, but it is designed for agent fleet management, not home automation. A consumer-friendly UI would need to be built on top.</li>
-    <li><strong>Go runtime required.</strong> The Pilot daemon is written in Go and compiles to a single binary. This works on Raspberry Pi, Intel NUCs, and any Linux SBC. It does not run on microcontrollers (ESP32, Arduino) without significant porting effort. For microcontroller-based devices, you would need a bridge device running the Pilot daemon that translates between the microcontroller's native protocol and the Pilot network.</li>
+    <li><strong>Needs a computer, not a microcontroller.</strong> The Pilot daemon and CLI are static Go binaries. This works on Raspberry Pi, Intel NUCs, and any Linux SBC. It does not run on microcontrollers (ESP32, Arduino) without significant porting effort. For microcontroller-based devices, you would need a bridge device running the Pilot daemon that translates between the microcontroller's native protocol and the Pilot network.</li>
     <li><strong>No ecosystem integrations.</strong> There are no Home Assistant plugins, no Alexa skills, no Google Home actions. Pilot is a communication layer, not a home automation platform. Integration with existing platforms would require custom development.</li>
   </ul>
 
-  <p>Pilot's value proposition for smart home is narrow but specific: it is the coordination layer that does not depend on anyone else's infrastructure. If you are building a custom home automation system from IP-capable devices and you want it to survive any vendor's business decisions, Pilot provides the addressing, encryption, discovery, and remote access. The device control, automation logic, and user interface are your responsibility.</p>
+  <p>Pilot's value proposition for smart home is narrow but specific: with a self-hosted registry and beacon, it is a coordination layer that does not depend on anyone else's infrastructure. If you are building a custom home automation system from IP-capable devices and you want it to survive any vendor's business decisions, Pilot provides the addressing, encryption, discovery, and remote access. The device control, automation logic, and user interface are your responsibility.</p>
 
   <h2 id="what-happens-next">When the Next Cloud Shuts Down</h2>
 
@@ -217,7 +208,7 @@ Tags updated: smart-plug, office, power-control
 
   <div class="cta">
     <h3>Try Pilot Protocol</h3>
-    <p>Permanent virtual addresses, encrypted communication, zero cloud dependencies. Build a smart home that outlives every vendor.</p>
+    <p>Permanent virtual addresses, encrypted communication, and a coordination layer you can run yourself. Build a smart home that outlives every vendor.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 ---

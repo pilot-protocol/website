@@ -45,7 +45,7 @@ const bodyContent = `<p>Remote AI agents need a deliberate network layer because
 
   <p>The scale of the problem keeps growing. Non-human identities -- agents, service accounts, API keys, bots -- already outnumber human identities in enterprise environments. Each one needs its own identity. The old model of a human administrator manually provisioning and rotating credentials does not scale to fleets of autonomous agents.</p>
 
-  <p>What is useful is a system where every agent has a <strong>unique cryptographic identity</strong> that it controls and can prove to a peer. In Pilot, this begins with the Ed25519 key pair generated during <code>pilotctl init</code>. The node retains its private key and uses signatures during identity and trust operations; registry and enterprise identity controls remain separate parts of the deployment.</p>
+  <p>What is useful is a system where every agent has a <strong>unique cryptographic identity</strong> that it controls and can prove to a peer. In Pilot, this begins with the Ed25519 key pair the daemon generates the first time it starts. The node retains its private key and uses signatures during identity and trust operations; registry-side controls, such as OIDC/JWT validation on a registry you run yourself, remain separate parts of the deployment.</p>
 
   <h2 id="quadratic">The Quadratic Explosion</h2>
 
@@ -91,7 +91,7 @@ const bodyContent = `<p>Remote AI agents need a deliberate network layer because
 
   <h3>NAT Traversal</h3>
 
-  <p>The network stack handles <strong>STUN discovery</strong>, <strong>hole-punching</strong>, and <strong>relay fallback</strong> automatically. The agent developer never thinks about NAT types, port mappings, or firewall rules. An agent behind a home router communicates with an agent behind a corporate firewall as easily as two agents on the same LAN.</p>
+  <p>The network stack handles <strong>STUN discovery</strong>, <strong>hole-punching</strong>, and <strong>relay fallback</strong> automatically. The agent developer does not configure NAT types, port mappings, or firewall rules. An agent behind a home router can reach an agent behind a corporate firewall without either side opening a port; networks that block UDP entirely use compat mode over TCP 443.</p>
 
   <h3>Tunnel Encryption</h3>
 
@@ -125,7 +125,7 @@ const bodyContent = `<p>Remote AI agents need a deliberate network layer because
 
   <h3>Decouple membership from trust</h3>
 
-  <p>Flat-network deployments can treat membership as broad reachability, although modern private networks may add detailed policy. For agents, keep membership, discovery, and authorization as distinct decisions. Pilot peer trust uses a bilateral handshake, while managed-network policy can further constrain relationships.</p>
+  <p>Flat-network deployments can treat membership as broad reachability, although modern private networks may add detailed policy. For agents, keep membership, discovery, and authorization as distinct decisions. Pilot peer trust uses a bilateral handshake, while network policy on a registry you run can further constrain relationships.</p>
 
   <h3>Keep connections stateful</h3>
 
@@ -135,7 +135,7 @@ const bodyContent = `<p>Remote AI agents need a deliberate network layer because
 
   <p>Every agent team ends up reinventing message passing and event distribution. Well-known service ports (echo, data exchange, pub/sub) give agents a shared vocabulary for common capabilities, so applications build on a stable service layer instead of bespoke protocols. It is the same move the internet made when it standardized on TCP/IP and DNS: a shared foundation lets everyone innovate above it.</p>
 
-  <p>These practices are exactly what Pilot Protocol implements as its core: permanent virtual addresses, automatic NAT traversal, encrypted tunnels, per-peer trust, stateful connections, and well-known service ports -- in a single Go daemon with no external dependencies. The fastest way to see them in practice is the <a href="build-multi-agent-network-five-minutes">five-minute multi-agent network tutorial</a>, or the <a href="/learn/what-is-pilot-protocol">plain-language primer on what Pilot Protocol is</a>.</p>
+  <p>These practices are exactly what Pilot Protocol implements as its core: permanent virtual addresses, automatic NAT traversal, encrypted tunnels, per-peer trust, stateful connections, and well-known service ports -- in a Go daemon and CLI distributed as static binaries with no runtime dependencies, coordinated by a registry and beacon (the public ones or your own). The fastest way to see them in practice is the <a href="build-multi-agent-network-five-minutes">five-minute multi-agent network tutorial</a>, or the <a href="/learn/what-is-pilot-protocol">plain-language primer on what Pilot Protocol is</a>.</p>
 
   <h2 id="tailscale">The Tailscale Analogy</h2>
 
@@ -163,7 +163,7 @@ const bodyContent = `<p>Remote AI agents need a deliberate network layer because
 
   <p>The internet works because the network layer is shared. Everyone uses TCP/IP. Everyone uses DNS. The application layer can innovate because the transport layer is stable and universal. Agents need the same foundation.</p>
 
-  <p>Pilot Protocol is a proposal for what that foundation looks like: <strong>permanent addresses</strong>, <strong>encrypted tunnels</strong>, <strong>automatic NAT traversal</strong>, <strong>cryptographic trust</strong>, and <strong>port-based services</strong>. The core daemon is a static Go binary with no external runtime dependencies. It is one of several agent networking approaches worth evaluating -- see the honest architecture comparison in <a href="/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents">Pilot vs Tailscale vs Nebula vs ZeroTier for AI Agents</a>, and the <a href="/blog/ai-networking-best-practices-secure-scalable-systems">broader AI networking best practices guide</a> for the security side of the same coin.</p>
+  <p>Pilot Protocol is a proposal for what that foundation looks like: <strong>permanent addresses</strong>, <strong>encrypted tunnels</strong>, <strong>automatic NAT traversal</strong>, <strong>cryptographic trust</strong>, and <strong>port-based services</strong>. The core daemon is a static Go binary with no runtime dependencies; it needs a registry and beacon, public or self-hosted. It is one of several agent networking approaches worth evaluating -- see the honest architecture comparison in <a href="/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents">Pilot vs Tailscale vs Nebula vs ZeroTier for AI Agents</a>, and the <a href="/blog/ai-networking-best-practices-secure-scalable-systems">broader AI networking best practices guide</a> for the security side of the same coin.</p>
 
   <div class="callout">
     <p><strong>The boundary is the point:</strong> the network layer handles identity-bearing paths, reachability, encryption, and transport behavior. The application layer still handles tool authorization, model context, approvals, transactions, and business policy.</p>
