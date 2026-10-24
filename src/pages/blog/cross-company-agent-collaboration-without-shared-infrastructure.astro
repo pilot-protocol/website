@@ -84,14 +84,14 @@ const bodyContent = `<p>Your company has an AI research agent. A partner company
   <p>Every agent generates an <strong>Ed25519 identity key pair</strong> at first startup. This key pair is the agent's permanent identity. Trust is established through a mutual handshake protocol:</p>
 
   <pre><code><span class="comment"># Agent A initiates trust with Agent B</span>
-<span class="cmd">pilotctl handshake 1:0001.0000.0042 "Research collaboration with PartnerCo"</span>
+<span class="cmd">pilotctl handshake 0:0000.0000.0042 "Research collaboration with PartnerCo"</span>
 
 <span class="comment"># Agent B reviews and approves (or rejects)</span>
 <span class="cmd">pilotctl pending</span>
-<span class="cmd">pilotctl approve 1:0001.0000.0017</span>
+<span class="cmd">pilotctl approve 0:0000.0000.0017</span>
 
 <span class="comment"># Both agents can now communicate</span>
-<span class="cmd">pilotctl send-message 1:0001.0000.0042 "Ready for task delegation"</span></code></pre>
+<span class="cmd">pilotctl send-message 0:0000.0000.0042 --data "Ready for task delegation"</span></code></pre>
 
   <p>This is fundamentally different from API key exchange. Both sides must explicitly approve the connection. Either side can revoke trust instantly. The justification field creates an audit trail. And the trust relationship is cryptographic -- it is not a shared secret that can be leaked, but a signature chain that proves both parties consented.</p>
   </section>
@@ -118,7 +118,7 @@ const bodyContent = `<p>Your company has an AI research agent. A partner company
   <p>Trust revocation is instant and unilateral:</p>
 
   <pre><code><span class="comment"># Revoke trust from a specific agent</span>
-<span class="cmd">pilotctl untrust 1:0001.0000.0042</span>
+<span class="cmd">pilotctl untrust 0:0000.0000.0042</span>
 
 <span class="comment"># The revoked agent can no longer:</span>
 <span class="comment"># - Use the revoked peer-trust grant</span>
@@ -137,37 +137,35 @@ const bodyContent = `<p>Your company has an AI research agent. A partner company
 
   <pre><code><span class="comment"># Company A: install and start research agent</span>
 <span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
-<span class="cmd">pilot-daemon</span>
-<span class="cmd">pilotctl network join 1</span>
-<span class="cmd">pilotctl set-hostname research-agent-a</span>
-<span class="cmd">pilotctl extras set-tags role=research,domain=finance</span>
+<span class="cmd">pilotctl daemon start --hostname research-agent-a</span>
+<span class="cmd">pilotctl extras set-tags research finance</span>  <span class="comment"># up to 3 labels, a-z 0-9 -</span>
 
 <span class="comment"># Company B: install and start data agent</span>
 <span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
-<span class="cmd">pilot-daemon</span>
-<span class="cmd">pilotctl network join 1</span>
-<span class="cmd">pilotctl set-hostname data-agent-b</span>
-<span class="cmd">pilotctl extras set-tags role=analysis,domain=finance,accepts=queries</span></code></pre>
+<span class="cmd">pilotctl daemon start --hostname data-agent-b</span>
+<span class="cmd">pilotctl extras set-tags analysis finance queries</span>
+
+<span class="comment"># The companies exchange their agents' addresses out of band</span></code></pre>
 
   <h3>Establish trust</h3>
 
   <pre><code><span class="comment"># Company A's agent requests trust with Company B's agent</span>
-<span class="cmd">pilotctl handshake 1:0001.0000.0042 "Q1 financial research collaboration per MSA dated 2026-01-15"</span>
+<span class="cmd">pilotctl handshake 0:0000.0000.0042 "Q1 financial research collaboration per MSA dated 2026-01-15"</span>
 
 <span class="comment"># Company B's agent reviews and approves</span>
-<span class="cmd">pilotctl pending --json</span>
-<span class="comment"># {"address":"1:0001.0000.0017","justification":"Q1 financial research collaboration..."}</span>
-<span class="cmd">pilotctl approve 1:0001.0000.0017</span></code></pre>
+<span class="cmd">pilotctl --json pending</span>
+<span class="comment"># {"status":"ok","data":{"pending":[{"node_id":23,"justification":"Q1 financial research collaboration...","received_at":...}]}}</span>
+<span class="cmd">pilotctl approve 23</span></code></pre>
 
   <h3>Collaborate</h3>
 
-  <pre><code><span class="comment"># Company A: send a request to Company B's agent</span>
-<span class="cmd">pilotctl send 1:0001.0000.0042 \\
+  <pre><code><span class="comment"># Company A: send a request to Company B's agent and wait for the reply</span>
+<span class="cmd">pilotctl --json send-message 0:0000.0000.0042 --wait 10m --data \\
   '{"description":"Analyze Q1 revenue trends for NASDAQ tech sector","params":{"sectors":["tech"],"exchange":"NASDAQ","period":"Q1-2026"}}'</span>
 
-<span class="comment"># Company B's agent processes the request and sends results back</span>
-<span class="comment"># Company A receives the result over the encrypted tunnel</span>
-<span class="cmd">pilotctl recv --from 1:0001.0000.0042 --json</span></code></pre>
+<span class="comment"># Company B's agent processes the request and sends results back with send-message;</span>
+<span class="comment"># the reply comes back inline, and later replies stay in Company A's inbox</span>
+<span class="cmd">pilotctl --json inbox --from 0:0000.0000.0042 --latest</span></code></pre>
 
   <h3>Go integration for programmatic use</h3>
 
@@ -179,6 +177,8 @@ import (
     "log"
 
     "github.com/pilot-protocol/common/driver"
+    "github.com/pilot-protocol/common/protocol"
+    "github.com/pilot-protocol/dataexchange"
 )
 
 func main() {
@@ -197,24 +197,30 @@ func main() {
         },
     }
 
+    body, _ := json.Marshal(task)
+
     <span class="comment">// Dial the partner's data agent on the data-exchange port (1001)</span>
-    conn, err := d.Dial("1:0001.0000.0042:1001")
+    partner, _ := protocol.ParseAddr("0:0000.0000.0042")
+    cl, err := dataexchange.Dial(d, partner)
     if err != nil {
         log.Fatal(err)
     }
-    defer conn.Close()
+    defer cl.Close()
 
-    <span class="comment">// Send the task as JSON over the encrypted tunnel</span>
-    json.NewEncoder(conn).Encode(task)
+    <span class="comment">// Send the task as JSON over the encrypted tunnel;</span>
+    <span class="comment">// Send returns once the partner's daemon acknowledges it</span>
+    res, err := cl.Send(&dataexchange.Frame{Type: dataexchange.TypeJSON, Payload: body})
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Delivered: %s\\n", res.Ack.Payload)
 
-    <span class="comment">// Result arrives over the same encrypted tunnel</span>
+    <span class="comment">// The partner's agent answers with a message of its own, which lands</span>
+    <span class="comment">// in this daemon's inbox: pilotctl --json inbox --from 0:0000.0000.0042</span>
     <span class="comment">// No shared API, no API keys, no firewall rules</span>
-    var analysis map[string]any
-    json.NewDecoder(conn).Decode(&analysis)
-    fmt.Printf("Analysis: %v\\n", analysis)
 }</code></pre>
 
-  <p>At no point did either company deploy shared infrastructure. No shared API gateway. No shared message queue. No shared database. No shared cloud account. Each company runs its own agents on its own infrastructure. The agents connect peer-to-peer through encrypted tunnels, with trust established by mutual cryptographic handshake.</p>
+  <p>At no point did either company deploy shared infrastructure. No shared API gateway. No shared message queue. No shared database. No shared cloud account. Each company runs its own agents on its own infrastructure. The agents connect peer-to-peer through encrypted tunnels (relayed through the beacon when no direct path exists), with trust established by mutual cryptographic handshake.</p>
   </section>
 
   <section>
@@ -234,7 +240,7 @@ func main() {
 
   <h3>Audit trails</h3>
 
-  <p>Pilot uses structured logging via Go's <code>slog</code> package. Every trust operation, connection establishment, and data exchange is logged with structured fields. Combined with the webhook event system, organizations can pipe agent activity into their existing SIEM infrastructure:</p>
+  <p>Pilot uses structured logging via Go's <code>slog</code> package. Trust operations and connection events are logged with structured fields. Combined with the webhook event system, organizations can pipe agent activity into their existing SIEM infrastructure:</p>
 
   <pre><code><span class="comment"># Forward all agent events to your monitoring system</span>
 <span class="cmd">pilotctl set-webhook http://localhost:9090/siem-ingest</span>
@@ -261,7 +267,7 @@ func main() {
   <p>In a full stack deployment:</p>
 
   <ol>
-    <li>An agent discovers a peer through Pilot's registry and tag system</li>
+    <li>An agent resolves a peer it knows (by hostname or address) through Pilot's registry</li>
     <li>It establishes a trust handshake (Pilot layer)</li>
     <li>It fetches the peer's A2A Agent Card over the Pilot tunnel (A2A over Pilot)</li>
     <li>It delegates a task using A2A's JSON-RPC format, sent over the encrypted tunnel</li>
@@ -294,16 +300,15 @@ func main() {
 
   <p>Cross-company agent collaboration starts with two commands on each side:</p>
 
-  <pre><code><span class="comment"># Both companies install and join the same network</span>
+  <pre><code><span class="comment"># Both companies install and start the daemon (the public registry is the default)</span>
 <span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
-<span class="cmd">pilot-daemon</span>
-<span class="cmd">pilotctl network join 1</span>
+<span class="cmd">pilotctl daemon start</span>
 
 <span class="comment"># Establish trust (one-time, mutual)</span>
 <span class="cmd">pilotctl handshake &lt;partner-address&gt; "Collaboration purpose"</span>
 
 <span class="comment"># Start communicating</span>
-<span class="cmd">pilotctl send-message &lt;partner-address&gt; "Ready to collaborate"</span></code></pre>
+<span class="cmd">pilotctl send-message &lt;partner-address&gt; --data "Ready to collaborate"</span></code></pre>
 
   <p>No partner-specific broker, VPN peering, or shared credential store is required. The agents use Pilot's coordination layer, establish a mutual trust relationship, and communicate over an encrypted tunnel that is direct when the network permits and relayed as ciphertext when needed.</p>
   </section>

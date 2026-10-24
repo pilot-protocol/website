@@ -57,18 +57,18 @@ const bodyContent = `<p>A single complex query now routinely requires <strong>5 
   <section>
   <h2>Persistent Tunnels: Connect Once, Stream Continuously</h2>
 
-  <p>A Pilot Protocol connection is persistent by design. When two agents connect, they establish an encrypted UDP tunnel with keepalive probes every 30 seconds and an idle timeout of 120 seconds. The tunnel survives network changes, NAT rebinding, and transient packet loss. There is no per-request handshake because the connection is already established.</p>
+  <p>A Pilot Protocol connection is persistent by design. When two agents connect, they establish an encrypted UDP tunnel, and the daemon sends a keepalive over it every 25 seconds. The tunnel survives NAT rebinding and transient packet loss. There is no per-request key exchange because the tunnel is already established.</p>
 
   <p>The model for chaining is simple: each model service registers as a Pilot agent and listens on port 80 for HTTP requests over the overlay. The orchestrator connects to each model agent once, then reuses those persistent tunnels for every inference call. The connection setup cost (STUN discovery, key exchange, tunnel establishment) is paid once, not per request.</p>
 
   <pre><code><span class="comment"># Orchestrator connects to each model agent (one-time cost)</span>
-<span class="cmd">pilotctl ping 1:0001.0001.0001</span>  <span class="comment"># LLM agent - ~200ms first connection</span>
-<span class="cmd">pilotctl ping 1:0001.0002.0001</span>  <span class="comment"># Whisper agent</span>
-<span class="cmd">pilotctl ping 1:0001.0003.0001</span>  <span class="comment"># Image gen agent</span>
+<span class="cmd">pilotctl ping llm-agent</span>      <span class="comment"># LLM agent</span>
+<span class="cmd">pilotctl ping whisper-agent</span>  <span class="comment"># Whisper agent</span>
+<span class="cmd">pilotctl ping image-agent</span>    <span class="comment"># Image gen agent</span>
 
 <span class="comment"># After tunnels are established, every subsequent call</span>
 <span class="comment"># goes directly through the existing encrypted tunnel.</span>
-<span class="comment"># No DNS, no TCP handshake, no TLS negotiation.</span></code></pre>
+<span class="comment"># No public DNS, no TLS negotiation.</span></code></pre>
   </section>
 
   <section>
@@ -79,26 +79,32 @@ const bodyContent = `<p>A single complex query now routinely requires <strong>5 
   <p>Here is the layout:</p>
 
   <ul>
-    <li><strong>Machine A</strong> -- LLM agent, address <code>1:0001.0001.0001</code>, serves <code>/v1/completions</code> on port 80</li>
-    <li><strong>Machine B</strong> -- Whisper agent, address <code>1:0001.0002.0001</code>, serves <code>/v1/transcribe</code> on port 80</li>
-    <li><strong>Machine C</strong> -- Image agent, address <code>1:0001.0003.0001</code>, serves <code>/v1/generate</code> on port 80</li>
-    <li><strong>Machine D</strong> -- Orchestrator, address <code>1:0001.0004.0001</code>, chains calls across A, B, and C</li>
+    <li><strong>Machine A</strong> -- LLM agent, hostname <code>llm-agent</code>, serves <code>/v1/completions</code> on port 80</li>
+    <li><strong>Machine B</strong> -- Whisper agent, hostname <code>whisper-agent</code>, serves <code>/v1/transcribe</code> on port 80</li>
+    <li><strong>Machine C</strong> -- Image agent, hostname <code>image-agent</code>, serves <code>/v1/generate</code> on port 80</li>
+    <li><strong>Machine D</strong> -- Orchestrator, chains calls across A, B, and C</li>
   </ul>
 
-  <p>Each model agent registers with tags describing its capability:</p>
+  <p>Each model agent starts its daemon with a hostname that names its role. Tags are optional labels: a peer sees them when it looks the node up, but there is no search by tag.</p>
 
   <pre><code><span class="comment"># On Machine A</span>
+<span class="cmd">pilotctl daemon start --hostname llm-agent</span>
 <span class="cmd">pilotctl extras set-tags model-service llm reasoning</span>
 
 <span class="comment"># On Machine B</span>
+<span class="cmd">pilotctl daemon start --hostname whisper-agent</span>
 <span class="cmd">pilotctl extras set-tags model-service whisper audio</span>
 
 <span class="comment"># On Machine C</span>
+<span class="cmd">pilotctl daemon start --hostname image-agent</span>
 <span class="cmd">pilotctl extras set-tags model-service diffusion image</span></code></pre>
 
-  <p>The orchestrator finds model hosts by node-ID/hostname substring (tags are metadata the daemon stores, but the peer search matches node ID and hostname, not tags — so name your model hosts with a recognizable prefix):</p>
+  <p>The orchestrator knows these hostnames and resolves each one through the registry. A private node resolves only for peers it trusts, so the orchestrator handshakes with each model agent first and each one approves:</p>
 
-  <pre><code><span class="cmd">pilotctl --json peers --search "model"</span></code></pre>
+  <pre><code><span class="comment"># On Machine D</span>
+<span class="cmd">pilotctl handshake &lt;llm-agent address&gt; "inference pipeline"</span>
+<span class="comment"># On Machine A</span>
+<span class="cmd">pilotctl approve &lt;orchestrator node id&gt;</span></code></pre>
   </section>
 
   <section>
@@ -121,11 +127,11 @@ import (
     "github.com/pilot-protocol/common/driver"
 )
 
-<span class="comment">// Model agent addresses (discovered via hostname substring at startup)</span>
+<span class="comment">// Model agent hostnames (resolved through the registry when dialing)</span>
 var (
-    llmAddr    = "1:0001.0001.0001"
-    whisperAddr = "1:0001.0002.0001"
-    imageAddr  = "1:0001.0003.0001"
+    llmAddr     = "llm-agent"
+    whisperAddr = "whisper-agent"
+    imageAddr   = "image-agent"
 )
 
 type ChainRequest struct {
@@ -221,7 +227,7 @@ func callModel(client *http.Client, agentAddr, path string, payload any) (string
     body, _ := json.Marshal(payload)
 
     <span class="comment">// Request goes through the persistent Pilot tunnel</span>
-    <span class="comment">// No DNS, no TCP handshake, no TLS negotiation</span>
+    <span class="comment">// No public DNS, no TLS negotiation</span>
     url := fmt.Sprintf("http://%s%s", agentAddr, path)
     resp, err := client.Post(url, "application/json", bytes.NewReader(body))
     if err != nil {
@@ -238,68 +244,44 @@ func callModel(client *http.Client, agentAddr, path string, payload any) (string
     return parsed.Result, nil
 }</code></pre>
 
-  <p>The key detail is the custom <code>http.Transport</code>: its <code>DialContext</code> resolves the hostname through the Pilot registry and dials over the encrypted Pilot tunnel instead of the standard network stack. The <code>http.Client</code> uses it transparently -- the code looks like normal HTTP calls, but the transport is a persistent encrypted tunnel. There are no public DNS lookups, no TCP handshakes, no TLS negotiations on each request.</p>
+  <p>The key detail is the custom <code>http.Transport</code>: its <code>DialContext</code> resolves the hostname through the Pilot registry and dials over the encrypted Pilot tunnel instead of the standard network stack. The <code>http.Client</code> uses it transparently -- the code looks like normal HTTP calls, but the transport is a persistent encrypted tunnel. There are no public DNS lookups and no TLS negotiations; the HTTP client reuses its connections, and a new one costs a single round trip over the existing tunnel.</p>
   </section>
 
   <section>
-  <h2>Performance: Persistent Tunnel vs Per-Request HTTP</h2>
+  <h2>Persistent Tunnel vs Per-Request HTTP</h2>
 
-  <p>We benchmarked a 3-stage model chain processing 1,000 sequential inference requests. Each model takes approximately 200ms of compute time (mocked). The total compute time is 600ms per request (3 x 200ms). The question is: how much does the network add?</p>
+  <p>What changes is where the connection cost is paid. We haven't published measurements for this setup, so the comparison below is qualitative; time your own chain, and use <code>pilotctl bench &lt;peer&gt;</code> for raw tunnel throughput between two machines.</p>
 
   <table>
     <tr>
-      <th>Metric</th>
+      <th></th>
       <th>Per-Request HTTPS</th>
       <th>HTTP Keep-Alive</th>
       <th>Pilot Persistent Tunnel</th>
     </tr>
     <tr>
-      <td>First request</td>
-      <td>~750ms</td>
-      <td>~750ms</td>
-      <td>~800ms (tunnel setup)</td>
+      <td>Connection setup</td>
+      <td>DNS + TCP + TLS on every call</td>
+      <td>Once per pooled connection</td>
+      <td>Tunnel and key exchange once per peer; a new stream costs one round trip</td>
     </tr>
     <tr>
-      <td>Subsequent requests</td>
-      <td>~750ms</td>
-      <td>~620ms</td>
-      <td>~605ms</td>
-    </tr>
-    <tr>
-      <td>After 60s idle</td>
-      <td>~750ms</td>
-      <td>~750ms (keep-alive expired)</td>
-      <td>~605ms (tunnel persists)</td>
-    </tr>
-    <tr>
-      <td>1,000 requests total</td>
-      <td>~750s</td>
-      <td>~625s</td>
-      <td>~605s</td>
-    </tr>
-    <tr>
-      <td>Network overhead</td>
-      <td>~150ms/req (20%)</td>
-      <td>~20ms/req (3%)</td>
-      <td>~5ms/req (&lt;1%)</td>
+      <td>After an idle period</td>
+      <td>Same as always</td>
+      <td>Full setup again once keep-alive expires</td>
+      <td>Tunnel kept open by keepalives every 25 seconds</td>
     </tr>
     <tr>
       <td>Works through NAT</td>
       <td>Requires public IPs</td>
       <td>Requires public IPs</td>
-      <td>Yes (automatic)</td>
-    </tr>
-    <tr>
-      <td>Survives network change</td>
-      <td>No</td>
-      <td>No</td>
-      <td>Yes (keepalive + reconnect)</td>
+      <td>Yes (hole punching, relay fallback)</td>
     </tr>
   </table>
 
-  <p>The persistent tunnel reduces per-request network overhead to under 5ms -- essentially the UDP round-trip time plus minimal framing. Over 1,000 requests, this saves roughly 145 seconds compared to per-request HTTPS. For latency-sensitive applications where every 100ms matters, the tunnel approach reduces tail latency because there are no sporadic TLS handshakes or DNS timeouts.</p>
+  <p>For latency-sensitive applications, the tunnel approach avoids sporadic TLS handshakes and DNS timeouts in the middle of a chain.</p>
 
-  <p>The more significant advantage is resilience. HTTP keep-alive connections break after idle timeouts, load balancer reshuffling, or network changes. Pilot tunnels persist through all of these because the keepalive mechanism actively maintains the tunnel with probes every 30 seconds. If a probe fails, the tunnel reconnects automatically. For long-running inference pipelines that process requests over hours or days, this eliminates an entire class of transient connection failures.</p>
+  <p>The more significant advantage is resilience. HTTP keep-alive connections break after idle timeouts or load balancer reshuffling. A Pilot tunnel stays up between calls because the daemon sends a keepalive every 25 seconds, which also keeps the NAT mapping open. For long-running inference pipelines that process requests over hours or days, this removes a class of transient connection failures.</p>
   </section>
 
   <section>
@@ -333,23 +315,24 @@ func callModel(client *http.Client, agentAddr, path string, payload any) (string
   <pre><code><span class="comment"># Step 1: Install Pilot on each machine</span>
 <span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
 
-<span class="comment"># Step 2: Start daemons and join the same network</span>
-<span class="cmd">pilot-daemon</span>
-<span class="cmd">pilotctl network join 1</span>
+<span class="comment"># Step 2: Start each daemon with a hostname for its role</span>
+<span class="cmd">pilotctl daemon start --hostname llm-agent</span>  <span class="comment"># On Machine A</span>
 
-<span class="comment"># Step 3: Tag each model agent</span>
-<span class="cmd">pilotctl extras set-tags model-service llm</span>  <span class="comment"># On Machine A</span>
+<span class="comment"># Step 3: Establish trust between the orchestrator and each model agent</span>
+<span class="cmd">pilotctl handshake &lt;llm-agent address&gt; "inference pipeline"</span>  <span class="comment"># On Machine D</span>
+<span class="cmd">pilotctl approve &lt;orchestrator node id&gt;</span>                    <span class="comment"># On Machine A</span>
 
 <span class="comment"># Step 4: Run your model server using driver.Listen(80)</span>
-<span class="comment"># The orchestrator discovers agents via tags and chains calls</span>
-<span class="cmd">pilotctl peers --search "model-service" --json</span></code></pre>
+<span class="comment"># The orchestrator calls each model agent by hostname</span></code></pre>
 
-  <p>Once the tunnels are established, model calls flow through persistent encrypted connections. The orchestrator code looks like standard HTTP, but the transport is Pilot. No certificate management, no firewall rules - just persistent tunnels that stay connected and keep your inference pipeline fast. The only infrastructure requirement is a rendezvous server for initial discovery (the public one at <code>pilotprotocol.network</code> works out of the box, or you can self-host your own).</p>
+  <p>Trust is set up pair by pair here. If you'd rather put the machines in a private network, networks are created by the operator of a registry, so run your own rendezvous and create one there.</p>
+
+  <p>Once the tunnels are established, model calls flow through persistent encrypted connections. The orchestrator code looks like standard HTTP, but the transport is Pilot. No certificate management, no firewall rules - just persistent tunnels that stay connected and keep your inference pipeline fast. The only infrastructure requirement is a registry and beacon for discovery and NAT traversal (the public ones run by Vulture Labs work out of the box, or you can run your own).</p>
   </section>
 
   <div class="cta">
     <h3>Try Pilot Protocol</h3>
-    <p>Connect AI model services with persistent encrypted tunnels. No per-request overhead, automatic NAT traversal, and standard HTTP semantics.</p>
+    <p>Connect AI model services with persistent encrypted tunnels. No per-request connection setup, automatic NAT traversal, and standard HTTP semantics.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 ---

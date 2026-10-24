@@ -61,16 +61,16 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
   <section>
   <h2>Virtual Addresses: One Identity Regardless of Cloud</h2>
 
-  <p>Pilot Protocol assigns each agent a <strong>48-bit virtual address</strong> in the format <code>N:NNNN.HHHH.LLLL</code>. This address has two components: a 16-bit network ID and a 32-bit node ID. The address is generated when the agent first starts and remains stable for the agent's lifetime, regardless of where it runs.</p>
+  <p>Pilot Protocol assigns each agent a <strong>48-bit virtual address</strong> in the format <code>N:NNNN.HHHH.LLLL</code>. This address has two components: a 16-bit network ID and a 32-bit node ID. The registry assigns the address when the agent first registers and binds it to the agent's Ed25519 key, so it remains stable for the agent's lifetime, regardless of where it runs.</p>
 
-  <p>An agent on AWS us-east-1 might have address <code>1:0001.0000.0017</code>. If you migrate that agent to GCP europe-west1, its address stays <code>1:0001.0000.0017</code>. Other agents continue to reach it at the same address. The Pilot daemon handles re-registration with the registry when the physical endpoint changes, and peers automatically reconnect to the new location.</p>
+  <p>An agent on AWS us-east-1 might have address <code>0:0000.0000.0017</code>. If you migrate that agent (with its identity file) to GCP europe-west1, its address stays <code>0:0000.0000.0017</code>. Other agents continue to reach it at the same address. The Pilot daemon handles re-registration with the registry when the physical endpoint changes, and peers automatically reconnect to the new location.</p>
 
   <pre><code><span class="comment"># Agent identity is portable across clouds</span>
 
   AWS us-east-1            GCP europe-west1          Azure eastus2
   +------------------+    +------------------+      +------------------+
   | Agent: research  |    | Agent: analysis  |      | Agent: customer  |
-  | 1:0001.0000.0017 |    | 1:0001.0000.0042 |      | 1:0001.0000.0063 |
+  | 0:0000.0000.0017 |    | 0:0000.0000.0042 |      | 0:0000.0000.0063 |
   | IP: 10.0.1.15    |    | IP: 10.128.0.5   |      | IP: 10.1.0.8     |
   +------------------+    +------------------+      +------------------+
           |                        |                         |
@@ -94,10 +94,9 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
 
 <span class="comment"># Start daemon and set identity</span>
 <span class="cmd">pilotctl daemon start --email research@company.com</span>
-<span class="cmd">pilotctl network join 1</span>
 <span class="cmd">pilotctl set-hostname research-aws</span>
 <span class="cmd">pilotctl set-public</span>
-<span class="cmd">pilotctl extras set-tags cloud=aws,region=us-east-1,role=research</span></code></pre>
+<span class="cmd">pilotctl extras set-tags aws us-east-1 research</span>  <span class="comment"># up to 3 labels, a-z 0-9 -</span></code></pre>
 
   <h3>Step 2: Start agent on GCP</h3>
 
@@ -106,35 +105,31 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
 
 <span class="comment"># Start daemon and set identity</span>
 <span class="cmd">pilotctl daemon start --email analysis@company.com</span>
-<span class="cmd">pilotctl network join 1</span>
 <span class="cmd">pilotctl set-hostname analysis-gcp</span>
 <span class="cmd">pilotctl set-public</span>
-<span class="cmd">pilotctl extras set-tags cloud=gcp,region=europe-west1,role=analysis</span></code></pre>
+<span class="cmd">pilotctl extras set-tags gcp europe-west1 analysis</span></code></pre>
 
-  <h3>Step 4: Establish trust and communicate</h3>
+  <h3>Step 3: Establish trust and communicate</h3>
 
   <pre><code><span class="comment"># From AWS agent: discover and trust GCP agent</span>
-<span class="cmd">pilotctl lookup analysis-gcp</span>
-<span class="comment"># 1:0001.0000.0042</span>
+<span class="cmd">pilotctl find analysis-gcp</span>
+<span class="comment"># Address:   0:0000.0000.0042</span>
 
-<span class="cmd">pilotctl handshake 1:0001.0000.0042 "Cross-cloud research collaboration"</span>
+<span class="cmd">pilotctl handshake 0:0000.0000.0042 "Cross-cloud research collaboration"</span>
 
 <span class="comment"># From GCP agent: approve trust</span>
-<span class="cmd">pilotctl approve 1:0001.0000.0017</span>
+<span class="cmd">pilotctl approve 0:0000.0000.0017</span>
 
 <span class="comment"># Communicate: send a message</span>
-<span class="cmd">pilotctl send-message 1:0001.0000.0042 "Analyze this dataset"</span>
+<span class="cmd">pilotctl send-message 0:0000.0000.0042 --data "Run sentiment analysis on Q1 customer feedback"</span>
 
 <span class="comment"># Send a file</span>
-<span class="cmd">pilotctl send-file 1:0001.0000.0042 dataset.csv</span>
-
-<span class="comment"># Send a message</span>
-<span class="cmd">pilotctl send 1:0001.0000.0042 "Run sentiment analysis on Q1 customer feedback"</span>
+<span class="cmd">pilotctl send-file 0:0000.0000.0042 dataset.csv</span>
 
 <span class="comment"># Benchmark the connection</span>
-<span class="cmd">pilotctl bench 1:0001.0000.0042</span></code></pre>
+<span class="cmd">pilotctl bench 0:0000.0000.0042</span></code></pre>
 
-  <p>That is the complete setup. One install command per agent, a <code>daemon start</code> on each, one trust handshake, and the agents are communicating across clouds with end-to-end encryption. No VPN tunnels. No cloud interconnect products. No firewall rules beyond outbound UDP/4000.</p>
+  <p>That is the complete setup. One install command per agent, a <code>daemon start</code> on each, one trust handshake, and the agents are communicating across clouds with end-to-end encryption. No VPN tunnels. No cloud interconnect products. No inbound firewall rules: the daemon needs outbound TCP 9000 to the registry and UDP to the beacon and its peers, or only outbound TCP 443 in compat mode.</p>
   </section>
 
   <section>
@@ -142,13 +137,13 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
 
   <p>The example above used VMs with public IPs and <code>set-public</code>. For cloud VMs with a known public IP you can also pass the daemon's <code>--endpoint</code> flag to register a fixed endpoint and skip STUN. But many cloud deployments use private-only VMs (no public IP) behind Cloud NAT or similar services. Pilot handles this automatically.</p>
 
-  <p>When an agent starts without the <code>--endpoint</code> flag, the daemon performs STUN discovery to determine its public-facing IP and port, plus the NAT type (Full Cone, Restricted Cone, Port-Restricted Cone, or Symmetric). Based on the NAT types of both peers, the connection strategy is selected automatically:</p>
+  <p>When an agent starts without the <code>--endpoint</code> flag, the daemon performs STUN discovery to determine its public-facing IP and port. It doesn't classify the NAT type: for each peer it tries a direct connection, then hole punching coordinated by the beacon, then the relay. Which one ends up carrying the traffic depends on the NATs on both sides:</p>
 
   <table>
     <tr>
       <th>Agent A NAT</th>
       <th>Agent B NAT</th>
-      <th>Strategy</th>
+      <th>Typical outcome</th>
     </tr>
     <tr>
       <td>Public IP / Full Cone</td>
@@ -195,9 +190,9 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
 
   <p>A VPN tunnel encapsulates IP packets inside encrypted IP packets. Each packet gets an outer IP header (20 bytes), a UDP or ESP header (8-24 bytes), and encryption overhead (16-32 bytes for AES-GCM). This reduces the effective MTU and can cause fragmentation, especially for larger payloads. VPN gateways also introduce an extra network hop, adding latency.</p>
 
-  <p>Pilot tunnels encapsulate application data directly in UDP packets with a <strong>34-byte Pilot header</strong> and AES-256-GCM encryption overhead (16-byte auth tag + 12-byte nonce). There is no IP-in-IP encapsulation because Pilot is an overlay network, not a VPN -- it does not route arbitrary IP traffic, only agent communication. This means less overhead per packet and no fragmentation issues with standard 1500-byte MTUs.</p>
+  <p>Pilot tunnels carry application data directly in UDP packets: a <strong>34-byte Pilot header</strong>, encrypted with AES-256-GCM inside a 36-byte frame (4-byte magic, 4-byte sender ID, 12-byte nonce, 16-byte auth tag). There is no IP-in-IP encapsulation because Pilot is an overlay network, not a VPN -- it does not route arbitrary IP traffic, only agent communication, so there is no inner IP or TCP header either. Stream segments can be up to 4 KB, so on a 1500-byte link a full segment is fragmented at the IP layer.</p>
 
-  <p>For agent communication patterns (small messages, task payloads, event streams), the difference is measurable:</p>
+  <p>Side by side:</p>
 
   <table>
     <tr>
@@ -208,7 +203,7 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
     </tr>
     <tr>
       <td>Per-packet overhead</td>
-      <td>62 bytes</td>
+      <td>98 bytes with outer IPv4 + UDP (no inner IP/TCP header)</td>
       <td>58-76 bytes</td>
       <td>60 bytes</td>
     </tr>
@@ -220,7 +215,7 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
     </tr>
     <tr>
       <td>Additional hops</td>
-      <td>0 (direct P2P)</td>
+      <td>0 when direct; the beacon when relayed</td>
       <td>2 (gateway each side)</td>
       <td>0-1</td>
     </tr>
@@ -238,13 +233,13 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
     </tr>
     <tr>
       <td>Discovery</td>
-      <td>Registry + tags</td>
+      <td>Registry (hostname lookup)</td>
       <td>None (static config)</td>
       <td>None (static config)</td>
     </tr>
   </table>
 
-  <p>The key performance advantage is not per-packet overhead (which is similar across all three). It is the elimination of the gateway hop and the zero-configuration NAT traversal. With VPN, traffic routes through gateway VMs that become bottlenecks. With Pilot, traffic flows directly between agent VMs over peer-to-peer tunnels. See <a href=\"https://pilotprotocol.network/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents\">a detailed comparison of Pilot vs Tailscale vs Nebula vs ZeroTier</a> for more context on how these approaches differ for agent workloads.</p>
+  <p>The advantage is not per-packet overhead (Pilot's framing is larger than WireGuard's). It is the elimination of the gateway hop and the zero-configuration NAT traversal. With VPN, traffic routes through gateway VMs that become bottlenecks. With Pilot, traffic flows directly between agent VMs over peer-to-peer tunnels. See <a href=\"https://pilotprotocol.network/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents\">a detailed comparison of Pilot vs Tailscale vs Nebula vs ZeroTier</a> for more context on how these approaches differ for agent workloads.</p>
   </section>
 
   <section>
@@ -288,14 +283,14 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
     </tr>
     <tr>
       <td>Control plane</td>
-      <td>Managed network</td>
+      <td>Public registry (free) or self-hosted</td>
       <td>Tailscale coordination (cloud)</td>
       <td>ZeroTier Central (cloud)</td>
       <td>Self-managed</td>
     </tr>
     <tr>
       <td>Agent features</td>
-      <td>Tasks, events, files, trust, reputation</td>
+      <td>Messages, events, files, trust</td>
       <td>None (network only)</td>
       <td>None (network only)</td>
       <td>None (network only)</td>
@@ -316,9 +311,9 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
     </tr>
   </table>
 
-  <p>Tailscale and ZeroTier are excellent products for connecting devices and services across networks. They solve the connectivity problem well. But they are general-purpose network tools, not agent communication platforms. They provide a tunnel -- you still need to build agent discovery, trust management, task delegation, event streaming, and reputation tracking on top.</p>
+  <p>Tailscale and ZeroTier are excellent products for connecting devices and services across networks. They solve the connectivity problem well. But they are general-purpose network tools, not agent communication platforms. They provide a tunnel -- you still need to build agent naming, trust management, messaging and event streaming on top.</p>
 
-  <p>Pilot provides all of these as built-in services on well-known ports. An agent on Pilot can discover peers by tags, establish trust with justifications, stream events (port 1002), exchange files (port 1001), and send messages (port 1000) -- all without additional infrastructure. The networking is just the foundation.</p>
+  <p>Pilot provides these as built-in services on well-known ports. An agent on Pilot can resolve peers by hostname, establish trust with justifications, stream events (port 1002), and exchange messages and files (port 1001) -- all without additional infrastructure. The networking is just the foundation.</p>
   </section>
 
   <section>
@@ -337,19 +332,19 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
       <td>Software</td>
       <td>Free (open source)</td>
       <td>Included with cloud</td>
-      <td>Free for 3 users, $6/user/mo</td>
+      <td>Free tier, paid plans</td>
     </tr>
     <tr>
       <td>VPN gateway hours</td>
-      <td>$0</td>
-      <td>~$0.05/hr per tunnel (~$36/mo)</td>
-      <td>$0</td>
+      <td>None</td>
+      <td>Billed per tunnel-hour</td>
+      <td>None</td>
     </tr>
     <tr>
-      <td>3 clouds, 3 tunnels</td>
-      <td>$0</td>
-      <td>~$108/mo</td>
-      <td>$0 (relay via Tailscale cloud)</td>
+      <td>3 clouds</td>
+      <td>No tunnels</td>
+      <td>3 tunnels</td>
+      <td>No tunnels</td>
     </tr>
     <tr>
       <td>Data transfer</td>
@@ -371,9 +366,9 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
     </tr>
   </table>
 
-  <p>For 3 clouds with site-to-site VPN, you are paying approximately $108/month in VPN gateway hours alone, before data transfer. For 5 clouds, it is $360/month (10 tunnels). For 10 sites, it is $1,620/month (45 tunnels). And each tunnel requires configuration, monitoring, and maintenance.</p>
+  <p>With site-to-site VPN you pay for every tunnel-hour before data transfer, and the tunnel count grows as N*(N-1)/2: 3 tunnels for 3 clouds, 10 for 5, 45 for 10 sites. And each tunnel requires configuration, monitoring, and maintenance.</p>
 
-  <p>Pilot does not require a site-to-site VPN or cloud interconnect. Default UDP mode needs the documented UDP/4000 path; compat mode uses outbound TCP/443 for supported environments that block UDP. Adding a new cloud still requires installing the daemon, joining the intended network, and applying the appropriate trust and egress policy.</p>
+  <p>Pilot does not require a site-to-site VPN or cloud interconnect. Default UDP mode needs outbound TCP 9000 to the registry and UDP to the beacon and peers; compat mode uses outbound TCP/443 for supported environments that block UDP. Adding a new cloud still requires installing the daemon, establishing trust with the peers it needs, and applying the appropriate egress policy.</p>
   </section>
 
   <section>
@@ -384,25 +379,23 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
   <ol>
     <li>Installs <code>pilotctl</code></li>
     <li>Starts the daemon</li>
-    <li>Joins the network</li>
     <li>Establishes trust with the specific peers it needs to communicate with</li>
   </ol>
 
   <pre><code><span class="comment"># Add a new agent on Azure (or any cloud, or on-premises, or a laptop)</span>
 <span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
 <span class="cmd">pilotctl daemon start --email agent@company.com</span>
-<span class="cmd">pilotctl network join 1</span>
 <span class="cmd">pilotctl set-hostname new-agent-azure</span>
-<span class="cmd">pilotctl extras set-tags cloud=azure,region=eastus2,role=customer-support</span>
+<span class="cmd">pilotctl extras set-tags azure eastus2 customer-support</span>
 
-<span class="comment"># Discover peers by tag</span>
-<span class="cmd">pilotctl peers --search role=research</span>
-<span class="comment"># 1:0001.0000.0017  research-aws  [cloud=aws, region=us-east-1, role=research]</span>
+<span class="comment"># Resolve the peers it needs by hostname</span>
+<span class="cmd">pilotctl find research-aws</span>
+<span class="comment"># Address:   0:0000.0000.0017</span>
 
 <span class="comment"># Establish trust with specific agents (not entire networks)</span>
-<span class="cmd">pilotctl handshake 1:0001.0000.0017 "Cross-cloud task delegation"</span></code></pre>
+<span class="cmd">pilotctl handshake 0:0000.0000.0017 "Cross-cloud task delegation"</span></code></pre>
 
-  <p>There are no site-to-site VPN tunnels or cloud routing tables to add. The agent joins the network, discovers peers, and establishes an encrypted tunnel using a direct path when available or ciphertext relay fallback otherwise. Operators still need to allow the selected transport and apply environment-specific identity and network policy.</p>
+  <p>There are no site-to-site VPN tunnels or cloud routing tables to add. The agent registers, resolves its peers, and establishes an encrypted tunnel using a direct path when available or ciphertext relay fallback otherwise. Operators still need to allow the selected transport and apply environment-specific identity and network policy.</p>
 
   <p>The overlay keeps the agent-facing addressing and trust workflow consistent across supported environments. Cross-organization deployments can use the same transport model, but they still require security, privacy, governance, and contractual review appropriate to the data and parties involved.</p>
   </section>
@@ -410,17 +403,16 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
   <section>
   <h2>Getting Started</h2>
 
-  <p>Deploy agents across any combination of clouds in under 10 minutes:</p>
+  <p>Deploy agents across any combination of clouds:</p>
 
   <pre><code><span class="comment"># 1. Install on each agent (any cloud, any location)</span>
 <span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
-<span class="cmd">pilotctl daemon start --email agent@company.com</span>
-<span class="cmd">pilotctl network join 1</span>
+<span class="cmd">pilotctl daemon start --email agent@company.com --hostname &lt;name&gt; --public</span>
 
-<span class="comment"># 3. Agents discover each other and communicate</span>
-<span class="cmd">pilotctl peers --search role=analysis</span>
+<span class="comment"># 2. Agents resolve each other, establish trust and communicate</span>
+<span class="cmd">pilotctl find analysis-gcp</span>
 <span class="cmd">pilotctl handshake &lt;peer-address&gt; "Multi-cloud collaboration"</span>
-<span class="cmd">pilotctl send-message &lt;peer-address&gt; "Task: analyze Q1 data"</span></code></pre>
+<span class="cmd">pilotctl send-message &lt;peer-address&gt; --data "Task: analyze Q1 data"</span></code></pre>
 
   <p>No VPN. No cloud interconnect. No per-cloud networking configuration. One overlay network that spans all of them.</p>
   </section>
@@ -434,11 +426,11 @@ const bodyContent = `<p>You need AI agents running on AWS, GCP, and Azure to com
 const faqItems = [
   {
     question: "How do I connect AI agents across AWS, GCP, and Azure without a VPN?",
-    answer: "Install Pilot Protocol on each supported host, start the daemon, join the intended network, and establish the required trust relationships. The overlay handles virtual addressing, NAT traversal, and tunnel encryption without a site-to-site VPN, while operators remain responsible for egress, identity, and network policy."
+    answer: "Install Pilot Protocol on each supported host, start the daemon, and establish the required trust relationships. The overlay handles virtual addressing, NAT traversal, and tunnel encryption without a site-to-site VPN, while operators remain responsible for egress, identity, and network policy."
   },
   {
     question: "What is NAT traversal and how does it work for multi-cloud agents?",
-    answer: "NAT traversal allows agents behind cloud NAT gateways (AWS NAT Gateway, GCP Cloud NAT, Azure NAT Gateway) to establish direct connections even though they lack public IPs. Pilot uses STUN discovery to determine each agent's NAT type, then selects the best strategy: direct connection, hole-punching, or relay fallback — all automatically."
+    answer: "NAT traversal allows agents behind cloud NAT gateways (AWS NAT Gateway, GCP Cloud NAT, Azure NAT Gateway) to establish direct connections even though they lack public IPs. Pilot uses STUN discovery to learn each agent's public endpoint, then tries a direct connection, hole-punching and relay fallback in turn — all automatically."
   },
   {
     question: "How does Pilot Protocol compare to VPNs for multi-cloud agent communication?",
@@ -446,11 +438,11 @@ const faqItems = [
   },
   {
     question: "Can I connect agents behind AWS NAT Gateway, GCP Cloud NAT, or Azure NAT Gateway?",
-    answer: "Yes. Pilot's NAT traversal handles all major cloud NAT implementations automatically. Agents behind cloud NAT services that use Port-Restricted Cone or Symmetric NAT get hole-punching or relay fallback with no configuration changes. The daemon determines the strategy automatically at connection time."
+    answer: "Yes. Pilot's NAT traversal handles all major cloud NAT implementations automatically. Agents behind cloud NAT services that use Port-Restricted Cone or Symmetric NAT get hole-punching or relay fallback with no configuration changes. The daemon falls back from one to the next automatically at connection time."
   },
   {
     question: "How much does multi-cloud agent networking cost without VPN?",
-    answer: "Pilot Protocol's software is open source under AGPL-3.0, and the public backbone is open. Hosting, operations, cloud egress, and relay traffic can still create costs; managed private and enterprise options are in early access. See the plans page for current packaging."
+    answer: "Pilot Protocol's software is open source under AGPL-3.0, and the public registry and beacon are run by Vulture Labs at no charge. Your remaining costs are cloud egress and, if you choose to run your own registry and beacon, the hosts for them."
   }
 ];
 ---
