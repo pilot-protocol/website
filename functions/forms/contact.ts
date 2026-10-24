@@ -9,7 +9,8 @@ import {
   type FormEnv,
 } from '../_form-mail';
 
-const TOPICS = ['enterprise', 'product', 'partnership', 'press', 'security-review', 'governance', 'roadmap', 'other'];
+// Keep in step with the topic <select> in src/pages/contact.astro.
+const TOPICS = ['question', 'app-publishing', 'partnership', 'press', 'correction', 'other'];
 
 export const onRequest: PagesFunction<FormEnv> = async ({ request, env }) =>
   handleForm(request, env, {
@@ -17,7 +18,7 @@ export const onRequest: PagesFunction<FormEnv> = async ({ request, env }) =>
     required: ['name', 'email', 'topic', 'message'],
     limits: { name: 120, email: 254, organization: 160, role: 160, topic: 40, message: 8_000 },
     validate: (values) => {
-      if (!isEmail(values.email)) return 'Please enter a valid work email address.';
+      if (!isEmail(values.email)) return 'Please enter a valid email address.';
       if (!oneOf(values.topic, TOPICS)) return 'Please choose a valid topic.';
       return null;
     },

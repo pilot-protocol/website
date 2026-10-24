@@ -1,46 +1,48 @@
 ---
 import PlainLayout from '../../layouts/PlainLayout.astro';
+import { apps } from '../../data/apps';
+
+const appCount = apps.filter((a) => a.inCatalogue).length;
 ---
 <PlainLayout
   title="Roadmap — Pilot Protocol (plain)"
-  description="Pilot Protocol product priorities across reliability, security, enterprise operations, developer tooling, and research."
+  description="What Pilot Protocol shipped in October 2026 and is working on now, across the protocol, the data service agents, the App Store and Pilot Cloud."
   canonical="https://pilotprotocol.network/plain/roadmap/"
 >
 <p><a href="/roadmap">Switch to the styled roadmap</a></p>
 <h1>Product roadmap</h1>
-<p>Updated July 2026. Horizons communicate direction rather than fixed delivery dates. Priority and scope may change as security findings, deployment evidence, and operator feedback evolve.</p>
+<p>Updated October 2026. Only work that has shipped, or is underway in the open-source repositories or in Pilot Cloud, is listed. Unfinished work has no dates, and plans can change.</p>
 
-<h2>Current baseline</h2>
+<h2>What exists today</h2>
 <ul>
-  <li>Available: persistent agent identity, signed handshakes, and encrypted peer tunnels.</li>
-  <li>Available: peer approval, rejection, revocation, network membership, and configurable pre-trust hardening.</li>
-  <li>Available: discoverable agent apps with review, signature verification, and digest pinning.</li>
-  <li>Early access: private deployments, roles, identity integration, policy, key lifecycle, provisioning, and audit export.</li>
+  <li>Pilot Protocol: the open-source daemon and pilotctl (AGPL-3.0): addresses, Ed25519 identity, encrypted tunnels, NAT traversal and explicit trust, over a public backbone run at no charge.</li>
+  <li>Data service agents: about 430 live data agents, the list-agents directory, and pilot-mom, which turns a task into a plan of agent calls.</li>
+  <li>App Store: {appCount} apps from their publishers, reviewed, signature-verified and SHA-256 pinned, installed with one command.</li>
+  <li>Pilot Cloud: a hosted, always-on Pilot node used over MCP from Claude, ChatGPT and other clients. Free; sign-ups are capped by capacity.</li>
 </ul>
 
-<h2>Now: harden and prove the foundation</h2>
+<h2>Shipped in October</h2>
 <ul>
-  <li>Reliability across registry, beacon, NAT traversal, relay, upgrade, and recovery paths.</li>
-  <li>Security verification, strict pre-trust coverage, revocation testing, and stronger implementation evidence.</li>
-  <li>Assisted enterprise deployments to refine roles, identity, policy, consent, and audit export.</li>
-  <li>More predictable SDK parity, installation, examples, and error handling.</li>
+  <li>Pilot Protocol, v1.16 to v1.18: daemons forget peers nobody uses, so long-running agents no longer grow until they run out of memory, and use much less CPU under send bursts. Relayed trust handshakes complete in seconds instead of two minutes, and a daemon recovers as soon as its IP address changes. v1.18.0 shipped on 8 October (<a href="https://github.com/pilot-protocol/pilotprotocol/releases/tag/v1.18.0">release notes</a>).</li>
+  <li>Pilot Protocol, v1.17.0: send-message --wait matches the reply to the message by ID, takes its payload from stdin or a file, and delivers messages over 256 KB; a send nobody acknowledges now fails. appstore install waits for the app's first start and reports it.</li>
+  <li>Data service agents: every data agent moved to the current daemon release, and the list-agents directory answers each query once.</li>
+  <li>App Store: stopping an app stops its whole process group, with SIGTERM first and SIGKILL after three seconds, and the supervisor hands apps the daemon's real address (in the daemon from v1.15.0).</li>
+  <li>Pilot Cloud: Sign in with Apple joined email codes, Google and GitHub. Conversations with friends' agents have an inbox. OAuth for MCP clients gained a read-only scope and token revocation, and there is room for 200 accounts.</li>
 </ul>
 
-<h2>Next: make Pilot easier to operate at scale</h2>
+<h2>In progress</h2>
 <ul>
-  <li>Fleet health, lifecycle, policy state, key state, audit flow, and safer bulk workflows.</li>
-  <li>Deeper identity-provider, directory, role-mapping, revocation, and approval integration.</li>
-  <li>Dedicated-service resilience, backups, controlled upgrades, and measurable service objectives.</li>
-  <li>Stronger publisher verification, package provenance, capability declarations, and incident handling.</li>
+  <li>Pilot Protocol: open pull requests keep a session alive when the two sides' keys fall out of step, so it recovers without a restart, and fix a throughput collapse under packet loss, with a benchmark harness to measure overlay throughput.</li>
+  <li>Pilot Protocol: the open-source registry takes its remaining locks off the request path and saves its snapshots faster, streaming them to disk. The changes are in its beta releases.</li>
+  <li>Pilot Protocol: pilotctl appstore uninstall moves an app's state into backups instead of deleting it. Merged; it ships with the next release.</li>
+  <li>App Store: updates to PostgreSQL, Redis, Smol, Bowmark, AEGIS and Plainweb so their processes exit with the daemon and leave no stray children, and General Legal for four platforms.</li>
+  <li>App Store: Wallet 0.4 sends USDC on chain and pays gas from its own ETH, has a daily ceiling, and keeps a copy of its key outside the install directory. It is waiting to enter the catalogue, which still lists 0.3.3.</li>
+  <li>Pilot Cloud: iPhone, iPad and Mac apps are built, with the same Inbox, Friends and Agents as the website; not yet in the App Store.</li>
+  <li>Pilot Cloud: getting listed in MCP clients' connector directories. The OAuth flows, tool descriptions and reviewer accounts they ask for are in place.</li>
 </ul>
 
-<h2>Exploring</h2>
-<ul>
-  <li>Federated coordination with explicit trust boundaries and failure isolation.</li>
-  <li>Scoped and delegated authority with expiring grants and machine-readable approval context.</li>
-  <li>Per-connection security profiles beyond the existing encrypted peer tunnel.</li>
-  <li>Supervisor-controlled budgets, receipts, and audit evidence around paid capabilities.</li>
-</ul>
+<h2>How we prioritize</h2>
+<p>Security findings can move work forward immediately. Beyond that, priorities follow what breaks on the live network, what users and app publishers ask for, and how much lasting complexity a change adds.</p>
 
-<p>See the <a href="/trust">Trust Center</a>, <a href="/enterprise-readiness-report.pdf">Enterprise Readiness Report</a>, or <a href="/contact?topic=roadmap">send roadmap feedback</a>.</p>
+<p>Suggest something: <a href="https://github.com/pilot-protocol/pilotprotocol/issues">open an issue on GitHub</a> or <a href="/contact?topic=question">contact us</a>.</p>
 </PlainLayout>
