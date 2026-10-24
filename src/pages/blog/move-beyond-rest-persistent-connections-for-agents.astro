@@ -3,7 +3,7 @@ import BlogLayout from '../../layouts/BlogLayout.astro';
 
 const bodyContent = `<p><strong>Persistent connections for AI agents</strong> eliminate the waste of REST polling and the complexity of WebSocket scaling. This article compares REST, WebSocket, gRPC streaming, MQTT, and persistent encrypted UDP tunnels — with code examples and a migration path that runs alongside your existing APIs.</p>
 
-  <p><a href="https://en.wikipedia.org/wiki/REST" target="_blank" rel="noopener">REST</a> APIs are fundamentally unidirectional. The client asks, the server responds. If the server has new information for the client, it cannot push it. The client must ask again. And again. Studies on real-world polling systems show that <strong>only 1.5% of HTTP polls find new data</strong>. The other 98.5% are wasted requests -- burning bandwidth, CPU cycles, and money to learn that nothing changed.</p>
+  <p><a href="https://en.wikipedia.org/wiki/REST" target="_blank" rel="noopener">REST</a> APIs are fundamentally unidirectional. The client asks, the server responds. If the server has new information for the client, it cannot push it. The client must ask again. And again. In a typical polling loop, <strong>most polls find no new data</strong>. Those requests are wasted -- burning bandwidth, CPU cycles, and money to learn that nothing changed.</p>
 
   <p>For agents that need real-time coordination, REST polling is architectural debt. <a href="https://www.rfc-editor.org/rfc/rfc6455.html" target="_blank" rel="noopener">WebSocket</a> is the common upgrade path, but it brings its own scaling nightmares. MQTT and <a href="https://grpc.io" target="_blank" rel="noopener">gRPC</a> streaming help in specific contexts but carry trade-offs that do not fit agent-to-agent communication. This article examines what agents actually need from a connection model, why existing options fall short, and how persistent overlay connections solve the problems without the operational pain.</p>
 
@@ -68,15 +68,16 @@ while True:
     <li>AES-256-GCM encryption begins on all subsequent data.</li>
   </ol>
 
-  <p>After this one-time setup, the tunnel stays open. Keepalive probes every 25 seconds maintain the NAT mapping. If a probe fails, the tunnel automatically re-establishes. If the network changes (WiFi to cellular, IP rebind), the tunnel detects the change and reconnects.</p>
+  <p>After this one-time setup, the tunnel stays open. When a tunnel has been idle for 25 seconds, the daemon sends a small encrypted keepalive to hold the NAT mapping open. If a direct path goes silent, the daemon falls back to the relay. If this host's address changes (Wi-Fi to cellular, a new DHCP lease), the daemon notices and re-registers its new endpoint so peers can reach it again.</p>
 
   <p>Both sides can send data at any time. There is no client or server. The connection is peer-to-peer and bidirectional by default.</p>
 
-  <pre><code><span class="comment"># Agent A sends a message to Agent B</span>
-<span class="cmd">pilotctl send-message 1:0001.0002.0001 --data '{"task": "analyze", "payload": "..."}'</span>
+  <pre><code><span class="comment"># Once both agents trust each other (pilotctl handshake / pilotctl approve)</span>
+<span class="comment"># Agent A sends a message to Agent B</span>
+<span class="cmd">pilotctl send-message agent-b --data '{"task": "analyze", "payload": "..."}'</span>
 
 <span class="comment"># Agent B sends a message to Agent A (same tunnel, reverse direction)</span>
-<span class="cmd">pilotctl send-message 1:0001.0001.0001 --data '{"result": "complete", "output": "..."}'</span></code></pre>
+<span class="cmd">pilotctl send-message agent-a --data '{"result": "complete", "output": "..."}'</span></code></pre>
 
   <p>No polling. No WebSocket reconnection logic. No load balancer configuration. The tunnel handles persistence, encryption, NAT traversal, and bidirectional communication as a single primitive.</p>
   </section>
@@ -147,7 +148,7 @@ while True:
       <td>No</td>
       <td>No</td>
       <td>Yes</td>
-      <td>No</td>
+      <td>No (pub/sub runs in a daemon)</td>
     </tr>
     <tr>
       <td>Peer discovery</td>
@@ -155,7 +156,7 @@ while True:
       <td>DNS/config</td>
       <td>DNS/config</td>
       <td>Topic-based</td>
-      <td>Tag-based registry</td>
+      <td>Registry (hostname or address)</td>
     </tr>
     <tr>
       <td>Idle overhead</td>
@@ -163,15 +164,7 @@ while True:
       <td>TCP keepalive</td>
       <td>HTTP/2 ping</td>
       <td>MQTT keepalive</td>
-      <td>UDP probe (25s)</td>
-    </tr>
-    <tr>
-      <td>Memory per conn</td>
-      <td>0 (stateless)</td>
-      <td>~8KB (TCP buffer)</td>
-      <td>~8KB (TCP buffer)</td>
-      <td>~4KB (broker side)</td>
-      <td>~2KB (UDP state)</td>
+      <td>UDP keepalive (after 25s idle)</td>
     </tr>
   </table>
 
@@ -188,9 +181,12 @@ while True:
 import (
     "encoding/json"
     "fmt"
+    "log"
     "time"
 
     "github.com/pilot-protocol/common/driver"
+    "github.com/pilot-protocol/common/protocol"
+    "github.com/pilot-protocol/eventstream"
 )
 
 type Message struct {
@@ -199,24 +195,43 @@ type Message struct {
     Ts      int64           \`json:"ts"\`
 }
 
+<span class="comment">// Both agents use the event stream (port 1002) of a node they both trust</span>
+func coordinator(d *driver.Driver) protocol.Addr {
+    res, err := d.ResolveHostname("coordinator")
+    if err != nil {
+        log.Fatal(err)
+    }
+    addr, err := protocol.ParseAddr(res["address"].(string))
+    if err != nil {
+        log.Fatal(err)
+    }
+    return addr
+}
+
 <span class="comment">// Agent A: sends tasks and receives results</span>
 func runAgentA() {
     d, _ := driver.Connect("")
-    stream, _ := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
 
     <span class="comment">// Subscribe to results from Agent B</span>
-    results, _ := stream.Subscribe("agent-b.results")
+    stream, err := eventstream.Subscribe(d, coordinator(d), "agent-b.results")
+    if err != nil {
+        log.Fatal(err)
+    }
 
     <span class="comment">// Handle incoming results in background</span>
     go func() {
-        for event := range results {
+        for {
+            event, err := stream.Recv()
+            if err != nil {
+                return
+            }
             var msg Message
-            json.Unmarshal(event.Data, &msg)
+            json.Unmarshal(event.Payload, &msg)
             fmt.Printf("[A] Received result: %s\\n", string(msg.Payload))
         }
     }()
 
-    <span class="comment">// Send tasks periodically</span>
+    <span class="comment">// Send tasks periodically on the same connection</span>
     for i := 0; ; i++ {
         task := Message{
             Type:    "task",
@@ -233,14 +248,20 @@ func runAgentA() {
 <span class="comment">// Agent B: receives tasks and sends results</span>
 func runAgentB() {
     d, _ := driver.Connect("")
-    stream, _ := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
 
     <span class="comment">// Subscribe to tasks from Agent A</span>
-    tasks, _ := stream.Subscribe("agent-a.tasks")
+    stream, err := eventstream.Subscribe(d, coordinator(d), "agent-a.tasks")
+    if err != nil {
+        log.Fatal(err)
+    }
 
-    for event := range tasks {
+    for {
+        event, err := stream.Recv()
+        if err != nil {
+            return
+        }
         var msg Message
-        json.Unmarshal(event.Data, &msg)
+        json.Unmarshal(event.Payload, &msg)
         fmt.Printf("[B] Received task: %s\\n", string(msg.Payload))
 
         <span class="comment">// Process the task</span>
@@ -258,21 +279,21 @@ func runAgentB() {
     }
 }</code></pre>
 
-  <p>Both agents can send messages at any time. Agent B does not wait to be polled. Agent A does not need to hold the connection open. The event stream on port 1002 handles the persistent, bidirectional channel. If either agent restarts, it resubscribes and picks up new events immediately.</p>
+  <p>Both agents can send messages at any time. Agent B does not wait to be polled. Each agent holds one connection to the coordinator's event stream (port 1002), which carries both its subscription and its publishes. If either agent restarts, it resubscribes and receives new events from then on; events published while it was down are not replayed.</p>
 
   <p>The CLI equivalent for quick testing:</p>
 
   <pre><code><span class="comment"># Terminal 1: Agent A subscribes to results</span>
-<span class="cmd">pilotctl subscribe <broker-addr> "agent-b.results"</span>
+<span class="cmd">pilotctl subscribe coordinator agent-b.results</span>
 
 <span class="comment"># Terminal 2: Agent B subscribes to tasks</span>
-<span class="cmd">pilotctl subscribe <broker-addr> "agent-a.tasks"</span>
+<span class="cmd">pilotctl subscribe coordinator agent-a.tasks</span>
 
 <span class="comment"># Terminal 3: Agent A publishes a task</span>
-<span class="cmd">pilotctl publish <broker-addr> agent-a.tasks --data '{"id":1,"work":"analyze dataset"}'</span>
+<span class="cmd">pilotctl publish coordinator agent-a.tasks --data '{"id":1,"work":"analyze dataset"}'</span>
 
 <span class="comment"># Terminal 4: Agent B publishes a result</span>
-<span class="cmd">pilotctl publish <broker-addr> agent-b.results --data '{"status":"complete","confidence":0.95}'</span></code></pre>
+<span class="cmd">pilotctl publish coordinator agent-b.results --data '{"status":"complete","confidence":0.95}'</span></code></pre>
   </section>
 
   <section>
@@ -305,28 +326,28 @@ func runAgentB() {
 
 <span class="comment"># Step 3: Add Pilot for specific patterns</span>
 <span class="comment"># Replace polling loops with event subscriptions</span>
-<span class="cmd">pilotctl subscribe <broker-addr> "tasks.new"</span>  <span class="comment"># Instead of GET /api/tasks/pending every second</span>
+<span class="cmd">pilotctl subscribe coordinator tasks.new</span>  <span class="comment"># Instead of GET /api/tasks/pending every second</span>
 
 <span class="comment"># Step 4: Use Pilot for agent-to-agent coordination</span>
 <span class="comment"># Keep REST for external API consumers</span>
-<span class="cmd">pilotctl send-message 1:0001.0002.0001 --data '{"action":"delegate","task_id":"abc"}'</span></code></pre>
+<span class="cmd">pilotctl send-message agent-b --data '{"action":"delegate","task_id":"abc"}'</span></code></pre>
 
   <p>This is not an all-or-nothing migration. You can start with one polling loop, replace it with an event subscription, and measure the improvement. If it works, migrate the next pattern. If it does not, keep REST for that case.</p>
 
-  <p>The Pilot daemon runs alongside your existing services, using 10 MB of memory. It does not interfere with your HTTP servers, does not require port changes, and does not need new firewall rules. It is an additional communication layer, not a replacement for your existing stack.</p>
+  <p>The Pilot daemon runs alongside your existing services. It does not interfere with your HTTP servers, does not require port changes, and does not need inbound firewall rules. It is an additional communication layer, not a replacement for your existing stack.</p>
 
   <p>For agent architectures that are growing past the point where REST polling is efficient -- where you are adding WebSocket servers, connection managers, and reconnection logic to work around HTTP's limitations -- the persistent tunnel model eliminates that complexity by making persistence, bidirectionality, and NAT traversal properties of the connection itself, rather than features you build on top of a protocol that was not designed for them.</p>
   </section>
 
   <div class="cta">
     <h3>Try Pilot Protocol</h3>
-    <p>Replace polling loops with persistent bidirectional connections. No broker, no WebSocket server, no reconnection logic to maintain.</p>
+    <p>Replace polling loops with persistent bidirectional connections. No separate broker, no WebSocket server, no reconnection logic to maintain.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 const faqItems = [
   {
     question: "Why is REST polling bad for AI agents?",
-    answer: "REST polling wastes resources: only 1.5% of HTTP polls return new data, meaning 98.5% are wasted requests that burn bandwidth and CPU. Polling also introduces latency — poll every second to catch updates quickly and you make thousands of wasteful requests; poll every 10 seconds and you add up to 10 seconds of delay. For agent coordination where sub-second response times matter, polling is architectural debt."
+    answer: "REST polling wastes resources: most polls return no new data, so most requests burn bandwidth and CPU for nothing. Polling also introduces latency — poll every second to catch updates quickly and you make thousands of wasteful requests; poll every 10 seconds and you add up to 10 seconds of delay. For agent coordination where sub-second response times matter, polling is architectural debt."
   },
   {
     question: "What are the alternatives to WebSocket for AI agent communication?",
@@ -342,13 +363,13 @@ const faqItems = [
   },
   {
     question: "What are the memory costs of persistent agent connections at scale?",
-    answer: "Each TCP-based connection (WebSocket, gRPC) requires a separate socket and TLS session, consuming roughly 8 KB per connection plus server-side overhead. A UDP overlay like Pilot shares a single encrypted tunnel across all peers, adding only ~2 KB per peer for connection state. At 100 peers, that difference matters — see our <a href=\"/blog/benchmarking-http-vs-udp-overlay\">full benchmarking comparison</a>."
+    answer: "Each TCP-based connection (WebSocket, gRPC) needs its own socket and TLS session. A Pilot daemon sends every tunnel over one UDP socket, with a separate encryption key per peer, so a new peer adds per-peer state rather than another socket. We have not published per-connection memory figures; see <a href=\"/blog/benchmarking-http-vs-udp-overlay\">how to benchmark HTTP against a UDP overlay</a> to measure them on your own workload."
   }
 ];
 ---
 <BlogLayout
   title="Persistent Connections for AI Agents: REST Polling vs WebSocket vs Encrypted UDP Tunnels"
-  description="REST polling wastes 98% of requests. Compare REST, WebSocket, gRPC, and persistent UDP tunnels for AI agent communication — with code examples and a migration path."
+  description="Most REST polls find nothing new. Compare REST, WebSocket, gRPC, and persistent UDP tunnels for AI agent communication — with code examples and a migration path."
   date="July 7, 2026"
   tags={["architecture", "real-time", "networking"]}
   canonicalPath="/blog/move-beyond-rest-persistent-connections-for-agents"

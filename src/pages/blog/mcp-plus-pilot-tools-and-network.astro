@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>The <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol (MCP)</a> gives agents tools: database queries, API calls, file access, web search. Pilot Protocol gives agents a network: peer discovery, encrypted tunnels, trust management, task delegation. Neither replaces the other. An agent that can query a database but cannot share the results with a peer agent is half an agent. An agent that can reach peers but cannot access tools is the other half. This article shows you how to build the complete picture.</p>
+const bodyContent = `<p>The <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol (MCP)</a> gives agents tools: database queries, API calls, file access, web search. Pilot Protocol gives agents a network: addresses, encrypted tunnels, trust management, messaging and pub/sub. Neither replaces the other. An agent that can query a database but cannot share the results with a peer agent is half an agent. An agent that can reach peers but cannot access tools is the other half. This article shows you how to build the complete picture.</p>
 
   <p>MCP has crossed 97 million monthly SDK downloads. Thousands of <a href="https://github.com/modelcontextprotocol/servers" target="_blank" rel="noopener">MCP servers</a> exist for everything from GitHub to Postgres to Slack. What none of them provide is peer communication. An MCP-equipped agent can gather data from any source, but delivering that data to another agent still requires building your own transport, discovery, and encryption layer. That is exactly what Pilot provides.</p>
 
@@ -12,7 +12,7 @@ const bodyContent = `<p>The <a href="https://modelcontextprotocol.io" target="_b
 
   <p><strong>Vertical: Tools (MCP).</strong> An agent reaches down into systems. It queries databases, calls APIs, reads files, executes code. MCP standardizes this with a client-server protocol: the agent runs an MCP client, connects to MCP servers (each wrapping a tool), and invokes tools through a structured <a href="https://www.jsonrpc.org" target="_blank" rel="noopener">JSON-RPC</a> interface. The agent talks to systems.</p>
 
-  <p><strong>Horizontal: Network (Pilot).</strong> An agent reaches across to peers. It discovers other agents, establishes trust, opens encrypted connections, sends messages, delegates tasks, subscribes to events. Pilot standardizes this with virtual addresses, UDP tunnels, and a port-based service model. The agent talks to agents.</p>
+  <p><strong>Horizontal: Network (Pilot).</strong> An agent reaches across to peers. It finds other agents, establishes trust, opens encrypted connections, sends messages and requests, subscribes to events. Pilot standardizes this with virtual addresses, UDP tunnels, and a port-based service model. The agent talks to agents.</p>
 
   <p>Neither layer knows about the other. MCP does not care how your agent communicates with peers. Pilot does not care what tools your agent uses. This separation is a feature: you can upgrade your tools without changing your network layer, and vice versa. But at the application level, you need both.</p>
 
@@ -40,21 +40,26 @@ type Agent struct {
     llm    *llmclient.Client  <span class="comment">// LLM: reasoning</span>
 }
 
-<span class="comment">// The agent loop: receive request, gather data, reason, deliver</span>
+<span class="comment">// The agent loop: accept a request, gather data, reason, reply</span>
 func (a *Agent) Run() {
-    for msg := range a.pilot.Recv() {
+    ln, _ := a.pilot.Listen(1000)
+    for {
+        conn, _ := ln.Accept()
+        req := readRequest(conn)
+
         <span class="comment">// 1. Use MCP to gather data</span>
-        data := a.mcp.CallTool("database_query", msg.Params)
+        data := a.mcp.CallTool("database_query", req.Params)
 
         <span class="comment">// 2. Use LLM to reason about the data</span>
-        result := a.llm.Complete(msg.Prompt + data)
+        result := a.llm.Complete(req.Prompt + data)
 
-        <span class="comment">// 3. Use Pilot to deliver the result</span>
-        a.pilot.Send(msg.Sender, result)
+        <span class="comment">// 3. Use Pilot to deliver the result on the same connection</span>
+        conn.Write([]byte(result))
+        conn.Close()
     }
 }</code></pre>
 
-  <p>The Pilot daemon runs as a separate process (started with <code>pilot-daemon</code>). The MCP servers run as separate processes too (started by the MCP client). Your agent process is the coordinator that ties them together.</p>
+  <p>The Pilot daemon runs as a separate process (started with <code>pilotctl daemon start</code>). The MCP servers run as separate processes too (started by the MCP client). Your agent process is the coordinator that ties them together.</p>
   </section>
 
   <section>
@@ -78,10 +83,11 @@ import (
     "encoding/json"
     "fmt"
     "log"
-    "os/exec"
 
     "github.com/pilot-protocol/common/driver"
-        )
+    "github.com/pilot-protocol/common/protocol"
+    "github.com/pilot-protocol/eventstream"
+)
 
 func main() {
     <span class="comment">// Connect to the local Pilot daemon</span>
@@ -91,99 +97,112 @@ func main() {
     }
     defer drv.Close()
 
-    <span class="comment">// Advertise task readiness</span>
-    // illustrative — the shipped driver exposes SendTo/RecvFrom; wire
-    // pub/sub + tasks to pilotctl publish/subscribe or the messaging API
-    drv.SetTaskReady(true)
+    <span class="comment">// Accept research requests on port 1000</span>
+    ln, err := drv.Listen(1000)
+    if err != nil {
+        log.Fatal(err)
+    }
 
-    log.Println("Research agent online, waiting for tasks...")
+    <span class="comment">// Completion events go to a hub node's event stream (port 1002).
+    // Other agents follow them with: pilotctl subscribe research-hub research.completed</span>
+    hub, err := drv.ResolveHostname("research-hub")
+    if err != nil {
+        log.Fatal(err)
+    }
+    hubAddr, err := protocol.ParseAddr(hub["address"].(string))
+    if err != nil {
+        log.Fatal(err)
+    }
+    events, err := eventstream.Subscribe(drv, hubAddr, "research.completed")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer events.Close()
+
+    log.Println("Research agent online, waiting for requests...")
 
     for {
-        <span class="comment">// Accept incoming research requests via Pilot</span>
-        msg, err := drv.Recv()
+        <span class="comment">// Accept an incoming research request via Pilot</span>
+        conn, err := ln.Accept()
         if err != nil {
-            log.Printf("recv error: %v", err)
+            log.Printf("accept error: %v", err)
             continue
         }
 
-        log.Printf("Received request from %s", msg.Sender)
+        buf := make([]byte, 64*1024)
+        n, err := conn.Read(buf)
+        if err != nil {
+            conn.Close()
+            continue
+        }
+        var req map[string]string
+        if err := json.Unmarshal(buf[:n], &req); err != nil {
+            conn.Close()
+            continue
+        }
+        log.Printf("Received request from %s", conn.RemoteAddr())
 
         <span class="comment">// Use MCP to query the database</span>
         queryResult := callMCPTool("database", "query", map[string]string{
             "sql": fmt.Sprintf(
                 "SELECT title, abstract FROM papers WHERE topic LIKE '%%%s%%' LIMIT 10",
-                msg.Params["topic"],
+                req["topic"],
             ),
         })
 
         <span class="comment">// Use MCP to fetch web content for additional context</span>
         webResult := callMCPTool("web-search", "search", map[string]string{
-            "query": msg.Params["topic"] + " recent developments",
+            "query": req["topic"] + " recent developments",
         })
 
         <span class="comment">// Combine sources and produce summary (LLM call omitted for clarity)</span>
         summary := fmt.Sprintf(
-            "Research summary for: %s\\n\\nDatabase: %d papers found\\n%s\\n\\nWeb: %s",
-            msg.Params["topic"],
-            len(queryResult),
-            formatPapers(queryResult),
-            webResult,
+            "Research summary for: %s\\n\\nDatabase:\\n%s\\n\\nWeb: %s",
+            req["topic"], queryResult, webResult,
         )
 
-        <span class="comment">// Return results to the requester via Pilot</span>
-        err = drv.Send(msg.Sender, []byte(summary))
-        if err != nil {
-            log.Printf("send error: %v", err)
-            continue
+        <span class="comment">// Return results to the requester on the same connection</span>
+        if _, err := conn.Write([]byte(summary)); err != nil {
+            log.Printf("write error: %v", err)
         }
+        conn.Close()
 
-        <span class="comment">// Publish event so other agents know research is done</span>
-        event := eventstream.Event{
-            Topic: "research.completed",
-            Data:  map[string]string{
-                "task_id": task.ID,
-                "topic":   task.Params["topic"],
-                "papers":  fmt.Sprintf("%d", len(queryResult)),
-            },
+        <span class="comment">// Publish an event so other agents know the research is done</span>
+        eventData, _ := json.Marshal(map[string]string{"topic": req["topic"]})
+        if err := events.Publish("research.completed", eventData); err != nil {
+            log.Printf("publish error: %v", err)
         }
-        eventData, _ := json.Marshal(event)
-        drv.Publish("research.completed", eventData)
-
-        log.Printf("Task %s completed, event published", task.ID)
     }
 }
 
-<span class="comment">// callMCPTool invokes an MCP tool via the MCP client CLI.
-// In production, use the MCP Go SDK for direct integration.</span>
+<span class="comment">// callMCPTool invokes a tool through your MCP client
+// (for example the official MCP Go SDK). Left as a stub here.</span>
 func callMCPTool(server, tool string, params map[string]string) string {
-    args := []string{"call", "--server", server, "--tool", tool}
-    for k, v := range params {
-        args = append(args, "--param", k+"="+v)
-    }
-    out, err := exec.Command("mcp", args...).Output()
-    if err != nil {
-        log.Printf("MCP tool %s/%s error: %v", server, tool, err)
-        return ""
-    }
-    return string(out)
+    return ""
 }</code></pre>
 
-  <p>The flow is straightforward: Pilot handles the peer communication (receiving the task, sending the results, publishing the event), while MCP handles the tool access (database query, web search). The agent's logic is the glue between them.</p>
+  <p>The flow is straightforward: Pilot handles the peer communication (accepting the request, returning the result, publishing the event), while MCP handles the tool access (database query, web search). The agent's logic is the glue between them.</p>
 
   <h3>Python Implementation</h3>
 
-  <p>For Python agents, the pattern uses <code>subprocess</code> calls to <code>pilotctl</code> for Pilot integration and the MCP Python SDK for tool access:</p>
+  <p>For Python agents, the pattern uses the Pilot Python SDK (<code>pip install pilotprotocol</code>) for Pilot integration and the MCP Python SDK for tool access:</p>
 
-  <pre><code>import subprocess
+  <pre><code>import asyncio
 import json
+from pilotprotocol import Driver
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 async def research_agent():
+    <span class="comment"># Connect to the local Pilot daemon and accept requests on port 1000</span>
+    pilot = Driver()
+    listener = pilot.listen(1000)
+
     <span class="comment"># Connect to MCP database server</span>
     server_params = StdioServerParameters(
-        command="mcp-server-postgres",
-        args=["--connection-string", "postgresql://localhost/research"]
+        command="npx",
+        args=["-y", "@modelcontextprotocol/server-postgres",
+              "postgresql://localhost/research"]
     )
 
     async with stdio_client(server_params) as (read, write):
@@ -191,16 +210,10 @@ async def research_agent():
             await mcp.initialize()
 
             while True:
-                <span class="comment"># Receive incoming request via pilotctl</span>
-                result = subprocess.run(
-                    ["pilotctl", "recv", "1000", "--json"],
-                    capture_output=True, text=True, timeout=60
-                )
-                if result.returncode != 0:
-                    continue
-
-                msg = json.loads(result.stdout)
-                topic = msg["params"]["topic"]
+                <span class="comment"># Wait for a request (accept blocks, so run it off the event loop)</span>
+                conn = await asyncio.to_thread(listener.accept)
+                req = json.loads(conn.read(65536))
+                topic = req["topic"]
 
                 <span class="comment"># Use MCP to query the database</span>
                 db_result = await mcp.call_tool("query", {
@@ -213,26 +226,19 @@ async def research_agent():
                 for row in db_result.content:
                     summary += f"- {row.text}\\n"
 
-                <span class="comment"># Return results via pilotctl</span>
-                subprocess.run([
-                    "pilotctl", "send",
-                    msg["sender"], "1000", "--data",
-                    summary
-                ])
+                <span class="comment"># Return results on the same connection</span>
+                conn.write(summary.encode())
+                conn.close()
 
-                <span class="comment"># Publish completion event via pilotctl</span>
+                <span class="comment"># Publish a completion event on the hub's event stream</span>
                 event = json.dumps({
-                    "task_id": task["id"],
                     "topic": topic,
                     "papers": str(len(db_result.content))
                 })
-                subprocess.run([
-                    "pilotctl", "publish",
-                    "<broker-addr>", "research.completed",
-                    "--data", event
-                ])</code></pre>
+                pilot.publish_event("research-hub", "research.completed",
+                                    event.encode())</code></pre>
 
-  <p>The Python version shells out to <code>pilotctl</code> for Pilot operations, which is practical for prototyping and small-scale agents. For production workloads, a native Python binding to the Pilot IPC socket would eliminate the subprocess overhead.</p>
+  <p>The Python SDK calls the same Go driver as the Go example, through a shared library that ships in the wheel. If you would rather not add a dependency, the same steps work by shelling out to <code>pilotctl</code>: <code>pilotctl send &lt;addr&gt; 1000 --data '...'</code> to make a request and <code>pilotctl publish research-hub research.completed --data '...'</code> for the event.</p>
   </section>
 
   <section>
@@ -242,7 +248,7 @@ async def research_agent():
 
   <h3>Data Pipeline Across Agents</h3>
 
-  <p>Agent A uses MCP to query a database. It publishes a "data.ready" event via Pilot's event stream. Agent B subscribes to "data.*" events. When it receives the notification, it connects to Agent A on port 1001 (data exchange) and downloads the dataset. Agent B uses MCP to write the processed results to a different database. Three agents and two databases use Pilot's registry and beacon coordination without an additional workflow-specific broker.</p>
+  <p>Agent A uses MCP to query a database. It publishes a "data.ready" event via Pilot's event stream. Agent B subscribes to the "data.ready" topic. When it receives the notification, it asks Agent A for the dataset, and Agent A sends it with <code>pilotctl send-file</code> over data exchange (port 1001). Agent B uses MCP to write the processed results to a different database. The event stream runs inside a Pilot daemon, so there is no separate message broker to deploy.</p>
 
   <h3>Tool Delegation</h3>
 
@@ -258,11 +264,11 @@ async def research_agent():
 
   <p>Today, MCP agents are islands. They connect to tools, they process data, they produce results. But they have no standardized way to find each other, establish trust, or exchange those results. Each MCP deployment reinvents peer communication with ad-hoc HTTP endpoints, message queues, or shared databases.</p>
 
-  <p>A Pilot address gives an MCP agent an identity on a peer network. It can be discovered by other agents (or stay invisible, if private). It can receive tasks, publish events, and exchange data. It can do all of this over <a href="zero-dependency-encryption-x25519-aes-gcm">encrypted tunnels</a> that traverse <a href="nat-traversal-ai-agents-deep-dive">NAT</a> without changes to your existing infrastructure - the only requirement is a rendezvous server for discovery, which you can use publicly or self-host.</p>
+  <p>A Pilot address gives an MCP agent an identity on a peer network. It can be discovered by other agents (or stay invisible, if private). It can receive requests, publish events, and exchange data. It can do all of this over <a href="zero-dependency-encryption-x25519-aes-gcm">encrypted tunnels</a> that traverse <a href="nat-traversal-ai-agents-deep-dive">NAT</a> without changes to your existing infrastructure - the only requirement is a registry and beacon, which you can use publicly (the backbone Vulture Labs runs at no charge) or self-host.</p>
 
   <p>The integration cost is minimal: start a Pilot daemon alongside your MCP agent, add a few <code>pilotctl</code> calls (or driver API calls in Go) to your agent loop, and your MCP agent becomes a networked MCP agent. The tools still work the same way. The LLM still works the same way. You just added the ability to collaborate with peers.</p>
 
-  <p>MCP handles the vertical. Pilot handles the horizontal. Together, they are the full stack for agent infrastructure. For more integration patterns, see <a href="a2a-agent-cards-over-pilot-tunnels">Building A2A Agent Cards Over Pilot Tunnels</a> and <a href="build-agent-swarm-self-organizes">Build an Agent Swarm That Self-Organizes via Reputation</a>. For the technical details of the Pilot driver API, check the <a href="/docs/">documentation</a>.</p>
+  <p>MCP handles the vertical. Pilot handles the horizontal. Together, they are the full stack for agent infrastructure. For more integration patterns, see <a href="a2a-agent-cards-over-pilot-tunnels">Building A2A Agent Cards Over Pilot Tunnels</a> and <a href="connecting-mcp-servers-across-agents">Connecting MCP Servers to Agents Across Any Network</a>. For the technical details of the Pilot driver API, check the <a href="/docs/">documentation</a>.</p>
   </section>
 
   <div class="cta">

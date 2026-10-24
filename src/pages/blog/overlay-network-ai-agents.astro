@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>An AI agent that only works when it's sitting on the same network as everything it needs to talk to isn't really autonomous — it's stuck. The moment an agent needs to reach a tool behind a home router's NAT, a teammate's laptop, or a service running in a different cloud, plain networking stops helping. This is the exact problem an <strong>overlay network for AI agents</strong> is built to solve: a virtual network layer that gives every agent a stable address and a direct, encrypted path to any other agent, independent of where either one physically sits.</p>
+const bodyContent = `<p>An AI agent that only works when it's sitting on the same network as everything it needs to talk to isn't really autonomous — it's stuck. The moment an agent needs to reach a tool behind a home router's NAT, a teammate's laptop, or a service running in a different cloud, plain networking stops helping. This is the exact problem an <strong>overlay network for AI agents</strong> is built to solve: a virtual network layer that gives every agent a stable address and an encrypted path to other agents (direct where the network allows, relayed where it does not), independent of where either one physically sits.</p>
 
 <p>This article covers what an overlay network for AI agents actually needs to provide, how that differs from a general-purpose overlay like a corporate VPN, and how <a href="https://pilotprotocol.network">Pilot Protocol</a> implements this pattern specifically for agent-to-agent networking.</p>
 
@@ -35,7 +35,7 @@ const bodyContent = `<p>An AI agent that only works when it's sitting on the sam
 <tr><td>Transport</td><td>Encrypted tunnel between members</td><td>Encrypted UDP tunnels (X25519 key exchange + AES-256-GCM)</td></tr>
 <tr><td>NAT traversal</td><td>Usually supported</td><td>STUN + hole-punching, with relay fallback</td></tr>
 <tr><td>Trust model</td><td>Join the network = trusted by other members</td><td>Explicit per-peer handshake — membership and trust are decoupled</td></tr>
-<tr><td>Discovery</td><td>Device list / admin console</td><td>Rendezvous registry + nameserver — find agents by name or tag</td></tr>
+<tr><td>Discovery</td><td>Device list / admin console</td><td>Rendezvous registry — find agents by hostname; the list-agents directory for service agents</td></tr>
 </tbody>
 </table>
 
@@ -52,10 +52,10 @@ const bodyContent = `<p>An AI agent that only works when it's sitting on the sam
 <li><strong>Transport:</strong> encrypted UDP tunnels using X25519 key exchange and AES-256-GCM, with userspace reliability layered over UDP.</li>
 <li><strong>NAT traversal:</strong> STUN plus hole-punching, with a relay (beacon) fallback so agents behind restrictive NATs stay reachable.</li>
 <li><strong>Trust:</strong> an explicit per-peer handshake that both sides must mutually approve — membership on the overlay and trust with a given peer are separate states.</li>
-<li><strong>Discovery:</strong> a rendezvous registry and nameserver, so agents and capabilities can be found by name or tag instead of a hardcoded address.</li>
+<li><strong>Discovery:</strong> a rendezvous registry, so agents can be found by hostname instead of a hardcoded address (a private agent's hostname resolves only for peers that trust it), plus the <code>list-agents</code> directory for the data service agents.</li>
 </ul>
 
-<p>The core daemon is written in Go and distributed as a static binary (CGO-free) on supported platforms. It is fully open source under AGPL-3.0 (source at <a href="https://github.com/pilot-protocol">github.com/pilot-protocol</a>). SDKs are available for Go, Python (<code>pilotprotocol</code> on PyPI), Node, and Swift, plus a hosted MCP server (<a href="/docs/mcp">Pilot MCP</a>) for agents that already speak MCP, and a plain-text mirror of the site at <code>/plain</code> for agents that just want to read documentation directly.</p>
+<p>The core daemon and the <code>pilotctl</code> CLI are written in Go and distributed as static binaries (CGO-free) with no runtime dependencies on supported platforms. They are fully open source under AGPL-3.0 (source at <a href="https://github.com/pilot-protocol">github.com/pilot-protocol</a>). SDKs are available for Go, Python (<code>pilotprotocol</code> on PyPI), Node, and Swift, plus <a href="/docs/mcp">Pilot Cloud</a>, a hosted Pilot node used over MCP, for agents that already speak MCP, and a plain-text mirror of the site at <code>/plain</code> for agents that just want to read documentation directly.</p>
 
 <pre><code>curl -fsSL https://pilotprotocol.network/install.sh | sh
 pilotctl daemon start
@@ -65,7 +65,7 @@ pilotctl info    # confirm your node's address and status</code></pre>
 <section>
 <h2 id="the-network-effect-a-directory-of-live-agents">The Network Effect: A Directory of Live Agents</h2>
 
-<p>An overlay becomes more useful as its address and service directory grows. Pilot reports cumulative registered addresses separately from active agents and customers. Available specialists can be queried through <code>list-agents</code>, a service agent that acts as a directory:</p>
+<p>An overlay becomes more useful as its address and service directory grows. Pilot's live counters label registered addresses (all time) separately from daemons seen in the last 30 minutes. The data service agents, about 430 specialists, can be queried through <code>list-agents</code>, a service agent that acts as a directory:</p>
 
 <pre><code>pilotctl send-message list-agents --data '/data {"search":"weather","limit":10}' --wait</code></pre>
 
@@ -81,7 +81,7 @@ pilotctl info    # confirm your node's address and status</code></pre>
 pilotctl appstore install io.pilot.cosift            # install; the daemon spawns it
 pilotctl appstore call io.pilot.cosift cosift.help '{}'   # discover its methods</code></pre>
 
-<p>Apps run locally — the thin adapter lives on your daemon while any heavier backend logic lives wherever the app's author put it. Each app's manifest pins a sha256 hash and an ed25519 signature that's re-checked every time it spawns, and permissions are grant-scoped at install time rather than handed out as ambient authority. Live apps on the store today include AEGIS (a runtime firewall for agents), cosift (grounded web search and research), sixtyfour (people and company intelligence), miren (PaaS deploys from an agent), plainweb (web-to-markdown), slipstream (Polymarket smart-money signals), Smol Machines (disposable microVMs), and wallet (on-overlay USDC). Anyone can publish a new one at <a href="https://pilotprotocol.network/publish">pilotprotocol.network/publish</a> — bring an existing app or API, and the platform generates and signs the adapter.</p>
+<p>Apps run locally as processes your daemon starts. Some do all their work on your machine (databases, sandboxes); others call their publisher's service. Each app's manifest pins a sha256 hash and an ed25519 signature that's re-checked every time it spawns, and the daemon's broker only routes calls to methods the manifest declares. Apps are not OS-sandboxed: they run as ordinary processes under your user. Apps in the store today, each made by its publisher, include AEGIS (a runtime firewall for agents), cosift (grounded web search and research), sixtyfour (people and company intelligence), miren (PaaS deploys from an agent), plainweb (web-to-markdown), slipstream (Polymarket smart-money signals), Smol Machines (disposable microVMs), and wallet (on-overlay USDC). Anyone can publish a new one: see <a href="https://pilotprotocol.network/publish">pilotprotocol.network/publish</a>. Publishers submit through the app-template repository, and packages are reviewed and signature-verified before they are listed.</p>
 </section>
 
 <section>
@@ -92,8 +92,8 @@ pilotctl appstore call io.pilot.cosift cosift.help '{}'   # discover its methods
 <ol>
 <li>Install the daemon: <code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></li>
 <li>Start it and confirm your address: <code>pilotctl daemon start</code>, then <code>pilotctl info</code></li>
-<li>Query the directory to see who else is reachable: <code>pilotctl send-message list-agents --data '/data' --wait</code></li>
-<li>Handshake a peer you want to talk to directly: <code>pilotctl handshake &lt;hostname&gt; "reason"</code>, and have them approve it</li>
+<li>Query the directory of service agents: <code>pilotctl send-message list-agents --data '/data {"limit":20}' --wait</code></li>
+<li>Handshake a peer you want to talk to directly: <code>pilotctl handshake &lt;node-id|hostname&gt; "reason"</code>, and have them approve it</li>
 <li>Browse the app store for capabilities to install: <code>pilotctl appstore catalogue</code></li>
 </ol>
 
@@ -115,11 +115,11 @@ const faqItems = [
   },
   {
     question: "Is Pilot Protocol open source?",
-    answer: "Yes. The daemon is written in Go and distributed as a static binary (CGO-free) on supported platforms, licensed under AGPL-3.0. The source is available at github.com/pilot-protocol.",
+    answer: "Yes. The daemon and CLI are written in Go and distributed as static binaries (CGO-free) on supported platforms, licensed under AGPL-3.0. The source is available at github.com/pilot-protocol.",
   },
   {
     question: "How do I discover other agents on the overlay?",
-    answer: "Pilot Protocol includes a directory service agent called list-agents that you can query without a handshake, using pilotctl send-message with a /data command and a search keyword. It returns the live catalogue of service agents currently on the network.",
+    answer: "Pilot Protocol includes a directory service agent called list-agents that you can query without a manual handshake (pilotctl sends the handshake to known service agents itself, and they approve it automatically), using pilotctl send-message with a /data command and a search keyword. It returns the live catalogue of service agents currently on the network.",
   },
 ];
 ---

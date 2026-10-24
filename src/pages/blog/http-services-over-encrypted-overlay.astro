@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>Every HTTP library in every language works with TCP sockets. Pilot Protocol speaks UDP. You might assume these are incompatible. They are not. Pilot's driver implements <code>net.Conn</code>, which means Go's <a href="https://pkg.go.dev/net/http" target="_blank" rel="noopener"><code>net/http</code></a> server and client work over Pilot connections without modification. You write a normal HTTP handler, listen on a Pilot port, and the bytes travel over an encrypted UDP tunnel through NAT. Standard <code>curl</code> and <code>fetch()</code> calls work through the gateway.</p>
+const bodyContent = `<p>Every HTTP library in every language works with TCP sockets. Pilot Protocol speaks UDP. You might assume these are incompatible. They are not. Pilot's driver implements <code>net.Conn</code>, which means Go's <a href="https://pkg.go.dev/net/http" target="_blank" rel="noopener"><code>net/http</code></a> server and client work over Pilot connections without modification. You write a normal HTTP handler, listen on a Pilot port, and the bytes travel over an encrypted UDP tunnel through NAT. Standard <code>curl</code> and <code>fetch()</code> calls can reach the same services through the optional gateway, a separate binary that needs root.</p>
 
   <p>This tutorial builds from a single HTTP endpoint to a three-service REST API mesh running entirely over the encrypted overlay. By the end, you will have agents exposing HTTP services that any standard client can consume, with <strong>zero TLS configuration</strong> on your part.</p>
 
@@ -89,7 +89,7 @@ func main() {
     }
 
     <span class="comment">// Dial Agent A's address on port 80 (addr string is "N:XXXX.YYYY.YYYY:PORT")</span>
-    conn, err := d.Dial("1:0001.0002.0003:80")
+    conn, err := d.Dial("0:0000.0002.0003:80")
     if err != nil {
         panic(err)
     }
@@ -110,7 +110,7 @@ func main() {
     fmt.Printf("Status: %d\\nBody: %s\\n", resp.StatusCode, body)
 }</code></pre>
 
-  <p>The HTTP request and response travel over the encrypted Pilot tunnel. Agent B does not need Agent A's IP address, does not need to open firewall ports, and does not need TLS certificates. The Pilot address (<code>1:0001.0002.0003</code>) is the only identifier needed.</p>
+  <p>The HTTP request and response travel over the encrypted Pilot tunnel. Agent B does not need Agent A's IP address, does not need to open firewall ports, and does not need TLS certificates. Once the two agents have completed a trust handshake (or share a network), the Pilot address (<code>0:0000.0002.0003</code>) is the only identifier needed.</p>
 
   <h3>Using net/http.Client Directly</h3>
 
@@ -119,6 +119,7 @@ func main() {
   <pre><code>package main
 
 import (
+    "context"
     "fmt"
     "io"
     "net"
@@ -164,13 +165,17 @@ func main() {
 
   <p>The Go driver approach works for agent-to-agent communication. But what about external tools -- <code>curl</code>, Postman, a Python <code>requests</code> call, or a browser? The Pilot gateway bridges the overlay network to your local machine.</p>
 
+  <div class="callout">
+    <p><strong>The gateway is a separate, optional binary.</strong> <code>pilot-gateway</code> is not in the release tarballs (they contain <code>pilot-daemon</code>, <code>pilotctl</code> and <code>pilot-updater</code>). Its code, <a href="https://github.com/pilot-protocol/gateway">github.com/pilot-protocol/gateway</a>, is published as a Go library that you build into your own binary. When a <code>pilot-gateway</code> binary is present (next to <code>pilotctl</code>, on <code>$PATH</code>, or in <code>$PILOT_GATEWAY_BIN</code>), <code>pilotctl extras gateway start</code> runs it in the foreground. It needs root, because it adds loopback aliases.</p>
+  </div>
+
   <h3>Starting the Gateway</h3>
 
   <pre><code><span class="comment"># Map Agent A's address to a local IP and expose port 80</span>
-<span class="cmd">pilotctl extras gateway start --ports 80 1:0001.0002.0003</span>
+<span class="cmd">sudo pilotctl extras gateway start --ports 80 0:0000.0002.0003</span>
 
-<span class="comment"># The gateway assigns a loopback alias (e.g., 10.4.0.1)</span>
-<span class="comment"># Output: Gateway active: 1:0001.0002.0003 -> 10.4.0.1:80</span></code></pre>
+<span class="comment"># The gateway assigns loopback aliases from 10.4.0.0/16, starting at 10.4.0.1</span>
+<span class="comment"># Stop it with Ctrl-C, or: sudo pkill -TERM pilot-gateway</span></code></pre>
 
   <p>The gateway does three things:</p>
 
@@ -184,7 +189,7 @@ func main() {
 
   <pre><code><span class="comment"># curl works</span>
 <span class="cmd">curl http://10.4.0.1/api/status</span>
-{"status":"healthy","agent":"1:0001.0002.0003","version":"1.0.0"}
+{"status":"healthy","agent":"0:0000.0002.0003","version":"1.0.0"}
 
 <span class="comment"># Python requests works</span>
 <span class="cmd">python3 -c "import requests; print(requests.get('http://10.4.0.1/api/status').json())"</span>
@@ -197,18 +202,15 @@ func main() {
 
   <h3>Multiple Agents, Multiple Local IPs</h3>
 
-  <p>You can map multiple agents simultaneously. Each gets its own local IP:</p>
+  <p>You can map multiple agents at once by passing several addresses to one gateway. Each gets its own local IP, in order:</p>
 
-  <pre><code><span class="cmd">pilotctl extras gateway start --ports 80 1:0001.0002.0003</span>  <span class="comment"># -> 10.4.0.1</span>
-<span class="cmd">pilotctl extras gateway start --ports 80 1:0001.0002.0004</span>  <span class="comment"># -> 10.4.0.2</span>
-<span class="cmd">pilotctl extras gateway start --ports 80 1:0001.0002.0005</span>  <span class="comment"># -> 10.4.0.3</span>
+  <pre><code><span class="cmd">sudo pilotctl extras gateway start --ports 80 \\
+    0:0000.0002.0003 0:0000.0002.0004 0:0000.0002.0005</span>
+<span class="comment"># 0:0000.0002.0003 -> 10.4.0.1</span>
+<span class="comment"># 0:0000.0002.0004 -> 10.4.0.2</span>
+<span class="comment"># 0:0000.0002.0005 -> 10.4.0.3</span></code></pre>
 
-<span class="comment"># List active gateway mappings</span>
-<span class="cmd">pilotctl extras gateway list</span>
-ADDRESS              LOCAL IP      PORTS
-1:0001.0002.0003     10.4.0.1      80
-1:0001.0002.0004     10.4.0.2      80
-1:0001.0002.0005     10.4.0.3      80</code></pre>
+  <p>The mapping table lives inside the running <code>pilot-gateway</code> process, which logs each mapping as it is added; <code>pilotctl extras gateway list</code> cannot see it.</p>
   </section>
 
   <section>
@@ -373,12 +375,12 @@ func main() {
 
   <h3>Accessing the Mesh via Gateway</h3>
 
-  <p>Start gateway mappings for all three agents:</p>
+  <p>Start one gateway with mappings for all three agents:</p>
 
   <pre><code><span class="comment"># Map each service to a local IP</span>
-<span class="cmd">pilotctl extras gateway start --ports 80 1:0001.0002.0001</span>  <span class="comment"># Users  -> 10.4.0.1</span>
-<span class="cmd">pilotctl extras gateway start --ports 80 1:0001.0002.0002</span>  <span class="comment"># Orders -> 10.4.0.2</span>
-<span class="cmd">pilotctl extras gateway start --ports 80 1:0001.0002.0003</span>  <span class="comment"># Inventory -> 10.4.0.3</span></code></pre>
+<span class="cmd">sudo pilotctl extras gateway start --ports 80 \\
+    0:0000.0002.0001 0:0000.0002.0002 0:0000.0002.0003</span>
+<span class="comment"># Users -> 10.4.0.1, Orders -> 10.4.0.2, Inventory -> 10.4.0.3</span></code></pre>
 
   <p>Now query the services with standard HTTP tools:</p>
 
@@ -402,7 +404,7 @@ func main() {
 
   <pre><code><span class="comment">// Inside the Orders service: enrich order with user details</span>
 func enrichOrder(d *driver.Driver, order Order) map[string]any {
-    conn, _ := d.Dial("1:0001.0002.0001:80") <span class="comment">// Users service</span>
+    conn, _ := d.Dial("0:0000.0002.0001:80") <span class="comment">// Users service</span>
     defer conn.Close()
 
     req, _ := http.NewRequest("GET",
@@ -430,12 +432,12 @@ func enrichOrder(d *driver.Driver, order Order) map[string]any {
   <p>Today, Pilot ports 80 and 443 both ride the same AES-256-GCM encrypted tunnel. Port 443 is the secure-service convention; it does not yet add a second per-connection encryption layer in the shipping SDK.</p>
 
   <div class="callout">
-    <p><strong>Roadmap note.</strong> The per-connection secure layer ("pilot-secure-v1") is specified in the <a href="/docs/research">wire specification</a> (§11.4) but is <strong>not yet exposed as a distinct driver API</strong> — there is no <code>ListenSecure</code>/<code>DialSecure</code> in the current Go SDK. Today, listening on port 443 rides the same tunnel encryption as port 80. The code below shows the intended shape using the shipping <code>Listen</code>/<code>Dial</code> calls; the second encryption layer lands when the secure-port API ships.</p>
+    <p><strong>Current state.</strong> A per-connection secure layer exists as a Go package, <code>github.com/pilot-protocol/common/secure</code>: <code>secure.Handshake</code> wraps any <code>net.Conn</code> in a channel with its own ephemeral X25519 key and AES-256-GCM. The driver does <strong>not</strong> apply it -- there is no <code>ListenSecure</code>/<code>DialSecure</code> in the current Go SDK, and listening on port 443 rides the same tunnel encryption as port 80. The code below uses the shipping <code>Listen</code>/<code>Dial</code> calls.</p>
   </div>
 
-  <h3>Why a Future Second Layer?</h3>
+  <h3>Why a Second Layer?</h3>
 
-  <p>The proposed secure-port API would derive a separate key for each logical connection, adding isolation beyond the current peer-specific tunnel secret. That is a roadmap property, not a claim about the current driver.</p>
+  <p>A second layer derives a separate key for each logical connection, adding isolation beyond the peer-specific tunnel secret. With today's driver you only get it by wrapping the connection yourself.</p>
 
   <p>This is the same defense-in-depth approach as running TLS inside a VPN tunnel. It protects against key compromise at any single layer.</p>
 
@@ -460,8 +462,8 @@ func main() {
     info, _ := d.Info()
     addr, _ := info["address"].(string)
 
-    <span class="comment">// Listen on secure port 443 (rides tunnel encryption today;</span>
-    <span class="comment">// the per-connection X25519 layer lands with the secure-port API)</span>
+    <span class="comment">// Listen on secure port 443 (rides tunnel encryption;</span>
+    <span class="comment">// the driver adds no per-connection layer)</span>
     ln, err := d.Listen(443)
     if err != nil {
         panic(err)
@@ -473,9 +475,8 @@ func main() {
     mux.HandleFunc("/api/secrets", func(w http.ResponseWriter, r *http.Request) {
         w.Header().Set("Content-Type", "application/json")
         json.NewEncoder(w).Encode(map[string]string{
-            "message": "Encrypted by the Pilot tunnel today; per-connection layer on the roadmap",
-            "tunnel":  "AES-256-GCM (shared tunnel key)",
-            "conn":    "per-connection X25519 key (pilot-secure-v1, planned)",
+            "message": "Encrypted by the Pilot tunnel",
+            "tunnel":  "AES-256-GCM (peer tunnel key)",
         })
     })
 
@@ -486,7 +487,7 @@ func main() {
   <p>The client side dials the <code>:443</code> port the same way as any other:</p>
 
   <pre><code><span class="comment">// Client: connect to secure port</span>
-conn, err := d.Dial("1:0001.0002.0003:443")
+conn, err := d.Dial("0:0000.0002.0003:443")
 if err != nil {
     panic(err)
 }
@@ -500,7 +501,7 @@ resp, _ := http.ReadResponse(bufio.NewReader(conn), req)</code></pre>
   <p>The gateway also supports secure ports:</p>
 
   <pre><code><span class="comment"># Gateway with secure port mapping</span>
-<span class="cmd">pilotctl extras gateway start --ports 443 1:0001.0002.0003</span>
+<span class="cmd">sudo pilotctl extras gateway start --ports 443 0:0000.0002.0003</span>
 
 <span class="comment"># Access via curl (still plain HTTP on the local side)</span>
 <span class="cmd">curl http://10.4.0.1:443/api/secrets</span></code></pre>
@@ -515,7 +516,7 @@ resp, _ := http.ReadResponse(bufio.NewReader(conn), req)</code></pre>
 
   <ul>
     <li><strong>Go:</strong> <code>net/http</code>, Gin, Chi, Echo -- all work. Pass the Pilot listener to your framework's <code>Serve</code> method.</li>
-    <li><strong>Gateway clients:</strong> Python <code>requests</code>, JavaScript <code>fetch</code>, Rust <code>reqwest</code>, Java <code>HttpClient</code> -- all work through the gateway. They see a local IP.</li>
+    <li><strong>Gateway clients:</strong> Python <code>requests</code>, JavaScript <code>fetch</code>, Rust <code>reqwest</code>, Java <code>HttpClient</code> -- all work through the gateway, where you run one. They see a local IP.</li>
     <li><strong>Monitoring:</strong> Prometheus can scrape <code>http://10.4.0.1/metrics</code>. Grafana dashboards work unchanged.</li>
     <li><strong>Load testing:</strong> <code>wrk</code>, <code>hey</code>, <code>k6</code> -- point them at the gateway IP.</li>
   </ul>
@@ -533,7 +534,7 @@ resp, _ := http.ReadResponse(bufio.NewReader(conn), req)</code></pre>
 ---
 <BlogLayout
   title="HTTP Services Over Encrypted Overlay"
-  description="Run standard HTTP services over Pilot Protocol's encrypted overlay. Access any agent's API through the gateway."
+  description="Run standard HTTP services over Pilot Protocol's encrypted overlay. Call an agent's API from Go or through the optional gateway."
   date="February 22, 2026"
   tags={["tutorial", "http", "gateway"]}
   canonicalPath="/blog/http-services-over-encrypted-overlay"
