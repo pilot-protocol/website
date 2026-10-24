@@ -2,28 +2,14 @@
 import BaseHead from '../../components/BaseHead.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
+import { loadSkillsCatalog } from '../../data/skillsCatalog';
 import '../../styles/system.css';
 
 const title = "Skills - Agent Skills for Pilot Protocol";
-const description = "The complete catalog of Pilot Protocol agent skills. Communication, file transfer, trust, task routing, swarm coordination - each installable with one command.";
+const description = "Agent skills that teach an agent to use pilotctl: messaging, file transfer, trust, pub/sub, bridges and the service agents. Each installs from ClawHub.";
 const canonicalUrl = "https://pilotprotocol.network/for/skills";
 
-let catalog: {categories: any[]; total: number} = { categories: [], total: 0 };
-try {
-  // Catalog lives under the maintainer's account until the repo transfers to the org.
-  const res = await fetch("https://raw.githubusercontent.com/TeoSlayer/pilot-skills/main/skills.json");
-  if (res.ok) {
-    catalog = await res.json();
-    // Do not publish catalog entries whose advertised source is absent.
-    catalog.categories = catalog.categories
-      .map((category: any) => ({
-        ...category,
-        skills: category.skills.filter((skill: any) => skill.slug !== 'pilot-momy'),
-      }))
-      .filter((category: any) => category.skills.length > 0);
-    catalog.total = catalog.categories.reduce((total: number, category: any) => total + category.skills.length, 0);
-  }
-} catch {}
+const catalog = await loadSkillsCatalog();
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -46,11 +32,13 @@ try {
 <section class="page-head">
   <div class="wrap">
     <div class="eyebrow">Skills</div>
-    <h1>{catalog.total > 0 ? `${catalog.total}+` : ""} agent skills.<br/><em>One command</em> each.</h1>
+    <h1>{catalog.total > 0 ? `${catalog.total} agent skills.` : "Agent skills."}<br/><em>One command</em> each.</h1>
     <p class="lede">
-      Every skill wraps <code>pilotctl</code> to give agents a focused capability -
-      messaging, file transfer, task routing, trust, swarm coordination -
+      Each skill is a <code>SKILL.md</code> that teaches an agent to use <code>pilotctl</code> for one job -
+      messaging, file transfer, trust, pub/sub, bridges, the service agents -
       installable from <a href="https://clawhub.ai/teoslayer/pilot-protocol">ClawHub</a>.
+      The list is built from <a href="https://github.com/TeoSlayer/pilot-skills">github.com/TeoSlayer/pilot-skills</a>;
+      skills that describe features Pilot doesn't have are left out.
     </p>
     <div class="head-cta">
       <a class="btn primary" href="https://clawhub.ai/teoslayer/pilot-protocol"
@@ -67,7 +55,7 @@ try {
       <div class="fs-left">
         <div class="eyebrow">Main skill · ClawHub</div>
         <div class="fs-name">pilot-protocol</div>
-        <p class="fs-desc">The full Pilot Protocol agent skill. Gives any OpenClaw-compatible agent a permanent address, encrypted peer-to-peer tunnels, trust handshakes, and network discovery - one install, everything wired.</p>
+        <p class="fs-desc">The core Pilot Protocol skill. Teaches an OpenClaw-compatible agent the <code>pilotctl</code> commands for its address, encrypted tunnels, trust handshakes, messaging and the service agents, with the steps to install Pilot itself.</p>
         <div class="fs-cta">View on ClawHub <span class="arr">→</span></div>
       </div>
       <div class="fs-right">

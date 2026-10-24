@@ -10,7 +10,7 @@ const bodyContent = `
 <ul>
 <li>MCP tunnels give individual AI agents a standardized way to request tools and access data from servers — they solve the <em>vertical</em> connectivity problem (agent to system).</li>
 <li>VPNs give entire networks IP-layer reachability — they solve the <em>horizontal</em> connectivity problem at the infrastructure level, but they treat every machine in the network as equivalent and provide no agent-level identity or discovery.</li>
-<li>These two approaches solve different problems and are complementary, not competing. Neither provides per-agent identity, capability-based discovery, or peer-to-peer trust — which is where an agent-native overlay network like Pilot Protocol fills the gap.</li>
+<li>These two approaches solve different problems and are complementary, not competing. Neither provides per-agent identity, lookup by agent name, or peer-to-peer trust — which is where an agent-native overlay network like Pilot Protocol fills the gap.</li>
 </ul>
 </blockquote>
 <hr>
@@ -57,7 +57,7 @@ const bodyContent = `
 <li><strong>Network-layer compatibility.</strong> Existing applications and protocols work over a VPN without modification because they operate at the IP layer.</li>
 </ul>
 
-<p>What VPNs do <em>not</em> give you: per-agent identity, capability-based discovery, or per-peer trust at the application layer. Every machine on the VPN is "trusted" at the network level — once a machine is connected, it can reach any other machine that accepts its traffic. VPNs operate at the infrastructure layer; they do not know or care what software is running on the endpoints.</p>
+<p>What VPNs do <em>not</em> give you: per-agent identity, lookup by agent name, or per-peer trust at the application layer. Every machine on the VPN is "trusted" at the network level — once a machine is connected, it can reach any other machine that accepts its traffic. VPNs operate at the infrastructure layer; they do not know or care what software is running on the endpoints.</p>
 
 <h2 id="where-each-falls-short-for-agent-to-agent-communication">Where each falls short for agent-to-agent communication</h2>
 
@@ -67,7 +67,7 @@ const bodyContent = `
 <p>MCP's design assumes a client-server topology. An MCP server waits for tool requests and responds. It has no mechanism to connect to another MCP server or to discover what other agents exist. If you build a multi-agent system using only MCP tunnels, you have to build your own peer discovery, identity management, and messaging layer on top — essentially recreating what an agent-native networking layer provides from the start.</p>
 
 <h3>VPNs: no agent-level semantics</h3>
-<p>A VPN connects machines, not agents. If Agent A and Agent B run on the same machine behind a VPN, they share the same IP address — the VPN cannot distinguish them. If Agent A moves to a different machine (or a different cloud), its IP changes even within the VPN unless you pin addresses manually. VPNs also provide no trust model beyond "is this machine authorized to join the network" — there is no per-peer handshake or capability-based access control at the agent level.</p>
+<p>A VPN connects machines, not agents. If Agent A and Agent B run on the same machine behind a VPN, they share the same IP address — the VPN cannot distinguish them. If Agent A moves to a different machine (or a different cloud), its IP changes even within the VPN unless you pin addresses manually. VPNs also provide no trust model beyond "is this machine authorized to join the network" — there is no per-peer handshake at the agent level.</p>
 
 <p>Security teams have also noticed that a VPN's "joined = trusted" model, while appropriate for infrastructure-level connectivity, creates a flat trust surface for agent communication. A compromised agent on the VPN can reach every other agent on the VPN without additional authorization. Agent-level trust requires a finer granularity than the VPN's network-level admission provides.</p>
 
@@ -77,9 +77,9 @@ const bodyContent = `
 
 <ul>
 <li><strong>Per-agent virtual addresses</strong> that survive restarts, IP changes, and machine migrations — so an agent is reachable by the same address regardless of what infrastructure it runs on.</li>
-<li><strong>Peer discovery</strong> so agents can find each other by capability or tag, not by IP address or DNS name.</li>
+<li><strong>Peer lookup</strong> so agents can find each other by a stable name or address, not by an IP address that changes.</li>
 <li><strong>Mutual trust handshake</strong> — peer-level authentication before two agents exchange data, separate from infrastructure-level VPN authentication.</li>
-<li><strong>Encrypted peer-to-peer tunnels</strong> with built-in NAT traversal — because agents on different clouds, behind different NATs, or in serverless environments should be able to communicate without cloud-specific VPN gateway configuration.</li>
+<li><strong>Encrypted peer-to-peer tunnels</strong> with built-in NAT traversal — because agents on different clouds or behind different NATs should be able to communicate without cloud-specific VPN gateway configuration.</li>
 </ul>
 
 <p>This is exactly what an agent-native overlay network provides. <a href="https://pilotprotocol.network">Pilot Protocol</a> is one such overlay: it gives every agent a permanent virtual address, handles encrypted peer-to-peer communication with NAT traversal, and provides a mutual trust handshake that operates at the agent level — independent of whatever infrastructure connectivity (MCP tunnels, VPN, or public internet) the agents use to reach the overlay.</p>
@@ -89,11 +89,11 @@ const bodyContent = `
 <h2 id="practical-comparison-scenarios">Practical comparison scenarios</h2>
 
 <h3>Scenario 1: Two research agents share findings</h3>
-<p>Agent A (on AWS Lambda) researches a topic using an MCP database query and produces results. Agent B (on a Kubernetes pod in a different cloud) needs those results.</p>
+<p>Agent A (in a container on a spot instance) researches a topic using an MCP database query and produces results. Agent B (on a Kubernetes pod in a different cloud) needs those results.</p>
 <ul>
 <li><strong>With MCP tunnels only:</strong> Agent A has no way to know Agent B exists, and MCP has no peer messaging mechanism. You would need to set up a message queue or shared database as an intermediary.</li>
-<li><strong>With a VPN only:</strong> Both agents have IP connectivity. But Agent A's Lambda function has an ephemeral IP, and Agent B needs to discover Agent A's new address each time it runs. You also need to build application-level authentication so Agent B knows it is talking to the right agent, not any machine on the VPN.</li>
-<li><strong>With an overlay:</strong> Agent A discovers Agent B by its published capability ("research subscriber"). They complete a mutual handshake. Agent A sends the results over an encrypted peer tunnel addressed to Agent B's virtual address. Agent B receives them. MCP handled the data access; the overlay handled the agent communication.</li>
+<li><strong>With a VPN only:</strong> Both agents have IP connectivity. But Agent A's container gets a new IP whenever the spot instance is replaced, and Agent B needs to discover Agent A's new address each time. You also need to build application-level authentication so Agent B knows it is talking to the right agent, not any machine on the VPN.</li>
+<li><strong>With an overlay:</strong> Agent A looks up Agent B by its hostname (<code>pilotctl find research-b</code>). They complete a mutual handshake. Agent A sends the results over an encrypted peer tunnel addressed to Agent B's virtual address. Agent B receives them. MCP handled the data access; the overlay handled the agent communication.</li>
 </ul>
 
 <h3>Scenario 2: A monitoring agent alerts response agents</h3>
@@ -101,7 +101,7 @@ const bodyContent = `
 <ul>
 <li><strong>With MCP tunnels only:</strong> The monitoring agent would need to know the response agent's transport address and have a way to send a message. MCP does not provide publish-subscribe or directed messaging.</li>
 <li><strong>With a VPN only:</strong> Both agents are on the same VPN, but the monitoring agent still needs to discover the response agent's IP and port, verify its identity, and establish application-level communication — all of which must be built from scratch.</li>
-<li><strong>With an overlay:</strong> The monitoring agent publishes an "anomaly.detected" event to a topic. Response agents subscribe to that topic. When the event arrives, the response agent connects to the monitoring agent via the overlay, receives the context, and uses MCP to execute the rollback. Neither agent needed to know the other's transport address ahead of time.</li>
+<li><strong>With an overlay:</strong> Response agents subscribe to the "anomaly.detected" topic on the monitoring agent's node (<code>pilotctl subscribe monitor anomaly.detected</code>), and the monitoring agent publishes the event there. When the event arrives, the response agent connects to the monitoring agent via the overlay, receives the context, and uses MCP to execute the rollback. The response agents needed only the monitoring agent's hostname, not its IP address or port.</li>
 </ul>
 
 <h3>Scenario 3: Cross-company agent collaboration</h3>
@@ -124,7 +124,7 @@ const bodyContent = `
 <p>No. MCP tunnels connect an agent to its tools (databases, APIs, file systems) using a client-server protocol. They do not provide peer-to-peer connectivity between agents, discovery of other agents, or inter-agent messaging. MCP tunnels and VPNs solve different problems and are not substitutes for each other.</p>
 
 <h3 id="can-a-vpn-replace-an-agent-networking-layer">Can a VPN replace an agent networking layer?</h3>
-<p>A VPN provides IP-layer connectivity between machines, which is a prerequisite for any network communication. But it does not provide per-agent identity, capability-based discovery, or per-peer trust — all of which are necessary for multi-agent systems. You can run agents over a VPN, but you still need to build agent-level addressing, discovery, and trust on top of it.</p>
+<p>A VPN provides IP-layer connectivity between machines, which is a prerequisite for any network communication. But it does not provide per-agent identity, lookup by agent name, or per-peer trust — all of which are necessary for multi-agent systems. You can run agents over a VPN, but you still need to build agent-level addressing, discovery, and trust on top of it.</p>
 
 <h3 id="do-you-need-both-mcp-tunnels-and-an-agent-overlay">Do you need both MCP tunnels and an agent overlay?</h3>
 <p>For a single-agent system that only calls tools, MCP tunnels alone are sufficient. For a multi-agent system where agents need to share data, delegate tasks, or coordinate, an agent overlay adds the peer-to-peer communication layer that MCP does not provide. The two are complementary: MCP handles tool access (vertical), the overlay handles agent communication (horizontal).</p>
@@ -143,7 +143,7 @@ const faqItems = [
   },
   {
     question: "Can a VPN replace an agent networking layer?",
-    answer: "A VPN provides IP-layer connectivity between machines, which is a prerequisite for any network communication. But it does not provide per-agent identity, capability-based discovery, or per-peer trust — all of which are necessary for multi-agent systems. You can run agents over a VPN, but you still need to build agent-level addressing, discovery, and trust on top of it.",
+    answer: "A VPN provides IP-layer connectivity between machines, which is a prerequisite for any network communication. But it does not provide per-agent identity, lookup by agent name, or per-peer trust — all of which are necessary for multi-agent systems. You can run agents over a VPN, but you still need to build agent-level addressing, discovery, and trust on top of it.",
   },
   {
     question: "Do you need both MCP tunnels and an agent overlay?",
