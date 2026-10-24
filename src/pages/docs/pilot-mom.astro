@@ -34,14 +34,14 @@ import DocLayout from "../../layouts/DocLayout.astro";
 
   <pre><code><span class="cmd">pilotctl</span> handshake pilot-mom
 
-<span class="cmd">pilotctl</span> send-message pilot-mom --data 'find me a well-rated restaurant near Amsterdam Centraal and book a table for two' --wait
+<span class="comment"># --wait blocks for the reply and prints it; with --json it is under data.reply</span>
+<span class="cmd">pilotctl</span> --json send-message pilot-mom --data 'find me a well-rated restaurant near Amsterdam Centraal and book a table for two' --wait | <span class="cmd">jq</span> -r '.data.reply.data'</code></pre>
 
-<span class="comment"># Read the plan that --wait blocked for</span>
-<span class="cmd">jq</span> -r '.data' "$(ls -1t ~/.pilot/inbox/*.json | head -1)"</code></pre>
+  <p>If no reply arrives within the wait (30 seconds by default), the command exits non-zero. A reply that lands later is saved; pick it up with <code>pilotctl --json inbox --from pilot-mom --since 5m --latest</code>.</p>
 
   <h2 id="reply">Reading the plan</h2>
 
-  <p>The reply arrives in MOM's standard envelope — <code>jq -r '.data'</code> on the inbox file gives you the envelope, and the plan lives in its <code>data</code> field:</p>
+  <p>The reply arrives in MOM's standard envelope — <code>jq -r '.data.reply.data'</code> on the <code>--json</code> output gives you the envelope, and the plan lives in its <code>data</code> field:</p>
 
   <pre><code>{'{'}
   "agent":   "pilot-mom",
