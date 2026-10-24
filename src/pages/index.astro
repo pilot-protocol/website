@@ -3282,14 +3282,16 @@ seq=2 bytes=6 time=144.993333ms  [dial=47.968ms echo=96.987ms]</pre>
     }
 
     statBigs.forEach(function (el) { render(el, 0); }); // start at 0 pre-reveal
+    // Watch each figure, not the whole section: stacked on a phone the section
+    // is taller than the screen, so a 40% threshold on it never fired and the
+    // figures stayed at 0.
     var numObs = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
-        if (e.isIntersecting) { statBigs.forEach(spin); }
-        else { statBigs.forEach(function (el) { render(el, 0); }); }
+        if (e.intersectionRatio >= 0.4) spin(e.target);
+        else if (!e.isIntersecting) render(e.target, 0);
       });
-    }, { threshold: 0.4 });
-    var numbersSec = document.getElementById('numbers');
-    if (numbersSec) numObs.observe(numbersSec);
+    }, { threshold: [0, 0.4] });
+    statBigs.forEach(function (el) { numObs.observe(el); });
   }
 
 })();
@@ -3321,10 +3323,39 @@ seq=2 bytes=6 time=144.993333ms  [dial=47.968ms echo=96.987ms]</pre>
       var max = box.parentElement ? box.parentElement.clientWidth : Infinity;
       box.style.width = Math.min(word.offsetWidth, max) + 'px';
     }
-    // Wait for fonts, then lock the initial width.
-    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit); }
-    fit();
-    window.addEventListener('resize', fit);
+    // On a narrow screen the longest phrase can be wider than the room it has,
+    // and the box clipped it ("Markdowr" on phones). Shrink the phrase only as
+    // far as the longest one needs: one size for every phrase keeps the line
+    // from jumping as it rotates.
+    var probe = word.cloneNode(false);
+    probe.style.cssText = 'position:absolute;visibility:hidden;left:0;top:0';
+    var lastWidth = -1;
+    function scale(force) {
+      var line = box.parentElement;
+      if (!line || (!force && line.clientWidth === lastWidth)) return;
+      lastWidth = line.clientWidth;
+      box.style.fontSize = '';
+      var cs = getComputedStyle(line);
+      var room = line.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 1;
+      // Inline (wider screens), the phrase shares its line with "your agent can".
+      if (getComputedStyle(box).display !== 'block' && box.previousSibling) {
+        var r = document.createRange();
+        r.selectNodeContents(box.previousSibling);
+        room -= r.getBoundingClientRect().width;
+      }
+      box.appendChild(probe);
+      var widest = 0;
+      phrases.forEach(function (p) { probe.textContent = p; widest = Math.max(widest, probe.offsetWidth); });
+      box.removeChild(probe);
+      if (widest > room) {
+        box.style.fontSize = Math.floor(parseFloat(getComputedStyle(box).fontSize) * room / widest * 10) / 10 + 'px';
+      }
+      fit();
+    }
+    // Wait for fonts, then lock the initial size and width.
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(function () { scale(true); }); }
+    scale(true);
+    window.addEventListener('resize', function () { scale(); });
     // Refit whenever the word's own size changes (late webfont, vw-based
     // font size), not only on window resize.
     if ('ResizeObserver' in window) new ResizeObserver(fit).observe(word);
