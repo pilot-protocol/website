@@ -16,7 +16,7 @@ const bodyContent = `<p>OpenClaw agents may run on home networks, corporate envi
   <section>
   <h2 id="three-tiers">Three-Tier Traversal</h2>
 
-  <p>Pilot Protocol uses a three-tier strategy that handles every NAT type automatically. The agent does not choose a strategy -- the daemon tries a direct connection first (using its STUN-discovered endpoint), then escalates to beacon-coordinated hole-punching, and finally to relay. It does not classify the NAT type up front; it simply retries down the ladder until one tier works.</p>
+  <p>Pilot Protocol uses a three-tier strategy that the daemon runs automatically. The agent does not choose a strategy -- the daemon tries a direct connection first (using its STUN-discovered endpoint), then escalates to beacon-coordinated hole-punching, and finally to relay. It does not classify the NAT type up front; it simply retries down the ladder until one tier works.</p>
 
   <h3>Tier 1: Direct (Full Cone NAT)</h3>
 
@@ -61,18 +61,19 @@ const bodyContent = `<p>OpenClaw agents may run on home networks, corporate envi
   <p>Here is what the OpenClaw agent sees. No NAT configuration, no networking knowledge required:</p>
 
   <pre><code><span class="comment"># Start daemon (NAT traversal happens automatically)</span>
-<span class="cmd">pilot-daemon</span>
+<span class="cmd">pilotctl daemon start</span>
 
-<span class="comment"># Check the discovered endpoint and connection state</span>
-<span class="cmd">pilotctl daemon status --json</span>
-<span class="comment"># {"address":"1:0001.0A3F.7B21",
-#  "endpoint":"203.0.113.5:45782","encrypted":true,...}</span>
+<span class="comment"># Check the daemon, its address and its connections</span>
+<span class="cmd">pilotctl daemon status</span>
 
-<span class="comment"># Connect to a peer (traversal strategy chosen automatically)</span>
-<span class="cmd">pilotctl send 1:0001.0B22.4E19 1002 --data "Hello from behind NAT"</span>
-<span class="comment"># Works. The agent doesn't know or care how.</span></code></pre>
+<span class="comment"># Message a trusted peer (traversal strategy chosen automatically)</span>
+<span class="cmd">pilotctl send-message 0:0000.0B22.4E19 --data "Hello from behind NAT"</span>
+<span class="comment"># Works. The agent doesn't know or care how.</span>
 
-  <p>The <code>pilotctl status</code> output shows the STUN-discovered endpoint, but the agent does not need to act on this information. It is diagnostic data for humans. The daemon handles everything internally.</p>
+<span class="comment"># Optional: see which peers are direct and which are relayed</span>
+<span class="cmd">pilotctl peers</span></code></pre>
+
+  <p><code>pilotctl peers</code> reports how many peers are reached directly and how many through the relay, but the agent does not need to act on this information. It is diagnostic data for humans. The daemon handles everything internally.</p>
 
   <p>When the agent connects to a peer, the daemon follows this general sequence:</p>
 
@@ -96,9 +97,9 @@ const bodyContent = `<p>OpenClaw agents may run on home networks, corporate envi
   <section>
   <h2 id="ipv6">IPv6 and the Future</h2>
 
-  <p>IPv6 eliminates NAT for devices with globally-routable addresses. Some of the OpenClaw agents ran on IPv6 networks where every device has a public address. For these agents, STUN still runs (to discover the external address) but hole-punching and relay are never needed.</p>
+  <p>IPv6 eliminates NAT for devices with globally-routable addresses. On such a host, STUN still runs (to discover the external address), and hole-punching or relay is needed only when a firewall drops unsolicited inbound packets.</p>
 
-  <p>Pilot Protocol's beacon supports both IPv4 and IPv6 STUN. The daemon auto-detects the network stack and uses the appropriate protocol. As IPv6 adoption grows, the proportion of agents requiring hole-punching or relay will decrease, but the traversal stack remains available as a fallback for the IPv4 networks that will persist for years.</p>
+  <p>The beacon's discovery reply can carry either an IPv4 or an IPv6 endpoint. As IPv6 adoption grows, the proportion of agents requiring hole-punching or relay will decrease, but the traversal stack remains available as a fallback for the IPv4 networks that will persist for years.</p>
 
   <p>For the complete NAT traversal specification, including the packet formats, timing parameters, and keepalive intervals, see the <a href="nat-traversal-ai-agents-deep-dive">NAT traversal deep dive</a>.</p>
   </section>

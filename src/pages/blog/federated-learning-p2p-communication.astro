@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p>Communication overhead dominates <a href="https://en.wikipedia.org/wiki/Federated_learning" target="_blank" rel="noopener">federated learning</a>. Researchers consistently measure it at <strong>58 to 93 percent of total training latency</strong>, depending on model size, network topology, and the number of participating clients. The actual gradient computation -- the part that uses the GPU -- is often the minority of wall-clock time. The rest is spent serializing tensors, pushing them through gRPC streams, waiting for the aggregation server, and pulling the updated global model back down.</p>
+const bodyContent = `<p>Communication overhead dominates <a href="https://en.wikipedia.org/wiki/Federated_learning" target="_blank" rel="noopener">federated learning</a>. Studies of FL systems repeatedly find that it takes a large share of total training time, often the majority, depending on model size, network topology, and the number of participating clients. The actual gradient computation -- the part that uses the GPU -- is often the minority of wall-clock time. The rest is spent serializing tensors, pushing them through gRPC streams, waiting for the aggregation server, and pulling the updated global model back down.</p>
 
   <p>This article explains why the standard FL communication stack (gRPC to a central parameter server) creates bottlenecks that get worse as you scale, and how a peer-to-peer overlay network can eliminate the central server, traverse NAT boundaries, and encrypt gradient exchange without the infrastructure overhead.</p>
 
@@ -34,19 +34,19 @@ const bodyContent = `<p>Communication overhead dominates <a href="https://en.wik
   <section>
   <h2>Pilot as FL Transport</h2>
 
-  <p>Pilot Protocol is an overlay network for AI agents that runs over UDP. Each node gets a 48-bit virtual address, an Ed25519 identity, and automatic NAT traversal. For federated learning, it provides exactly the pieces that gRPC lacks: peer-to-peer connectivity through NAT, encrypted data exchange without infrastructure, and tag-based peer discovery.</p>
+  <p>Pilot Protocol is an overlay network for AI agents that runs over UDP. Each node gets a 48-bit virtual address, an Ed25519 identity, and automatic NAT traversal. For federated learning, it provides exactly the pieces that gRPC lacks: peer-to-peer connectivity through NAT, encrypted data exchange without per-node servers, and hostname lookup through the registry.</p>
 
-  <p>The architecture is straightforward. Each FL client runs a Pilot daemon alongside its training process. The daemon handles networking: NAT traversal via STUN, hole-punching, or relay (automatically selected based on NAT type), encrypted tunnels using X25519 key exchange and AES-256-GCM, and peer discovery through a lightweight registry.</p>
+  <p>The architecture is straightforward. Each FL client runs a Pilot daemon alongside its training process. The daemon handles networking: NAT traversal via STUN, hole-punching, or relay (tried in that order until one works; the daemon does not classify the NAT type), encrypted tunnels using X25519 key exchange and AES-256-GCM, and peer discovery through a lightweight registry.</p>
 
-  <p>Gradient exchange happens over <strong>port 1001</strong> (data exchange). This port supports file transfer and arbitrary message passing. A gradient tensor serialized to a file can be sent directly to a peer with a single CLI command or API call, with no size limit imposed by the protocol layer.</p>
+  <p>Gradient exchange happens over <strong>port 1001</strong> (data exchange). This port supports file transfer and arbitrary message passing. A gradient tensor serialized to a file can be sent directly to a peer with a single CLI command or API call. <code>send-file</code> streams the file in acknowledged chunks and checks a SHA-256 over the whole file; the receiving daemon keeps at most 2 GiB of received files (including unfinished transfers) by default.</p>
 
   <pre><code><span class="comment"># Node A sends its gradient file to Node B</span>
-<span class="cmd">pilotctl send-file 1:0001.0002.0003 ./gradients_round_42.pt</span>
+<span class="cmd">pilotctl send-file 0:0000.0002.0003 ./gradients_round_42.pt</span>
 
 <span class="comment"># Node B sends its gradient file to Node A</span>
-<span class="cmd">pilotctl send-file 1:0001.0001.0001 ./gradients_round_42.pt</span></code></pre>
+<span class="cmd">pilotctl send-file 0:0000.0001.0001 ./gradients_round_42.pt</span></code></pre>
 
-  <p>Both commands work regardless of NAT type. If both nodes are behind NAT, Pilot automatically negotiates hole-punching or falls back to relay through the beacon server. The gradient data is encrypted in transit with AES-256-GCM. No TLS certificates, no firewall rules, no cloud relay to configure.</p>
+  <p>Once the two nodes trust each other (see the security section), both commands work whatever the NAT type. If both nodes are behind NAT, Pilot automatically negotiates hole-punching or falls back to relay through the beacon server. The gradient data is encrypted in transit with AES-256-GCM. No TLS certificates, no firewall rules, no cloud relay to configure.</p>
   </section>
 
   <section>
@@ -58,7 +58,7 @@ const bodyContent = `<p>Communication overhead dominates <a href="https://en.wik
 
   <ol>
     <li><strong>Training process</strong> -- <a href="https://pytorch.org" target="_blank" rel="noopener">PyTorch</a>, <a href="https://www.tensorflow.org" target="_blank" rel="noopener">TensorFlow</a>, or JAX. Computes local gradients on private data.</li>
-    <li><strong>Pilot daemon</strong> -- handles networking, runs in the background, uses 10 MB of memory.</li>
+    <li><strong>Pilot daemon</strong> -- handles networking and runs in the background.</li>
     <li><strong>FL coordinator script</strong> -- orchestrates the round: exports gradients, sends them to peers, receives peer gradients, aggregates, and updates the local model.</li>
   </ol>
 
@@ -66,7 +66,7 @@ const bodyContent = `<p>Communication overhead dominates <a href="https://en.wik
 
   <ol>
     <li>Each node trains on its local data and serializes gradients to a file.</li>
-    <li>Each node discovers its peers using tags (see next section).</li>
+    <li>Each node resolves its peers' addresses from their hostnames (see the discovery section).</li>
     <li>Each node sends its gradient file to K peers (where K is a configurable fan-out).</li>
     <li>Each node receives gradient files from its peers.</li>
     <li>Each node locally averages the received gradients with its own.</li>
@@ -76,14 +76,14 @@ const bodyContent = `<p>Communication overhead dominates <a href="https://en.wik
   <p>There is no central server. The aggregation is fully distributed. Each node converges toward the global average through repeated local averaging, which is mathematically equivalent to centralized FedAvg under standard assumptions.</p>
 
   <div class="callout">
-    <p><strong>Memory footprint:</strong> The Pilot daemon uses 10 MB of RSS at idle. On a machine running a multi-GB training job, this overhead is negligible. Pilot is lightweight enough to run on Raspberry Pi and Jetson Nano devices, making it viable for edge FL deployments where compute nodes are physically distributed.</p>
+    <p><strong>Edge devices:</strong> Pilot ships static binaries for Linux and macOS on amd64 and arm64, so the daemon also runs on 64-bit ARM boards such as Raspberry Pi and Jetson, which makes it usable for edge FL deployments where compute nodes are physically distributed.</p>
   </div>
   </section>
 
   <section>
   <h2>Code Example: Python FL Node with Gradient Exchange</h2>
 
-  <p>Here is a Python FL node that trains a model, exchanges gradients with peers via Pilot, and aggregates. It uses <code>subprocess</code> to call <code>pilotctl</code> for file transfer and peer discovery.</p>
+  <p>Here is a Python FL node that trains a model, exchanges gradients with peers via Pilot, and aggregates. It uses <code>subprocess</code> to call <code>pilotctl</code> for file transfer and address lookup.</p>
 
   <pre><code>import subprocess
 import json
@@ -100,21 +100,23 @@ model = nn.Sequential(
 )
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
-def discover_peers():
-    """Find all FL nodes in the network using tags."""
-    result = subprocess.run(
-        ["pilotctl", "peers", "--search", "fl-node", "--json"],
-        capture_output=True, text=True,
-    )
-    peers = json.loads(result.stdout)
-    return [p["address"] for p in peers if p["address"] != my_address()]
+<span class="comment"># Participants in this FL task, agreed out of band (one hostname per node)</span>
+PARTICIPANTS = ["fl-hospital-a", "fl-hospital-b", "fl-clinic-c", "fl-clinic-d"]
+MY_HOSTNAME = "fl-hospital-a"
 
-def my_address():
-    result = subprocess.run(
-        ["pilotctl", "daemon", "status", "--json"],
-        capture_output=True, text=True,
-    )
-    return json.loads(result.stdout)["address"]
+def discover_peers():
+    """Resolve the other participants' addresses through the registry."""
+    peers = []
+    for host in PARTICIPANTS:
+        if host == MY_HOSTNAME:
+            continue
+        result = subprocess.run(
+            ["pilotctl", "--json", "find", host],
+            capture_output=True, text=True,
+        )
+        if result.returncode == 0:
+            peers.append(json.loads(result.stdout)["data"]["address"])
+    return peers
 
 def send_gradients(peer_address, round_num):
     """Send gradient file to a peer over Pilot port 1001."""
@@ -127,13 +129,20 @@ def send_gradients(peer_address, round_num):
         "pilotctl", "send-file", peer_address, grad_path,
     ])
 
-def receive_gradients(round_num, timeout=30):
-    """Wait for gradient files from peers."""
-    <span class="comment"># Files arrive automatically at ~/.pilot/received/ when peers send them</span>
+def receive_gradients(round_num, expected, timeout=30):
+    """Wait for this round's gradient files from peers."""
+    <span class="comment"># Files arrive in ~/.pilot/received/ as &lt;name&gt;-&lt;timestamp&gt;-&lt;seq&gt;.pt</span>
     recv_dir = os.path.expanduser("~/.pilot/received/")
-    os.makedirs(recv_dir, exist_ok=True)
-    grad_files = [os.path.join(recv_dir, f) for f in os.listdir(recv_dir)]
-    return [torch.load(f) for f in grad_files]
+    prefix = f"gradients_round_{round_num}-"
+    deadline = time.time() + timeout
+    while True:
+        names = []
+        if os.path.isdir(recv_dir):
+            names = [f for f in os.listdir(recv_dir)
+                     if f.startswith(prefix) and f.endswith(".pt")]
+        if len(names) >= expected or time.time() > deadline:
+            return [torch.load(os.path.join(recv_dir, f)) for f in names]
+        time.sleep(1)
 
 def aggregate(local_grads, peer_grads_list):
     """Average local gradients with peer gradients (FedAvg)."""
@@ -163,7 +172,7 @@ for round_num in range(NUM_ROUNDS):
     for peer in selected:
         send_gradients(peer, round_num)
 
-    peer_grads = receive_gradients(round_num)
+    peer_grads = receive_gradients(round_num, expected=len(selected))
 
     <span class="comment"># Step 4: Aggregate</span>
     local_grads = {
@@ -181,31 +190,31 @@ for round_num in range(NUM_ROUNDS):
 
     print(f"Round {round_num}: aggregated with {len(peer_grads)} peers")</code></pre>
 
-  <p>This is a simplified example. A production FL system would add round synchronization, gradient compression, Byzantine fault tolerance for malicious peers, and differential privacy noise injection. But the transport layer -- discovering peers, sending gradient files, receiving them, and doing this through NAT -- is handled entirely by Pilot.</p>
+  <p>This is a simplified example. A production FL system would add round synchronization, gradient compression, Byzantine fault tolerance for malicious peers, and differential privacy noise injection. But the transport layer -- resolving peers, sending gradient files, receiving them, and doing this through NAT -- is handled by Pilot.</p>
   </section>
 
   <section>
-  <h2>Discovery: FL Nodes Find Each Other via Tags</h2>
+  <h2>Discovery: FL Nodes Find Each Other by Hostname</h2>
 
-  <p>In centralized FL, the server knows all clients because they registered with it. In decentralized FL, you need a discovery mechanism. Pilot uses <strong>tags</strong>: key-value labels that agents attach to themselves in the registry.</p>
+  <p>In centralized FL, the server knows all clients because they registered with it. In decentralized FL, each node still needs to know who its peers are. With Pilot, every node registers a hostname, the participants in a task agree on the list of hostnames, and the registry turns each hostname into the node's current virtual address. Nodes can also carry up to three <strong>tags</strong>: short lowercase labels that the registry returns with a node's lookup. Tags describe a node; there is no search by tag.</p>
 
-  <pre><code><span class="comment"># Mark this node as an FL participant working on a vision model</span>
-<span class="cmd">pilotctl extras set-tags fl-node vision-model round-robin</span>
+  <pre><code><span class="comment"># Give this node a stable name and label it</span>
+<span class="cmd">pilotctl set-hostname fl-hospital-a</span>
+<span class="cmd">pilotctl extras set-tags fl-node vision-model</span>
 
-<span class="comment"># Find all nodes participating in this FL task</span>
-<span class="cmd">pilotctl peers --search "fl-node" --json</span></code></pre>
+<span class="comment"># Resolve another participant</span>
+<span class="cmd">pilotctl find fl-hospital-b</span></code></pre>
 
-  <p>The output gives you each peer's virtual address, hostname, and tags:</p>
+  <p><code>find</code> prints the peer's node ID, address and visibility:</p>
 
-  <pre><code>[
-  {"address": "1:0001.0002.0003", "hostname": "hospital-a", "tags": ["fl-node", "vision-model"]},
-  {"address": "1:0001.0004.0005", "hostname": "hospital-b", "tags": ["fl-node", "vision-model"]},
-  {"address": "1:0001.0006.0007", "hostname": "clinic-c", "tags": ["fl-node", "vision-model"]}
-]</code></pre>
+  <pre><code>Hostname:  fl-hospital-b
+Node ID:   48213
+Address:   0:0000.0000.BC55
+Visible:   private</code></pre>
 
-  <p>Tags allow for flexible grouping. You can run multiple FL tasks on the same network by using different tags: <code>fl-node vision-model</code> for one task, <code>fl-node nlp-model</code> for another. Nodes discover only their relevant peers. When a node leaves the FL task, it removes its tag and disappears from discovery results.</p>
+  <p>A private node resolves only for peers that trust it or share a network with it, so the trust handshake below comes first. If you run your own rendezvous, an operator can put each FL task's nodes in their own network; <code>pilotctl network members &lt;id&gt;</code> then lists every member, and its <code>--json</code> output includes each member's hostname and tags. Separate tasks use separate hostname lists or separate networks.</p>
 
-  <p>This replaces the registration server, the peer list configuration file, and the manual endpoint management that decentralized FL frameworks typically require.</p>
+  <p>This replaces the registration server and the manual endpoint management that decentralized FL frameworks typically require: addresses stay the same when a node changes IP or network.</p>
   </section>
 
   <section>
@@ -215,55 +224,43 @@ for round_num in range(NUM_ROUNDS):
 
   <p>Pilot encrypts all data in transit using <strong>X25519 key exchange and AES-256-GCM</strong>. When two nodes establish a connection, they perform an ECDH handshake to derive a shared secret, then use that secret to encrypt every byte of payload data. This happens automatically, with no configuration.</p>
 
-  <p>Beyond encryption, Pilot's trust model adds access control. Nodes are <strong>private by default at the application connectivity layer</strong>: directory metadata can support discovery, while private endpoints and application traffic remain gated. For FL, a node advertises the relevant tag, then uses peer trust or an applicable shared network before gradient exchange begins.</p>
+  <p>Beyond encryption, Pilot's trust model adds access control. Nodes are <strong>private by default at the application connectivity layer</strong>: directory metadata can support discovery, while private endpoints and application traffic remain gated. For FL, nodes establish peer trust or share a network before gradient exchange begins.</p>
 
   <pre><code><span class="comment"># Node A requests trust with Node B (includes justification)</span>
-<span class="cmd">pilotctl handshake 1:0001.0002.0003 "FL gradient exchange for vision-model task"</span>
+<span class="cmd">pilotctl handshake 0:0000.0002.0003 "FL gradient exchange for vision-model task"</span>
 
 <span class="comment"># Node B approves (after verifying the request)</span>
-<span class="cmd">pilotctl approve 1:0001.0001.0001</span></code></pre>
+<span class="cmd">pilotctl approve 0:0000.0001.0001</span></code></pre>
 
   <p>Once trust is established, it persists across sessions. If a node is compromised or behaves maliciously (sending poisoned gradients), any peer can instantly revoke trust:</p>
 
   <pre><code><span class="comment"># Revoke trust from a suspected malicious node</span>
-<span class="cmd">pilotctl untrust 1:0001.0002.0003</span></code></pre>
+<span class="cmd">pilotctl untrust 0:0000.0002.0003</span></code></pre>
 
   <p>Revocation is immediate. The revoked node can no longer send data to or receive data from the revoking peer. This provides a practical defense against model poisoning attacks at the transport layer: if your Byzantine fault detection algorithm flags a node, you can cut it off at the network level without waiting for the next aggregation round.</p>
   </section>
 
   <section>
-  <h2>Performance: Pilot vs gRPC vs Custom P2P</h2>
+  <h2>Comparison: Pilot vs gRPC vs Custom P2P</h2>
 
-  <p>We compared three transport options for exchanging a 100 MB gradient file between two nodes, one in us-east and one in eu-west, both behind NAT.</p>
+  <p>How three transport options compare for exchanging gradient files between two nodes that are both behind NAT:</p>
 
   <table>
     <tr>
-      <th>Metric</th>
+      <th>Property</th>
       <th>Pilot (P2P)</th>
       <th>gRPC (via relay)</th>
       <th>Custom UDP P2P</th>
     </tr>
     <tr>
-      <td>Connection setup</td>
-      <td>~200ms (STUN + handshake)</td>
-      <td>~150ms (TLS handshake)</td>
-      <td>~500ms (manual hole-punch)</td>
-    </tr>
-    <tr>
-      <td>Transfer time (100 MB)</td>
-      <td>~3.2s</td>
-      <td>~4.8s (relay hop)</td>
-      <td>~3.0s</td>
-    </tr>
-    <tr>
       <td>NAT traversal</td>
-      <td>Automatic (3 strategies)</td>
+      <td>Automatic (direct, hole-punch, relay)</td>
       <td>Requires relay server</td>
       <td>Manual implementation</td>
     </tr>
     <tr>
       <td>Max payload size</td>
-      <td>No protocol limit</td>
+      <td>2 GiB of received files per receiver (default)</td>
       <td>~2 GB (protobuf)</td>
       <td>No protocol limit</td>
     </tr>
@@ -275,27 +272,21 @@ for round_num in range(NUM_ROUNDS):
     </tr>
     <tr>
       <td>Peer discovery</td>
-      <td>Tag-based (built-in)</td>
+      <td>Hostname lookup (registry)</td>
       <td>External registry</td>
       <td>External registry</td>
-    </tr>
-    <tr>
-      <td>Lines of transport code</td>
-      <td>~15</td>
-      <td>~200</td>
-      <td>~2000</td>
     </tr>
     <tr>
       <td>Infrastructure needed</td>
-      <td>1 registry + 1 beacon</td>
+      <td>1 registry + 1 beacon (public or your own)</td>
       <td>1 relay server + TLS certs</td>
       <td>STUN server + signaling</td>
     </tr>
   </table>
 
-  <p>The gRPC relay path adds latency because data goes through a third-party server instead of directly between peers. Pilot's direct P2P path (via hole-punching) avoids this extra hop, resulting in lower transfer times for large payloads. The custom UDP approach is slightly faster on raw throughput, but requires thousands of lines of transport code to handle reliability, congestion control, and NAT traversal -- exactly the code that Pilot already provides.</p>
+  <p>The gRPC relay path sends every byte through a third server instead of directly between peers. When hole-punching succeeds, Pilot's path is direct and avoids that extra hop; when it does not, Pilot relays through the beacon too. A custom UDP approach can avoid both, but it needs its own reliability, congestion control, and NAT traversal code -- the code that Pilot already provides.</p>
 
-  <p>For large models (7B+ parameters, 14+ GB), the difference is more pronounced. gRPC requires chunking and streaming logic that adds complexity and failure modes. Pilot's file transfer sends the data as a stream over the encrypted tunnel with built-in congestion control and segmentation, handling large payloads natively.</p>
+  <p>For large models (7B+ parameters, 14+ GB), gRPC requires chunking and streaming logic that adds complexity and failure modes. Pilot's <code>send-file</code> already streams in acknowledged chunks, verifies a SHA-256 over the whole file, and resumes where it stopped when a dropped transfer is sent again. Because a receiver holds at most 2 GiB of received files by default, split full checkpoints of that size into shards and clear the received directory between rounds (<code>pilotctl received --clear</code>).</p>
   </section>
 
   <section>
@@ -309,50 +300,73 @@ for round_num in range(NUM_ROUNDS):
 <span class="comment"># Start the daemon</span>
 <span class="cmd">pilotctl daemon start --email fl-node@example.com</span>
 
-<span class="comment"># Join the network and tag as FL participant</span>
-<span class="cmd">pilotctl network join 1</span>
+<span class="comment"># Name and tag this node as an FL participant</span>
+<span class="cmd">pilotctl set-hostname fl-hospital-a</span>
 <span class="cmd">pilotctl extras set-tags fl-node vision-model</span>
 
-<span class="comment"># Verify connectivity to another FL node</span>
-<span class="cmd">pilotctl ping 1:0001.0002.0003</span>
+<span class="comment"># Ask another FL node for trust (its operator runs pilotctl approve)</span>
+<span class="cmd">pilotctl handshake 0:0000.0002.0003 "FL gradient exchange for vision-model task"</span>
+
+<span class="comment"># Verify connectivity to that node</span>
+<span class="cmd">pilotctl ping 0:0000.0002.0003</span>
 
 <span class="comment"># Exchange a test file</span>
-<span class="cmd">pilotctl send-file 1:0001.0002.0003 ./test_gradients.pt</span></code></pre>
+<span class="cmd">pilotctl send-file 0:0000.0002.0003 ./test_gradients.pt</span></code></pre>
 
-  <p>The daemon handles NAT traversal automatically. You do not need to configure firewall rules, open ports, or set up relay servers. If both nodes are behind symmetric NAT (the hardest case), Pilot falls back to relay through the beacon server transparently.</p>
+  <p>On the public backbone, nodes talk to each other directly once they trust each other; no network needs to be joined. Private networks are created by a registry operator, so to group FL nodes into one, run your own rendezvous. The daemon handles NAT traversal automatically. You do not need to configure firewall rules, open ports, or set up relay servers. If both nodes are behind symmetric NAT (the hardest case), Pilot falls back to relay through the beacon server transparently.</p>
 
-  <p>For a full decentralized FL system, integrate the <code>pilotctl</code> commands into your training loop as shown in the Python example above, or use the Go driver package directly for tighter integration:</p>
+  <p>For a full decentralized FL system, integrate the <code>pilotctl</code> commands into your training loop as shown in the Python example above, or use the Go driver and <code>dataexchange</code> packages directly for tighter integration:</p>
 
   <pre><code>import (
-    "io"
+    "fmt"
     "os"
+    "path/filepath"
 
     "github.com/pilot-protocol/common/driver"
+    "github.com/pilot-protocol/common/protocol"
+    "github.com/pilot-protocol/dataexchange"
 )
 
 func exchangeGradients(peerAddr string, gradFile string) error {
-    d, err := driver.Connect("")
+    d, err := driver.Connect("") <span class="comment">// default daemon socket</span>
     if err != nil {
         return err
     }
-    // Dial the peer on the data-exchange port (1001) and stream the file
-    conn, err := d.Dial(peerAddr + ":1001")
+    defer d.Close()
+
+    addr, err := protocol.ParseAddr(peerAddr)
     if err != nil {
         return err
     }
-    defer conn.Close()
+    <span class="comment">// Dial the peer's data-exchange service (port 1001)</span>
+    c, err := dataexchange.Dial(d, addr)
+    if err != nil {
+        return err
+    }
+    defer c.Close()
 
     f, err := os.Open(gradFile)
     if err != nil {
         return err
     }
     defer f.Close()
+    st, err := f.Stat()
+    if err != nil {
+        return err
+    }
 
-    _, err = io.Copy(conn, f)
-    return err
+    <span class="comment">// Chunked, acknowledged, SHA-256-verified transfer; a retry resumes</span>
+    res, err := c.SendFileStream(filepath.Base(gradFile), f, st.Size(), 0)
+    if err != nil {
+        return err
+    }
+    if !res.OK {
+        return fmt.Errorf("receiver refused the file: %s", res.Message)
+    }
+    return nil
 }</code></pre>
 
-  <p>Communication overhead is the dominant bottleneck in federated learning. Removing the central server from the communication path, enabling direct peer-to-peer gradient exchange, and handling NAT traversal automatically cuts that overhead substantially. Pilot provides the transport layer so you can focus on the learning algorithms instead of the networking plumbing. Once nodes can reach each other directly, the next question is how they find and verify each other in the first place — see the <a href="https://pilotprotocol.network/blog/ai-agent-discovery-process-p2p-networks">AI agent discovery process on P2P networks</a> for a step-by-step walkthrough of capability announcement and trust verification.</p>
+  <p>Communication overhead is the dominant bottleneck in federated learning. Removing the central server from the communication path, enabling direct peer-to-peer gradient exchange, and handling NAT traversal automatically removes the central server's inbound link as the bottleneck. Pilot provides the transport layer so you can focus on the learning algorithms instead of the networking plumbing. Once nodes can reach each other directly, the next question is how they find and verify each other in the first place — see the <a href="https://pilotprotocol.network/blog/ai-agent-discovery-process-p2p-networks">AI agent discovery process on P2P networks</a> for a step-by-step walkthrough of capability announcement and trust verification.</p>
   </section>
 
   <div class="cta">
