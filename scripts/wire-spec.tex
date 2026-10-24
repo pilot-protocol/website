@@ -78,14 +78,14 @@
 {\Huge\bfseries Pilot Protocol\\[0.3em]}
 {\LARGE Wire Specification and Architecture\\[2em]}
 
-{\large Version 2.0 --- July 2026\\[3em]}
+{\large Version 2.1 --- October 2026\\[3em]}
 
 {\Large Calin Teodor\\[0.5em]}
 {\small \url{https://pilotprotocol.network}\\[1em]}
 
 \vfill
 
-{\large\textit{The reference implementation is written in Go with zero external dependencies.}}
+{\large\textit{The reference implementation is written in Go and ships as static binaries.}}
 
 \vspace{2cm}
 \end{titlepage}
@@ -125,13 +125,13 @@ Pilot Protocol is designed around five principles:
 
 \textbf{Agents are first-class network citizens.} Every agent gets a unique virtual address. It can bind ports, listen for connections, and be reached by any other agent on the network. The network treats agents the way the internet treats devices.
 
-\textbf{Connectivity requires an explicit grant.} A private node admits application traffic through bilateral peer trust or applicable shared-network membership. Managed networks can additionally constrain membership, administrative roles, and allowed ports. Connectivity is not permission to perform a business action; task, data, tool, spend, and approval authority remain in the application layer.
+\textbf{Connectivity requires an explicit grant.} A private node admits application traffic through bilateral peer trust or applicable shared-network membership. Networks on a registry can additionally constrain membership, administrative roles, and allowed ports. Connectivity is not permission to perform a business action; task, data, tool, spend, and approval authority remain in the application layer.
 
 \textbf{Transport agnosticism.} Pilot Protocol provides reliable streams (TCP-equivalent) and unreliable datagrams (UDP-equivalent). Anything that runs on TCP/IP can run on Pilot Protocol: HTTP, SSH, gRPC, WebSocket, custom binary protocols.
 
 \textbf{Minimize the protocol, maximize the surface.} The protocol defines addressing, packets, and transport. It deliberately does not define application-level message formats, serialization schemes, or agent interaction patterns. Those are layers built on top---the same way HTTP was built on top of TCP.
 
-\textbf{Operational boundaries must remain visible.} The default public registry and beacon are Pilot-operated coordination services, and their endpoints are configurable. Direct, relay, compatibility, dedicated, and future federation modes have different availability and metadata boundaries; deployments should select and document the mode they operate.
+\textbf{Operational boundaries must remain visible.} The default public registry and beacon are Pilot-operated coordination services, and their endpoints are configurable. Direct, relay and compatibility paths, and public or self-hosted coordination, have different availability and metadata boundaries; deployments should select and document the mode they operate.
 
 % ============================================================
 \section{Architecture}
@@ -236,7 +236,7 @@ The format is deliberately simple. There are no options, no extensions, no varia
 
 \subsection{Registry}
 
-The Registry is the coordination service for address assignment, identity records, discovery, membership, trust state, and liveness. The public deployment is Pilot-operated by default; registry and beacon endpoints are configuration values, and dedicated deployment models are enterprise early access. The Registry runs on TCP and handles:
+The Registry is the coordination service for address assignment, identity records, discovery, membership, trust state, and liveness. The public deployment is Pilot-operated by default; registry and beacon endpoints are configuration values, and anyone can run their own registry and beacon from the open-source code. The Registry runs on TCP and handles:
 
 \begin{itemize}
     \item \textbf{Node registration.} An agent connects, receives a unique Node~ID, and is issued an Ed25519 keypair as its identity token. Nodes may optionally request a hostname during registration; the hostname is validated with the same rules as network names (lowercase alphanumeric with hyphens, 1--63~characters). If the requested hostname is invalid or already taken, registration still succeeds but includes a \texttt{hostname\_error} field in the response, giving the agent clear feedback without blocking enrollment.
@@ -257,7 +257,7 @@ The Registry is the coordination service for address assignment, identity record
 
 \textbf{Hot-standby replication.} The Registry supports push-based replication for high availability. A standby instance subscribes to the primary with \texttt{-{}-standby primary:9000} and receives state snapshots. Every state mutation on the primary triggers an immediate snapshot push to all connected standbys. The standby maintains a read-only copy of the full registry state---it serves lookups and list queries but rejects writes. Replication subscriptions are authenticated with a shared token (\texttt{-{}-replication-token}). On primary failure, the standby is promoted by restarting it without the \texttt{-{}-standby} flag.
 
-Peers must be able to reach the configured Registry for coordination. A public deployment requires a globally reachable instance; a dedicated deployment can scope reachability to its environment. Independently operated or federated coordination remains future work.
+Peers must be able to reach the configured Registry for coordination. A public deployment requires a globally reachable instance; a self-hosted deployment can scope reachability to its environment. Independently operated or federated coordination remains future work.
 
 \subsection{Beacon}
 
@@ -472,7 +472,7 @@ The \texttt{info} command provides a comprehensive view of daemon state, includi
 
 \textbf{Email binding and key rotation.} Nodes can be bound to an email address via the \texttt{-email} flag. This enables key rotation recovery: if a node's private key is compromised or lost, the email holder can request a new keypair from the registry. Key rotation supports two authentication paths: (1)~signature-based, where the node signs a challenge (\texttt{rotate:<node\_id>}) with its current Ed25519 private key, proving possession; or (2)~email-based, where the email address is matched against the registry's records. After rotation, the registry issues a fresh Ed25519 keypair while preserving the node's ID and network memberships. Email binding also enables reclaiming a deregistered node's identity---re-registering with the same email recovers the original node~ID.
 
-\textbf{Trust and admission boundaries.} Private nodes admit streams and datagrams when a bilateral peer-trust relationship or an applicable shared-network membership grants connectivity. Standard networks use membership as a group-level grant. Enterprise early-access networks can add join rules, administrative roles, membership caps, and port policy. Optional strict deployment controls extend authorization to pre-connection key exchange, private directory operations, and NAT-punch coordination. Application authorization remains a separate decision above the network layer.
+\textbf{Trust and admission boundaries.} Private nodes admit streams and datagrams when a bilateral peer-trust relationship or an applicable shared-network membership grants connectivity. Standard networks use membership as a group-level grant. Networks with enterprise mode enabled on a registry can add join rules, administrative roles, membership caps, and port policy. Optional strict deployment controls extend authorization to pre-connection key exchange, private directory operations, and NAT-punch coordination. Application authorization remains a separate decision above the network layer.
 
 \textbf{Integrity.} Every packet carries a CRC32 checksum over header and payload. This detects corruption but not tampering---CRC32 is not cryptographic.
 
@@ -855,18 +855,18 @@ Pilot Protocol governs network identity and connectivity. It does not, by itself
 Identity and transport & Daemon identity, signed handshakes, encrypted tunnels & Core available & Protect identity material, keep encryption enabled, and validate the selected network path. \\
 Peer admission & Bilateral trust, reject, revoke, shared-network membership & Core available & Define who may connect and review trust and membership over time. \\
 Pre-trust hardening & Key-exchange, directory, and punch-authorization gates & Configurable & Enable the daemon, registry, and beacon controls together after compatibility testing. \\
-Managed networks & Roles, identity integration, policies, key lifecycle, blueprints, audit export & Enterprise early access & Validate exact release, configuration, ownership, operating commitments, and recovery procedures. \\
+Network controls & Roles, identity integration, policies, key lifecycle, blueprints, audit export & In the open-source registry & Run your own registry to use them; on the public registry only its operators can create networks. \\
 Business actions & Connectivity signals only & Application layer & Enforce task scopes, data permissions, transaction limits, human approval, retention, and legal authority. \\
-Assurance & Public implementation and technical evidence & Current evidence & Independent certification is not listed; map controls to the organization's own requirements. \\
+Assurance & Public implementation and technical evidence & Current evidence & Pilot has no SOC~2 report or other independent certification; map controls to the organization's own requirements. \\
 \bottomrule
 \end{tabularx}
-\caption{Shared-responsibility and availability boundary as of July 2026.}
+\caption{Shared-responsibility and availability boundary as of October 2026.}
 \label{tab:governance}
 \end{table}
 
 The operating loop is: define participants and authority; approve owners and consequential actions; enforce identity, trust, membership, roles, network policy, and application policy; observe network events alongside application records; revoke changed authority; and periodically review members, keys, policies, evidence, and exceptions.
 
-Current public references are the \href{https://pilotprotocol.network/trust}{Trust Center}, \href{https://pilotprotocol.network/governance}{Governance model}, \href{https://pilotprotocol.network/roadmap}{Product roadmap}, and \href{https://pilotprotocol.network/enterprise-readiness-report.pdf}{Enterprise Readiness Report}. These sources should be reviewed with the implementation because product availability and deployment packaging can evolve independently from the wire format.
+Current public references are the \href{https://pilotprotocol.network/security/}{Security page}, the \href{https://pilotprotocol.network/self-hosting/}{self-hosting guide}, and the \href{https://pilotprotocol.network/roadmap}{Product roadmap}. These sources should be reviewed with the implementation because product availability and deployment packaging can evolve independently from the wire format.
 
 % ============================================================
 \section{Current Limitations}
@@ -877,7 +877,7 @@ Current public references are the \href{https://pilotprotocol.network/trust}{Tru
 
 \textbf{Handshake polling latency.} Relayed handshake requests are delivered when the target node polls during its heartbeat cycle (every 30\,s). This means a handshake request to a private node may take up to 30\,s to be delivered. Real-time push notification for handshake delivery is not yet implemented.
 
-\textbf{Managed-network availability.} Custom networks and their CLI lifecycle are implemented for self-hosted evaluation. Managed private networks, enterprise roles, identity integrations, policies, blueprints, key lifecycle, and audit export remain early access; packaging, support, and operating commitments are deployment specific.
+\textbf{Network controls.} Custom networks, enterprise roles, identity integration, policies, blueprints, key lifecycle, and audit export are implemented in the open-source registry. Creating networks requires the registry's admin token, so on the public registry only its operators can create them; anyone can run a registry of their own.
 
 \textbf{No distinct secure-port driver API.} Port~443 currently uses the same encrypted peer tunnel as other ports. The additional per-connection secure profile described in this document is not exposed as a distinct \texttt{ListenSecure} or \texttt{DialSecure} API.
 
@@ -911,7 +911,7 @@ Current public references are the \href{https://pilotprotocol.network/trust}{Tru
 
 Pilot Protocol gives software agents persistent identity, virtual addresses, ports, encrypted tunnels, and transport primitives over the existing internet. It is a practical overlay that lets a daemon listen, connect, and retain an address across infrastructure boundaries while keeping coordination, connectivity, and business authority as distinct concerns.
 
-The core implementation is written in Go and published under AGPL-3.0. Current availability, managed deployment options, and roadmap status are documented separately from this wire specification.
+The core implementation is written in Go and published under AGPL-3.0. Current availability and roadmap status are documented separately from this wire specification.
 
 \vspace{2em}
 \noindent\rule{\textwidth}{0.4pt}
