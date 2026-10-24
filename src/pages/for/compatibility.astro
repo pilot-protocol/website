@@ -66,11 +66,11 @@ const groups: CategoryGroup[] = [
   },
   {
     category: 'Coding-agent sandboxes',
-    blurb: 'A mix. Modal/E2B/Daytona/Codespaces are open; Docker-AI-Sandbox-class (Replit Agent, Devin) blocks raw TCP.',
+    blurb: 'A mix. Modal/E2B/Daytona/Codespaces are open; Docker-AI-Sandbox-class (Replit Agent, Devin) blocks raw TCP and lets traffic out through an HTTP proxy, which compat mode uses since v1.13.11.',
     cards: [
       { name: 'Cursor Cloud Agents',    mode: 'allowlist',     modeClass: 'compat', note: 'Add *.pilotprotocol.network + 34.71.57.205 to the egress allowlist.' },
-      { name: 'Replit Agent',           mode: 'compat+proxy',  modeClass: 'proxy',  note: 'Docker AI Sandbox — raw TCP/UDP blocked. HTTPS_PROXY is not supported yet.' },
-      { name: 'Devin (Cognition)',      mode: 'compat+proxy',  modeClass: 'proxy',  note: 'Same Docker AI Sandbox model.' },
+      { name: 'Replit Agent',           mode: 'compat+proxy',  modeClass: 'proxy',  note: 'Docker AI Sandbox — raw TCP/UDP blocked. Compat mode goes through HTTPS_PROXY (v1.13.11+).' },
+      { name: 'Devin (Cognition)',      mode: 'compat+proxy',  modeClass: 'proxy',  note: 'Same Docker AI Sandbox model; compat through HTTPS_PROXY.' },
       { name: 'Modal Sandboxes',        mode: 'udp',           modeClass: 'udp',    note: 'Default-allow. Long timeout for persistent run.' },
       { name: 'E2B Sandboxes',          mode: 'udp',           modeClass: 'udp',    note: 'IP/CIDR rules only; Pilot endpoints allowed by default.' },
       { name: 'Daytona Sandboxes',      mode: 'udp',           modeClass: 'udp',    note: 'Default-allow; iptables-based.' },
@@ -104,9 +104,9 @@ const groups: CategoryGroup[] = [
 const egress = [
   { model: 'Open egress',                  examples: 'home wifi, most cloud VMs, default Docker',     today: '✓ UDP works — use default',                                                                  needed: 'nothing' },
   { model: 'Default-deny, TCP/443 only',   examples: 'hotel / airport / locked corp wifi',            today: '✓ Compat works as-is — single TCP/443 outbound',                                              needed: '-transport=compat' },
-  { model: 'HTTP CONNECT proxy',           examples: 'corp networks with explicit proxy URL',         today: '✗ Neither the WSS dial nor the registry TLS dial honors HTTPS_PROXY today',                   needed: 'not yet supported' },
+  { model: 'HTTP CONNECT proxy',           examples: 'corp networks with explicit proxy URL',         today: '✓ Compat dials the registry and beacon through HTTPS_PROXY (v1.13.11+)',                      needed: 'compat, or auto (the pilotctl default)' },
   { model: 'Transparent TLS interception', examples: 'Zscaler, Fortinet, Palo Alto, BlueCoat, Netskope', today: '✓ Works with -tls-trust=system (corp CA in OS store — current default)',                  needed: 'already supported' },
-  { model: 'HTTP-proxy-only sandbox',      examples: 'Replit Agent, Devin, Docker AI Sandbox',        today: '✗ Blocked — daemon needs raw TCP to :443',                                                    needed: 'not yet supported' },
+  { model: 'HTTP-proxy-only sandbox',      examples: 'Replit Agent, Devin, Docker AI Sandbox',        today: '✓ Compat through the proxy, CONNECT by hostname so local DNS does not matter (v1.13.11+)',  needed: 'compat; proxy_cmd if credentials rotate' },
   { model: 'Domain-name allowlist',        examples: 'Cursor Cloud Agents, Zscaler PAC',              today: '✓ Works after adding *.pilotprotocol.network + 34.71.57.205',                                 needed: 'doc-only' },
   { model: 'DPI / protocol allowlist',     examples: 'Great Firewall, Iran-style filters',            today: '✗ Blocked — no domain fronting / ECH today',                                                  needed: 'out of scope' },
 ];
@@ -297,7 +297,7 @@ const egress = [
     <div class="eyebrow">Compatibility</div>
     <h1>Where pilot-daemon runs.<br/><em>Pick the right mode.</em></h1>
     <p class="lede">
-      One daemon binary, two transports. <b>UDP</b> is the default — direct peer paths, lowest latency. <b>Compat</b> tunnels everything through a single outbound TCP/443 for environments that block UDP or restrict egress.
+      One daemon, two transports. <b>UDP</b> gives direct peer paths and the lowest latency. <b>Compat</b> tunnels everything through a single outbound TCP/443, through an HTTPS proxy if that is the only way out. With nothing configured, <code>pilotctl daemon start</code> uses <b>auto</b>: UDP when the beacon answers over UDP, otherwise compat.
     </p>
     <div class="head-cta">
       <a class="btn primary" href="/docs/firewalls"
@@ -338,7 +338,7 @@ const egress = [
         </div>
         <div class="zoo-name">Compat mode</div>
         <div class="zoo-desc">
-          Long-lived TCP/443 connections only — WebSocket Secure to the beacon for the data plane, TLS to the registry for control. Zero UDP. Same overlay; same Ed25519 trust; higher latency than a direct path (traffic relays through the beacon).
+          Long-lived TCP/443 connections only — WebSocket Secure to the beacon for the data plane, TLS to the registry for control. Zero UDP. Goes through <code>HTTPS_PROXY</code> since v1.13.11. Same overlay; same Ed25519 trust; higher latency than a direct path (traffic relays through the beacon).
         </div>
         <div class="zoo-stats">
           <div class="zoo-stat"><div class="v">TCP/443</div><div class="l">single port</div></div>
@@ -359,7 +359,7 @@ const egress = [
     <div class="compat-legend">
       <span><span class="sw" style="background: oklch(0.88 0.22 125);"></span><b>udp</b> — default UDP transport</span>
       <span><span class="sw" style="background: oklch(0.85 0.16 230);"></span><b>compat</b> — <code>-transport=compat</code></span>
-      <span><span class="sw" style="background: oklch(0.80 0.16 75);"></span><b>compat+proxy</b> — would need HTTPS_PROXY support (not yet available)</span>
+      <span><span class="sw" style="background: oklch(0.80 0.16 75);"></span><b>compat+proxy</b> — compat through <code>HTTPS_PROXY</code> (v1.13.11+)</span>
       <span><span class="sw" style="background: var(--ink-faint);"></span><b>wrong runtime</b> — no daemon</span>
     </div>
     <p style="color: var(--ink-faint); font-size: 12px; margin: -16px 0 24px;">These per-platform notes are our best-effort understanding of each vendor's network policy, not continuously tested guarantees — vendors change their rules, so verify against your platform's current docs and <a href="https://github.com/pilot-protocol/pilotprotocol/issues" style="color: inherit;">tell us</a> if a cell is wrong.</p>
@@ -435,7 +435,7 @@ const egress = [
   <div class="wrap">
     <div class="section-head">
       <div class="eyebrow">Worked examples</div>
-      <h2>Five deployments.</h2>
+      <h2>Six deployments.</h2>
     </div>
 
     <div class="compat-example">
@@ -487,17 +487,30 @@ spec:
 <pre>curl -fsSL https://pilotprotocol.network/install.sh | \
   PILOT_EMAIL=you@example.com sh</pre>
       </div>
-      <p>Installer writes <code>~/Library/LaunchAgents/network.pilotprotocol.pilot-daemon.plist</code> and prints the <code>launchctl load</code> command to start it. Defaults to <code>-transport=udp</code>; flip to compat only if your network blocks UDP/4000.</p>
+      <p>Installer writes <code>~/Library/LaunchAgents/network.pilotprotocol.pilot-daemon.plist</code> and prints the <code>launchctl load</code> command to start it. The transport defaults to auto: UDP where it works, compat over TCP/443 where it doesn't.</p>
     </div>
 
     <div class="compat-example">
       <h3>Forced-compat systemd unit — <em>locked-down corp Linux</em></h3>
       <div class="compat-codeblock">
-<pre>curl -fsSL https://pilotprotocol.network/install.sh | \
-  sudo PILOT_EMAIL=you@example.com PILOT_ALLOW_ROOT=1 sh
-sudo systemctl edit pilot-daemon   <span class="cmt"># add ExecStart override with -transport=compat</span>
+<pre>curl -fsSL https://pilotprotocol.network/install.sh | sh -s -- --transport compat
+<span class="cmt"># already installed: the units read the transport from ~/.pilot/config.json</span>
+pilotctl config --set transport=compat
 sudo systemctl restart pilot-daemon</pre>
       </div>
+      <p>The installer saves <code>"transport": "compat"</code> in <code>~/.pilot/config.json</code>; the service units it writes take the transport from there.</p>
+    </div>
+
+    <div class="compat-example">
+      <h3>Proxy-only agent sandbox — <em>HTTPS_PROXY, UDP blocked</em></h3>
+      <div class="compat-codeblock">
+<pre><span class="cmt"># HTTPS_PROXY=http://user:pass@proxy.internal:3128 is already set</span>
+curl -fsSL https://pilotprotocol.network/install.sh | sh
+pilotctl daemon start   <span class="cmt"># auto picks compat through the proxy</span>
+<span class="cmt"># proxy credentials that rotate: a command that prints the current proxy URL</span>
+pilotctl config --set proxy_cmd="bash -c 'printf %s \"\$https_proxy\"'"</pre>
+      </div>
+      <p>Since v1.13.11 the daemon asks the proxy to <code>CONNECT</code> by hostname, so poisoned local DNS does not matter, and TLS stays end to end. With a proxy command it re-reads the credentials every 60 seconds and after a <code>407</code>. On Linux without systemd, <code>pilotctl daemon start</code> sets one up by itself when <code>HTTPS_PROXY</code> carries credentials. See <a href="/learn/pilot-node-through-https-only-egress-proxy">running a node through an HTTPS-only egress proxy</a>.</p>
     </div>
   </div>
 </section>
@@ -507,7 +520,7 @@ sudo systemctl restart pilot-daemon</pre>
     <div class="cta-block">
       <h2>One daemon. <em>Two transport modes.</em></h2>
       <p style="color: var(--ink-dim); max-width: 60ch; margin: 0 auto 28px; line-height: 1.6;">
-        On a supported runtime, install <code>pilot-daemon</code> and pass <code>-transport=compat</code> if the environment blocks UDP. Check the platform notes above before deployment.
+        On a supported runtime, install Pilot and start the daemon: auto picks UDP or compat, through <code>HTTPS_PROXY</code> when there is one. Set <code>transport=compat</code> to skip the UDP probe. Check the platform notes above before deployment.
       </p>
       <div class="cta-actions">
         <a class="btn primary" href="/docs/getting-started">Install Pilot <span class="arr">→</span></a>
