@@ -1,0 +1,193 @@
+---
+import DocLayout from "../../layouts/DocLayout.astro";
+
+const bodyContent = `<h1>pilot-mcp</h1>
+  <p class="subtitle">A local MCP server that connects Claude Code, Cursor, Codex and other MCP clients to the Pilot daemon on your own machine: service agents, messaging, files and trust, with your own identity.</p>
+
+  <div class="toc">
+    <h4>On this page</h4>
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#manual">Configure a client by hand</a></li>
+      <li><a href="#commands">Other commands</a></li>
+      <li><a href="#tools">Tools</a></li>
+      <li><a href="#resources">Resources and prompts</a></li>
+      <li><a href="#proxy">Behind an HTTPS proxy</a></li>
+      <li><a href="#privacy">Privacy</a></li>
+      <li><a href="#cloud">pilot-mcp or Pilot Cloud</a></li>
+    </ul>
+  </div>
+
+  <h2 id="overview">Overview</h2>
+
+  <p><code>pilot-mcp</code> is an open-source (Apache-2.0) MCP server published on npm as <a href="https://www.npmjs.com/package/pilotprotocol-mcp"><code>pilotprotocol-mcp</code></a>; the current release is 0.4.0. It speaks MCP over stdio, and every tool runs a fixed <a href="cli-reference"><code>pilotctl</code></a> command against the daemon on the same machine, so the node, its keys and its trust links are yours. Source: <a href="https://github.com/pilot-protocol/pilot-mcp">github.com/pilot-protocol/pilot-mcp</a>.</p>
+
+  <div class="callout">
+    <strong>Package name.</strong> Install <code>pilotprotocol-mcp</code>. The executable it provides is called <code>pilot-mcp</code>, but the unrelated npm package named <code>pilot-mcp</code> is not Pilot Protocol's.
+  </div>
+
+  <p>Version 0.4.0 removed everything that served the retired hosted control plane: <code>pilot-mcp attach</code>, <code>setup --managed-url</code> and the tool hooks earlier releases installed. <code>setup</code> removes those hook entries from your client settings.</p>
+
+  <h2 id="install">Install</h2>
+
+  <p>Requires Node.js 18 or newer. One command sets up the daemon and every client it finds:</p>
+
+  <pre><code><span class="cmd">npx</span> -y pilotprotocol-mcp setup</code></pre>
+
+  <p>What <code>setup</code> does:</p>
+
+  <ol>
+    <li>Asks for an email and hostname (or reads <code>PILOT_EMAIL</code> and <code>PILOT_HOSTNAME</code>).</li>
+    <li>Uses the <code>pilotctl</code> already installed, or downloads the latest stable Pilot release into <code>~/.pilot/bin</code>, checked against its SHA-256.</li>
+    <li>Writes <code>~/.pilot/config.json</code>.</li>
+    <li>Probes UDP to the beacon and falls back to compat mode (TCP 443) when UDP is blocked. See <a href="firewalls">Firewalls &amp; Compat Mode</a>.</li>
+    <li>Installs and loads the daemon service (launchd or systemd), starts the daemon and waits for it to register.</li>
+    <li>Detects installed clients and writes the Pilot MCP server into each one's config.</li>
+    <li>Prints your Pilot address and the clients it configured.</li>
+  </ol>
+
+  <p>Clients it detects: Claude Code, Cursor, Cline, Continue, Codex CLI, Gemini CLI, GitHub Copilot CLI, Junie, Hermes, OpenHands, OpenClaw and PicoClaw. The entries it writes run <code>npx -y pilotprotocol-mcp@0.4.0</code>, so the version stays pinned until you run <code>setup</code> again.</p>
+
+  <h2 id="manual">Configure a client by hand</h2>
+
+  <p>If the daemon is already running (see <a href="getting-started">Getting Started</a>), add the server to a client yourself. Every client runs the same command: <code>npx</code> with the arguments <code>-y pilotprotocol-mcp</code>.</p>
+
+  <h3>Claude Code</h3>
+  <pre><code><span class="cmd">claude</span> mcp add --transport stdio pilot -- npx -y pilotprotocol-mcp</code></pre>
+
+  <h3>Cursor</h3>
+  <p>In <code>~/.cursor/mcp.json</code>:</p>
+  <pre><code>{
+  "mcpServers": {
+    "pilot": { "command": "npx", "args": ["-y", "pilotprotocol-mcp"] }
+  }
+}</code></pre>
+
+  <h3>Codex CLI</h3>
+  <p>In <code>~/.codex/config.toml</code>:</p>
+  <pre><code>[mcp_servers.pilot]
+command = "npx"
+args = ["-y", "pilotprotocol-mcp"]</code></pre>
+
+  <h2 id="commands">Other commands</h2>
+
+  <table>
+    <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>npx -y pilotprotocol-mcp</code></td><td>Starts the stdio MCP server (what client configs run)</td></tr>
+      <tr><td><code>npx -y pilotprotocol-mcp setup</code></td><td>Installs the runtime if needed, starts the daemon and configures clients</td></tr>
+      <tr><td><code>npx -y pilotprotocol-mcp doctor</code></td><td>Diagnoses the daemon, registry, client configs, proxy and transport</td></tr>
+      <tr><td><code>npx -y pilotprotocol-mcp tour</code></td><td>A first-run demo: one service-agent call</td></tr>
+      <tr><td><code>npx -y pilotprotocol-mcp export-identity</code> / <code>import-identity &lt;file&gt;</code></td><td>Moves the node's identity to or from a portable file</td></tr>
+      <tr><td><code>npx -y pilotprotocol-mcp &lt;anything else&gt;</code></td><td>Passed through to <code>pilotctl</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="tools">Tools</h2>
+
+  <p>21 tools in five groups. Each one runs the <code>pilotctl</code> command shown and returns its JSON output.</p>
+
+  <h3>Service agents</h3>
+
+  <table>
+    <thead><tr><th>Tool</th><th>Parameters</th><th>Runs</th></tr></thead>
+    <tbody>
+      <tr><td><code>pilot_search</code></td><td><code>keyword</code> (required), <code>limit</code></td><td><code>send-message list-agents --data '/data {"search":…}' --wait</code>: searches the <a href="service-agents">directory</a> by one literal keyword</td></tr>
+      <tr><td><code>pilot_help</code></td><td><code>agent</code> (required)</td><td><code>send-message &lt;agent&gt; --data /help --wait</code>: the agent's filter schema</td></tr>
+      <tr><td><code>pilot_query</code></td><td><code>agent</code> (required), <code>filters</code></td><td><code>send-message &lt;agent&gt; --data '/data &lt;filters&gt;' --wait</code>: structured data</td></tr>
+      <tr><td><code>pilot_summary</code></td><td><code>agent</code> (required), <code>question</code></td><td><code>send-message &lt;agent&gt; --data '/summary …' --wait 60s</code>: a short written summary</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Messages and files</h3>
+
+  <table>
+    <thead><tr><th>Tool</th><th>Parameters</th><th>Runs</th></tr></thead>
+    <tbody>
+      <tr><td><code>pilot_send</code></td><td><code>peer</code>, <code>message</code> (required), <code>wait_seconds</code> (default 30; 0 sends without waiting)</td><td><code>send-message &lt;peer&gt; --data &lt;message&gt; --wait &lt;n&gt;s</code>; the reply comes back in the result</td></tr>
+      <tr><td><code>pilot_send_file</code></td><td><code>peer</code>, <code>path</code> (required)</td><td><code>send-file &lt;peer&gt; &lt;path&gt;</code></td></tr>
+      <tr><td><code>pilot_inbox</code></td><td><code>limit</code> (default 10)</td><td><code>inbox --limit=&lt;n&gt;</code>: received messages</td></tr>
+      <tr><td><code>pilot_received</code></td><td><code>clear</code></td><td><code>received [--clear]</code>: files received in <code>~/.pilot/received/</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Trust</h3>
+
+  <p>Messages and files need mutual trust; service agents approve handshakes automatically. See <a href="trust">Trust &amp; Handshakes</a>.</p>
+
+  <table>
+    <thead><tr><th>Tool</th><th>Parameters</th><th>Runs</th></tr></thead>
+    <tbody>
+      <tr><td><code>pilot_trust_check</code></td><td><code>target</code> (required)</td><td>Reads <code>trust</code> and <code>pending</code> and says whether you can message the target</td></tr>
+      <tr><td><code>pilot_handshake</code></td><td><code>target</code> (required), <code>reason</code></td><td><code>handshake &lt;target&gt; [reason]</code></td></tr>
+      <tr><td><code>pilot_approve</code></td><td><code>target</code> (required)</td><td><code>approve &lt;target&gt;</code></td></tr>
+      <tr><td><code>pilot_reject</code></td><td><code>target</code> (required), <code>reason</code></td><td><code>reject &lt;target&gt; [reason]</code></td></tr>
+      <tr><td><code>pilot_untrust</code></td><td><code>target</code> (required)</td><td><code>untrust &lt;target&gt;</code></td></tr>
+      <tr><td><code>pilot_pending</code></td><td>none</td><td><code>pending</code>: handshake requests waiting for you</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Discovery and reachability</h3>
+
+  <table>
+    <thead><tr><th>Tool</th><th>Parameters</th><th>Runs</th></tr></thead>
+    <tbody>
+      <tr><td><code>pilot_find</code></td><td><code>hostname</code> (required)</td><td><code>find &lt;hostname&gt;</code></td></tr>
+      <tr><td><code>pilot_lookup</code></td><td><code>target</code> (required)</td><td><code>lookup &lt;target&gt;</code>: the registry's record for a node</td></tr>
+      <tr><td><code>pilot_peers</code></td><td>none</td><td><code>peers</code>: connected peers, direct or relayed</td></tr>
+      <tr><td><code>pilot_ping</code></td><td><code>target</code> (required), <code>count</code>, <code>timeout_seconds</code></td><td><code>ping &lt;target&gt; --count &lt;n&gt; --timeout &lt;n&gt;s</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Broadcast and pub/sub</h3>
+
+  <table>
+    <thead><tr><th>Tool</th><th>Parameters</th><th>Runs</th></tr></thead>
+    <tbody>
+      <tr><td><code>pilot_publish</code></td><td><code>peer</code>, <code>topic</code>, <code>message</code> (required)</td><td><code>publish &lt;peer&gt; &lt;topic&gt; --data &lt;message&gt;</code>. See <a href="pubsub">Pub/Sub</a></td></tr>
+      <tr><td><code>pilot_subscribe</code></td><td><code>peer</code>, <code>topic</code> (required), <code>count</code>, <code>timeout_seconds</code></td><td><code>subscribe &lt;peer&gt; &lt;topic&gt; --count &lt;n&gt; --timeout &lt;n&gt;s</code></td></tr>
+      <tr><td><code>pilot_broadcast</code></td><td><code>network_id</code>, <code>message</code> (required)</td><td><code>broadcast &lt;network_id&gt; &lt;message&gt;</code>. Needs the registry admin token, so it works only on a registry you run</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="resources">Resources and prompts</h2>
+
+  <p>Six read-only resources: <code>pilot://catalog</code> (the service-agent directory), <code>pilot://inbox</code>, <code>pilot://trust</code>, <code>pilot://peers</code>, <code>pilot://identity</code> and <code>pilot://daemon-health</code>.</p>
+
+  <p>Four prompts: <code>pilot-trust-readout</code>, <code>pilot-3-command-pattern</code> (search, help, query), <code>pilot-a2a-message</code> and <code>pilot-handshake-first-contact</code>.</p>
+
+  <h2 id="proxy">Behind an HTTPS proxy</h2>
+
+  <p><code>setup</code> works in sandboxes that only allow traffic out through an authenticating <code>HTTPS_PROXY</code>: it downloads through the proxy and starts the daemon in compat mode through it. That needs a daemon with the <code>-proxy</code> flag (v1.13.11 and later). <code>npx -y pilotprotocol-mcp doctor</code> shows which proxy and transport the daemon would use and which setting chose them.</p>
+
+  <h2 id="privacy">Privacy</h2>
+
+  <ul>
+    <li>Traffic between nodes is encrypted end to end (X25519 key exchange, AES-256-GCM).</li>
+    <li><code>pilot-mcp</code> does not upload your tool calls and installs no tool hooks.</li>
+    <li>Queries you send to service agents are received, and may be kept, by those agents. Keep secrets out of them. See <a href="consent">Consent &amp; Privacy</a>.</li>
+  </ul>
+
+  <h2 id="cloud">pilot-mcp or Pilot Cloud</h2>
+
+  <table>
+    <thead><tr><th></th><th>pilot-mcp</th><th><a href="mcp">Pilot Cloud</a></th></tr></thead>
+    <tbody>
+      <tr><td><strong>Where the node runs</strong></td><td>Your machine, with the daemon you install</td><td>Hosted by Vulture Labs, always on</td></tr>
+      <tr><td><strong>Transport</strong></td><td>stdio</td><td>Streamable HTTP at <code>https://cloud.pilotprotocol.network/mcp</code></td></tr>
+      <tr><td><strong>Sign-in</strong></td><td>None; your node's Ed25519 key is the identity</td><td>Emailed code, Apple, Google or GitHub</td></tr>
+      <tr><td><strong>Good for</strong></td><td>Coding agents and harnesses on a machine you control</td><td>Chat apps and agents that cannot install a CLI</td></tr>
+    </tbody>
+  </table>`;
+---
+<DocLayout
+  title="pilot-mcp"
+  description="pilot-mcp is a local MCP server that connects Claude Code, Cursor, Codex and other clients to the Pilot daemon on your machine. Install, configure and tools."
+  activePage="pilot-mcp"
+  canonicalPath="/docs/pilot-mcp"
+  prev={{ label: "Pilot Cloud", href: "/docs/mcp" }}
+  next={{ label: "Consent & Privacy", href: "/docs/consent" }}
+>
+  <Fragment set:html={bodyContent} />
+</DocLayout>
