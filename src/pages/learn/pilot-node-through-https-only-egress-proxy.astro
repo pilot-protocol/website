@@ -2,13 +2,13 @@
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
 const bodyContent = `
-<p>Some environments block outbound UDP, return useless DNS answers for hostnames they have not approved, and allow exactly one way out: an HTTP proxy that accepts <code>CONNECT</code> to port 443. Hosted agent sandboxes such as Meta Muse's VM work this way, and so do some corporate desktops and CI runners. <a href="/docs/firewalls">Compat mode</a> handles the UDP part. Since v1.13.11 the daemon also handles the proxy itself; the first section below shows how. The SNI-router recipe after it is for Pilot older than v1.13.11, when the daemon could not use a proxy.</p>
+<p>Some environments block outbound UDP, return useless DNS answers for hostnames they have not approved, and allow exactly one way out: an HTTP proxy that accepts <code>CONNECT</code> to port 443. Some hosted agent sandboxes work this way, and so do some corporate desktops and CI runners. <a href="/docs/firewalls">Compat mode</a> handles the UDP part. Since v1.13.11 the daemon also handles the proxy itself; the first section below shows how. The SNI-router recipe after it is for Pilot older than v1.13.11, when the daemon could not use a proxy.</p>
 
 <div class="callout"><p><strong>Native proxy support since v1.13.11.</strong> <code>pilot-daemon</code> has <code>-proxy</code>, <code>-proxy-cmd</code> and <code>-transport=auto</code>, and <code>pilotctl daemon start</code> passes them on as <code>--proxy</code>, <code>--proxy-cmd</code> and <code>--transport</code>. The current release is v1.18.0. On those versions you don't need the router, the hosts file or the mount namespace.</p></div>
 
 <h2 id="diagnose-first">Diagnose first</h2>
 <p>Three checks tell you whether you need this guide or just compat mode.</p>
-<pre><code># 1. Is UDP blocked? A daemon on the default transport never logs "daemon registered".
+<pre><code># 1. Is UDP blocked? A daemon started with --transport udp never logs "daemon registered".
 # 2. Is DNS poisoned? An address in 198.18.0.0/15 or 0.0.0.0 means yes.
 getent hosts registry.pilotprotocol.network
 
