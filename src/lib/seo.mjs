@@ -7,19 +7,19 @@ const MAX_DESCRIPTION_LENGTH = 160;
 // editorial; the browser/search title should be concise, descriptive, and
 // consistent across product, documentation, and resource collections.
 const ROUTE_TITLES = new Map([
-  ['/', 'Pilot Protocol: Secure Network OS for AI Agent Teams'],
+  ['/', 'Pilot Protocol: The Open-Source Network for AI Agents'],
   ['/about', 'About Pilot Protocol: Company, Team and Engineering'],
   ['/app-store', 'Agent App Store: Tools and Services | Pilot Protocol'],
   ['/aup', 'Acceptable Use Policy and Platform Rules | Pilot Protocol'],
   ['/brand', 'Pilot Protocol Brand Guidelines, Logos and Media Kit'],
   ['/blog', 'AI Agent Networking Guides and Analysis | Pilot Protocol'],
-  ['/contact', 'Contact Pilot Protocol: Sales, Partnerships and Press'],
+  ['/cloud', 'Pilot Cloud: A Hosted Pilot Node for Claude and ChatGPT'],
+  ['/contact', 'Contact Pilot Protocol: Questions, Partnerships and Press'],
   ['/cookies', 'Cookie Policy and Tracking Controls | Pilot Protocol'],
   ['/docs', 'Pilot Protocol Documentation: Guides and API Reference'],
   ['/governance', 'Agent Network Governance and Controls | Pilot Protocol'],
   ['/learn', 'Pilot Protocol Learning Center: Guides and Concepts'],
   ['/news', 'Pilot Protocol Company News and Product Announcements'],
-  ['/plans', 'Pilot Protocol Plans for Teams and Private Agent Networks'],
   ['/press', 'Pilot Protocol Press Kit, Company Facts and Brand Assets'],
   ['/privacy', 'Privacy Policy and Data Practices | Pilot Protocol'],
   ['/publish', 'Publish Agent Apps in the Pilot Protocol App Store'],
@@ -42,8 +42,6 @@ const ROUTE_TITLES = new Map([
   ['/docs/firewalls', 'Running Pilot Behind a Firewall: Compat Mode Guide'],
   ['/learn/nats-vs-grpc-agent-messaging', 'NATS vs gRPC: Agent Messaging Compared | Pilot Protocol'],
   ['/for/compatibility', 'Pilot Protocol Deployment Compatibility by Environment'],
-  ['/for/networks', 'Managed Agent Networks for Organizations | Pilot Protocol'],
-  ['/for/setups', 'Multi-Agent Fleet Blueprints and Setups | Pilot Protocol'],
   ['/for/skills', 'Agent Skills and Integrations Directory | Pilot Protocol'],
 ]);
 
@@ -156,14 +154,6 @@ export function formatPageTitle(title, pathname) {
     return fitted || fallbackTitle(subject, ': Agent App | Pilot Protocol');
   }
 
-  if (path.startsWith('/for/setups/')) {
-    fitted = chooseFitted(subject, [
-      (name) => `${name}: Agent Fleet Blueprint | Pilot Protocol`,
-      (name) => `${name}: Multi-Agent Setup | Pilot Protocol`,
-    ]);
-    return fitted || fallbackTitle(subject, ': Agent Fleet | Pilot Protocol');
-  }
-
   if (path.startsWith('/docs/')) {
     fitted = chooseFitted(subject, [
       (name) => `Pilot Protocol ${name}: Developer Guide & Reference`,
@@ -202,10 +192,10 @@ export function formatPageTitle(title, pathname) {
 
   if (path.startsWith('/for/')) {
     fitted = chooseFitted(subject, [
-      (name) => `${name}: Agent Network Solutions | Pilot Protocol`,
-      (name) => `${name} | Pilot Protocol Solutions`,
+      (name) => `${name}: Agent Networking Guide | Pilot Protocol`,
+      (name) => `${name} | Pilot Protocol Guides`,
     ]);
-    return fitted || fallbackTitle(subject, ' | Pilot Protocol Solutions');
+    return fitted || fallbackTitle(subject, ' | Pilot Protocol Guides');
   }
 
   return supplied;
@@ -231,23 +221,17 @@ export function formatMetaDescription(description, pathname) {
         'Review setup, usage, and operating details.',
         'Review its methods, setup, runtime requirements, and typed agent interface.',
       ]
-    : path.startsWith('/for/setups/')
+    : path.startsWith('/docs/')
       ? [
-          'See the implementation blueprint.',
-          'Review the workflow, roles, and controls.',
-          'Review the workflow, roles, controls, and practical implementation blueprint.',
+          'Read the implementation guide.',
+          'Read configuration and operating guidance.',
+          'Read implementation details, configuration, and operational guidance.',
         ]
-      : path.startsWith('/docs/')
-        ? [
-            'Read the implementation guide.',
-            'Read configuration and operating guidance.',
-            'Read implementation details, configuration, and operational guidance.',
-          ]
-        : [
-            'See the technical details.',
-            'Review the architecture and practical guidance.',
-            'Review the architecture, operating model, tradeoffs, and practical next steps.',
-          ];
+      : [
+          'See the technical details.',
+          'Review the architecture and practical guidance.',
+          'Review the architecture, operating model, tradeoffs, and practical next steps.',
+        ];
 
   clean = finishSentence(clean);
   const candidate = suffixes
