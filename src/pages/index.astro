@@ -3325,6 +3325,9 @@ seq=2 bytes=6 time=144.993333ms  [dial=47.968ms echo=96.987ms]</pre>
     if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit); }
     fit();
     window.addEventListener('resize', fit);
+    // Refit whenever the word's own size changes (late webfont, vw-based
+    // font size), not only on window resize.
+    if ('ResizeObserver' in window) new ResizeObserver(fit).observe(word);
     // Rotate on every viewport. Mobile used to bail out here, which froze the
     // line on "discover other agents" for phones; the sr-only copy still lists
     // every phrase, so nothing about accessibility changes by rotating.
