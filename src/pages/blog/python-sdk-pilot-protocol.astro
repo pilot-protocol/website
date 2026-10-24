@@ -2,17 +2,17 @@
 import BlogLayout from "../../layouts/BlogLayout.astro";
 
 const bodyContent = `
-<p><span class="tag accent">v0.1.1</span></p>
+<p><span class="tag accent">v1.9.1</span></p>
 
 <h2 id="why-python">Why a Python SDK</h2>
 
-<p>Pilot Protocol's core daemon is written in Go and distributed as a static binary with no external runtime dependencies. That's a strength for deployment but a friction point for the Python ecosystem. AI/ML engineers, data scientists, and agent framework developers overwhelmingly work in Python. Asking them to shell out to <code>pilotctl</code> and parse CLI output is not a real integration.</p>
+<p>Pilot Protocol's core daemon is written in Go and distributed as static binaries with no runtime dependencies. That's a strength for deployment but a friction point for the Python ecosystem. AI/ML engineers, data scientists, and agent framework developers overwhelmingly work in Python. Asking them to shell out to <code>pilotctl</code> and parse CLI output is not a real integration.</p>
 
 <p>The Python SDK gives you a native <code>Driver</code> class with context managers, type hints, and Pythonic error handling. Under the hood it calls the same Go code through a <code>ctypes</code> FFI layer - same guarantees, no re-implementation.</p>
 
 <pre><code>pip install pilotprotocol</code></pre>
 
-<p>One command installs the SDK, the CLI tools (<code>pilotctl</code>, <code>pilot-daemon</code>), and platform-specific native binaries. Python 3.9+, Linux and macOS.</p>
+<p>One command installs the SDK, the native <code>libpilot</code> library, and console entry points for <code>pilotctl</code> and <code>pilot-daemon</code>. Python 3.9+, Linux and macOS.</p>
 
 <h2 id="hello-world">Hello World in 8 Lines</h2>
 
@@ -24,11 +24,12 @@ with Driver() as d:
     info = d.info()
     print(f"I am {info['hostname']} at {info['address']}")
 
-    with d.dial("other-agent:1000") as conn:
+    peer = d.resolve_hostname("other-agent")["address"]
+    with d.dial(f"{peer}:1000") as conn:
         conn.write(b"Hello from Python!")
         print(conn.read(4096))</code></pre>
 
-<p>The <code>Driver</code> connects to the daemon's Unix socket at <code>/tmp/pilot.sock</code>. The <code>with</code> statement handles cleanup. <code>dial()</code> returns a <code>Conn</code> that supports <code>read()</code>, <code>write()</code>, and <code>close()</code> - exactly what you'd expect from a socket.</p>
+<p>The <code>Driver</code> connects to the daemon's Unix socket at <code>/tmp/pilot.sock</code>. The <code>with</code> statement handles cleanup. <code>dial()</code> takes a Pilot address and port (<code>N:XXXX.YYYY.YYYY:PORT</code>), so resolve a hostname first; it returns a <code>Conn</code> that supports <code>read()</code>, <code>write()</code>, and <code>close()</code> - exactly what you'd expect from a socket.</p>
 
 <h2 id="high-level-api">High-Level API: Services Without Boilerplate</h2>
 
@@ -41,7 +42,10 @@ with Driver() as d:
 
     # Pub/sub events (port 1002)
     d.publish_event("peer", "metrics/gpu", b"87.3")
-    d.subscribe_event("peer", "metrics/**", lambda topic, data: print(f"{topic}: {data}"))</code></pre>
+    for topic, data in d.subscribe_event("peer", "metrics/gpu", timeout=30):
+        print(f"{topic}: {data}")</code></pre>
+
+<p>Topics match exactly, or <code>"*"</code> subscribes to every topic on that peer; there are no prefix wildcards.</p>
 
 <p>Each method handles connection setup, framing, and acknowledgment. You send bytes and get dicts back.</p>
 
@@ -73,7 +77,7 @@ with Driver() as d:
 
 <p>This means:</p>
 <ul>
-  <li><strong>Single source of truth</strong> - the SDK uses the exact same packet handling, encryption, and transport code as <code>pilotctl</code></li>
+  <li><strong>Single source of truth</strong> - the SDK uses the same Go driver as <code>pilotctl</code>, and the same daemon does the encryption and transport for both</li>
   <li><strong>No drift</strong> - when the Go code gets a bug fix, the Python SDK gets it too (after a wheel rebuild)</li>
   <li><strong>Memory safety</strong> - Go's GC manages allocations; the SDK handles cleanup of Go-allocated strings via <code>ctypes</code></li>
   <li><strong>Opaque handles</strong> - connections and listeners are represented as integer handles, avoiding cross-language pointer issues</li>
@@ -87,9 +91,9 @@ with Driver() as d:
 
 with Driver() as d:
     try:
-        conn = d.dial("nonexistent:1000")
+        conn = d.dial("0:0000.0000.9999:1000", timeout=5)
     except PilotError as e:
-        print(f"Failed: {e}")  # "no route to host"</code></pre>
+        print(f"Failed: {e}")</code></pre>
 
 <p>The SDK raises <code>PilotError</code> for protocol-level failures (unreachable peers, trust failures, timeouts), <code>FileNotFoundError</code> when the native library isn't found, and <code>ValueError</code> for invalid parameters. Standard Python exception hierarchy - catch what you need.</p>
 
@@ -101,16 +105,16 @@ with Driver() as d:
 from typing import Dict, Any
 
 with Driver() as d:
-    conn: Conn = d.dial("other-agent:1000")
+    conn: Conn = d.dial("0:0000.0000.0005:1000")
     info: Dict[str, Any] = d.info()</code></pre>
 
 <h2 id="agent-frameworks">Use With Agent Frameworks</h2>
 
 <p>The SDK is designed to integrate with existing Python agent frameworks. A few patterns:</p>
 
-<p><strong>With LangChain / LangGraph:</strong> Use the SDK as a tool - agents can send messages, transfer files, or delegate tasks to peers on the Pilot network as part of their tool chain.</p>
+<p><strong>With LangChain / LangGraph:</strong> Use the SDK as a tool - agents can send messages, transfer files, or open streams to trusted peers on the Pilot network as part of their tool chain.</p>
 
-<p><strong>With <a href="/blog/openclaw-meets-pilot-agent-networking-one-command">OpenClaw</a>:</strong> The SDK powers the Pilot skill on ClawHub. OpenClaw agents use it to discover peers, establish trust, and form <a href="/blog/multi-agent-pipelines-openclaw-encrypted-tunnels">multi-agent pipelines</a>.</p>
+<p><strong>With <a href="/blog/openclaw-meets-pilot-agent-networking-one-command">OpenClaw</a>:</strong> OpenClaw agents can use the SDK (or <code>pilotctl</code> directly) to find peers, establish trust, and form <a href="/blog/multi-agent-pipelines-openclaw-encrypted-tunnels">multi-agent pipelines</a>.</p>
 
 <p><strong>With FastAPI / Flask:</strong> Run a local HTTP server that proxies to Pilot peers. Or use the <a href="/docs/gateway">gateway</a> to expose Pilot services as local IPs and hit them with standard HTTP clients.</p>
 
@@ -118,7 +122,7 @@ with Driver() as d:
 
 <ol>
   <li>Install: <code>pip install pilotprotocol</code></li>
-  <li>Set your hostname, then start the daemon: <code>pilotctl init --hostname my-agent</code> followed by <code>pilotctl daemon start</code> (the daemon takes its email via the <code>-email</code> flag, not <code>--hostname</code>)</li>
+  <li>Start the daemon with a hostname: <code>pilotctl daemon start --hostname my-agent</code></li>
   <li>Write Python code using the <code>Driver</code> class</li>
   <li>See the <a href="/docs/python-sdk">full API reference</a> for all methods and types</li>
 </ol>

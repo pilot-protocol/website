@@ -56,22 +56,24 @@ const bodyContent = `<p>Multi-agent systems add a security boundary that single-
   <p>When you first start a Pilot daemon, it generates an Ed25519 key pair and stores the private key at <code>~/.pilot/identity.json</code> (<code>pilotctl init</code> only writes local config; the daemon creates the identity on start). The public key is registered with the rendezvous server alongside the agent's 48-bit virtual address.</p>
 
   <pre><code><span class="comment"># Write local config (registry/beacon/hostname)</span>
-<span class="cmd">$ pilotctl init</span>
+<span class="cmd">$ pilotctl init --hostname agent-alpha</span>
 
 <span class="comment"># Starting the daemon generates the Ed25519 identity + registers</span>
 <span class="cmd">$ pilotctl daemon start</span>
-Identity created: ~/.pilot/identity.json
-Public key: 3b7f...a91c (Ed25519, 32 bytes)
-Virtual address: 1:0001.0000.0003
+Daemon running (pid 4812)
+  Address:  0:0000.0004.1A2B
+  Hostname: agent-alpha
+  ...
 
 <span class="comment"># The identity persists across restarts</span>
 <span class="cmd">$ pilotctl info</span>
-Address:    1:0001.0000.0003
-Public Key: 3b7f...a91c
-Hostname:   agent-alpha
-Visibility: private</code></pre>
+● pilot-daemon v1.18.0 · up 2m
 
-  <p>Ed25519 was chosen specifically for agent use cases. Its signatures are deterministic -- there is no random nonce that could leak the private key if the random number generator is weak. This matters for agents running on constrained hardware, in containers with limited entropy, or on IoT devices. The keys are small (32 bytes public, 64 bytes signature), so they fit in packet headers without adding overhead to every message.</p>
+  identity   agent-alpha · 0:0000.0004.1A2B · node 268843
+             Ed25519 O7fK2pQx… · persistent · alpha@example.com
+  ...</code></pre>
+
+  <p>Ed25519 was chosen specifically for agent use cases. Its signatures are deterministic -- there is no random nonce that could leak the private key if the random number generator is weak. This matters for agents running on constrained hardware, in containers with limited entropy, or on IoT devices. The keys are small (32 bytes public, 64 bytes signature), which keeps handshake and registration messages compact. Data packets are not signed one by one; AES-256-GCM authenticates them, as described below.</p>
 
   <p>The identity is <strong>persistent</strong>. If the agent restarts, moves to a different machine, or changes its network address, it retains the same cryptographic identity. Peers recognize it by its public key, not by its IP address or hostname.</p>
 
@@ -84,7 +86,7 @@ Visibility: private</code></pre>
   <ul>
     <li><strong>Lookup</strong> -- metadata such as hostname, tags, or network membership may be returned according to registry configuration; it is not a connectivity grant.</li>
     <li><strong>Resolve</strong> -- a reachable network endpoint (IP:port) is withheld unless mutual trust or shared-network membership authorizes connectivity.</li>
-    <li><strong>Directory scope</strong> -- public agents opt in to broad search, while private-agent metadata is limited by the registry and network context.</li>
+    <li><strong>Directory scope</strong> -- public agents opt in to being resolvable by anyone who knows their hostname, while private-agent metadata is limited by the registry and network context. There is no search or roster of agents for ordinary nodes.</li>
   </ul>
 
   <p>This supports a <strong>bounded blast radius</strong>: a compromised agent can connect only where its peer trust and network memberships permit. Directory metadata should still be treated as visible control-plane information and protected accordingly.</p>
@@ -94,21 +96,22 @@ Visibility: private</code></pre>
   <p>Trust between two agents is established through a cryptographic handshake ceremony. This is not an HTTP request to an OAuth provider. It is a peer-to-peer protocol where both sides must actively agree.</p>
 
   <pre><code><span class="comment"># Agent Alpha initiates a handshake to Agent Beta</span>
-<span class="cmd">$ pilotctl handshake beta "Requesting data feed for quarterly analysis pipeline"</span>
-Handshake request sent to beta (1:0001.0000.0007)
-Waiting for approval...
+<span class="cmd">$ pilotctl handshake agent-beta "Requesting data feed for quarterly analysis pipeline"</span>
+handshake request sent to node 268849
+  they must approve on their side · check status: pilotctl trust · propagation can take ~60s
 
 <span class="comment"># On Agent Beta's side -- review pending requests</span>
 <span class="cmd">$ pilotctl pending</span>
-PENDING HANDSHAKES:
-  1:0001.0000.0003 (agent-alpha)
-  Justification: "Requesting data feed for quarterly analysis pipeline"
-  Signed by: 3b7f...a91c (verified)
+Pending handshakes — 1
+
+  node 268843 · 12s ago (2026-06-05 10:14)
+  Requesting data feed for quarterly analysis pipeline
+  accept: pilotctl approve 268843 · decline: pilotctl reject 268843 "reason"
 
 <span class="comment"># Approve the handshake</span>
-<span class="cmd">$ pilotctl approve 1:0001.0000.0003</span>
-Trust established with agent-alpha (1:0001.0000.0003)
-Encrypted tunnel active</code></pre>
+<span class="cmd">$ pilotctl approve 268843</span>
+trust established with node 268843
+  trust is now mutual — message them: pilotctl send-message 268843 --data "hi"</code></pre>
 
   <p>The handshake includes a <strong>justification</strong> -- a signed, auditable statement of why Agent Alpha wants to connect. This is not a comment field. It travels with the signed handshake so the reviewing operator sees who is asking and why. (Note: the Ed25519 signature covers the handshake challenge — <code>handshake:&lt;node_id&gt;:&lt;peer_id&gt;</code> — binding the request to the sender's identity; the justification text itself is an attached field, not part of the signed bytes.)</p>
 
@@ -134,9 +137,9 @@ Encrypted tunnel active</code></pre>
       <tr><td>Default visibility</td><td>Private endpoint; metadata may be visible</td><td>Public (Agent Card)</td><td>Configured by client</td><td>Public endpoint</td></tr>
       <tr><td>Trust establishment</td><td>Mutual handshake + justification</td><td>Fetch Agent Card</td><td>Client configuration</td><td>Shared credential</td></tr>
       <tr><td>Trust granularity</td><td>Per agent pair</td><td>Per endpoint</td><td>Per server</td><td>Per API key scope</td></tr>
-      <tr><td>Encryption</td><td>X25519 + AES-256-GCM (mandatory)</td><td>TLS (optional)</td><td>TLS (optional)</td><td>TLS (optional)</td></tr>
+      <tr><td>Encryption</td><td>X25519 + AES-256-GCM (on by default)</td><td>TLS (optional)</td><td>TLS (optional)</td><td>TLS (optional)</td></tr>
       <tr><td>Revocation speed</td><td>Instant (pilotctl untrust)</td><td>HTTP 401/403</td><td>Token expiry</td><td>Key rotation</td></tr>
-      <tr><td>Enumeration protection</td><td>Blocked (no roster API)</td><td>Crawlable</td><td>N/A</td><td>Endpoint scanning</td></tr>
+      <tr><td>Enumeration protection</td><td>Backbone roster is admin-only</td><td>Crawlable</td><td>N/A</td><td>Endpoint scanning</td></tr>
       <tr><td>Blast radius</td><td>Trust set only</td><td>Full network</td><td>Connected servers</td><td>Full API surface</td></tr>
       <tr><td>Spoofing resistance</td><td>Cryptographic (Ed25519)</td><td>Optional card signing</td><td>Server-side</td><td>Token-based</td></tr>
     </tbody>
@@ -152,31 +155,31 @@ Encrypted tunnel active</code></pre>
 <span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
 <span class="cmd">$ pilotctl init --hostname agent-alpha</span>
 <span class="cmd">$ pilotctl daemon start --email alpha@example.com</span>
-Agent alpha online at 1:0001.0000.0003 (private)
+Daemon running (pid 4812)
+  Address:  0:0000.0004.1A2B
+  Hostname: agent-alpha
+  ...
 
 <span class="comment"># Machine 2: Install and initialize Agent Beta</span>
 <span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
 <span class="cmd">$ pilotctl init --hostname agent-beta</span>
 <span class="cmd">$ pilotctl daemon start --email beta@example.com --public</span>
-Agent beta online at 1:0001.0000.0007 (public)
+Daemon running (pid 3307)
+  Address:  0:0000.0004.1A31
+  Hostname: agent-beta
+  ...
 
 <span class="comment"># Machine 1: Agent Alpha initiates handshake</span>
 <span class="cmd">$ pilotctl handshake agent-beta "Need analytics data for Q1 pipeline"</span>
-Handshake request sent. Waiting for approval...
+handshake request sent to node 268849
 
 <span class="comment"># Machine 2: Agent Beta reviews and approves</span>
 <span class="cmd">$ pilotctl pending</span>
-1:0001.0000.0003 (agent-alpha) - "Need analytics data for Q1 pipeline"
-<span class="cmd">$ pilotctl approve 1:0001.0000.0003</span>
-Trust established with agent-alpha
+<span class="cmd">$ pilotctl approve 268843</span>
+trust established with node 268843
 
-<span class="comment"># Machine 1: Connection is now live</span>
-Handshake approved by agent-beta
-Encrypted tunnel active (X25519 + AES-256-GCM)
-
-<span class="comment"># Send an encrypted message</span>
-<span class="cmd">$ pilotctl send agent-beta 1002 --data "Begin Q1 data extraction"</span>
-Message delivered (encrypted, 34 bytes, 2ms RTT)</code></pre>
+<span class="comment"># Machine 1: send an encrypted message (data exchange, port 1001)</span>
+<span class="cmd">$ pilotctl send-message agent-beta --data "Begin Q1 data extraction"</span></code></pre>
 
   <p>Notice that Agent Alpha is private while Agent Beta is public. Alpha can find Beta through a lookup because Beta opted into visibility. Beta may see Alpha's directory metadata, but it does not receive Alpha's reachable endpoint until the handshake is approved or a shared-network policy grants connectivity. After authorization, both agents can communicate over an encrypted tunnel.</p>
 
@@ -185,26 +188,27 @@ Message delivered (encrypted, 34 bytes, 2ms RTT)</code></pre>
   <p>Trust revocation is as critical as trust establishment. If you detect a compromised agent, you need to cut it off immediately -- not in five minutes when a token expires, not after a configuration redeployment, but right now.</p>
 
   <pre><code><span class="comment"># Revoke trust for a specific agent</span>
-<span class="cmd">$ pilotctl untrust 1:0001.0000.0003</span>
-Trust revoked for agent-alpha (1:0001.0000.0003)
-Active tunnel torn down
-Peer notified</code></pre>
+<span class="cmd">$ pilotctl untrust 268843</span>
+trust revoked for node 268843
+  re-establish later: pilotctl handshake 268843</code></pre>
 
-  <p>When <code>pilotctl untrust</code> runs, three things happen atomically:</p>
+  <p>When <code>pilotctl untrust</code> runs, three things happen:</p>
 
   <ol>
     <li><strong>Trust pair deleted</strong> -- the peer's public key is removed from local storage. The agent will reject all future connection attempts from this peer.</li>
-    <li><strong>Active tunnel torn down</strong> -- any open encrypted tunnel to the peer is terminated. All in-flight connections, file transfers, and data streams are cut immediately.</li>
-    <li><strong>Peer notified</strong> -- the revoked agent receives a notification so it can clean up its own state and stop reconnection attempts.</li>
+    <li><strong>Peer notified</strong> -- the daemon sends the revoked agent a best-effort revoke message (before the tunnel goes) so it can clean up its own state.</li>
+    <li><strong>Active tunnel torn down</strong> -- any open encrypted tunnel to the peer is terminated. In-flight connections, file transfers, and data streams are cut.</li>
   </ol>
 
-  <p>There is no cache to invalidate, no token to wait out, no propagation delay. The next packet from the revoked agent is rejected. The time between "revoke" and "locked out" is measured in milliseconds.</p>
+  <p>There is no token to wait out. On the revoking node the change takes effect at once: the tunnel is gone, and a private node refuses new connections from the revoked agent.</p>
 
   <p>For fleet management, you can revoke trust for multiple agents at once or use the <code>--json</code> flag for programmatic revocation from scripts and orchestrators:</p>
 
-  <pre><code><span class="comment"># Programmatic revocation from a management script</span>
-<span class="cmd">$ pilotctl --json peers</span> | jq -r '.[] | select(.hostname | startswith("temp-")) | .address' | \\
-  xargs -I {} <span class="cmd">pilotctl untrust</span> {}</code></pre>
+  <pre><code><span class="comment"># Inspect the trust set as JSON (node_id, network, approved_at, public_key)</span>
+<span class="cmd">$ pilotctl --json trust</span> | jq -r '.data.trusted[].node_id'
+
+<span class="comment"># Programmatic revocation: one node ID per line, from your orchestrator</span>
+<span class="cmd">$ xargs -n1 pilotctl untrust</span> &lt; revoked-node-ids.txt</code></pre>
 
   <h2 id="additional-layers">When You Still Need Additional Security Layers</h2>
 
@@ -216,7 +220,7 @@ Peer notified</code></pre>
     <li><strong>Prompt injection defense</strong> -- Pilot encrypts and authenticates the transport, but it does not inspect message content. A trusted agent can still send a malicious prompt. Content-level guardrails are a separate concern.</li>
     <li><strong>Tool authorization</strong> -- Pilot controls which agents can talk to each other, not what actions they can perform once connected. If Agent A is trusted to talk to Agent B, Pilot does not restrict which API calls A makes. Use MCP or similar tool-level authorization for this. See <a href="mcp-plus-pilot-tools-and-network">MCP + Pilot</a> for how the two protocols complement each other.</li>
     <li><strong>Data classification</strong> -- Pilot does not understand the sensitivity of the data flowing through its tunnels. If an agent should only receive redacted data, that logic lives in the application, not the protocol.</li>
-    <li><strong>Audit logging</strong> -- Pilot logs trust events (handshakes, approvals, revocations) locally. If you need centralized audit logging for compliance, aggregate these logs into your SIEM. For healthcare environments, see the <a href="/blog/hipaa-compliant-agent-communication">technical controls and operator-responsibility guide</a>.</li>
+    <li><strong>Audit logging</strong> -- Pilot logs trust events (handshakes, approvals, revocations) locally. If you need centralized audit logging, aggregate these logs into your SIEM. For healthcare environments, see the <a href="/blog/hipaa-compliant-agent-communication">technical controls and operator-responsibility guide</a>.</li>
   </ul>
 
   <p>The right architecture is layered: Pilot Protocol for transport-level zero trust, MCP or equivalent for tool-level authorization, and application-level guardrails for content safety. Each layer handles the security domain it understands best. When agents need to collaborate across organizational boundaries, this zero trust model becomes the foundation for <a href="/blog/cross-company-agent-collaboration-without-shared-infrastructure">cross-company agent collaboration without shared infrastructure</a> -- scoped trust handshakes replace the fragile shared-credential model.</p>

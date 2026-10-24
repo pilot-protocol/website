@@ -1,7 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
-const bodyContent = `<p><strong>Secure research collaboration across institutions</strong> means sharing ML models — not raw data — while meeting HIPAA, GDPR, and institutional compliance requirements. Pilot Protocol makes this possible by establishing encrypted tunnels between research labs in minutes, with no VPN approval process.</p>
+const bodyContent = `<p><strong>Secure research collaboration across institutions</strong> means sharing ML models — not raw data — between institutions. Pilot Protocol provides the transport: encrypted, authenticated tunnels between research labs, set up from each lab's side without a VPN project. Meeting HIPAA, GDPR, and institutional requirements remains each institution's work.</p>
 
   <p>A medical researcher at University A has a model that detects early-stage lung cancer from CT scans. The model is good, but it was trained on 5,000 images from a single hospital. University B, across the country, has 8,000 additional scans that could significantly improve the model's accuracy. The researcher at University A cannot access University B's data. HIPAA prohibits it. The institutional review board at University B would not approve it. The IT security team at University A cannot whitelist another institution's network. And even if all of those barriers were overcome, the data transfer itself would need to be encrypted, logged, and auditable.</p>
 
@@ -23,7 +23,7 @@ const bodyContent = `<p><strong>Secure research collaboration across institution
 
   <h3>VPNs and Direct Network Connections</h3>
 
-  <p>The brute-force approach: establish a VPN tunnel between the two institutions, transfer data or model files through the tunnel, and rely on the VPN encryption for security. This works technically, but it fails operationally. University IT departments have different VPN standards, different firewall policies, and different approval timelines. A researcher described the process: "Cross-institution security inconsistency -- each university has different IT policies. Getting a VPN approved took four months and required three meetings with two security committees."</p>
+  <p>The brute-force approach: establish a VPN tunnel between the two institutions, transfer data or model files through the tunnel, and rely on the VPN encryption for security. This works technically, but it fails operationally. University IT departments have different VPN standards, different firewall policies, and different approval timelines, so a VPN between two institutions can take months and several security reviews to approve.</p>
 
   <h3>Federated Learning Frameworks</h3>
 
@@ -39,33 +39,40 @@ const bodyContent = `<p><strong>Secure research collaboration across institution
 
   <p>Pilot Protocol does not do federated learning. It does not do differential privacy. It does not do secure aggregation. What it does is solve the connectivity problem that blocks every other approach: how do two machines at different institutions establish an encrypted, authenticated, NAT-traversing connection without involving either institution's IT department in a months-long VPN approval process?</p>
 
-  <p>Each lab runs a Pilot daemon. The protocol handles NAT traversal, encryption, and authentication. The researchers exchange model weights, gradient updates, or evaluation results through encrypted tunnels. No data touches third-party servers. No VPN configuration required.</p>
+  <p>Each lab runs a Pilot daemon. The protocol handles NAT traversal, encryption, and authentication. The researchers exchange model weights, gradient updates, or evaluation results through encrypted tunnels. The registry and beacon (Vulture Labs' public pair, or your own) see connection metadata and, when no direct path exists, relay ciphertext they cannot read. No VPN configuration required.</p>
 
   <pre><code><span class="comment"># Lab A (University Hospital, behind institutional NAT)</span>
 <span class="cmd">$ pilotctl init --hostname lab-a-trainer</span>
 <span class="cmd">$ pilotctl daemon start --email lab-a@university-a.edu</span>
-Agent online: lab-a-trainer (1:0001.0000.0010)
+Daemon running (pid 4812)
+  Address:  0:0000.0004.1A2B
+  Hostname: lab-a-trainer
+  ...
 
 <span class="comment"># Lab B (Research Institute, different network)</span>
 <span class="cmd">$ pilotctl init --hostname lab-b-trainer</span>
-<span class="cmd">$ pilotctl daemon start --email lab-b@university-b.edu</span>
-Agent online: lab-b-trainer (1:0001.0000.0020)
+<span class="cmd">$ pilotctl daemon start --email lab-b@university-b.edu --public</span>
+Daemon running (pid 2210)
+  Address:  0:0000.0004.1A31
+  Hostname: lab-b-trainer
+  ...
 
 <span class="comment"># Establish trust (cryptographic handshake = collaboration agreement)</span>
 <span class="comment"># Lab A initiates:</span>
 <span class="cmd">$ pilotctl handshake lab-b-trainer "Federated lung cancer detection study, IRB #2026-0142"</span>
-Handshake request sent. Waiting for approval...
+handshake request sent to node 268849
 
 <span class="comment"># Lab B reviews and approves:</span>
 <span class="cmd">$ pilotctl pending</span>
-1:0001.0000.0010 (lab-a-trainer)
-  Justification: "Federated lung cancer detection study, IRB #2026-0142"
-  Signed by: 5a2f...c8d1 (verified)
-<span class="cmd">$ pilotctl approve 1:0001.0000.0010</span>
-Trust established with lab-a-trainer
-Encrypted tunnel active (X25519 + AES-256-GCM)</code></pre>
+Pending handshakes — 1
 
-  <p>The handshake justification is not a formality. It is a signed, cryptographically verifiable statement. When an auditor asks "who authorized this data exchange and why?", the answer is recorded in the handshake: the IRB number, the study description, the Ed25519 signatures of both parties, and the timestamp. This is better audit evidence than most VPN approval forms.</p>
+  node 268843 · 40s ago (2026-06-09 09:12)
+  Federated lung cancer detection study, IRB #2026-0142
+  accept: pilotctl approve 268843 · decline: pilotctl reject 268843 "reason"
+<span class="cmd">$ pilotctl approve 268843</span>
+trust established with node 268843</code></pre>
+
+  <p>The handshake justification is not a formality. It travels with the request, shows in <code>pilotctl pending</code>, and is written to the daemon log when the request arrives. The request itself is signed with Lab A's Ed25519 key; the justification text is attached to it, not part of the signed bytes, and the trust record kept after approval holds the node, its key and the approval time but not the text. When an auditor will ask "who authorized this data exchange and why?", keep your own record of each approval (the IRB number, the study description, the node IDs and the time) next to the daemon log.</p>
 
   <h2 id="sharing-weights">Sharing Model Weights Over Encrypted Tunnels</h2>
 
@@ -77,13 +84,11 @@ Training complete. Model saved: /models/round-3-weights.pt (142MB)
 
 <span class="comment"># Send weights to Lab B via encrypted Pilot tunnel</span>
 <span class="cmd">$ pilotctl send-file lab-b-trainer /models/round-3-weights.pt</span>
-Sending: round-3-weights.pt (142MB)
-Transfer: ████████████████████ 100% (4.2s, 33.8 MB/s)
-File delivered (encrypted, verified)
+<span class="comment"># prints a JSON summary once Lab B has acknowledged the file</span>
 
 <span class="comment"># Lab B: Receive weights and aggregate</span>
-<span class="cmd">$ ls ~/.pilot/received/</span>
-round-3-weights.pt
+<span class="cmd">$ pilotctl received</span>
+<span class="comment"># lists files in ~/.pilot/received/, newest first: round-3-weights.pt</span>
 
 <span class="comment"># Lab B aggregates with its own local weights</span>
 <span class="cmd">$ python aggregate.py \\
@@ -92,14 +97,14 @@ round-3-weights.pt
     --output /models/global-round-3.pt</span>
 Aggregation complete. Global model: /models/global-round-3.pt</code></pre>
 
-  <p>The file transfer uses Pilot's data exchange port (1001). The entire payload is encrypted with AES-256-GCM. If the connection is relayed through the beacon (because both labs are behind institutional NATs), the beacon sees only encrypted bytes. At no point does the model file exist in cleartext on any third-party infrastructure.</p>
+  <p>The file transfer uses Pilot's data exchange port (1001), in chunks that are acknowledged and checked end to end with SHA-256. The entire payload is encrypted with AES-256-GCM. If the connection is relayed through the beacon (because both labs are behind institutional NATs), the beacon sees only encrypted bytes. At no point does the model file exist in cleartext on any third-party infrastructure.</p>
 
   <p>For automated workflows, the transfer can be scripted into the training loop:</p>
 
   <pre><code><span class="comment">#!/usr/bin/env python3</span>
 <span class="comment">"""Federated training round with Pilot transport."""</span>
+import os
 import subprocess
-import sys
 
 PARTNER = "lab-b-trainer"
 ROUNDS = 10
@@ -126,13 +131,14 @@ for round_num in range(1, ROUNDS + 1):
     print("Waiting for partner weights...")
     subprocess.run([
         "pilotctl", "subscribe", PARTNER, "training/weights-ready",
-    ], check=True, timeout=600)  <span class="comment"># 10 min timeout</span>
+        "--count", "1", "--timeout", "10m",
+    ], check=True)
 
     <span class="comment"># Step 4: Aggregate</span>
     subprocess.run([
         "python", "aggregate.py",
         "--local", f"/models/local-round-{round_num}.pt",
-        "--remote", f"~/.pilot/received/local-round-{round_num}.pt",
+        "--remote", os.path.expanduser(f"~/.pilot/received/local-round-{round_num}.pt"),
         "--output", f"/models/global-round-{round_num}.pt"
     ], check=True)
 
@@ -144,46 +150,44 @@ for round_num in range(1, ROUNDS + 1):
 
 print("Federated training complete.")</code></pre>
 
-  <p>The event stream (port 1002) coordinates the training rounds. Each lab publishes to <code>training/weights-ready</code> when its weights are available and subscribes to <code>training/round-complete</code> to know when to proceed to the next round. The data exchange (port 1001) handles the actual weight file transfer. The entire coordination and transport layer is provided by Pilot. The ML framework -- PyTorch, TensorFlow, JAX -- is the researcher's choice.</p>
+  <p>The event stream (port 1002) coordinates the training rounds. This lab waits for one <code>training/weights-ready</code> event from its partner and publishes <code>training/round-complete</code> when it has aggregated; the partner runs the mirror image of the loop. Topics match exactly. The data exchange (port 1001) handles the actual weight file transfer. The entire coordination and transport layer is provided by Pilot. The ML framework -- PyTorch, TensorFlow, JAX -- is the researcher's choice.</p>
 
   <h2 id="trust-as-agreement">The Trust Model as Collaboration Agreement</h2>
 
   <p>In traditional research collaboration, the collaboration agreement is a legal document. A Data Use Agreement (DUA), a Memorandum of Understanding (MOU), or an IRB-approved protocol. These documents specify who can access what data, for what purpose, and under what conditions. They are essential, but they are not enforced by the technology. Once a VPN is established, the technical controls do not prevent someone from transferring data outside the scope of the agreement.</p>
 
-  <p>Pilot's trust model provides a technical analog to the legal agreement. The handshake is a cryptographic commitment: both parties explicitly agree to communicate, the justification is signed and immutable, and either party can revoke trust instantly.</p>
+  <p>Pilot's trust model provides a technical analog to the legal agreement. The handshake is a cryptographic commitment: both parties explicitly agree to communicate, the request is signed by its sender and carries the stated purpose, and either party can revoke trust instantly.</p>
 
   <ul>
     <li><strong>Handshake = explicit consent.</strong> Both institutions must actively approve the connection. Unlike a VPN where access is granted by IT policy, the research team at each institution directly controls who can communicate with their training node.</li>
-    <li><strong>Justification = purpose limitation.</strong> The signed justification ("Federated lung cancer detection study, IRB #2026-0142") creates a cryptographic record of the stated purpose. This does not prevent misuse, but it does create an auditable record of what was agreed to.</li>
-    <li><strong>Revocation = instant termination.</strong> If a collaboration ends, an IRB revokes approval, or a compliance issue is discovered, either party runs <code>pilotctl untrust</code> and the connection is severed within milliseconds. No waiting for VPN credentials to expire or IT tickets to be processed.</li>
+    <li><strong>Justification = purpose limitation.</strong> The justification ("Federated lung cancer detection study, IRB #2026-0142") states the purpose when trust is requested, and the daemon logs it. This does not prevent misuse, but together with your own approval record it documents what was agreed to.</li>
+    <li><strong>Revocation = instant termination.</strong> If a collaboration ends, an IRB revokes approval, or a compliance issue is discovered, either party runs <code>pilotctl untrust</code> and the connection is severed at once on that side. No waiting for VPN credentials to expire or IT tickets to be processed.</li>
   </ul>
 
   <pre><code><span class="comment"># Revoke collaboration access (either side can do this)</span>
-<span class="cmd">$ pilotctl untrust 1:0001.0000.0020</span>
-Trust revoked for lab-b-trainer (1:0001.0000.0020)
-Active tunnel torn down
-Peer not notified — it will see connection failures on its next attempt
+<span class="cmd">$ pilotctl untrust 268849</span>
+trust revoked for node 268849
+  re-establish later: pilotctl handshake 268849
 
-<span class="comment"># Lab B can no longer send or receive any data</span>
-<span class="comment"># The revocation is effective immediately</span></code></pre>
+<span class="comment"># The tunnel is torn down and Lab B is sent a best-effort revoke notice</span></code></pre>
 
-  <h2 id="data-isolation">No Data on Third-Party Servers</h2>
+  <h2 id="data-isolation">No Readable Data on Third-Party Servers</h2>
 
-  <p>A critical property for regulated research: no research data touches infrastructure outside the collaborating institutions. The Pilot network only handles address resolution and NAT traversal signaling -- it never sees the contents of the data exchange. Model weights, gradients, evaluation results -- all of these are encrypted end-to-end between the lab nodes.</p>
+  <p>A critical property for regulated research: no third party can read the research data. On the public backbone, Vulture Labs' registry and beacon handle address resolution and NAT traversal signaling, and when no direct path exists the beacon relays the encrypted packets without being able to read them. Model weights, gradients, evaluation results -- all of these are encrypted end-to-end between the lab nodes. If even the connection metadata must stay inside the consortium, run your own registry and beacon.</p>
 
   <p>Separate research collaborations can use separate network policies. Membership in one collaboration does not grant connectivity to another; any cross-network access requires an explicit bridge or peer authorization. Directory-metadata exposure still depends on the registry and deployment configuration.</p>
 
-  <h2 id="compliance">Compliance Properties</h2>
+  <h2 id="compliance">What Compliance Reviewers Will Ask About</h2>
 
-  <p>Pilot Protocol is not a compliance product. It does not certify your deployment as HIPAA-compliant or GDPR-compliant. But it provides technical properties that compliance teams evaluate when reviewing research infrastructure:</p>
+  <p>Pilot Protocol is not a compliance product. It does not make your deployment HIPAA-compliant or GDPR-compliant, it holds no certification, and Vulture Labs does not sign business associate agreements. But it has technical properties that compliance teams evaluate when reviewing research infrastructure:</p>
 
   <ul>
-    <li><strong>End-to-end encryption.</strong> All data in transit is encrypted with X25519 key exchange and AES-256-GCM. Encryption is on by default; it can only be turned off with the daemon's <code>--no-encrypt</code> flag, so leave it on to satisfy the "encryption in transit" requirement found in HIPAA Security Rule Section 164.312(e)(1) and GDPR Article 32(1)(a).</li>
+    <li><strong>End-to-end encryption.</strong> All data in transit is encrypted with X25519 key exchange and AES-256-GCM. Encryption is on by default; it can only be turned off with the daemon's <code>--no-encrypt</code> flag.</li>
     <li><strong>Mutual authentication.</strong> Both parties verify identity using Ed25519 signatures before any data flows. The authentication is per-agent, not per-network. This provides stronger access control than IP-based allowlisting or VPN group membership.</li>
-    <li><strong>Audit trail.</strong> Every trust event (handshake request, approval, revocation) is logged locally with timestamps and cryptographic signatures. The justification field in each handshake creates a purpose-limited record of why the connection was established.</li>
-    <li><strong>Data minimization.</strong> The network stores only connection metadata. No research data, model weights, or training parameters are stored on shared infrastructure. The data exchange is purely peer-to-peer.</li>
-    <li><strong>Trust revocation.</strong> Access can be terminated instantly, without waiting for credential expiration or administrative processing. This supports the "right to withdraw" (GDPR Article 7(3)) and incident response timelines (HIPAA Breach Notification Rule).</li>
-    <li><strong>No third-party data processing.</strong> No data processor outside the collaborating institutions handles any data. The network handles only connection metadata. This simplifies GDPR Data Processing Agreement (DPA) requirements because there is no third-party processor to contract with.</li>
+    <li><strong>Trust events in the log.</strong> Handshake requests, approvals, and revocations are logged locally by the daemon with timestamps, and the justification text appears with each incoming request. Keep your own approval records alongside these logs.</li>
+    <li><strong>Data minimization.</strong> The registry stores only connection metadata. No research data, model weights, or training parameters are stored on shared infrastructure. Data travels end to end between the lab nodes, relayed as ciphertext when no direct path exists.</li>
+    <li><strong>Trust revocation.</strong> Access can be terminated instantly, without waiting for credential expiration or administrative processing.</li>
+    <li><strong>Who runs the coordination layer.</strong> On the public backbone, Vulture Labs runs the registry and beacon, so connection metadata and any relayed ciphertext pass through its servers. Run your own registry and beacon if no outside party may handle even that.</li>
   </ul>
 
   <div class="callout">
@@ -210,39 +214,36 @@ Peer not notified — it will see connection failures on its next attempt
 
   <p>Pilot replaces the network configuration layer in the FL framework. Instead of configuring IP addresses, ports, TLS certificates, and VPN tunnels, you configure Pilot hostnames. The FL clients connect to each other using virtual addresses that work across any network topology.</p>
 
-  <p>This has been tested with gradient exchange via the data exchange port. Two nodes on different continents, both behind NAT, exchanged model gradients every 30 seconds over Pilot tunnels. The latency overhead of the overlay network was approximately 5-15ms per transfer -- negligible compared to the minutes-long training rounds that produce the gradients.</p>
-
   <h2 id="multi-institution">Scaling to Multiple Institutions</h2>
 
   <p>Research consortia often involve more than two institutions. A multi-site clinical trial might have 10 hospitals contributing data. A genomics consortium might have 20 labs. Each approved pair can establish a handshake; larger deployments should evaluate relationship fan-out, registry capacity, relay use, and operational policy for the intended topology.</p>
 
   <pre><code><span class="comment"># 5-institution research consortium</span>
-<span class="comment"># Each institution runs a Pilot node tagged by role</span>
+<span class="comment"># Each institution runs a Pilot node</span>
 
-<span class="comment"># Aggregator (hosted by consortium coordinator)</span>
-<span class="cmd">$ pilotctl init --hostname fl-aggregator</span>
-<span class="cmd">$ pilotctl extras set-tags aggregator lung-cancer-study</span>
-<span class="cmd">$ pilotctl set-public</span>
+<span class="comment"># Aggregator (hosted by consortium coordinator), public so sites can find it by hostname</span>
+<span class="cmd">$ pilotctl daemon start --hostname fl-aggregator --public</span>
 
 <span class="comment"># Each institution's trainer connects and handshakes with the aggregator</span>
 <span class="cmd">$ pilotctl handshake fl-aggregator "Site 3 trainer, IRB #2026-0142, lung cancer FL study"</span>
 
 <span class="comment"># Aggregator approves all verified sites</span>
 <span class="cmd">$ pilotctl pending</span>
-1:0001.0000.0010 (johns-hopkins-trainer) - "Site 1 trainer, IRB #2026-0142"
-1:0001.0000.0020 (mayo-clinic-trainer)   - "Site 2 trainer, IRB #2026-0142"
-1:0001.0000.0030 (stanford-trainer)      - "Site 3 trainer, IRB #2026-0142"
-1:0001.0000.0040 (charité-trainer)       - "Site 4 trainer, IRB #2026-0142"
-1:0001.0000.0050 (tokyo-u-trainer)       - "Site 5 trainer, IRB #2026-0142"
+Pending handshakes — 5
 
-<span class="comment"># Approve all verified participants</span>
-<span class="cmd">$ pilotctl approve 1:0001.0000.0010</span>
-<span class="cmd">$ pilotctl approve 1:0001.0000.0020</span>
-<span class="cmd">$ pilotctl approve 1:0001.0000.0030</span>
-<span class="cmd">$ pilotctl approve 1:0001.0000.0040</span>
-<span class="cmd">$ pilotctl approve 1:0001.0000.0050</span></code></pre>
+  node 268801 · 3m ago (2026-06-09 09:12)
+  Site 1 trainer, IRB #2026-0142, lung cancer FL study
+  accept: pilotctl approve 268801 · decline: pilotctl reject 268801 "reason"
+  ...
 
-  <p>Each institution has a trust relationship with the aggregator only. The institutions do not have trust with each other. Stanford cannot see Johns Hopkins' traffic. The aggregator receives weights from all five, aggregates them, and distributes the global model back. This star topology mirrors the standard federated learning architecture, but with cryptographic trust enforcement at each link.</p>
+<span class="comment"># Approve all verified participants (site-1 ... site-5)</span>
+<span class="cmd">$ pilotctl approve 268801</span>
+<span class="cmd">$ pilotctl approve 268802</span>
+<span class="cmd">$ pilotctl approve 268803</span>
+<span class="cmd">$ pilotctl approve 268804</span>
+<span class="cmd">$ pilotctl approve 268805</span></code></pre>
+
+  <p>Each institution has a trust relationship with the aggregator only. The institutions do not have trust with each other. Site 3 cannot see Site 1's traffic. The aggregator receives weights from all five, aggregates them, and distributes the global model back. This star topology mirrors the standard federated learning architecture, but with cryptographic trust enforcement at each link.</p>
 
   <h2 id="remote-labs">Are Distributed Remote Research Labs Possible?</h2>
 
@@ -250,7 +251,7 @@ Peer not notified — it will see connection failures on its next attempt
 
   <p>A distributed research lab needs three things that traditional VPN-based infrastructure provides poorly: cross-network connectivity for researchers working from different institutions and locations, encrypted data exchange that satisfies compliance requirements, and a trust model that maps to research collaboration agreements rather than network perimeters.</p>
 
-  <p>Pilot provides all three. Researchers at different institutions join a shared Pilot network. Each researcher's node gets a permanent virtual address that works regardless of their physical location -- at the university lab, at home, or at a conference. Trust relationships define who can communicate with whom, independently of network topology.</p>
+  <p>Pilot provides all three. Researchers at different institutions run Pilot nodes and establish trust with each other (or, on a registry the consortium runs itself, join a shared private network). Each researcher's node gets a permanent virtual address that works regardless of their physical location -- at the university lab, at home, or at a conference. Trust relationships define who can communicate with whom, independently of network topology.</p>
 
   <p>The event stream (port 1002) adds coordination: researchers publish experimental results, training status, and coordination messages to shared topics. This replaces the Slack channels and email threads that currently coordinate most distributed research -- with the added benefit that the messages are encrypted and the participants are cryptographically authenticated.</p>
 
@@ -263,10 +264,10 @@ Peer not notified — it will see connection failures on its next attempt
     <li><strong>Pilot does not inspect content.</strong> The protocol encrypts and delivers data. It does not understand what the data is. If a researcher accidentally sends raw patient data instead of model weights, Pilot delivers it faithfully. Content classification and data loss prevention are application-layer concerns.</li>
     <li><strong>No differential privacy.</strong> Pilot does not add noise to model updates, clip gradients, or implement any privacy-enhancing computation. If you need differential privacy guarantees, use a framework like PySyft or Opacus. Pilot provides the encrypted transport that the privacy framework communicates over.</li>
     <li><strong>No formal data lineage.</strong> Pilot logs trust events and file transfers, but it does not provide a complete data lineage graph. You cannot query "which institutions' data contributed to this model" from Pilot logs alone. Data provenance tracking is an application-layer responsibility.</li>
-    <li><strong>Network availability.</strong> If the network goes offline, new connections cannot be established (existing tunnels continue to work). For research collaborations that run for months, the network provides high availability by design.</li>
+    <li><strong>Network availability.</strong> If the registry or beacon goes offline, new connections cannot be established (established direct tunnels continue to work). The public backbone is run at no charge and without an SLA; collaborations that cannot tolerate a coordination outage can run their own registry with a hot standby.</li>
   </ul>
 
-  <p>The honest pitch: Pilot makes it possible for two machines at two institutions to establish an encrypted connection in two minutes instead of two months. What flows over that connection -- model weights, gradients, evaluation metrics, or coordination messages -- is up to the researchers and their compliance teams.</p>
+  <p>The honest pitch: Pilot makes it possible for two machines at two institutions to establish an encrypted connection in minutes instead of months. What flows over that connection -- model weights, gradients, evaluation metrics, or coordination messages -- is up to the researchers and their compliance teams.</p>
 
   <p>For the encryption details behind these transfers, see <a href="zero-dependency-encryption-x25519-aes-gcm">Zero-Dependency Encryption: X25519 + AES-256-GCM</a>. For the NAT traversal that connects machines behind institutional firewalls, see <a href="nat-traversal-ai-agents-deep-dive">NAT Traversal: A Deep Dive</a>. For the file transfer protocol used for weight exchange, see <a href="peer-to-peer-file-transfer-agents">Peer-to-Peer File Transfer Between AI Agents</a>.</p>
 
@@ -274,7 +275,7 @@ Peer not notified — it will see connection failures on its next attempt
 
   <p>The trust model described above -- explicit handshakes, purpose-limited justifications, instant revocation -- was designed for exactly the kind of deliberate, IRB-governed collaboration outlined in this post. A separate research question is what happens when the trust model is left to autonomous agents with no researcher directing who talks to whom. Pilot Protocol's research page publishes a study addressing that question directly: <a href="https://pilotprotocol.network/research/social-structures.pdf">Emergent Social Structures in Autonomous AI Agent Networks</a>, an empirical analysis of autonomous AI agents (predominantly OpenClaw instances) that independently discovered, installed, and joined the Pilot network without human instruction.</p>
 
-  <p>Because all message content on Pilot is end-to-end encrypted, the study could only observe metadata -- trust-graph topology, self-reported capability tags, and registry statistics -- pulled from the registry's public stats endpoint. That constraint is itself a demonstration of the compliance properties discussed above: even the researchers studying the network's own social behavior could not see what agents said to each other, only who trusted whom.</p>
+  <p>Because all message content on Pilot is end-to-end encrypted, the study could only observe metadata -- trust-graph topology, self-reported capability tags, and registry statistics -- read from the registry by its operators. That constraint is itself a demonstration of the encryption properties discussed above: even the researchers studying the network's own social behavior could not see what agents said to each other, only who trusted whom.</p>
 
   <p>The resulting trust graph showed a sparse, heavy-tailed structure: most agents connected to a handful of peers, a small number of hub nodes accounted for a disproportionate share of trust edges, and the network organized into one large connected component alongside many smaller, more isolated clusters. Several of the highest-degree hub agents declared no self-reported capability tags at all, consistent with a broker or coordinator role rather than a specialist one. For a research team evaluating whether a trust-gated overlay can support organic, unsupervised collaboration between many independent agents -- not just two pre-arranged institutional partners -- this is the closest available empirical evidence of how that plays out at the metadata level.</p>
 
@@ -282,7 +283,7 @@ Peer not notified — it will see connection failures on its next attempt
 
   <div class="cta">
     <h3>Try Pilot Protocol</h3>
-    <p>Encrypted, authenticated, NAT-traversing connections between research institutions. Trust-gated file exchange, encrypted connections, zero cloud dependencies. Connect in minutes, not months.</p>
+    <p>Encrypted, authenticated, NAT-traversing connections between research institutions. Trust-gated file exchange, encrypted connections, and a coordination layer you can self-host. Connect in minutes, not months.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 
@@ -305,13 +306,13 @@ const faqItems = [
   },
   {
     question: "Does Pilot Protocol satisfy HIPAA and GDPR requirements for cross-institutional research?",
-    answer: "Pilot provides end-to-end encryption (X25519 + AES-256-GCM), mutual authentication via Ed25519 signatures, purpose-limited trust handshakes with signed justifications, instant trust revocation, and zero third-party data processing — all technical controls that support HIPAA Security Rule and GDPR compliance. However, full compliance requires institutional review, data governance policies, and a risk assessment. Pilot handles the transport layer; your institution handles the compliance process.",
+    answer: "Pilot provides end-to-end encryption (X25519 + AES-256-GCM), mutual authentication via Ed25519 signatures, trust handshakes that carry a stated purpose, and instant trust revocation. These are technical controls; Pilot does not make a deployment HIPAA or GDPR compliant, holds no certification, and Vulture Labs does not sign business associate agreements. On the public backbone, connection metadata and any relayed ciphertext pass through Vulture Labs' registry and beacon, so self-host them if that is not acceptable. Full compliance requires institutional review, data governance policies, and a risk assessment. Pilot handles the transport layer; your institution handles the compliance process.",
   },
 ];
 ---
 <BlogLayout
   title="Secure Research Collaboration: Share AI Models Across Institutions Without Sharing Data"
-  description="Share ML models across institutions without moving data. Encrypted tunnels connect research labs behind any firewall in minutes — no VPN approval needed."
+  description="Share ML models across institutions without moving data. Encrypted tunnels connect research labs behind NAT and firewalls in minutes — no VPN approval needed."
   date="June 9, 2026"
   tags={["research", "privacy", "federated-learning"]}
   canonicalPath="/blog/secure-research-collaboration-share-models-not-data"

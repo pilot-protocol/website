@@ -3,7 +3,7 @@ import BlogLayout from '../../layouts/BlogLayout.astro';
 
 const bodyContent = `<p>"Give me /events, not webhooks." That sentiment hit the front page of Hacker News because it captures a frustration shared by every developer who has built a webhook consumer at scale. <a href="https://en.wikipedia.org/wiki/Webhook" target="_blank" rel="noopener">Webhooks</a> are conceptually simple -- a provider sends an HTTP POST to your URL when something happens. In practice, they are a source of silent data loss, security vulnerabilities, and infrastructure complexity that scales worse than the systems they integrate.</p>
 
-  <p>Nearly <strong>20% of webhook event deliveries fail silently during peak loads</strong>. The provider's retry logic is a black box you do not control. Events arrive out of order. Your endpoint needs a routable IP address, which means code running behind NAT -- laptops, home servers, CI runners, most AI agents -- cannot receive webhooks at all. And the security model is inverted: you are exposing a public HTTP endpoint that anyone on the internet can POST to.</p>
+  <p>Webhook deliveries <strong>fail silently</strong> when the consumer is down or slow, and that happens most during peak loads. The provider's retry logic is a black box you do not control. Events arrive out of order. Your endpoint needs a routable IP address, which means code running behind NAT -- laptops, home servers, CI runners, most AI agents -- cannot receive webhooks at all. And the security model is inverted: you are exposing a public HTTP endpoint that anyone on the internet can POST to.</p>
 
   <p>This article examines why webhooks break down for agent-to-agent communication, why the common workarounds do not solve the fundamental problems, and how persistent encrypted tunnels with built-in event streaming provide a better model.</p>
 
@@ -16,7 +16,7 @@ const bodyContent = `<p>"Give me /events, not webhooks." That sentiment hit the 
 
   <p>Webhook providers typically retry failed deliveries on an exponential backoff schedule. If your server returns a 500 or times out during a deployment window, the provider queues the retry. If your server is down for longer than the retry window -- which varies wildly between providers, from 30 minutes to 72 hours -- those events are gone. You have no way to know they existed. There is no consumer-side replay. There is no offset you can rewind to.</p>
 
-  <p>A production study of webhook delivery across major SaaS platforms found that nearly 20% of deliveries fail during peak loads. Not 20% of total events over the lifetime of the integration -- 20% during the hours when you need them most. Payment processing webhooks during Black Friday. CI/CD webhooks during a deploy. Agent task completion signals during a burst of parallel work.</p>
+  <p>Failures cluster in the hours when you need the events most, because that is when consumers are overloaded or mid-deploy. Payment processing webhooks during Black Friday. CI/CD webhooks during a deploy. Agent task completion signals during a burst of parallel work.</p>
 
   <h3>The public URL problem</h3>
 
@@ -32,11 +32,7 @@ const bodyContent = `<p>"Give me /events, not webhooks." That sentiment hit the 
 
   <h3>The infrastructure spiral</h3>
 
-  <p>To handle webhooks reliably, you need to build infrastructure that rivals the webhook provider itself. One engineering team documented what it takes to process a single webhook safely:</p>
-
-  <blockquote>
-    <p>"You would need 4 new services (SQS, S3, Publisher, Consumer) just to handle a single webhook safely."</p>
-  </blockquote>
+  <p>To handle webhooks reliably, you need to build infrastructure that rivals the webhook provider itself.</p>
 
   <p>An incoming webhook hits a lightweight receiver that immediately returns 200 OK. The receiver pushes the raw payload to a queue (SQS, RabbitMQ). A consumer reads from the queue with retry logic. Failed events go to a dead letter queue. A separate service monitors the dead letter queue and alerts. You need idempotency keys to handle duplicate deliveries. You need ordering logic if events must be processed sequentially. This is four to six services to reliably receive an HTTP POST.</p>
   </section>
@@ -46,7 +42,7 @@ const bodyContent = `<p>"Give me /events, not webhooks." That sentiment hit the 
 
   <p>The most common workaround for the "no public URL" problem is a tunneling service like <a href="https://ngrok.com" target="_blank" rel="noopener">ngrok</a>. It creates a temporary public URL that tunnels traffic to your local machine. For development, this is convenient. For production agent communication, it introduces its own problems.</p>
 
-  <p>The free tier of ngrok limits you to <strong>20 connections per minute</strong> and assigns a new random subdomain every session. Your webhook URL changes every time you restart the tunnel -- roughly every 7 hours on the free tier. That means reconfiguring every webhook provider that points at your endpoint, which is a manual process for most SaaS integrations and completely impractical for agent-to-agent communication where peers discover each other dynamically.</p>
+  <p>Free tunneling tiers are rate-limited, and a URL that changes when the tunnel restarts means reconfiguring every webhook provider that points at your endpoint, which is a manual process for most SaaS integrations and completely impractical for agent-to-agent communication where peers discover each other dynamically.</p>
 
   <p>Paid tiers fix the URL stability problem but introduce a dependency on a third-party service that sits in the data path. Every webhook payload passes through ngrok's servers in plaintext (unless you add your own TLS layer). For agent communication carrying sensitive data -- task results, model outputs, customer information -- this is an unacceptable trust model.</p>
 
@@ -68,22 +64,24 @@ const bodyContent = `<p>"Give me /events, not webhooks." That sentiment hit the 
   <section>
   <h2>Pilot's Event Stream: Subscribe, Publish, No Public URL</h2>
 
-  <p>Port 1002 is Pilot's built-in pub/sub service. It supports topic-based routing with wildcard subscriptions, persistent connections, and encrypted transport. Here is how it works in practice.</p>
+  <p>Port 1002 is Pilot's built-in pub/sub service. It supports topic-based routing (exact topic names, or <code>*</code> for every topic), persistent connections, and encrypted transport. Here is how it works in practice.</p>
 
   <h3>CLI quick start</h3>
 
-  <pre><code><span class="comment"># Terminal 1: subscribe to all task events</span>
-<span class="cmd">pilotctl subscribe <broker-addr> "tasks.*"</span>
+  <pre><code><span class="comment"># Terminal 1: subscribe to task completion events</span>
+<span class="cmd">pilotctl subscribe &lt;broker-addr&gt; tasks.complete</span>
 
 <span class="comment"># Terminal 2: publish a task completion event</span>
-<span class="cmd">pilotctl publish <broker-addr> tasks.complete --data '{"task_id":"abc123","status":"done","result":"summary generated"}'</span>
+<span class="cmd">pilotctl publish &lt;broker-addr&gt; tasks.complete --data '{"task_id":"abc123","status":"done","result":"summary generated"}'</span>
 
 <span class="comment"># Terminal 1 immediately prints:</span>
 <span class="comment"># [tasks.complete] {"task_id":"abc123","status":"done","result":"summary generated"}</span></code></pre>
 
-  <p>No webhook URL configured. No public endpoint exposed. No HTTP server running. The subscriber initiated the connection outward through NAT and receives events over the existing encrypted tunnel.</p>
+  <p>No webhook URL configured. No public endpoint exposed. No HTTP server running. The subscriber initiated the connection outward through NAT and receives events over the existing encrypted tunnel. The broker is the daemon at <code>&lt;broker-addr&gt;</code>: every daemon runs the event stream on port 1002, and both sides must have a trust link with it.</p>
 
   <h3>Go subscriber and publisher</h3>
+
+  <p>In Go, use the <a href="https://github.com/pilot-protocol/eventstream" target="_blank" rel="noopener">eventstream</a> package with the daemon driver:</p>
 
   <pre><code>package main
 
@@ -93,6 +91,8 @@ import (
     "log"
 
     "github.com/pilot-protocol/common/driver"
+    "github.com/pilot-protocol/common/protocol"
+    "github.com/pilot-protocol/eventstream"
 )
 
 <span class="comment">// Subscriber: replaces your webhook endpoint</span>
@@ -101,21 +101,29 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
-    stream, err := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
+    defer d.Close()
+
+    <span class="comment">// The peer whose daemon carries the stream (port 1002)</span>
+    broker, err := protocol.ParseAddr("0:0000.0000.0005")
     if err != nil {
         log.Fatal(err)
     }
 
-    <span class="comment">// Subscribe to payment events (replaces Stripe webhook)</span>
-    ch, err := stream.Subscribe("payments.*")
+    <span class="comment">// Topics match exactly; "*" receives every topic (replaces a Stripe webhook)</span>
+    sub, err := eventstream.Subscribe(d, broker, "*")
     if err != nil {
         log.Fatal(err)
     }
+    defer sub.Close()
 
     fmt.Println("Listening for payment events...")
-    for event := range ch {
+    for {
+        event, err := sub.Recv()
+        if err != nil {
+            log.Fatal(err)
+        }
         var payload map[string]any
-        json.Unmarshal(event.Data, &payload)
+        json.Unmarshal(event.Payload, &amp;payload)
         fmt.Printf("[%s] %v\\n", event.Topic, payload)
 
         <span class="comment">// Process the event</span>
@@ -138,6 +146,8 @@ import (
     "time"
 
     "github.com/pilot-protocol/common/driver"
+    "github.com/pilot-protocol/common/protocol"
+    "github.com/pilot-protocol/eventstream"
 )
 
 <span class="comment">// Publisher: replaces the webhook sender</span>
@@ -146,10 +156,19 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
-    stream, err := d.OpenEventStream()   <span class="comment">// illustrative: SDK exposes SendTo/RecvFrom — pub/sub is via pilotctl publish/subscribe</span>
+    defer d.Close()
+
+    broker, err := protocol.ParseAddr("0:0000.0000.0005")
     if err != nil {
         log.Fatal(err)
     }
+
+    <span class="comment">// The broker protocol subscribes first, then publishes on the same stream</span>
+    pub, err := eventstream.Subscribe(d, broker, "payments.completed")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer pub.Close()
 
     event := map[string]any{
         "payment_id": "pay_abc123",
@@ -159,7 +178,9 @@ func main() {
         "ts":         time.Now().Unix(),
     }
     data, _ := json.Marshal(event)
-    stream.Publish("payments.completed", data)
+    if err := pub.Publish("payments.completed", data); err != nil {
+        log.Fatal(err)
+    }
 }</code></pre>
 
   <h3>Python wrapper</h3>
@@ -181,7 +202,7 @@ def subscribe(broker_addr: str, topic: str):
         yield event
 
 <span class="comment"># Usage: replaces a Flask webhook endpoint</span>
-for event in subscribe("<broker-addr>", "tasks.*"):
+for event in subscribe("&lt;broker-addr&gt;", "tasks.complete"):
     print(f"Received: {event['topic']} -> {event['data']}")
     process_event(event)</code></pre>
 
@@ -197,7 +218,7 @@ def publish(broker_addr: str, topic: str, data: dict):
     )
 
 <span class="comment"># Usage: replaces a webhook POST</span>
-publish("<broker-addr>", "tasks.complete", {
+publish("&lt;broker-addr&gt;", "tasks.complete", {
     "task_id": "abc123",
     "status": "done",
     "result": "Analysis complete. 3 anomalies found."
@@ -254,7 +275,7 @@ publish("<broker-addr>", "tasks.complete", {
       <td>URL path (manual)</td>
       <td>None built-in</td>
       <td>None built-in</td>
-      <td>Wildcard topics built-in</td>
+      <td>Exact topics, plus <code>*</code> for all</td>
     </tr>
     <tr>
       <td>Auth model</td>
@@ -268,7 +289,7 @@ publish("<broker-addr>", "tasks.complete", {
       <td>Manual URL config</td>
       <td>Manual URL config</td>
       <td>Manual URL config</td>
-      <td>Registry + DNS lookup</td>
+      <td>Registry hostname lookup</td>
     </tr>
     <tr>
       <td>Works behind NAT</td>
@@ -282,7 +303,7 @@ publish("<broker-addr>", "tasks.complete", {
       <td>Queue + DLQ + HTTP server</td>
       <td>HTTP server</td>
       <td>WS server</td>
-      <td>None (daemon handles it)</td>
+      <td>A daemon per agent, plus a registry and beacon</td>
     </tr>
     <tr>
       <td>Persistence</td>
@@ -293,7 +314,7 @@ publish("<broker-addr>", "tasks.complete", {
     </tr>
   </table>
 
-  <p>SSE and WebSockets solve the client-initiated connection problem -- the consumer opens the connection outward, so NAT is not an issue on the consumer side. But the server still needs a routable address. For agent-to-agent communication where <em>neither side</em> has a public IP, both SSE and WebSockets fail unless you add a relay infrastructure. Pilot handles this transparently: STUN discovers NAT type, hole-punching establishes direct connections where possible, and relay through the beacon handles symmetric NAT.</p>
+  <p>SSE and WebSockets solve the client-initiated connection problem -- the consumer opens the connection outward, so NAT is not an issue on the consumer side. But the server still needs a routable address. For agent-to-agent communication where <em>neither side</em> has a public IP, both SSE and WebSockets fail unless you add a relay infrastructure. Pilot handles this transparently: STUN discovers each peer's public endpoint, hole-punching establishes direct connections where possible, and relay through the beacon covers the cases where punching fails, such as symmetric NAT.</p>
   </section>
 
   <section>
@@ -312,10 +333,10 @@ publish("<broker-addr>", "tasks.complete", {
     <li><strong>Idempotency layer</strong> -- no deduplication database for duplicate webhook deliveries</li>
   </ul>
 
-  <p>What you gain: a single <code>pilotctl subscribe</code> command or six lines of Go. The Pilot daemon handles connection management, encryption, NAT traversal, and peer authentication. Your application code receives events on a channel.</p>
+  <p>What you gain: a single <code>pilotctl subscribe</code> command or a short Go loop. The Pilot daemon handles connection management, encryption, NAT traversal, and peer authentication. Your application code receives each event from <code>Recv()</code>.</p>
 
   <div class="callout">
-    <p><strong>Operational cost:</strong> Webhooks require you to operate infrastructure proportional to the number of integrations. Pilot's event stream requires you to run one daemon process per agent. The daemon is a single binary, ~15 MB, that runs alongside your agent. No message brokers, no cloud subscriptions, no infrastructure team beyond the shared rendezvous server.</p>
+    <p><strong>Operational cost:</strong> Webhooks require you to operate infrastructure proportional to the number of integrations. Pilot's event stream requires you to run one daemon process per agent, alongside a registry and beacon: the public ones, run by Vulture Labs at no charge, or your own. No separate message brokers, no cloud subscriptions.</p>
   </div>
   </section>
 
@@ -349,22 +370,22 @@ publish("<broker-addr>", "tasks.complete", {
   <pre><code><span class="comment"># Step 1: Install</span>
 <span class="cmd">curl -fsSL https://pilotprotocol.network/install.sh | sh</span>
 
-<span class="comment"># Step 2: Start daemon and join network</span>
+<span class="comment"># Step 2: Start the daemon (then handshake with the broker peer)</span>
 <span class="cmd">pilotctl daemon start --email agent@example.com</span>
-<span class="cmd">pilotctl network join 1</span>
+<span class="cmd">pilotctl handshake &lt;broker-addr&gt;</span>
 
 <span class="comment"># Step 3: Forward Pilot events to a legacy endpoint (outbound)</span>
 <span class="cmd">pilotctl set-webhook https://your-service.example.com/pilot-events</span>
 
 <span class="comment"># Step 4: Subscribe to events (replaces webhook consumer)</span>
-<span class="cmd">pilotctl subscribe <broker-addr> "tasks.*"</span></code></pre>
+<span class="cmd">pilotctl subscribe &lt;broker-addr&gt; tasks.complete</span></code></pre>
 
   <p>The bridge means you never have to choose between webhooks and Pilot. You can run both simultaneously, routing some events through webhooks and others through the event stream, until you have migrated everything you control to persistent tunnels.</p>
   </section>
 
   <div class="cta">
     <h3>Try Pilot Protocol</h3>
-    <p>Replace your webhook infrastructure with six lines of Go. No public URLs, no queues, no dead letter monitoring.</p>
+    <p>Replace your webhook infrastructure with a subscribe call and a short Go loop. No public URLs, no queues, no dead letter monitoring.</p>
     <a href="https://github.com/pilot-protocol/pilotprotocol">View on GitHub</a>
   </div>`;
 ---
