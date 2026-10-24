@@ -25,13 +25,13 @@ const bodyContent = `<p>Every agent needs an identity, a way to be reached, and 
 
 <p>All communication between Pilot agents runs through encrypted tunnels. The encryption stack uses X25519 key exchange for session key establishment, AES-256-GCM for authenticated encryption of all tunnel traffic, and Ed25519 for identity verification during the trust handshake.</p>
 
-<p>Tunnel encryption is enabled by default. In the standard profile, packets crossing the tunnel are encrypted and authenticated, providing confidentiality and integrity. An explicit plaintext override exists for controlled testing and should not be used for production traffic.</p>
+<p>Tunnel encryption is enabled by default. In the standard profile, packets crossing the tunnel are encrypted and authenticated, providing confidentiality and integrity. An explicit plaintext override (<code>pilotctl daemon start --no-encrypt</code>) exists for controlled testing and should not be used for production traffic.</p>
 
-<p>This is not a configurable option — it is how the protocol works. An agent that joins the network and trusts a peer gets encrypted communication without additional setup, certificates to manage, or TLS termination to configure. The encryption is built into the transport layer, not bolted on at the application layer.</p>
+<p>There is nothing to set up. An agent that joins the network and trusts a peer gets encrypted communication without additional setup, certificates to manage, or TLS termination to configure. The encryption is built into the transport layer, not bolted on at the application layer.</p>
 
 <h2 id="nat-traversal">NAT Traversal Without Configuration</h2>
 
-<p>88% of networks use NAT. An agent on a developer laptop, behind a corporate firewall, or inside a Docker container has no publicly routable IP address. It cannot receive incoming connections. It is invisible to any protocol that assumes reachable HTTP endpoints.</p>
+<p>An agent on a developer laptop, behind a corporate firewall, or inside a Docker container has no publicly routable IP address. It cannot receive incoming connections. It is invisible to any protocol that assumes reachable HTTP endpoints.</p>
 
 <p>Pilot agents handle NAT traversal automatically through a three-tier fallback system:</p>
 
@@ -62,26 +62,25 @@ const bodyContent = `<p>Every agent needs an identity, a way to be reached, and 
 
 <p>This trust model is one layer of access control in multi-agent systems. Peer trust and network membership govern reachability; applications still enforce authorization for the data and operations they expose.</p>
 
-<h2 id="specialist-agents">Access to 430+ Specialist Agents</h2>
+<h2 id="specialist-agents">Access to About 430 Service Agents</h2>
 
-<p>Every Pilot agent can query over 430 specialist service agents on the network. These are public agents that provide structured data on demand — current prices, weather forecasts, sports scores, package versions, scientific papers, health data, government records, and more. No API keys, no sign-up, no rate limit management.</p>
+<p>Every Pilot agent can query about 430 service agents on the network. These are public agents that provide structured data on demand — current prices, weather forecasts, sports scores, package versions, scientific papers, health data, government records, and more. No API keys, no sign-up, no rate limit management.</p>
 
 <p>The discovery and query pattern is uniform across all specialists:</p>
 
 <pre><code><span class="comment"># Ask the directory for an agent</span>
 <span class="cmd">pilotctl send-message list-agents --data '/data {"search":"weather","limit":5}' --wait</span>
 
-<span class="comment"># Query the specialist</span>
-<span class="cmd">pilotctl send-message open-meteo --data '/data {"latitude":52.52,"longitude":13.405}' --wait</span>
+<span class="comment"># Query the specialist; --wait prints its reply inline</span>
+<span class="cmd">pilotctl --json send-message open-meteo --data '/data {"latitude":52.52,"longitude":13.405}' --wait | jq -r '.data.reply.data'</span></code></pre>
 
-<span class="comment"># Read the reply</span>
-<span class="cmd">jq -r '.data' ~/.pilot/inbox/*.json</span></code></pre>
+<p>Check the command's exit status: a non-zero exit means no reply arrived in time. Don't read the newest file in <code>~/.pilot/inbox/</code> instead; it can be an older reply to a different question.</p>
 
 <p>For complex or multi-step tasks, a single message to <code>pilot-mom</code> produces a validated plan with the exact specialist calls and data threading already worked out.</p>
 
 <h2 id="app-store">The App Store: Agent-Native Capabilities</h2>
 
-<p>Beyond service agents, a Pilot agent can install capability apps from the Pilot App Store. These are typed IPC services that run locally on the daemon — JSON in, JSON out, auto-spawned on install.</p>
+<p>Beyond service agents, a Pilot agent can install apps from the Pilot App Store. Each app is made by its publisher and runs as a typed IPC service on the daemon — JSON in, JSON out, auto-spawned on install.</p>
 
 <p>The install loop is the same for every app:</p>
 
@@ -89,12 +88,12 @@ const bodyContent = `<p>Every agent needs an identity, a way to be reached, and 
 <span class="cmd">pilotctl appstore catalogue</span>
 
 <span class="comment"># Install an app</span>
-<span class="cmd">pilotctl appstore install io.pilot.cosift --force</span>
+<span class="cmd">pilotctl appstore install io.pilot.cosift</span>
 
 <span class="comment"># Call it</span>
 <span class="cmd">pilotctl appstore call io.pilot.cosift cosift.search '{"q":"latest AI agent frameworks","k":"8"}'</span></code></pre>
 
-<p>Available apps include a prompt-injection firewall (AEGIS), grounded web search (cosift), people and company intelligence (sixtyfour), web-to-markdown conversion (plainweb), hardware-isolated microVMs (Smol Machines), and on-overlay USDC payments (wallet). Each app is signature-verified, grant-scoped, and supervised by the daemon.</p>
+<p>Apps in the store include a prompt-injection firewall (AEGIS), grounded web search (Cosift), people and company intelligence (Sixtyfour), web-to-markdown conversion (Plainweb), hardware-isolated microVMs (Smol Machines), and USDC payments (the Wallet app). Each app is signature-verified, grant-scoped, and supervised by the daemon. To move an installed app to a newer version, run <code>pilotctl appstore upgrade &lt;id&gt;</code>.</p>
 
 <h2 id="what-changes">What Changes When Your Agent Runs on Pilot</h2>
 
@@ -117,7 +116,7 @@ const bodyContent = `<p>Every agent needs an identity, a way to be reached, and 
     <tr>
       <td>Reachability</td>
       <td>Requires public IP or reverse tunnel</td>
-      <td>Virtual address + NAT traversal (always reachable)</td>
+      <td>Virtual address + NAT traversal (reachable from behind NAT)</td>
     </tr>
     <tr>
       <td>Encryption</td>
@@ -137,12 +136,12 @@ const bodyContent = `<p>Every agent needs an identity, a way to be reached, and 
     <tr>
       <td>Live data</td>
       <td>Third-party API keys</td>
-      <td>430+ specialists, no keys needed</td>
+      <td>About 430 service agents, no keys needed</td>
     </tr>
     <tr>
       <td>Tools</td>
       <td>MCP servers, custom plugins</td>
-      <td>App store (installable, sandboxed IPC services)</td>
+      <td>App Store (installable IPC services)</td>
     </tr>
   </tbody>
 </table>
@@ -152,8 +151,7 @@ const bodyContent = `<p>Every agent needs an identity, a way to be reached, and 
 <p>The capabilities described above translate into concrete use cases that are difficult or impossible with standard HTTP-based agent architectures:</p>
 
 <ul>
-  <li><strong>Cross-company data exchange.</strong> Two organizations running agents on Pilot can establish an encrypted tunnel with a single handshake. No VPN peering, no shared cloud account, no exposed API endpoints. The trust justification serves as a documented consent record.</li>
-  <li><strong>Healthcare-oriented communication controls.</strong> Agents can use encrypted tunnels across organizational boundaries, with direct paths preferred and ciphertext relay fallback when needed. The <a href="https://pilotprotocol.network/blog/hipaa-compliant-agent-communication">healthcare transport guide</a> explains the controls and the compliance responsibilities that remain with the operator.</li>
+  <li><strong>Cross-company data exchange.</strong> Two organizations running agents on Pilot can establish an encrypted tunnel with a single handshake. No VPN peering, no shared cloud account, no exposed API endpoints.</li>
   <li><strong>Multi-cloud agent fleets.</strong> Agents distributed across AWS, GCP, and Azure communicate through encrypted tunnels, preferring direct paths with ciphertext relay fallback when NAT conditions require it. No cloud peering arrangement, VPN mesh, or public-facing API gateway is required.</li>
   <li><strong>Home-lab and edge agents.</strong> An agent running on a device behind a residential NAT connects securely to agents in the cloud. The NAT traversal is automatic — no port forwarding, no DDNS, no reverse tunnel service.</li>
 </ul>
@@ -161,16 +159,16 @@ const bodyContent = `<p>Every agent needs an identity, a way to be reached, and 
 <h2 id="frequently-asked-questions">Frequently Asked Questions</h2>
 
 <h3 id="does-a-pilot-agent-need-to-run-the-daemon">Does a Pilot agent need to run the daemon continuously?</h3>
-<p>Yes. The daemon maintains the agent's presence on the overlay network, handles encrypted tunnels, processes incoming messages, and manages the inbox. The daemon is a lightweight process — no external dependencies, minimal resource footprint.</p>
+<p>Yes. The daemon maintains the agent's presence on the overlay network, handles encrypted tunnels, processes incoming messages, and manages the inbox. The daemon is a background process with no runtime dependencies.</p>
 
 <h3 id="can-an-existing-agent-become-a-pilot-agent">Can an existing agent become a Pilot agent?</h3>
-<p>Yes. Install the daemon, start it, and the agent gets a virtual address and identity. Existing application logic runs unchanged — the agent communicates over Pilot tunnels instead of raw TCP or HTTP. SDKs for Go, Python, Node.js, and Swift are available.</p>
+<p>Yes. Install the daemon, start it, and the agent gets a virtual address and identity. The agent reaches the network through pilotctl, an SDK (Go, Python, Node.js and Swift are available), or pilot-mcp if it already speaks MCP; its own logic stays as it is.</p>
 
 <h3 id="do-pilot-agents-need-a-specific-framework">Do Pilot agents need a specific framework?</h3>
 <p>No. Pilot operates at the network layer. An agent built with LangChain, CrewAI, AutoGen, or any other framework can use Pilot for inter-agent transport. The framework handles task orchestration at the application layer; Pilot handles connectivity at the network layer.</p>
 
 <h3 id="how-does-pilot-compare-to-mcp">How does Pilot compare to MCP for agents?</h3>
-<p>MCP connects a model to tools. Pilot connects agents to each other across networks. They are complementary — an MCP server can run on top of a Pilot tunnel, giving remote agents access to tools as if they were local.</p>
+<p>MCP connects a model to tools. Pilot connects agents to each other across networks. They are complementary: pilot-mcp exposes a Pilot node to an MCP client as tools, so the agent can query service agents and message its peers without leaving the client.</p>
 
 <p><em>For the full specification, see <a href="https://pilotprotocol.network/docs/concepts">the core concepts documentation</a>. For a detailed comparison with other protocol options, read <a href="https://pilotprotocol.network/docs/comparison">Pilot vs MCP / A2A / ACP</a>.</em></p>`;
 ---
@@ -181,10 +179,10 @@ const bodyContent = `<p>Every agent needs an identity, a way to be reached, and 
   tags={["blog", "pilot-agent", "networking", "agents"]}
   canonicalPath="/learn/what-makes-a-pilot-agent"
   faqItems={[
-    { question: "Does a Pilot agent need to run the daemon continuously?", answer: "Yes. The daemon maintains the agent's presence on the overlay network, handles encrypted tunnels, processes incoming messages, and manages the inbox. The daemon is a lightweight process — no external dependencies, minimal resource footprint." },
-    { question: "Can an existing agent become a Pilot agent?", answer: "Yes. Install the daemon, start it, and the agent gets a virtual address and identity. Existing application logic runs unchanged — the agent communicates over Pilot tunnels instead of raw TCP or HTTP. SDKs for Go, Python, Node.js, and Swift are available." },
+    { question: "Does a Pilot agent need to run the daemon continuously?", answer: "Yes. The daemon maintains the agent's presence on the overlay network, handles encrypted tunnels, processes incoming messages, and manages the inbox. The daemon is a background process with no runtime dependencies." },
+    { question: "Can an existing agent become a Pilot agent?", answer: "Yes. Install the daemon, start it, and the agent gets a virtual address and identity. The agent reaches the network through pilotctl, an SDK (Go, Python, Node.js and Swift are available), or pilot-mcp if it already speaks MCP; its own logic stays as it is." },
     { question: "Do Pilot agents need a specific framework?", answer: "No. Pilot operates at the network layer. An agent built with LangChain, CrewAI, AutoGen, or any other framework can use Pilot for inter-agent transport. The framework handles task orchestration at the application layer; Pilot handles connectivity at the network layer." },
-    { question: "How does Pilot compare to MCP for agents?", answer: "MCP connects a model to tools. Pilot connects agents to each other across networks. They are complementary — an MCP server can run on top of a Pilot tunnel, giving remote agents access to tools as if they were local." }
+    { question: "How does Pilot compare to MCP for agents?", answer: "MCP connects a model to tools. Pilot connects agents to each other across networks. They are complementary: pilot-mcp exposes a Pilot node to an MCP client as tools, so the agent can query service agents and message its peers without leaving the client." }
   ]}
 >
   <Fragment set:html={bodyContent} />

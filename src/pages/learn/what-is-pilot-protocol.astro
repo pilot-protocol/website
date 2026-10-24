@@ -2,7 +2,7 @@
 import BlogLayout from '../../layouts/BlogLayout.astro';
 
 const bodyContent = `
-<p>AI agents need to communicate with each other across networks, clouds, and organizations. They need to discover peers, establish trust, and exchange data without requiring public IP addresses, VPN configurations, or shared infrastructure. <strong>Pilot Protocol</strong> is an open-source overlay network designed for this — it gives every AI agent a permanent virtual address, encrypted peer-to-peer tunnels, built-in NAT traversal, and a cryptographic trust model, all from a single binary with zero external dependencies.</p>
+<p>AI agents need to communicate with each other across networks, clouds, and organizations. They need to discover peers, establish trust, and exchange data without requiring public IP addresses, VPN configurations, or shared infrastructure. <strong>Pilot Protocol</strong> is an open-source overlay network designed for this — it gives every AI agent a permanent virtual address, encrypted peer-to-peer tunnels, built-in NAT traversal, and a cryptographic trust model. It ships as static binaries with no runtime dependencies.</p>
 
 <p>If you are building with AI agents and have run into the problem of connecting them across different environments, this page explains what Pilot Protocol is, how it works at a high level, and what problems it solves.</p>
 
@@ -23,11 +23,11 @@ const bodyContent = `
   <li><strong>Encrypted peer-to-peer tunnels</strong> using X25519 key exchange and AES-256-GCM — no TLS certificates to manage, no encryption configuration.</li>
   <li><strong>Automatic NAT traversal</strong> through STUN discovery, UDP hole-punching, and relay fallback — agents behind residential NATs, corporate firewalls, and container networks can all communicate.</li>
   <li><strong>A mutual trust model</strong> where agents approve each other through signed handshakes — an agent is invisible on the network until it explicitly trusts another agent.</li>
-  <li><strong>A registry and nameserver</strong> for agent discovery — find agents by hostname or capability tag, not by IP address.</li>
-  <li><strong>An app store</strong> of installable capability apps that run as typed IPC services on the daemon — discover, install, call.</li>
+  <li><strong>A registry</strong> for agent discovery — find an agent by its hostname, not by its IP address.</li>
+  <li><strong>An App Store</strong> of apps from their publishers that the daemon installs and runs as typed IPC services — discover, install, call.</li>
 </ul>
 
-<p>Every one of these capabilities ships in a single Go binary. The daemon has <strong>zero external dependencies</strong> — it uses only the Go standard library. There is no system dependency, no database to run, no runtime to install.</p>
+<p>Pilot is written in Go and ships as separate static binaries: the daemon (<code>pilot-daemon</code>), the CLI (<code>pilotctl</code>) and an updater (<code>pilot-updater</code>). They have <strong>no runtime dependencies</strong>: no database to run, no language runtime to install. The daemon connects to a rendezvous registry and beacon — the public backbone that Vulture Labs runs at no charge, or your own.</p>
 
 <h2 id="what-problems-it-solves">What Problems It Solves</h2>
 
@@ -41,26 +41,26 @@ const bodyContent = `
 <p>An agent generates its own cryptographic identity (Ed25519 key pair) during initialization. That identity is permanent. When two agents establish trust, they exchange signed handshake messages verified against registered public keys. Trust is revocable at any time. This gives multi-agent systems a trust model that operates at the agent level, not at the machine level.</p>
 
 <h3>Discovering peers and capabilities</h3>
-<p>Agents on Pilot can register hostnames and publish capability tags. The built-in nameserver resolves hostnames to virtual addresses. The <code>list-agents</code> directory service provides keyword-based search for specialists. For multi-step tasks, <code>pilot-mom</code> accepts a plain-English description and returns a validated plan with the agent calls, filters, and data threading already worked out.</p>
+<p>Agents on Pilot can register a hostname, and <code>pilotctl find &lt;hostname&gt;</code> resolves it to a virtual address through the registry. There is no search over other people's nodes: you reach an agent by a hostname or address you were given. For the public service agents, the <code>list-agents</code> directory provides keyword search. For multi-step tasks, <code>pilot-mom</code> accepts a plain-English description and returns a validated plan with the agent calls, filters, and data threading already worked out.</p>
 
 <h2 id="app-store">The App Store: Agent-Native Capabilities</h2>
 
-<p>One of Pilot Protocol's distinguishing features is the <a href="https://pilotprotocol.network/app-store">App Store</a>: installable capability apps that run locally on the daemon as typed IPC services. The loop is <strong>discover, install, call</strong> — the same three commands for every app:</p>
+<p>One of Pilot Protocol's distinguishing features is the <a href="https://pilotprotocol.network/app-store">App Store</a>: apps made by their publishers that the daemon installs and runs locally as typed IPC services. The loop is <strong>discover, install, call</strong> — the same three commands for every app:</p>
 
 <pre><code><span class="comment"># Browse available apps</span>
 <span class="cmd">pilotctl appstore catalogue</span>
 
 <span class="comment"># Install one</span>
-<span class="cmd">pilotctl appstore install io.pilot.cosift --force</span>
+<span class="cmd">pilotctl appstore install io.pilot.cosift</span>
 
 <span class="comment"># Call it — JSON in, JSON out</span>
 <span class="cmd">pilotctl appstore call io.pilot.cosift cosift.search '{"q":"multi-agent networking","k":"8"}'</span></code></pre>
 
-<p>Each app is signature-verified (the manifest pins its sha256 and Ed25519 signature, re-checked on every spawn), grant-scoped (permissions accepted at install time, not ambient), and auto-spawned by the daemon. Apps include grounded web search (cosift), a prompt-injection firewall (AEGIS), people and company intelligence (sixtyfour), databases (SQLite, DuckDB, PostgreSQL), hardware-isolated microVMs (Smol Machines), and on-overlay USDC payments (wallet).</p>
+<p>Each app is signature-verified (the manifest pins its sha256 and Ed25519 signature, re-checked on every spawn), grant-scoped (permissions accepted at install time, not ambient), and auto-spawned by the daemon. Apps in the store include grounded web search (Cosift), a prompt-injection firewall (AEGIS), people and company intelligence (Sixtyfour), databases (SQLite, DuckDB, PostgreSQL), hardware-isolated microVMs (Smol Machines), and USDC payments (the Wallet app). Most run locally and are free; a few call a paid provider and are metered against a small per-user budget.</p>
 
 <p>The App Store is how Pilot Protocol differs from a pure networking layer. It gives agents not just connectivity but capabilities — tools they can discover and install at runtime, without leaving the agent's native interface.</p>
 
-<p>Developers can <a href="https://pilotprotocol.network/publish">publish their own apps</a> to the store. Describe your app, verify an email address, and the platform generates and signs the adapter. Published apps become discoverable by every agent on the network.</p>
+<p>Developers can <a href="https://pilotprotocol.network/publish">publish their own apps</a> to the store. Describe your app and verify an email address; the adapter is generated and signed for you, and the team reviews it before it is listed. Listed apps appear in the catalogue every node can browse.</p>
 
 <h2 id="how-it-works-at-a-high-level">How It Works at a High Level</h2>
 
@@ -68,9 +68,9 @@ const bodyContent = `
 
 <p>When Agent A wants to communicate with Agent B, it sends a handshake request. Agent B approves. The daemons negotiate encrypted tunnel parameters using X25519, and the two agents begin exchanging messages through the tunnel. Tunnel encryption is enabled by default; an explicit plaintext override exists for controlled testing, not production profiles.</p>
 
-<p>Pilot runs entirely in userspace. It sends and receives raw UDP datagrams, with reliability, ordering, and congestion control implemented at the application layer (sliding window, AIMD, SACK). Because it is a userspace implementation, it works on any operating system that supports UDP — no kernel modules, no system configuration, no elevated privileges required.</p>
+<p>Pilot runs entirely in userspace. By default it sends and receives raw UDP datagrams, with reliability, ordering, and congestion control implemented at the application layer (sliding window, AIMD, SACK). Where UDP is blocked, compat mode carries the same traffic over a single outbound TCP connection on port 443, through an HTTPS proxy if that is the only way out. No kernel modules, no system configuration, no elevated privileges required.</p>
 
-<p>The full network stack is a single Go binary, open source under AGPL-3.0 at <a href="https://github.com/pilot-protocol">github.com/pilot-protocol</a>.</p>
+<p>The full network stack, including the registry and beacon, is open source under AGPL-3.0 at <a href="https://github.com/pilot-protocol">github.com/pilot-protocol</a>.</p>
 
 <h2 id="how-it-compares">How It Compares to Other Approaches</h2>
 
@@ -100,7 +100,7 @@ const bodyContent = `
     </tr>
     <tr>
       <td>Pilot Protocol</td>
-      <td>Agent-native networking: virtual addresses, encrypted P2P tunnels, NAT traversal, trust model, app store</td>
+      <td>Agent-native networking: virtual addresses, encrypted P2P tunnels, NAT traversal, trust model, App Store</td>
       <td>Tool execution (handled by MCP), application logic (handled by agent frameworks)</td>
     </tr>
   </tbody>
@@ -126,7 +126,7 @@ const bodyContent = `
 
 <pre><code>curl -fsSL https://pilotprotocol.network/install.sh | sh</code></pre>
 
-<p>After installation, the daemon generates an identity, registers with the network, and the agent is online. From there, you can discover specialists, install apps, and connect with peers:</p>
+<p>After installation, the daemon generates an identity, registers with the network, and the agent is online. From there, you can ask the service agents for data, install apps, and connect with peers:</p>
 
 <pre><code><span class="comment"># Check your address</span>
 <span class="cmd">pilotctl info</span>
@@ -134,8 +134,8 @@ const bodyContent = `
 <span class="comment"># Browse the app store</span>
 <span class="cmd">pilotctl appstore catalogue</span>
 
-<span class="comment"># Ask the network assistant for a plan</span>
-<span class="cmd">pilotctl send-message pilot-mom --data 'connect to my research agents and share findings' --wait</span></code></pre>
+<span class="comment"># Ask pilot-mom to plan a live-data task; --wait prints the reply</span>
+<span class="cmd">pilotctl send-message pilot-mom --data 'current weather in Bucharest' --wait</span></code></pre>
 
 <p>For more detailed walkthroughs, see <a href="/blog/how-pilot-protocol-works">how Pilot Protocol works</a> and the <a href="/learn/what-makes-a-pilot-agent">what makes a Pilot agent</a> guide.</p>
 `;
@@ -143,7 +143,7 @@ const bodyContent = `
 const faqItems = [
   {
     question: "What is Pilot Protocol in simple terms?",
-    answer: "Pilot Protocol is a networking layer for AI agents. It gives every agent a permanent address, handles NAT traversal so agents behind firewalls can communicate, encrypts tunnel traffic by default, and provides an app store of installable capabilities. The core daemon is a static Go binary with no external runtime dependencies."
+    answer: "Pilot Protocol is a networking layer for AI agents. It gives every agent a permanent address, handles NAT traversal so agents behind firewalls can communicate, encrypts tunnel traffic by default, and provides an App Store of installable apps. The daemon and pilotctl are static Go binaries with no runtime dependencies."
   },
   {
     question: "Does Pilot Protocol replace MCP?",
@@ -155,7 +155,7 @@ const faqItems = [
   },
   {
     question: "How is Pilot Protocol different from Tailscale or ZeroTier?",
-    answer: "Tailscale and ZeroTier are mesh VPNs that provide IP-layer connectivity between machines. Pilot Protocol is an agent-native overlay that operates above the IP layer — it provides per-agent virtual addresses (not per-machine IPs), capability-based discovery, a mutual trust handshake between agents, and an app store of installable agent capabilities. See the detailed comparison for more."
+    answer: "Tailscale and ZeroTier are mesh VPNs that provide IP-layer connectivity between machines. Pilot Protocol is an agent-native overlay that operates above the IP layer — it provides per-agent virtual addresses (not per-machine IPs), lookup by hostname, a mutual trust handshake between agents, and an App Store of installable apps. See the detailed comparison for more."
   },
   {
     question: "Does my agent need a public IP address?",
@@ -163,7 +163,7 @@ const faqItems = [
   },
   {
     question: "Is Pilot Protocol open source?",
-    answer: "Yes. The entire implementation is open source under AGPL-3.0. The source code is at github.com/pilot-protocol. The daemon is written in Go with zero external dependencies."
+    answer: "Yes. The entire implementation is open source under AGPL-3.0. The source code is at github.com/pilot-protocol. The daemon and pilotctl are written in Go and ship as static binaries with no runtime dependencies."
   }
 ];
 ---
