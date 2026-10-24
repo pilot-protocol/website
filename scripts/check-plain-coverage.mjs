@@ -35,7 +35,6 @@ const MAIN_PAIRS = [
   { human: 'src/pages/index.astro',          plain: 'src/pages/plain/index.astro' },
   { human: 'src/pages/for/p2p.astro',        plain: 'src/pages/plain/p2p.astro' },
   { human: 'src/pages/for/mcp.astro',        plain: 'src/pages/plain/mcp.astro' },
-  { human: 'src/pages/plans.astro',          plain: 'src/pages/plain/plans.astro' },
   { human: 'src/pages/trust.astro',          plain: 'src/pages/plain/trust.astro' },
   { human: 'src/pages/governance.astro',     plain: 'src/pages/plain/governance.astro' },
   { human: 'src/pages/roadmap.astro',        plain: 'src/pages/plain/roadmap.astro' },
@@ -119,7 +118,7 @@ async function main() {
   //    must match the CURRENT hash of its source. A mismatch means the source
   //    was edited but the plain twin was never regenerated — the silent staleness
   //    the structural checks above can't see. Files with no stamp (data-driven
-  //    skills/setups pages, hand-written plain pages) are skipped here.
+  //    skills pages, hand-written plain pages) are skipped here.
   let stamped = 0;
   for (const rel of await walkAstro(PLAIN_DIR)) {
     const stamp = readStamp(await readFile(join(REPO_ROOT, rel), 'utf8'));
