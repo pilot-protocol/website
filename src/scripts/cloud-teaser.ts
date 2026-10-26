@@ -33,6 +33,7 @@ function setActive(index: number) {
   lastPainted = index;
   root.dataset.tone = panels[index]?.dataset.tone || 'light';
   root.dataset.chapter = String(index);
+  if (progressFill && touchDevice.matches) progressFill.style.transform = `translateX(${index * 100}%)`;
   panels.forEach((panel, i) => {
     const inactive = horizontal && i !== index;
     if (inactive && panel.contains(document.activeElement)) stage?.focus({ preventScroll: true });
@@ -41,7 +42,7 @@ function setActive(index: number) {
   if (chapter) chapter.textContent = String(index + 1).padStart(2, '0');
   if (previous) previous.disabled = index === 0;
   if (next) next.disabled = index === panels.length - 1;
-  if (cue) cue.textContent = index === panels.length - 1 ? 'More see you soon' : index === 0 ? 'Scroll to see how' : 'Keep scrolling';
+  if (cue) cue.textContent = index === panels.length - 1 ? 'Take your life back' : index === 0 ? 'Scroll to see how' : 'Keep scrolling';
   if (changed && status) status.textContent = `Chapter ${index + 1} of ${panels.length}: ${panels[index].dataset.name}`;
 }
 
@@ -183,7 +184,7 @@ if (approve) {
     approve.dataset.approved = String(approved);
     approve.textContent = approved ? 'Replay example ↺' : 'Looks good ✓';
     const label = document.querySelector('.result-label');
-    if (label) label.textContent = approved ? 'Approved by you. See you Thursday!' : 'Dinner with Priya';
+    if (label) label.textContent = approved ? 'Approved by you. See you Thursday!' : 'Coffee with Priya';
   });
 }
 

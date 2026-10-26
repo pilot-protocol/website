@@ -1,94 +1,40 @@
-# Pilot Cloud: message strategy and landing copy
+# Pilot: shared message strategy
 
-Updated 25 October 2026. Audience confirmed by the founder: **people already using AI who want less coordination with friends and contacts.** Implemented as the warm preview at `/cloud-landing`; `/cloud` remains the comparison page.
+Updated 25 October 2026. Audience: people already using AI who want less coordination with friends and contacts. `/cloud-teaser`, `/cloud-landing` (Learn more), and `/pilot-film` now follow the same narrative. `/cloud` remains the original comparison page.
 
-## The decision
+## Current narrative
 
-Lead with **“Let your AI handle the back-and-forth.”** Explain the mechanism immediately: Pilot connects the AI someone already has to their people’s agents. State in the hero that both people sign in and connect an AI, and neither needs to install Pilot software. Demonstrate a familiar task, then show how to start with one person. Make the enduring identity a prominent supporting promise: **“New AI. Same handle.”**
+1. **What would you do with 20% more time?** Begin with desire. Keep the complete hypothetical question visible around the number. It is not a measured share of life lost or a Pilot savings promise.
+2. **“Quick question…”** Show coffee, an introduction, a group plan, and “What do you do?” together. The people are welcome; repeatedly handling the details is the problem.
+3. **The last chore you’ll ever do.** The founder’s chosen campaign line follows the request pile. “One setup. Less back-and-forth.” defines its intended scope.
+4. **Share your Pilot link.** Introduce Pilot and agents only now. The handle link gives someone a way to request a connection to your agent. You choose who connects. Both people sign in and connect an AI.
+5. **Let the agents do the back-and-forth.** Show the inbound direction: Priya’s Dots reaches your Muse about coffee. Your agent returns a proposed time for your approval.
+6. **Put your link everywhere.** The same handle appears in a bio, email signature and message. New AI. Same link. Your identity belongs to the same Pilot account across connected AI apps.
+7. **Take your life back.** One emotional ending and one primary action: **Claim your handle**. Setup is explicit: claim a handle, connect your AI, share your link. The service is free and hosted for you.
 
-This audience already understands the value of AI. The missing understanding is that their AI can reach someone else’s agent. They need a recognizable reason to connect, a clear first step, and confidence about who can reach them. A protocol explanation or five equally prominent benefits would make them assemble the proposition themselves.
+The teaser presents seven scroll chapters. The film takes 26.917 seconds and uses the same ordering with drum-synced state changes. Learn more expands the mechanism with four inbound examples, compatible agents, permissions, setup, network/funding proof and FAQ. It does not return to an agent-first or dinner-only pitch.
 
-The full narrative is:
+## Learn more implementation
 
-> Your AI can help with plans involving other people. Pilot gives it a way to reach their agents. Claim a handle, share your link, and approve a connection. Ask from your usual chat. Your handle and connections stay with you as your AI changes. We host Pilot for you. As the network grows, that connection can become useful in more places.
+The header has no navigation and no play button. Its non-linked Pilot mark and signup action appear only when the product-reveal section enters view, keeping product branding out of the opening. The hero points into the request story. Signup links repeat “Claim your handle” in the reveal, closing and header, all to the Cloud app. The footer motion control remains available.
 
-The opening sentences explain the current consumer offer. The last sentence is the bridge to the broader company story, rather than a second acquisition promise. The portable identity connects immediate usefulness to lasting value: someone can try a different AI without asking their people to find them again.
+The examples are coffee, an introduction, a group plan and an informational question. They begin with the other person asking their AI, then show their agent contacting yours. Every outcome is illustrative. Introductions require checking with the people involved; proposed plans require approval; shared information depends on permissions. These examples neither send messages nor modify product data.
 
-## Where each team narrative belongs
+Muse, Grok Bot, OpenClaw, Hermes and Dots appear as recommended background agents. Other MCP-compatible chat apps are shown too. Background check-ins must be configured; a hosted Pilot node does not by itself run a user’s AI. “Both AIs connected” and the connection-acceptance step remain visible near the mechanism, rather than being hidden in FAQ.
 
-| Narrative | Role | Treatment |
-|---|---|---|
-| Less coordination | Main benefit | Hero and first demonstration. Dinner, weekend plans, a contact’s update, and a file show useful range without changing the promise. |
-| Just share a link | Mechanism and activation | Show an example handle link, the request/acceptance step, and the three circles. Sharing is the beginning; both people still need connected AI apps. |
-| Your handle stays yours across agents | Distinctive, lasting benefit | Surface it beside AI compatibility and in a dedicated “New AI. Same handle.” section. The handle, link, and relationships belong to the same Pilot account as someone adds or switches supported AI apps. |
-| Hosted Pilot Protocol | Convenience and category clarification | “We host it for you. Nothing to install.” Explain the relationship to Pilot Protocol in the FAQ and keep the self-hosting path in the footer. |
-| Open-source adoption and investor backing | Credibility after the demo | Explain that Cloud builds on Pilot Protocol, the open-source network already in use. Show dated recent activity, cumulative registrations, and the public backers. These are network-wide measures, rather than a count of Cloud customers or a breakdown of self-hosted users. |
-| Earn with Moonlit | Separate intent and acquisition story | Send people seeking paid research to Moonlit’s own experience. Consider a contextual recommendation after Pilot activation once the integration and eligible journey are verified. No competing earning CTA on this coordination page. |
-| Pilot is an ecosystem | Expansion story | Show specific, working apps when they solve the next task. Explain the platform on product/developer surfaces. “Everything will be built here” is an ambition, not a reason to sign in today. |
-| Reach US businesses | Roadmap and later use-case campaign | Introduce a business use case when a visitor can try verified coverage. Keep the nationwide ambition in the company roadmap until then. Do not imply millions of live, business-authorized agents or exclusive relationships without evidence. |
+The link-reveal example retains the AI-switch control, and a later distribution section shows the same handle in three placements. The social card is shared with the teaser and built with `node scripts/build-teaser-social.mjs`; it shows “Take your life back. One link to your agent.” with the existing reunion image. It does not turn the 20% question into an isolated statistical claim in link previews.
 
-These ideas connect through one product capability: letting an AI reach other agents. They serve different visitor intentions, so they should not receive equal space on the main landing page.
+## Why this hierarchy
 
-## What the reference sites actually support
+The [BLS time-use table](https://www.bls.gov/news.release/atus.t01.htm) measures household activities, not coordination requests. [McKinsey’s social-economy research](https://www.mckinsey.com/industries/technology-media-and-telecommunications/our-insights/the-social-economy) estimates workweek email and information-search time, not 20% of life. Neither establishes the proposed percentage as a fact. The campaign therefore asks a question instead of claiming measured waste or savings.
 
-These are observed patterns and expert frameworks, not evidence that Pilot will get a particular conversion lift. A successful company’s homepage cannot tell us which individual element caused its success. Pages were checked on 25 October 2026.
+[Calendly](https://calendly.com/) demonstrates the value of leading with a familiar coordination job. [Partiful](https://partiful.com/) shows a desirable social result and a visible sharing mechanism. These are observed design patterns, not causal conversion evidence or proof that Pilot has their account-free guest flow. [NN/g’s tagline guidance](https://www.nngroup.com/articles/tagline-blues-whats-the-site-about/) supports making the product’s purpose clear: the emotional opening must lead to the concrete handle and agent exchange. The founder deliberately chose to delay the product introduction; comprehension testing should assess that tradeoff.
 
-| Source | Observation | Application to Pilot |
-|---|---|---|
-| [Calendly](https://calendly.com/) | Leads with work around meetings being handled, explains concrete tasks, and places signup and friction-reducing details together. Related products appear further down. | Lead with the job being taken off the visitor’s plate. Explain hosting near the CTA; introduce expansion after the main use case is understood. |
-| [Partiful](https://partiful.com/) | Makes social plans desirable, then shows the invite-link → response → shared-details sequence. | Pair human warmth with a visible sharing mechanism. Pilot must state its own onboarding requirements; Partiful’s guest experience does not establish that Pilot works without setup on the other end. |
-| [Copyhackers, 10x Landing Pages](https://school.copyhackers.com/courses/10x-landing-pages) | Organizes copy around one reader, big idea, promise, and offer, with audience research and awareness as inputs. | One reader: an existing AI user. One promise: less coordination. One offer: start free. Use cases supply evidence for that promise. The founder’s audience choice is a starting hypothesis; customer language should refine it. |
-| [Nielsen Norman Group, Tagline Blues](https://www.nngroup.com/articles/tagline-blues-whats-the-site-about/) | Recommends making a company’s purpose and distinctiveness understandable. | The warm headline needs a direct explanation of agent-to-agent contact. “More time for what matters” alone would leave the product unidentified. |
+The team’s remaining narratives stay out of the acquisition story: earnings via Moonlit belong to a separate intent; ecosystem expansion and nationwide business coverage require specific available use cases and verified claims. Investor and open-source proof follow the product demonstration. The site does not claim that network nodes are people, customers or endorsements.
 
-The dedicated landing page keeps the original no-navigation decision: the header contains a non-linked brand mark and a compact signup CTA. The motion setting is in the footer. There is no section menu, including after scrolling. Three full signup buttons repeat the same action in the hero, identity section, and closing section. The header CTA is an additional compact instance. Same-page demo controls explain the offer without introducing another signup path.
+## Scope
 
-The resulting sequence is benefit and setup requirement → two-sided example and compatible apps → network and funding proof → setup steps → lasting identity and relationship control → remaining questions → action. The warm visual design helps express the social outcome; it cannot substitute for explaining the product.
-
-## The implemented page
-
-**Eyebrow:** Your AI, connected to your people
-
-**Headline:** Let your AI handle the back-and-forth.
-
-**Description:** Keep the AI you already have. Pilot connects it to your people’s agents, so it can help make plans, get updates, and share files.
-
-**Primary action:** Start free — all four signup links, including the compact header.
-
-**Supporting line:** Free to start · No Pilot software to install
-
-**Visible setup:** Start with one friend. You both sign in and connect your AI. You can each use a different app.
-
-| Section | Visitor question answered | Intended effect to test |
-|---|---|---|
-| Hero and human photograph | What is this for? | Recognition of a familiar problem and a plausible result. |
-| Four example conversations | What would I actually ask? | Lead with Muse asking Maria’s Grok Bot. The weekend example shows OpenClaw, Hermes, and Dots; the update and file examples retain Claude, ChatGPT, and Gemini to show broader MCP compatibility. Each participant has its own label and logo. Dinner leads; contacts and files show breadth. All are labeled illustrations with Pilot connected on both sides, not customer evidence or live transactions. |
-| Compatible AI apps, inside the demo section | Does it fit how I already work, including when I switch AIs? | Explain that the handle stays yours across connected apps and reduce the assumption that Pilot requires a new assistant. Recommend Muse, Grok Bot, OpenClaw, Hermes, Dots, and other background agents first; show general MCP-compatible chat apps underneath. Explain that background check-ins must be enabled, while chat apps work during a chat. The strip carries a plan/settings caveat; logo presence does not imply every plan supports connectors. |
-| Open-source foundation, network, and backing, after the demo | Is there an established project behind this? | “Built on Pilot Protocol.” explains that Cloud brings an existing open-source network to the visitor’s AI app with hosting handled. Show the rounded recent-activity count and cumulative registrations with their date and definitions, plus the actual logos of Version One, Pioneer, Night Capital, Todd & Rahul Capital, and Precursor. The funding announcement is linked; the logo label is “Seed investors.” |
-| Three setup steps | What happens after I click? | Set accurate expectations: sign in and connect AI; invite and accept; ask. |
-| “New AI. Same handle.”, link, and circles | Will people still find me if I change AI apps? Who gets in? | Make continuity of identity and relationships concrete, then show sharing and acceptance. The illustrative URL has no fake copy or share action. |
-| Hosting and relationship reassurance | What do I have to manage? | Explain accepted connections, familiar AI apps, and managed hosting in ordinary language. |
-| FAQ | What are the limits and requirements? | Clarify the role of Pilot, the friend’s setup, permissions, connector support, and the hosted product. |
-| Closing invitation | What should I do first? | Connect an AI and invite one person. Repeat the same primary action. |
-
-Use Pilot the puppy as a recognizable companion and visual guide. Dialogue identifies each AI app and its owner; the section labels Pilot as the connection between them, so the mascot does not imply a separate general-purpose assistant. Keep the single Inter Tight family, cream background, clay accent, rounded shapes, and photography. Avoid making every sentence cute: clear setup instructions carry more weight than repeated “little,” “magic,” or “lend a paw.”
-
-## Research follow-up — 25 October 2026
-
-Applied page changes 2–7 from the new audit; the founder explicitly chose “Landing page now; scope the invite flow next.” The [audit](../../research_notes/software-websites/audit.md), [copy research](../../research_notes/software-websites/copy-research.md), and [activation research](../../research_notes/software-websites/activation.md) inform the changes, but their third-party effect sizes are not a forecast for Pilot.
-
-- The product demonstration now follows the hero directly. App compatibility sits within that demonstration; network activity and the five investor logos follow it.
-- Keep one Inter Tight family and no header navigation. The audit’s preference for serif emphasis conflicts with the founder’s explicit single-font preference.
-- “Your agent handles the group chat” remains a headline hypothesis. This pass retains the current H1: the product has not been shown to take over an existing messaging-app group chat. Test an outcome-led headline against a mechanism-led headline only after checking comprehension, with the rest of the page held constant.
-- Mature products’ account-free guest flows show a product direction, not an existing Pilot feature. “No Pilot software to install” does not mean “no account or setup.” Both requirements are now visible near the first CTA.
-- The page-specific Open Graph and Twitter card uses `public/cloud/warm/cloud-social.jpg` (1200 × 630), rebuilt with `node scripts/build-cloud-social.mjs`. It shows two people, the puppy pair, and a clearly labeled example plan. This changes the marketing preview only. It does not change the live Cloud `/@handle` or `/i/token` cards, personalize a real invitation, or claim a plan has been confirmed. The new public asset URL becomes available when this preview is published; it is currently served locally.
-
-The [next invite-flow scope](cloud-invite-next.md) records the existing entry points and the smallest proposed account-free plan response. No Cloud application code or email behavior changed in this pass.
-
-### Background agents and MCP — founder clarification
-
-The founder recommends Muse, Grok Bot, OpenClaw, Hermes, Dots, and other background agents, with MCP as the common connection method. This recommendation now appears in the compatibility area, setup copy, FAQ, demo, and identity example. The identity control starts with Muse and can switch to Claude or ChatGPT while retaining the same handle.
-
-`hosted/control/web/index.html` already lists these agents, their connection paths, and a check-in/scheduling prompt. It describes Dots as using plugins connected in ChatGPT; the separate OpenClaw and Hermes MCP guides document the hosted endpoint. The founder requested the yellow dots character for visual identification; its page asset is a transparent-edged crop of their supplied screenshot, not the generic ChatGPT mark. The recommendation is the founder’s product guidance, not a tested ranking of third-party agents. Background processing depends on the connected agent’s configuration. Hosting Pilot alone does not run the user’s AI or guarantee instant replies. “No Pilot software to install” remains specific to Pilot Cloud; it does not claim OpenClaw or Hermes need no installation of their own.
+This is a marketing-page and film change, not the Cloud app’s invitation flow. The account-free “Arranged Thing” remains scoped in [cloud-invite-next.md](cloud-invite-next.md). A handle URL is still a profile/connection entry point; it is not guest chat. No account creation, automatic acceptance, calendar access or new business-agent coverage is implemented by this campaign.
 
 ## Product claims and their boundaries
 
@@ -130,3 +76,7 @@ The preview retains existing `cta_click` tracking with `target=cloud_signup` and
 After a useful first exchange, recommend the next capability in context. A person coordinating dinner may benefit from an available business agent. Someone explicitly interested in paid research may choose Moonlit after seeing its requirements. Developers need protocol and ecosystem documentation. Each entry point should make a concrete promise to the person arriving there and then reveal the larger network through useful actions.
 
 This strategy supersedes the message hierarchy in `cloud-landing-research.md`. The older brief contains third-party conversion figures; none are used here as an expected Pilot result.
+
+## Conversational release — revision 16
+
+The approved teaser draft now asks “How does a ‘quick question’ turn into 30 minutes?” and shows eight everyday requests. “Let us help” leads to “One link. That’s it.” The handle is visibly part of the full shareable URL. “Put the back-and-forth on autopilot” is demonstrated with an accepted connection and an approved coffee plan. Distribution follows, then “Take your life back.” Agent portability remains in Learn more/FAQ, but the teaser and film no longer spend a beat on switching AIs. Thirty minutes is rhetorical, not measured. The opening 20% remains a hypothetical question. Both website pages and both video formats use this narrative.
