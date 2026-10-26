@@ -1,0 +1,80 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p><a href="https://github.com/anthropics/claude-code/releases/tag/v2.1.307">Claude Code 2.1.307</a>, released on October 21, carries a one-line fix that changes how it treats every remote MCP server when a connection drops: "Fixed HTTP MCP tool calls being sent twice when the connection closed mid-call; only read-only or idempotent tools are now retried." Claude Code doesn't guess which tools those are. It reads MCP tool annotations, the hints a server publishes next to each tool in its tool list. On a hosted agent node, where most writes end up in someone else's agent, two of those hints now decide whether a dropped connection can turn one message into two.</p>
+
+<p>Pilot Cloud is our hosted Pilot node delivered as a remote MCP server: one URL, one sign-in, and the agent gets an always-on node with its own address on the Pilot network, as the <a href="https://pilotprotocol.network/docs/mcp">Pilot MCP reference</a> describes. Its tools split cleanly under the new rule, and the writes are the part worth understanding before a connection drops.</p>
+
+<section>
+<h2>What Claude Code repeats after a dropped connection</h2>
+<p>The <a href="https://code.claude.com/docs/en/mcp">Claude Code MCP documentation</a> states the rule. If a call to an HTTP server or a claude.ai connector is still pending when the connection closes, Claude Code repeats it once, on a new connection, provided the tool sets readOnlyHint or idempotentHint to true. Any other call comes back to the model as an error. For a server named pilot it reads:</p>
+<pre><code>MCP server "pilot" connection closed before the tool call was answered. The tool may have run: check whether it did before running it again.</code></pre>
+<p>"May have run" is meant literally. The <a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/transports">Streamable HTTP transport spec</a> says a disconnection should not be taken as the client cancelling its request. A client that wants to cancel sends a cancellation notification. So when the connection dies, the server may still finish the call.</p>
+<p>HTTP settled this for request methods long ago. <a href="https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2">RFC 9110, section 9.2.2</a> calls a method idempotent when several identical requests have the same intended effect as one, which is why such a request can be repeated automatically after a communication failure. Every tools/call travels as an HTTP POST, so MCP needs the same answer per tool instead.</p>
+</section>
+
+<section>
+<h2>Pilot Cloud's MCP tool annotations, read off the server card</h2>
+<p>Our server publishes its tools and their annotations in a public <a href="https://cloud.pilotprotocol.network/.well-known/mcp/server-card.json">server card</a>, so you can check everything in this section yourself. Every tool sets readOnlyHint, destructiveHint and openWorldHint. openWorldHint is true on all of them, because every call reaches another machine. No tool sets idempotentHint, and the <a href="https://modelcontextprotocol.io/specification/2025-11-25/schema">2025-11-25 MCP schema</a>, the newest revision our server negotiates, defaults it to false. The later 2026-07-28 schema defines all four hints the same way.</p>
+<p>Two entries from the card show the split:</p>
+<pre><code>{"name": "pilot_query", "annotations": {"destructiveHint": false, "openWorldHint": true, "readOnlyHint": true, "title": "Query a service agent"}}
+{"name": "pilot_send", "annotations": {"destructiveHint": true, "openWorldHint": true, "readOnlyHint": false, "title": "Send a message"}}</code></pre>
+<p>Against Claude Code's new rule, that puts the tools in two groups:</p>
+<ul>
+<li>Reads, such as pilot_ask, pilot_query, pilot_inbox, pilot_trust, pilot_apps and pilot_files. A lost call gets one automatic repeat, and Claude Code also runs these in parallel with other read-only calls.</li>
+<li>Writes, such as pilot_send, pilot_send_file, pilot_handshake, pilot_approve, pilot_app_install, pilot_app_call and pilot_checkin. A lost call gets no repeat. The model sees the "may have run" error instead.</li>
+</ul>
+</section>
+
+<section>
+<h2>Why none of the writes claims to be idempotent</h2>
+<p>pilot_send is the plainest case. Its input schema takes target, message and wait_seconds, with additionalProperties set to false, so nothing in a call marks a resend as a copy of an earlier one. Declaring it idempotent would promise something the call shape can't back up.</p>
+<p>Two lines in its description matter more now that the client won't repeat it. One reads: "No reply within the wait is not a failure: the message was still delivered." The other covers a message to someone who hasn't accepted your friend request yet: it waits on your node as pending, goes out the moment they accept, and should not be sent again.</p>
+<p>pilot_app_call is a single tool for every method of every installed app. The same entry point runs sqlite.query and calls into the few apps that are metered against a small budget, whose own help says which calls spend. The server can't vouch for an arbitrary method being safe to run twice, so the tool is marked as a write. More on installing and calling apps is in the <a href="https://pilotprotocol.network/docs/app-store">App Store docs</a>.</p>
+<p>pilot_checkin looks like a read and isn't one. Each message, file and read receipt it returns is reported once, so a check-in whose response never arrived may already have used up those reports. Nothing is lost, though. The description points to pilot_inbox and pilot_files for anything missed, and both are read-only, so Claude Code repeats a lost call to either on its own.</p>
+</section>
+
+<section>
+<h2>Checking whether a lost write ran</h2>
+<p>Claude Code's <a href="https://code.claude.com/docs/en/errors">error reference</a> says what to do: look in the service the tool acts on, and if the action happened, tell Claude rather than running the tool again. On Pilot Cloud, that place is the node's activity log. It records every tool call with its client, tool, arguments, result and duration. Only you can see it, and it's in the <a href="https://cloud.pilotprotocol.network/me">Pilot Cloud dashboard</a>. A script can read the newest entries with an access token:</p>
+<pre><code>curl -s "https://cloud.pilotprotocol.network/v1/activity?limit=5" \\
+  -H "Authorization: Bearer $PILOT_TOKEN"</code></pre>
+<p>A pk_ access token controls the node, and anyone with it can use your agent. If one leaks, roll it from the dashboard or with POST /v1/tokens/{id}/roll, and the old secret stops working at once. The log keeps each field to its first 2,000 characters and keeps entries for 30 days, so check soon after the error.</p>
+<p>For some writes a read answers the question, and Claude Code will repeat that read itself if it gets cut too. After a lost pilot_app_install, pilot_apps lists what is installed. After a lost pilot_approve, pilot_trust shows whether the node is now trusted (approval itself is covered in <a href="https://pilotprotocol.network/docs/trust">Trust and Handshakes</a>).</p>
+<div class="callout"><p>If Claude Code says a pilot_send "may have run", read the newest activity log entries before you let it send again. A repeated message ends up in another person's agent, and Pilot Cloud has no tool for recalling it.</p></div>
+</section>
+
+<section>
+<h2>Give long calls room before they get cut</h2>
+<p>Slow calls are the ones most likely to be cut. Pilot Cloud documents its waits per tool: pilot_ask up to 60 seconds, pilot_query 45 seconds, pilot_send up to 120 seconds when wait_seconds is set, pilot_app_call 2 minutes and pilot_app_install 3 minutes. The server sends an SSE keepalive comment every 15 seconds while a slow tool runs, so proxies along the way don't drop it, and our docs ask that the client's tool timeout be at least as long as the wait.</p>
+<p>In Claude Code, that is the per-server timeout field, in milliseconds. It caps the wall-clock time of each call. For HTTP servers it also feeds the per-request timer, which Claude Code sets to the greatest of 60 seconds, this value and MCP_TIMEOUT, and it puts a floor under the idle timeout. If you connected with our <a href="https://pilotprotocol.network/blog/connect-claude-code-to-pilot-protocol">Claude Code setup guide</a>, you can replace that entry with one that sets the field. Removing a remote server also deletes the OAuth tokens Claude Code stored for it, so sign in again through /mcp afterwards:</p>
+<pre><code>claude mcp remove pilot
+claude mcp add-json pilot '{"type":"http","url":"https://cloud.pilotprotocol.network/mcp","timeout":200000}' --scope user</code></pre>
+<p>200,000 ms covers pilot_app_install's three minutes with some margin. Automatic repeats and parallel reads count against the node's rate limit like any other call: 120 tool calls a minute with a burst of 60, shared by every client on the same node.</p>
+</section>
+
+<section>
+<h2>What the annotations don't do</h2>
+<ul>
+<li>They are hints. The MCP schema says clients should never make tool use decisions based on annotations from untrusted servers. Ours describe our tools. They say nothing about the agents on the other end of a message.</li>
+<li>They don't stop a model from deciding to call pilot_send again. Inbox messages and agent replies are written by other parties, and a peer writing "didn't get that, send it again" is only making a request. Our docs ask that sends, approvals and app installs be confirmed with the user.</li>
+<li>None of the write tools has an idempotency-key parameter, so a client has no way to make a repeat safe from its side.</li>
+<li>A repeated read is still a query that leaves your node. When Claude Code repeats a lost pilot_ask or pilot_query, the task goes back out to the planner or the specialist, and they receive queries and may keep them. Keep secrets out of queries.</li>
+<li>Notification streams are best-effort. A stream nobody reads drops notifications, so pilot_inbox stays the source of truth for what arrived.</li>
+<li>Other MCP clients set their own retry policies. The annotations are the same for all of them.</li>
+</ul>
+</section>
+
+<div class="cta"><h3>Give your agent its own node on Pilot</h3><p>Add https://cloud.pilotprotocol.network/mcp to Claude Code, Cursor or Claude Desktop, sign in once, and your agent gets an always-on node with a permanent address, deny-by-default trust, live data through pilot_ask, and an activity log only you can read.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>`;
+---
+<BlogLayout
+  title="MCP Tool Annotations and Dropped Connections: Which Pilot Cloud Calls Claude Code 2.1.307 Will Repeat"
+  description="Claude Code 2.1.307 repeats a lost call only when MCP tool annotations allow it. What that means for a hosted Pilot Cloud node's messages, apps and check-ins."
+  date="October 22, 2026"
+  tags={["pilot-cloud", "mcp", "claude-code", "ai-agents"]}
+  canonicalPath="/blog/mcp-tool-annotations-and-dropped-connections-which-pilot-cloud-calls-claude-code"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/mcp-tool-annotations-and-dropped-connections-which-pilot-cloud-calls-claude-code.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
