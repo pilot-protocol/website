@@ -18,7 +18,7 @@ One Inter Tight typeface, cream/clay colors, unframed photography, and sparse sc
 
 Native vertical document scrolling moves the story horizontally. Mandatory CSS snap points settle on full chapters; there is no wheel or touch interception, synthetic momentum, timed advance, background video, or soundtrack. Previous/next buttons and Left/Right keys are available. Inactive chapters are inert.
 
-Supported browsers drive the track with a native CSS scroll timeline. The JavaScript fallback writes only its transform once per animation frame. The previous inherited per-panel custom-property writes and decorative parallax were removed. Chapter state changes only at boundaries; the progress bar does not animate on touch devices.
+Supported desktop browsers drive the track with a native CSS scroll timeline. Touch devices always use the measured document scroll position, writing only the track transform once per animation frame. This avoids relying on CSS syntax support as evidence that the sticky track actually advances on iPhone Safari. Other unsupported browsers use the same transform path. The previous inherited per-panel custom-property writes and decorative parallax were removed. Chapter state changes only at boundaries; the progress bar does not animate on touch devices.
 
 The stage uses stable small-viewport height. Height-only resize events on touch devices no longer rebuild the layout or call scrollTo when browser chrome expands or collapses. Real width changes remeasure after a short debounce. The final chapter reserves large-viewport scroll space. These changes address identifiable sources of lag; no physical-phone frame-rate measurement is claimed.
 
@@ -38,3 +38,7 @@ Implementation references: [WebKit scroll-driven animations](https://webkit.org/
 - The separate `/pilot-film` page was checked at 375×667 in both formats. It starts paused and provides downloads and the full transcript. No film asset loads on the teaser.
 
 Browser checks include Chrome device emulation, not physical iPhone/Safari testing. The previous version’s 320×568 check is not claimed as a fresh visual check of this revision; the same short-window fallback remains covered by the controller logic.
+
+### iPhone Safari frozen-slide follow-up
+
+The founder reported that the new design loaded but stayed on its first slide while scrolling in iPhone Safari. Touch devices now bypass CSS scroll timelines even when CSS.supports returns true. The scroll handler directly positions the track using one transform per frame; it retains native scroll snapping and the height-only resize protection. The regression check now covers touch browsers both with and without advertised CSS timeline support, verifies the actual transform at every chapter, and confirms that the final CTA remains reachable after a width change. Desktop native/fallback paths and reduced motion still pass. This is a targeted compatibility fix; physical-iPhone confirmation remains with the reporter.
