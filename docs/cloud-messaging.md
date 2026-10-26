@@ -76,3 +76,7 @@ The preview retains existing `cta_click` tracking with `target=cloud_signup` and
 After a useful first exchange, recommend the next capability in context. A person coordinating dinner may benefit from an available business agent. Someone explicitly interested in paid research may choose Moonlit after seeing its requirements. Developers need protocol and ecosystem documentation. Each entry point should make a concrete promise to the person arriving there and then reveal the larger network through useful actions.
 
 This strategy supersedes the message hierarchy in `cloud-landing-research.md`. The older brief contains third-party conversion figures; none are used here as an expected Pilot result.
+
+## Conversational release — revision 16
+
+The approved teaser draft now asks “How does a ‘quick question’ turn into 30 minutes?” and shows eight everyday requests. “Let us help” leads to “One link. That’s it.” The handle is visibly part of the full shareable URL. “Put the back-and-forth on autopilot” is demonstrated with an accepted connection and an approved coffee plan. Distribution follows, then “Take your life back.” Agent portability remains in Learn more/FAQ, but the teaser and film no longer spend a beat on switching AIs. Thirty minutes is rhetorical, not measured. The opening 20% remains a hypothetical question. Both website pages and both video formats use this narrative.

@@ -5,12 +5,12 @@ Standalone route: `/cloud-teaser`. This noindex preview is excluded from the sit
 ## Seven-scene story
 
 1. **What would you do with 20% more time?** A complete hypothetical question over café photography. It is not a claim about measured time lost or Pilot savings. No product marks appear yet.
-2. **“Quick question…”** Coffee, an introduction, a group plan and “What do you do?” appear together as illustrative inbound requests.
-3. **The last chore you’ll ever do.** The user’s chosen campaign line; “One setup. Less back-and-forth.” defines the intended scope. It does not promise the end of every life task.
-4. **Share your Pilot link.** The first product reveal shows a permanent handle link: a way to reach your agent. Connect your AI, share the link, and choose who connects. Muse, Dots, Grok Bot, Hermes and OpenClaw are shown; MCP-compatible chat apps remain an explicit alternative. Both people connect an AI.
-5. **Let the agents do the back-and-forth.** Priya’s Dots asks the visitor’s Muse for coffee. A Thursday 3:30 proposal requires human approval. This local illustration does not send messages or book anything.
-6. **Put your link everywhere.** The same link appears in a bio, email signature and message. Switching the example AI keeps the handle: “New AI. Same link.”
-7. **Take your life back.** A reunion photograph closes on the human outcome. Claim a handle, connect your AI, share your link. Claim your handle opens the Cloud app; Learn more opens `/cloud-landing`.
+2. **How does a “quick question” turn into 30 minutes?** Eight conversational asks appear together: coffee, an introduction, availability, work, feedback, a plumber, a designer and a pitch. The question is rhetorical, not a measured average.
+3. **Let us help.** “Make this the last time you do these chores.” The campaign turn follows the request wall.
+4. **One link. That’s it.** The URL prefix and @maya share one visual container. Your handle gives people a way to reach your agent. You connect your AI, share the link and decide who gets in. Supported-agent marks and the both-people-connect qualification remain.
+5. **Put the back-and-forth on autopilot.** Priya’s agent asks yours for coffee. You approve the proposal. This local illustration sends no messages and books nothing.
+6. **Put your link everywhere.** Bio, email and a message show the same handle. The teaser no longer includes an AI-switching demonstration.
+7. **Take your life back.** Claim a handle, connect your AI and share your link. Final links go to the Cloud app and Learn more.
 
 Pilot and agents enter only after the desire, request pile and last-chore turn. Earnings, future business coverage and ecosystem expansion are omitted. Product qualifications follow `docs/cloud-messaging.md`. The link is a profile and connection entry point, not account-free guest chat; connection acceptance and both AIs being connected remain explicit.
 
@@ -45,3 +45,9 @@ Current visual and build checks are recorded with the release. Browser emulation
 - DevTools showed development-server logging; one earlier back/forward navigation caused a Vite WebSocket cache warning, cleared on a new load. It is a dev-server connection, not the published controller.
 
 The new progress marker follows touch chapters with a single boundary update, preserving the one-track-transform-per-frame scrolling path.
+
+### Conversational revision and height correction
+
+The expanded request wall and conversational wording follow the approved quick draft. At 1352×667, the prior distribution composition exceeded its grid content area and switched the whole story into vertical fallback. Compact desktop spacing and height-aware display type restore horizontal mode while retaining the accessibility fallback. The repaired distribution slide and reachable 07/07 were visually checked before this copy revision. Current controller regression covers all seven chapters. A fresh complete physical-phone check is not claimed.
+
+Current conversational revision: fresh Chrome checks at 1352×667 and 375×667 show the expanded request wall fits and horizontal mode remains active. Mobile checks covered the grouped link, autopilot example, distribution and 07/07 final action. Native scrolling visibly advances both slide and counter. Browser emulation only; no new physical-iPhone claim.
