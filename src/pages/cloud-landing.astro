@@ -1,5 +1,6 @@
 ---
 import BaseHead from '../components/BaseHead.astro';
+import CloudIcon from '../components/CloudIcon.astro';
 
 // A standalone, noindex warm preview. Keep /cloud and its shared theme unchanged.
 const app = 'https://cloud.pilotprotocol.network';
@@ -48,7 +49,7 @@ const identityApps = [recommendedAgents[0], apps[0], apps[1]];
 const incomingRequests = ["Coffee this week?", "Could you make an intro?", "When’s everyone free?", "So, what do you do?", "Can you give me feedback on this?", "Know a good plumber?", "Know a good designer?", "Can I pitch you something?"];
 const examples = [
   {
-    label: 'Coffee', icon: '☕', title: 'Coffee with Priya',
+    label: 'Coffee', icon: 'coffee' as const, title: 'Coffee with Priya',
     app: { name: 'Dots', logo: 'dots.webp', owner: 'Priya' },
     thread: [['them', 'coffee this week?'], ['you', 'thursday?'], ['them', 'what time?'], ['you', 'let me check…'], ['them', 'afternoon maybe?']],
     ask: 'Ask Maya’s agent about coffee on Thursday.',
@@ -58,7 +59,7 @@ const examples = [
     looseEnd: 'A quick coffee. A not-so-quick conversation.',
   },
   {
-    label: 'An introduction', icon: '↗', title: 'An introduction for Sam',
+    label: 'An introduction', icon: 'arrow-up-right' as const, title: 'An introduction for Sam',
     app: { name: 'Hermes', logo: 'hermes.png', owner: 'Sam' },
     thread: [['them', 'do you know Alex?'], ['you', 'yes, why?'], ['them', 'could you introduce us?'], ['you', 'what should I tell them?'], ['them', 'I’ll write something up…']],
     ask: 'Ask Maya if she can introduce me to Alex.',
@@ -68,9 +69,9 @@ const examples = [
     looseEnd: 'Another thread to follow up on.',
   },
   {
-    label: 'A group plan', icon: '♡', title: 'Friday with everyone',
+    label: 'A group plan', icon: 'users' as const, title: 'Friday with everyone', threadIcon: 'smile' as const,
     app: { name: 'OpenClaw', logo: 'openclaw.png', owner: 'Lucas' },
-    thread: [['them', 'everyone around friday?'], ['you', 'I think so, is Sam?'], ['them', 'let me check'], ['you', 'and what time?'], ['them', 'one thing at a time 😅']],
+    thread: [['them', 'everyone around friday?'], ['you', 'I think so, is Sam?'], ['them', 'let me check'], ['you', 'and what time?'], ['them', 'one thing at a time']],
     ask: 'Find a time for coffee with Maya and Sam on Friday.',
     reply: 'Would Friday at 4 work for everyone?',
     responses: [
@@ -81,7 +82,7 @@ const examples = [
     looseEnd: 'One plan. Three conversations.',
   },
   {
-    label: 'A quick question', icon: '✳', title: 'What do you do?',
+    label: 'A quick question', icon: 'message' as const, title: 'What do you do?',
     app: { name: 'ChatGPT', logo: 'chatgpt.svg', owner: 'Alex' },
     thread: [['them', 'what are you working on?'], ['you', 'product design'], ['them', 'any examples?'], ['you', 'one sec, finding the link'], ['them', 'thank you!']],
     ask: 'Ask Maya’s agent about her work.',
@@ -137,7 +138,7 @@ const faq = [
       <div class="page-header shell">
         <span class="brand"><img src="/img/pilot-96.webp" alt="" width="44" height="44" />Pilot</span>
         <div class="header-actions">
-          <a class="header-start" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_nav">Claim your handle <span aria-hidden="true">↗</span></a>
+          <a class="header-start" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_nav">Claim your handle <span aria-hidden="true"><CloudIcon name="arrow-up-right" /></span></a>
         </div>
       </div>
     </header>
@@ -146,11 +147,11 @@ const faq = [
       <section class="hero shell" aria-labelledby="hero-title">
         <div class="hero-copy">
           <h1 id="hero-title" class="time-question"><span class="question-intro">What would you do with</span><span class="time-amount">20<span>%</span></span><span class="question-tail">more time?</span></h1>
-          <div class="hero-actions"><a class="demo-link" href="#everyday-requests">A few things that get in the way <span aria-hidden="true">↓</span></a></div>
+          <div class="hero-actions"><a class="demo-link" href="#everyday-requests">A few things that get in the way <span aria-hidden="true"><CloudIcon name="arrow-down" /></span></a></div>
         </div>
         <div class="hero-story">
-          <span class="story-spark" aria-hidden="true">✳</span>
-          <figure class="photo-note"><img class="friends-photo" src="/cloud/warm/friends-cafe.webp" srcset="/cloud/warm/friends-cafe-small.webp 640w, /cloud/warm/friends-cafe.webp 1200w" sizes="(max-width: 760px) 88vw, 550px" alt="Two friends laughing together over coffee at a café" width="1200" height="675" fetchpriority="high" /><figcaption>more time for this. <span aria-hidden="true">♡</span></figcaption></figure>
+          <span class="story-spark" aria-hidden="true"><CloudIcon name="asterisk" /></span>
+          <figure class="photo-note"><img class="friends-photo" src="/cloud/warm/friends-cafe.webp" srcset="/cloud/warm/friends-cafe-small.webp 640w, /cloud/warm/friends-cafe.webp 1200w" sizes="(max-width: 760px) 88vw, 550px" alt="Two friends laughing together over coffee at a café" width="1200" height="675" fetchpriority="high" /><figcaption>more time for this. <span aria-hidden="true"><CloudIcon name="heart" /></span></figcaption></figure>
         </div>
       </section>
 
@@ -159,7 +160,7 @@ const faq = [
         <div class="request-pile">{incomingRequests.map((request, index) => <div class={`request-note request-${index}`}><p>{request}</p></div>)}<p class="fine">Illustrative requests from friends and contacts</p></div>
       </section>
 
-      <section class="last-chore-section" id="last-chore" aria-labelledby="last-chore-title"><div class="shell"><h2 id="last-chore-title">Let us help.</h2><p>Make this the last time you do these chores.</p><span aria-hidden="true">✳</span></div></section>
+      <section class="last-chore-section" id="last-chore" aria-labelledby="last-chore-title"><div class="shell"><h2 id="last-chore-title">Let us help.</h2><p>Make this the last time you do these chores.</p><span aria-hidden="true"><CloudIcon name="asterisk" /></span></div></section>
 
       <section class="together-section shell" id="your-handle" aria-labelledby="together-title">
         <div class="together-card" data-pilot-reveal>
@@ -169,7 +170,7 @@ const faq = [
               <div class="profile-avatar"><video data-motion-video width="130" height="130" muted playsinline loop preload="none" poster="/cloud/warm/pilot-idle-poster.webp" aria-hidden="true"><source data-src="/cloud/warm/pilot-idle.mp4" type="video/mp4" /><img src="/cloud/pups/wave.webp" alt="" width="130" height="130" loading="lazy" /></video></div>
               <p class="profile-handle">@maya</p>
               <p class="profile-tagline">New AI. Same link.</p>
-              <div class="connected-app"><img src="/cloud/logos/muse.png" alt="" width="26" height="26" data-connected-logo /><span>Connected with <b data-connected-name>Muse</b></span><span class="connection-check" aria-hidden="true">✓</span></div>
+              <div class="connected-app"><img src="/cloud/logos/muse.png" alt="" width="26" height="26" data-connected-logo /><span>Connected with <b data-connected-name>Muse</b></span><span class="connection-check" aria-hidden="true"><CloudIcon name="check" /></span></div>
               <div class="profile-circles"><span class="share-circles"><span>Close friend</span><span>Friend</span><span>Acquaintance</span></span><p>Your people come with you.</p></div>
             </div>
             <div class="identity-controls" hidden>
@@ -189,7 +190,7 @@ const faq = [
               <span class="share-address">cloud.pilotprotocol.network/<wbr /><b>@maya</b></span>
             </div>
             <p>You both sign in and connect an AI. You can use different apps. Pilot is hosted for you, with no Pilot software to install.</p>
-            <a class="warm-button identity-start" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_friend">Claim your handle <span aria-hidden="true">↗</span></a>
+            <a class="warm-button identity-start" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_friend">Claim your handle <span aria-hidden="true"><CloudIcon name="arrow-up-right" /></span></a>
           </div>
         </div>
       </section>
@@ -203,32 +204,32 @@ const faq = [
           </div>
           <div class="demo" data-demo>
             <div class="demo-choices" aria-label="Choose an example" hidden>
-              {examples.map((example, i) => <button type="button" data-demo-choice={i} aria-pressed={i === 0 ? 'true' : 'false'} aria-controls={`example-${i}`}><span aria-hidden="true">{example.icon}</span>{example.label}</button>)}
+              {examples.map((example, i) => <button type="button" data-demo-choice={i} aria-pressed={i === 0 ? 'true' : 'false'} aria-controls={`example-${i}`}><span aria-hidden="true"><CloudIcon name={example.icon} /></span>{example.label}</button>)}
             </div>
             {examples.map((example, i) => (
               <div class="demo-panel" data-demo-panel={i} id={`example-${i}`} aria-label={example.title}>
                 <div class="before-side">
-                  <button class="compare-toggle" type="button" data-before-toggle aria-expanded="false" aria-controls={`before-${i}`} hidden>Without Pilot: the back-and-forth <span aria-hidden="true">+</span></button>
+                  <button class="compare-toggle" type="button" data-before-toggle aria-expanded="false" aria-controls={`before-${i}`} hidden>Without Pilot: the back-and-forth <span aria-hidden="true"><CloudIcon name="plus" /></span></button>
                   <div data-before-thread id={`before-${i}`}>
                     <div class="demo-panel-heading"><span class="small-label">The usual way</span><span class="tiny-tag">you do the chasing</span></div>
                     <h3>{example.title}</h3>
-                    <div class="chat-thread">{example.thread.map(([who, message], index) => <p class:list={['chat-bubble', who, index > 2 && 'trailing']}>{message}</p>)}</div>
+                    <div class="chat-thread">{example.thread.map(([who, message], index) => <p class:list={['chat-bubble', who, index > 2 && 'trailing']}>{message}{index === example.thread.length - 1 && example.threadIcon && <> <CloudIcon name={example.threadIcon} /></>}</p>)}</div>
                     <span class="typing-note">{example.looseEnd}</span>
                   </div>
                 </div>
                 <div class="after-side">
-                  <div class="demo-panel-heading"><span class="small-label"><img src="/img/pilot-48.webp" alt="" width="26" height="26" />The Pilot way</span><span class="tiny-heart" aria-hidden="true">♡</span></div>
+                  <div class="demo-panel-heading"><span class="small-label"><img src="/img/pilot-48.webp" alt="" width="26" height="26" />The Pilot way</span><span class="tiny-heart" aria-hidden="true"><CloudIcon name="heart" /></span></div>
                   <div class="pilot-conversation">
                     <p class="request-bubble" data-demo-message><span>{example.app.owner}, to {example.app.name}</span>{example.ask}</p>
                     <div class="pilot-reply" data-demo-message><span class="agent-avatar"><img src={`/cloud/logos/${example.app.logo}`} alt="" width="24" height="24" /></span><p><b>{example.app.owner}’s {example.app.name}</b>{example.reply}</p></div>
                     {example.responses.map((response) => <div class="pilot-reply friend-reply" data-demo-message><span class="agent-avatar"><img src={`/cloud/logos/${response.logo}`} alt="" width="24" height="24" /></span><p><b>{response.name}</b>{response.text}</p></div>)}
-                    <div class="result-note" data-demo-message><span class="result-check" aria-hidden="true">✓</span><div><b>{example.result}</b><p>{example.detail}</p></div></div>
+                    <div class="result-note" data-demo-message><span class="result-check" aria-hidden="true"><CloudIcon name="check" /></span><div><b>{example.result}</b><p>{example.detail}</p></div></div>
                   </div>
                   <p class="demo-signoff">You keep the relationship. Your agents handle the details.</p>
                 </div>
               </div>
             ))}
-            <div class="demo-footer"><span>Illustrative examples · Both AIs connected. You approve connections and plans. Results depend on each AI’s tools, context and permissions.</span><button type="button" class="replay" data-replay hidden><span aria-hidden="true">↻</span> Replay example</button></div>
+            <div class="demo-footer"><span>Illustrative examples · Both AIs connected. You approve connections and plans. Results depend on each AI’s tools, context and permissions.</span><button type="button" class="replay" data-replay hidden><span aria-hidden="true"><CloudIcon name="replay" /></span> Replay example</button></div>
             <span class="sr-only" role="status" data-demo-status></span>
           </div>
           <div class="compatibility" role="group" aria-label="Compatible AI apps">
@@ -246,9 +247,9 @@ const faq = [
       <section class="share-section shell section-space" aria-labelledby="share-title">
         <div class="section-intro centered"><h2 id="share-title">Put your link<br /><em>where people find you.</em></h2><p>Your bio. Your email signature. Your next message.</p></div>
         <div class="link-placements">
-          <article><span class="small-label">In your bio</span><h3>Maya</h3><p>Product designer. Coffee person.</p><span class="placement-url">cloud.pilotprotocol.network/@maya ↗</span></article>
-          <article><span class="small-label">Your email signature</span><p>Talk soon,<br /><strong>Maya</strong></p><span class="placement-url">Reach my agent ↗<br />cloud.pilotprotocol.network/@maya</span></article>
-          <article><span class="small-label">Your next message</span><h3>Reach my agent here.</h3><span class="placement-url">cloud.pilotprotocol.network/@maya ↗</span></article>
+          <article><span class="small-label">In your bio</span><h3>Maya</h3><p>Product designer. Coffee person.</p><span class="placement-url">cloud.pilotprotocol.network/@maya <CloudIcon name="arrow-up-right" /></span></article>
+          <article><span class="small-label">Your email signature</span><p>Talk soon,<br /><strong>Maya</strong></p><span class="placement-url">Reach my agent <CloudIcon name="arrow-up-right" /><br />cloud.pilotprotocol.network/@maya</span></article>
+          <article><span class="small-label">Your next message</span><h3>Reach my agent here.</h3><span class="placement-url">cloud.pilotprotocol.network/@maya <CloudIcon name="arrow-up-right" /></span></article>
         </div>
         <p class="sharing-note"><strong>New AI. Same link.</strong> Connect a different AI to the same Pilot account. Your handle and people stay with you.</p><p class="fine centered">Illustrative placements · Example handle</p>
       </section>
@@ -263,12 +264,12 @@ const faq = [
             <p class="proof-label">Across the Pilot Protocol network</p>
             <p class="network-count"><strong aria-label={`${networkProof.exact} Pilot nodes`}>{networkProof.count}</strong><span>Pilot nodes seen<br />in 30 minutes</span></p>
             {networkProof.registered && <p class="network-registered"><b>{networkProof.registered}</b> addresses registered since launch.</p>}
-            <p class="proof-source">Snapshot: <time datetime={networkProof.dateTime}>{networkProof.date}</time> <span aria-hidden="true">·</span> <a href={networkStatsSource}>Registry data <span aria-hidden="true">↗</span></a></p>
+            <p class="proof-source">Snapshot: <time datetime={networkProof.dateTime}>{networkProof.date}</time> <span aria-hidden="true">·</span> <a href={networkStatsSource}>Registry data <span aria-hidden="true"><CloudIcon name="arrow-up-right" /></span></a></p>
           </div>}
           <div class="backing-proof">
             <p class="proof-label">Seed investors</p>
             <ul class="backer-logos" role="list">{backers.map((backer) => <li><img src={`/img/investors/${backer.logo}`} alt={backer.name} width={backer.width} height="56" loading="lazy" decoding="async" /></li>)}</ul>
-            <a class="funding-note" href="/news/pilot-raises-4-5m-seed">$4.5M seed raised <span aria-hidden="true">·</span> Read the announcement <span aria-hidden="true">↗</span></a>
+            <a class="funding-note" href="/news/pilot-raises-4-5m-seed">$4.5M seed raised <span aria-hidden="true">·</span> Read the announcement <span aria-hidden="true"><CloudIcon name="arrow-up-right" /></span></a>
           </div>
         </div>
       </section>
@@ -283,18 +284,18 @@ const faq = [
       </section>
 
       <section class="reassurance shell" aria-label="You stay in control">
-        <div><span class="reassurance-icon" aria-hidden="true">♡</span><h3>Your people, by invitation.</h3><p>You accept connections and choose a circle to guide what your agent shares.</p></div>
-        <div><span class="reassurance-icon" aria-hidden="true">✓</span><h3>Keep the AI you know.</h3><p>Background agent or chat app: connect the AI you already use through MCP.</p></div>
-        <div><span class="reassurance-icon" aria-hidden="true">☾</span><h3>We take care of the hosting.</h3><p>Your Pilot agent runs in the cloud, even when your laptop is closed.</p></div>
+        <div><span class="reassurance-icon" aria-hidden="true"><CloudIcon name="heart" /></span><h3>Your people, by invitation.</h3><p>You accept connections and choose a circle to guide what your agent shares.</p></div>
+        <div><span class="reassurance-icon" aria-hidden="true"><CloudIcon name="check" /></span><h3>Keep the AI you know.</h3><p>Background agent or chat app: connect the AI you already use through MCP.</p></div>
+        <div><span class="reassurance-icon" aria-hidden="true"><CloudIcon name="moon" /></span><h3>We take care of the hosting.</h3><p>Your Pilot agent runs in the cloud, even when your laptop is closed.</p></div>
       </section>
 
       <section class="faq-section shell section-space" id="questions" aria-labelledby="faq-title">
         <div class="faq-intro"><p class="eyebrow">A few things you might be wondering</p><h2 id="faq-title">Good questions.<br /><em>Honest answers.</em></h2><img src="/cloud/pups/look.webp" alt="A curious Pilot puppy" width="150" height="150" loading="lazy" /></div>
-        <div class="faq-list">{faq.map(([question, answer]) => <details><summary>{question}<span aria-hidden="true">+</span></summary><p>{answer}</p></details>)}</div>
+        <div class="faq-list">{faq.map(([question, answer]) => <details><summary>{question}<span aria-hidden="true"><CloudIcon name="plus" /></span></summary><p>{answer}</p></details>)}</div>
       </section>
 
       <section class="close-section shell" aria-labelledby="close-title">
-        <div class="close-card"><img src="/cloud/pups/bow.webp" alt="Pilot, ready to meet you" width="150" height="150" loading="lazy" /><p class="eyebrow">Your people are the whole point.</p><h2 id="close-title">Take your<br /><em>life back.</em></h2><p>Claim a handle. Connect your AI.<br />Share your link.</p><a class="warm-button" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_close">Claim your handle <span aria-hidden="true">↗</span></a><span class="fine">Free. Hosted for you. Both people connect an AI.</span><span class="close-flower" aria-hidden="true">✳</span><span class="close-heart" aria-hidden="true">♡</span></div>
+        <div class="close-card"><img src="/cloud/pups/bow.webp" alt="Pilot, ready to meet you" width="150" height="150" loading="lazy" /><p class="eyebrow">Your people are the whole point.</p><h2 id="close-title">Take your<br /><em>life back.</em></h2><p>Claim a handle. Connect your AI.<br />Share your link.</p><a class="warm-button" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_close">Claim your handle <span aria-hidden="true"><CloudIcon name="arrow-up-right" /></span></a><span class="fine">Free. Hosted for you. Both people connect an AI.</span><span class="close-flower" aria-hidden="true"><CloudIcon name="asterisk" /></span><span class="close-heart" aria-hidden="true"><CloudIcon name="heart" /></span></div>
       </section>
     </main>
 

@@ -14,10 +14,10 @@ const cue = document.querySelector<HTMLElement>('[data-scroll-cue]');
 const progressFill = document.querySelector<HTMLElement>('.story-progress > span');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const touchDevice = window.matchMedia('(hover: none), (pointer: coarse)');
-// iPhone Safari can accept these properties without advancing this sticky
-// track's timeline. Touch devices use the measured scroll position directly;
-// one transform per frame retains native scrolling and avoids layout work.
-const nativeTimeline = !touchDevice.matches && CSS.supports('animation-timeline', 'scroll(root block)') && CSS.supports('animation-range', '0px 1px');
+// Let the browser's scrolling thread move the picture, including on iOS.
+// Syntax support alone is insufficient: verify the actual track after a scroll
+// settles and permanently fall back if a browser accepts but stalls the timeline.
+let nativeTimeline = CSS.supports('animation-timeline', 'scroll(root block)') && CSS.supports('animation-range', '0px 1px');
 let horizontal = false;
 let active = 0;
 let lastPainted = -1;
@@ -25,6 +25,25 @@ let stageHeight = 0;
 let stageWidth = 0;
 let startY = 0;
 let pendingFrame = 0;
+let timelineCheck = 0;
+
+function scrollProgress() {
+  return Math.max(0, Math.min(panels.length - 1, (window.scrollY - startY) / stageHeight));
+}
+
+function verifyTimeline() {
+  timelineCheck = 0;
+  if (!horizontal || !nativeTimeline || !track || !stageHeight) return;
+  const expectedX = -scrollProgress() * stageWidth;
+  const transform = getComputedStyle(track).transform;
+  const values = transform.match(/^matrix(3d)?\(([^)]+)\)$/);
+  const actualX = values ? Number(values[2].split(',')[values[1] ? 12 : 4]) : 0;
+  if (!Number.isFinite(actualX) || Math.abs(actualX - expectedX) > 4) {
+    nativeTimeline = false;
+    root.classList.remove('teaser-native');
+    paint();
+  }
+}
 
 function setActive(index: number) {
   if (index === lastPainted) return;
@@ -49,7 +68,7 @@ function setActive(index: number) {
 function paint() {
   pendingFrame = 0;
   if (!horizontal || !track || !stageHeight) return;
-  const progress = Math.max(0, Math.min(panels.length - 1, (window.scrollY - startY) / stageHeight));
+  const progress = scrollProgress();
   // Supported browsers animate the track on their scroll timeline. The JS
   // fallback changes one transform, never inherited styles on every panel.
   if (!nativeTimeline) track.style.transform = `translate3d(${-progress * stageWidth}px, 0, 0)`;
@@ -58,7 +77,14 @@ function paint() {
 }
 
 function onScroll() {
-  if (horizontal && !pendingFrame) pendingFrame = requestAnimationFrame(paint);
+  if (!horizontal) return;
+  if (!pendingFrame) pendingFrame = requestAnimationFrame(paint);
+  if (nativeTimeline) {
+    window.clearTimeout(timelineCheck);
+    // No style/layout reads while the finger or native momentum is moving.
+    // The timeout also covers older browsers without a scrollend event.
+    timelineCheck = window.setTimeout(verifyTimeline, 160);
+  }
 }
 
 function goTo(index: number) {
@@ -109,7 +135,7 @@ function configure(keepPlace = false) {
     } else {
       story.style.setProperty('--teaser-step', `${stageHeight}px`);
       story.style.setProperty('--teaser-distance', `${stageHeight * (panels.length - 1)}px`);
-      story.style.setProperty('--teaser-shift', `${-100 * (panels.length - 1)}%`);
+      story.style.setProperty('--teaser-shift', `${-stageWidth * (panels.length - 1)}px`);
       // Reserve the large viewport once. Collapsing mobile browser chrome must
       // not rebuild the story or make the last chapter unreachable.
       story.style.height = `calc(${stageHeight * (panels.length - 1)}px + 100lvh)`;
@@ -182,7 +208,10 @@ if (approve) {
   approve.addEventListener('click', () => {
     const approved = approve.dataset.approved !== 'true';
     approve.dataset.approved = String(approved);
-    approve.textContent = approved ? 'Replay example ↺' : 'Looks good ✓';
+    const buttonLabel = approve.querySelector('[data-approve-label]');
+    if (buttonLabel) buttonLabel.textContent = approved ? 'Replay example' : 'Looks good';
+    approve.querySelector<HTMLElement>('[data-approve-check]')!.hidden = approved;
+    approve.querySelector<HTMLElement>('[data-approve-replay]')!.hidden = !approved;
     const label = document.querySelector('.result-label');
     if (label) label.textContent = approved ? 'Approved by you. See you Thursday!' : 'Coffee with Priya';
   });

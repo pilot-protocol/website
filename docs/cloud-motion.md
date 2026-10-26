@@ -79,3 +79,7 @@ Updated the preview branch to the current main branch before publication. The st
 ### Link-story revision — 25 October 2026
 
 Learn more now follows the teaser’s seven-part narrative. Its header stays hidden until the Pilot-link reveal enters the viewport; no navigation was added. The illustrative demo now shows inbound coffee, introduction, group-plan and informational requests. The existing pause/reduced-motion, height-reservation, identity selection and cleanup logic remains. Historical counts and browser checks above apply to their named earlier revisions; current release checks are recorded in `cloud-teaser.md` and `pilot-film.md`.
+
+## Cross-platform icons
+
+The teaser and Learn more page use inline SVG paths from `CloudIcon.astro` instead of emoji or font-symbol icons. The local approval/replay interaction preserves the icon markup. The teaser’s native scroll timeline and stalled-timeline fallback are described in `cloud-teaser.md`; no additional decorative motion was introduced.
