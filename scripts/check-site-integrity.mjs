@@ -177,17 +177,23 @@ const idsCache = new Map();
 const errors = [];
 let referencesChecked = 0;
 const publicHtmlFiles = [];
+const noindexRoutes = new Set();
 for (const file of htmlFiles) {
   const route = routeForFile(file);
   if (route.startsWith('/plain/') || route === '/404' || route === '/500') continue;
   const html = await readFile(file, 'utf8');
   htmlCache.set(file, html);
+  const noindex = /<meta\b[^>]*name=["']robots["'][^>]*content=["'][^"']*noindex/i.test(html);
+  if (noindex) noindexRoutes.add(normalizedRoute(route));
   const redirect = /<meta\b[^>]*http-equiv=["']refresh["']/i.test(html)
-    && /<meta\b[^>]*name=["']robots["'][^>]*content=["'][^"']*noindex/i.test(html);
+    && noindex;
   if (!redirect) publicHtmlFiles.push(file);
 }
 const publicRoutes = new Set(publicHtmlFiles.map((file) => normalizedRoute(routeForFile(file))));
-const inlinks = new Map([...publicRoutes].map((route) => [route, new Set()]));
+// Preview pages still receive content, accessibility, and asset checks, but
+// deliberately noindex pages do not belong in the sitemap or public link graph.
+const indexableRoutes = new Set([...publicRoutes].filter((route) => !noindexRoutes.has(route)));
+const inlinks = new Map([...indexableRoutes].map((route) => [route, new Set()]));
 
 async function htmlFor(file) {
   if (!htmlCache.has(file)) htmlCache.set(file, await readFile(file, 'utf8'));
@@ -459,11 +465,11 @@ if (!existsSync(sitemapPath)) {
       errors.push(`sitemap contains invalid URL “${value}”`);
     }
   }
-  for (const route of publicRoutes) {
+  for (const route of indexableRoutes) {
     if (!sitemapRoutes.has(route)) errors.push(`sitemap is missing indexable route “${route}”`);
   }
   for (const route of sitemapRoutes) {
-    if (!publicRoutes.has(route)) errors.push(`sitemap contains non-indexable or non-HTML route “${route}”`);
+    if (!indexableRoutes.has(route)) errors.push(`sitemap contains non-indexable or non-HTML route “${route}”`);
   }
 }
 

@@ -27,6 +27,8 @@ function routeFromKey(key: string): string {
 
 const REFERENCE = new Set(['error-codes', 'troubleshooting', 'diagnostics', 'configuration']);
 const LEGAL = new Set(['/privacy', '/cookies', '/terms', '/aup', '/publisher-agreement']);
+// Standalone design previews are intentionally noindex and shared by direct link.
+const PREVIEWS = new Set(['/cloud-landing']);
 
 // The four offerings: the protocol (home), the service agents, the App Store
 // and Pilot Cloud.
@@ -65,6 +67,7 @@ export async function GET() {
   for (const key of Object.keys(pageGlob).sort()) {
     const loc = routeFromKey(key);
     if (loc === '/404' || loc === '/500') continue; // error pages
+    if (PREVIEWS.has(loc)) continue;               // noindex design previews
     if (loc.includes('[')) continue;                // dynamic template — expanded below
     if (loc.startsWith('/plain/')) continue;        // non-canonical text mirror
     const datedPostSlug = loc.startsWith('/blog/')
