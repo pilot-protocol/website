@@ -27,7 +27,7 @@ for (const { nativeSupport, touch } of [
   const stage = { ...element(), clientHeight: 660, get clientWidth() { return browser.innerWidth; } };
   const story = { ...element(), getBoundingClientRect: () => ({ top: -browser.scrollY }) };
   const track = element();
-  const panels = Array.from({ length: 5 }, (_, i) => ({ ...element(), dataset: { name: `Scene ${i}`, tone: 'light' }, querySelector: () => ({ clientHeight: 660, scrollHeight: 660, getBoundingClientRect: () => ({ top: 0, bottom: 660 }), children: [{ getBoundingClientRect: () => ({ top: 150, bottom: 250 }) }] }) }));
+  const panels = Array.from({ length: 7 }, (_, i) => ({ ...element(), dataset: { name: `Scene ${i}`, tone: 'light' }, querySelector: () => ({ clientHeight: 660, scrollHeight: 660, getBoundingClientRect: () => ({ top: 0, bottom: 660 }), children: [{ getBoundingClientRect: () => ({ top: 150, bottom: 250 }) }] }) }));
   const reduced = { matches: false, addEventListener(type, callback) { this.change = callback; } };
   const browser = { innerWidth: 390, innerHeight: 700, scrollY: 0, matchMedia: query => query.includes('reduced') ? reduced : { matches: touch }, addEventListener: (name, fn) => { events[name] = fn; }, scrollTo: options => { scrolls.push(options); browser.scrollY = options.top; }, clearTimeout() { timer = undefined; }, setTimeout(fn) { timer = fn; return 1; } };
   const nodes = { '.teaser-story': story, '.teaser-stage': stage, '.teaser-track': track, '.teaser-controls': element(), '[data-previous]': element(), '[data-next]': element(), '[data-chapter]': element(), '[data-story-status]': element(), '[data-scroll-cue]': element(), '.story-progress > span': element() };
@@ -52,6 +52,7 @@ for (const { nativeSupport, touch } of [
     frames.splice(0).forEach(fn => fn());
     if (!nativeTimeline) assert.equal(track.style.transform, `translate3d(${-index * browser.innerWidth}px, 0, 0)`, 'scrolling must actually move the visible slide, even when touch browsers report timeline support');
     assert.equal(root.dataset.chapter, String(index));
+    assert.equal(nodes['.story-progress > span'].style.transform, `translateX(${index * 100}%)`, 'the progress marker must follow the visible chapter');
     assert.equal(nodes['[data-chapter]'].textContent, String(index + 1).padStart(2, '0'));
     assert.equal(panels.every((panel, i) => panel.inert === (i !== index)), true);
   }
@@ -61,7 +62,7 @@ for (const { nativeSupport, touch } of [
   assert.equal(typeof timer, 'function', 'a real width change must remeasure the layout');
   timer();
   assert.equal(scrolls.length, 1);
-  assert.equal(browser.scrollY, 4 * stage.clientHeight, 'a width change preserves the final chapter');
+  assert.equal(browser.scrollY, (panels.length - 1) * stage.clientHeight, 'a width change preserves the final chapter');
   reduced.matches = true;
   reduced.change();
   assert.equal(classes.has('teaser-horizontal'), false);

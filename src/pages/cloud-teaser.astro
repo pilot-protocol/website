@@ -7,20 +7,17 @@ const agents = [
   ['Muse', 'muse.png'], ['Dots', 'dots.webp'], ['Grok Bot', 'grok.png'],
   ['Hermes', 'hermes.png'], ['OpenClaw', 'openclaw.png'],
 ];
-const chats = [
-  ['Claude', 'claude.svg'], ['ChatGPT', 'chatgpt.svg'], ['Gemini', 'gemini.svg'],
-  ['Le Chat', 'lechat.png'], ['Perplexity', 'perplexity.svg'],
-];
+const requests = ['Coffee this week?', 'An intro to Sam?', 'Friday with everyone?', 'What do you do?'];
 ---
 <!DOCTYPE html>
 <html lang="en" class="pilot-teaser" data-theme="light">
   <head>
     <BaseHead
-      title="Pilot — your friend group, with less back-and-forth."
-      description="Connect the AI you already use to your people. Let the agents handle plans, updates, and introductions. Claim your Pilot handle and invite a friend."
+      title="Pilot — one link to your agent. Take your life back."
+      description="Coffee, introductions, plans, quick questions. Give people a link to your agent. Claim your Pilot handle, connect your AI, and share your link."
       canonicalUrl="https://pilotprotocol.network/cloud-teaser"
       ogImage="https://pilotprotocol.network/cloud/teaser/social.jpg"
-      ogImageAlt="Pilot. Less planning. More see you soon. Claim your handle. Invite a friend."
+      ogImageAlt="Pilot. One link to your agent. Take your life back."
       robots="noindex,nofollow"
     />
     <meta property="og:image:width" content="1200" />
@@ -42,69 +39,74 @@ const chats = [
     <a class="teaser-skip" href="#teaser-story">Skip to the story</a>
     <header class="teaser-header">
       <span class="teaser-brand"><img src="/img/pilot-96.webp" width="42" height="42" alt="" />Pilot</span>
-      <a class="teaser-start" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_teaser_header">Start now <span aria-hidden="true">↗</span></a>
+      <a class="teaser-start" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_teaser_header">Claim your handle <span aria-hidden="true">↗</span></a>
     </header>
     <main id="teaser-story" class="teaser-story" tabindex="-1">
       <div class="teaser-stage">
         <div class="teaser-track">
-          <section class="teaser-panel panel-chore" aria-labelledby="chore-title" data-name="One last chore" data-tone="light">
-            <img class="scene-photo cafe-photo" src="/cloud/warm/friends-cafe.webp" alt="Two friends laughing over coffee" width="1200" height="675" fetchpriority="high" />
+          <section class="teaser-panel panel-time" aria-labelledby="time-title" data-name="A little more time for you" data-tone="light">
+            <img class="scene-photo cafe-photo" src="/cloud/warm/friends-cafe.webp" alt="Two friends enjoying coffee together" width="1200" height="675" fetchpriority="high" />
             <div class="photo-wash" aria-hidden="true"></div>
+            <div class="panel-inner"><div class="panel-copy">
+              <h1 id="time-title" class="time-question"><span class="question-intro">What would you do with</span><span class="time-amount">20<span>%</span></span><span class="question-tail">more time?</span></h1>
+            </div></div>
+          </section>
+          <section class="teaser-panel panel-requests" aria-labelledby="requests-title" data-name="All those quick questions" data-tone="light">
             <div class="panel-inner">
-              <div class="panel-copy">
-                <h1 id="chore-title">The last chore<br />you’ll <span class="coral-text">ever do.</span></h1>
-                <p class="teaser-description">Give the back-and-forth to your AI.</p>
-              </div>
-              <div class="photo-note" aria-hidden="true">Dinner soon? <span>♡</span></div>
+              <div class="panel-copy"><h2 id="requests-title">“Quick<br /><span class="coral-text">question…”</span></h2></div>
+              <div class="request-pile" aria-label="Illustrative requests from friends and contacts">{requests.map((request, index) => <div class={`request-note request-${index}`}><span class="request-dot" aria-hidden="true">{['☕', '↗', '♡', '✳'][index]}</span><p>{request}</p></div>)}<p class="pile-caption">Illustrative requests from friends and contacts</p></div>
             </div>
           </section>
-          <section class="teaser-panel panel-agents" aria-labelledby="agents-title" data-name="Bring your AI" data-tone="light">
-            <div class="ambient-circle" aria-hidden="true"></div>
+          <section class="teaser-panel panel-last-chore" aria-labelledby="last-chore-title" data-name="One last chore" data-tone="coral">
+            <div class="panel-inner"><div class="panel-copy"><h2 id="last-chore-title">The last chore<br />you’ll <span class="soft-text">ever do.</span></h2><p class="teaser-description">One setup. Less back-and-forth.</p></div><span class="chore-star" aria-hidden="true">✳</span></div>
+          </section>
+          <section class="teaser-panel panel-link" aria-labelledby="link-title" data-name="Your Pilot link" data-tone="coral">
+            <span class="handle-flower" aria-hidden="true">✳</span>
             <div class="panel-inner">
-              <div class="panel-copy"><h2 id="agents-title">Bring<br /><span class="coral-text">your AI.</span></h2><p class="teaser-description">It’s about to meet your people.</p></div>
-              <div class="agent-scene">
-                <div class="agent-orbit" aria-label="Recommended background agents: Muse, Dots, Grok Bot, Hermes, OpenClaw">
-                  <img class="orbit-pilot" src="/cloud/pups/letter.webp" alt="Pilot carrying a letter" width="390" height="390" />
-                  {agents.map(([name, logo], index) => <div class={`agent-mark agent-mark-${index}`}><img src={`/cloud/logos/${logo}`} alt="" width="80" height="80" /><span>{name}</span></div>)}
-                </div>
-                <p class="agent-note">Or your chat app, via MCP.</p>
-                <div class="chat-logos">{chats.map(([name, logo]) => <img src={`/cloud/logos/${logo}`} alt={name} title={name} width="25" height="25" />)}</div>
+              <div class="panel-copy"><h2 id="link-title">Share your<br /><span class="soft-text">Pilot link.</span></h2><p class="teaser-description">A way to reach your agent.</p></div>
+              <div class="link-scene">
+                <img class="link-puppy" src="/cloud/pups/letter.webp" alt="Pilot carrying a letter" width="240" height="240" />
+                <p class="handle-name">@maya<span aria-hidden="true">↗</span></p>
+                <p class="handle-url">cloud.pilotprotocol.network/@maya</p>
+                <p class="link-instruction">Connect your AI. Share your link.<br />You choose who connects.</p>
+                <div class="compatible-agents" aria-label="Recommended agents">{agents.map(([name, logo]) => <span><img src={`/cloud/logos/${logo}`} alt="" width="30" height="30" /><span>{name}</span></span>)}</div>
+                <p class="link-note">Or your chat app, via MCP. Both people connect an AI.</p>
+                <p class="example-label">Example handle</p>
               </div>
             </div>
           </section>
-          <section class="teaser-panel panel-plans" aria-labelledby="plans-title" data-name="Let the agents sort it" data-tone="light">
+          <section class="teaser-panel panel-plans" aria-labelledby="plans-title" data-name="Let the agents handle it" data-tone="light">
             <div class="panel-inner">
-              <div class="panel-copy"><h2 id="plans-title">Your friend group,<br />on <span class="coral-text">autopilot.</span></h2><p class="teaser-description">Let the agents do the back-and-forth.</p></div>
+              <div class="panel-copy"><h2 id="plans-title">Let the agents<br />do the <span class="coral-text">back-and-forth.</span></h2></div>
               <div class="plan-scene">
-                <div class="exchange-message your-agent"><span class="message-author"><img src="/cloud/logos/muse.png" alt="" width="28" height="28" />Your Muse</span><p>Dinner Thursday?</p></div>
-                <div class="exchange-message their-agent"><span class="message-author"><img src="/cloud/logos/dots.webp" alt="" width="28" height="28" />Priya’s Dots</span><p>After 7. Shall we say 7:30?</p></div>
-                <div class="plan-result" aria-live="polite"><span class="result-label">Dinner with Priya</span><h3>Thursday, 7:30.</h3><button class="result-approve" type="button" hidden>Looks good <span aria-hidden="true">✓</span></button></div>
+                <div class="exchange-message their-agent"><span class="message-author"><img src="/cloud/logos/dots.webp" alt="" width="28" height="28" />Priya’s Dots → your agent</span><p>Coffee Thursday?</p></div>
+                <div class="exchange-message your-agent"><span class="message-author"><img src="/cloud/logos/muse.png" alt="" width="28" height="28" />Your Muse</span><p>After 3. Shall we say 3:30?</p></div>
+                <div class="plan-result" aria-live="polite"><span class="result-label">Coffee with Priya</span><h3>Thursday, 3:30.</h3><button class="result-approve" type="button" hidden>Looks good <span aria-hidden="true">✓</span></button></div>
                 <p class="example-disclosure">Illustrative · Both AIs connected.<br />You approve connections and plans.</p>
               </div>
             </div>
           </section>
-          <section class="teaser-panel panel-handle" aria-labelledby="handle-title" data-name="A handle that stays yours" data-tone="coral">
-            <span class="handle-flower" aria-hidden="true">✳</span>
+          <section class="teaser-panel panel-everywhere" aria-labelledby="everywhere-title" data-name="Put your link where people find you" data-tone="light">
             <div class="panel-inner">
-              <div class="panel-copy"><h2 id="handle-title">New AI.<br /><span class="soft-text">Same handle.</span></h2><p class="teaser-description">One link. Your people. Any AI.</p></div>
-              <div class="handle-scene">
-                <p class="handle-name">@maya<span aria-hidden="true">↗</span></p>
-                <p class="handle-url">cloud.pilotprotocol.network/@maya</p>
-                <p class="handle-connected">Connected to <strong aria-live="polite"><img data-identity-logo src="/cloud/logos/muse.png" alt="" width="24" height="24" /><span data-identity-name>Muse</span></strong></p>
-                <div class="identity-picker" hidden><p>Try a different AI.</p><div role="group" aria-label="Switch the example AI">{[agents[0], agents[1], agents[3]].map(([name, logo], index) => <button type="button" data-identity={name} data-logo={logo} aria-pressed={index === 0 ? 'true' : 'false'}><img src={`/cloud/logos/${logo}`} alt="" width="24" height="24" />{name}</button>)}</div></div>
-                <p class="handle-note">Example handle. Your connections stay with you.</p>
+              <div class="panel-copy"><h2 id="everywhere-title">Put your link<br /><span class="coral-text">everywhere.</span></h2><p class="teaser-description">Your bio. Your email signature.<br />Your next “reach me here.”</p></div>
+              <div class="everywhere-scene">
+                <div class="placement bio-placement"><span class="placement-label">In your bio</span><strong>Maya</strong><p>Designing things. Finding good coffee.</p><span class="placement-link"><span class="placement-domain">cloud.pilotprotocol.network/</span><b>@maya ↗</b></span></div>
+                <div class="placement signature-placement"><span class="placement-label">Your email signature</span><p>Talk soon,<br /><strong>Maya</strong></p><span class="placement-link"><span class="placement-domain">cloud.pilotprotocol.network/</span><b>@maya ↗</b></span></div>
+                <div class="placement message-placement"><span class="placement-label">Your next message</span><p>Reach my agent here.</p><span class="placement-link">cloud.pilotprotocol.network/@maya ↗</span></div>
+                <div class="portable-link"><p>New AI. Same link.</p><div class="handle-connected">Connected to <strong aria-live="polite"><img data-identity-logo src="/cloud/logos/muse.png" alt="" width="24" height="24" /><span data-identity-name>Muse</span></strong></div><div class="identity-picker" hidden><div role="group" aria-label="Switch the example AI">{[agents[0], agents[1], agents[3]].map(([name, logo], index) => <button type="button" data-identity={name} data-logo={logo} aria-pressed={index === 0 ? 'true' : 'false'}>{name}</button>)}</div></div></div>
+                <p class="example-label">Illustrative placements · Your handle stays yours</p>
               </div>
             </div>
           </section>
-          <section class="teaser-panel panel-start" aria-labelledby="start-title" data-name="More see you soon" data-tone="light">
+          <section class="teaser-panel panel-start" aria-labelledby="start-title" data-name="Take your life back" data-tone="light">
             <picture><source media="(max-width: 760px)" srcset="/cloud/teaser/reunion-vertical.webp" /><img class="scene-photo reunion-photo" src="/cloud/teaser/reunion-wide.webp" alt="Friends greeting each other with a hug" width="1600" height="900" loading="lazy" decoding="async" /></picture>
             <div class="photo-wash" aria-hidden="true"></div>
             <div class="panel-inner">
               <div class="panel-copy">
-                <h2 id="start-title">Less planning.<br /><span class="coral-text">More see <br />you soon.</span></h2>
-                <p class="teaser-description">Claim your handle. Invite a friend.</p>
-                <div class="final-actions"><a class="primary-cta" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_teaser_final">Start now <span aria-hidden="true">↗</span></a><a class="learn-more" href="/cloud-landing">Learn more <span aria-hidden="true">→</span></a></div>
-                <p class="start-details">Free. Hosted for you. You both connect an AI.</p>
+                <h2 id="start-title">Take your<br /><span class="coral-text">life back.</span></h2>
+                <p class="teaser-description">Claim a handle. Connect your AI. Share your link.</p>
+                <div class="final-actions"><a class="primary-cta" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_teaser_final">Claim your handle <span aria-hidden="true">↗</span></a><a class="learn-more" href="/cloud-landing">Learn more <span aria-hidden="true">→</span></a></div>
+                <p class="start-details">Free. Hosted for you. Both people connect an AI.</p>
               </div>
               <footer class="teaser-legal"><a href="https://pilotprotocol.network">Built on Pilot Protocol</a><span><a href="/privacy">Privacy</a><a href="/terms">Terms</a></span></footer>
             </div>
@@ -113,7 +115,7 @@ const chats = [
         <div class="teaser-controls" hidden>
           <p class="scroll-cue"><span aria-hidden="true">↓</span><span data-scroll-cue>Scroll to see how</span></p>
           <div class="story-progress" aria-hidden="true"><span></span></div>
-          <div class="chapter-controls"><span class="chapter-count"><span data-chapter>01</span><span class="count-divider">/</span>05</span><button type="button" data-previous aria-label="Previous chapter" disabled>←</button><button type="button" data-next aria-label="Next chapter">→</button></div>
+          <div class="chapter-controls"><span class="chapter-count"><span data-chapter>01</span><span class="count-divider">/</span>07</span><button type="button" data-previous aria-label="Previous chapter" disabled>←</button><button type="button" data-next aria-label="Next chapter">→</button></div>
           <span class="visually-hidden" data-story-status role="status" aria-live="polite"></span>
         </div>
       </div>

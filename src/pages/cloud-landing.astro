@@ -45,60 +45,61 @@ const recommendedAgents = [
 ] as const;
 const identityApps = [recommendedAgents[0], apps[0], apps[1]];
 
+const incomingRequests = ['Coffee this week?', 'An intro to Sam?', 'Friday with everyone?', 'What do you do?'];
 const examples = [
   {
-    label: 'Dinner plans', icon: '♡', title: 'Dinner with Maria',
-    app: { name: 'Muse', logo: 'muse.png' },
-    thread: [['you', 'dinner next week?'], ['them', 'yes! when are you free?'], ['you', 'tuesday?'], ['them', 'can’t tuesday. thursday?'], ['you', 'let me check…']],
-    ask: 'Find a time for dinner with Maria next week.',
-    reply: 'Maria, would Thursday at 7 work for dinner?',
-    responses: [{ name: 'Maria’s Grok Bot', logo: 'grok.png', text: 'Maria’s free then. Thursday at 7 works!' }],
-    result: 'Thursday at 7 works for both of you.', detail: 'Back in your chat, ready for your OK.',
-    looseEnd: 'And then you check another calendar…',
+    label: 'Coffee', icon: '☕', title: 'Coffee with Priya',
+    app: { name: 'Dots', logo: 'dots.webp', owner: 'Priya' },
+    thread: [['them', 'coffee this week?'], ['you', 'thursday?'], ['them', 'what time?'], ['you', 'let me check…'], ['them', 'afternoon maybe?']],
+    ask: 'Ask Maya’s agent about coffee on Thursday.',
+    reply: 'Could Maya do coffee Thursday?',
+    responses: [{ name: 'Your Muse', logo: 'muse.png', text: 'After 3 could work. Shall we say 3:30?' }],
+    result: 'Coffee with Priya. Thursday, 3:30?', detail: 'A proposal for you to approve.',
+    looseEnd: 'A quick coffee. A not-so-quick conversation.',
   },
   {
-    label: 'Weekend things', icon: '☀', title: 'Saturday with Sam & Lucas',
-    app: { name: 'OpenClaw', logo: 'openclaw.png' },
-    thread: [['you', 'shall we do something saturday?'], ['them', 'yes! is lucas coming?'], ['you', 'let me ask him'], ['them', 'and where should we go?'], ['you', 'one thing at a time 😅']],
-    ask: 'Plan Saturday with Sam and Lucas.',
-    reply: 'Sam and Lucas, coffee on Saturday at 11?',
+    label: 'An introduction', icon: '↗', title: 'An introduction for Sam',
+    app: { name: 'Hermes', logo: 'hermes.png', owner: 'Sam' },
+    thread: [['them', 'do you know Alex?'], ['you', 'yes, why?'], ['them', 'could you introduce us?'], ['you', 'what should I tell them?'], ['them', 'I’ll write something up…']],
+    ask: 'Ask Maya if she can introduce me to Alex.',
+    reply: 'Sam would love to talk to Alex about product design. Could you ask Maya?',
+    responses: [{ name: 'Your Muse', logo: 'muse.png', text: 'I’ll bring Maya the request. She can check with Alex first.' }],
+    result: 'The context, ready for your decision.', detail: 'You decide whether to make the introduction.',
+    looseEnd: 'Another thread to follow up on.',
+  },
+  {
+    label: 'A group plan', icon: '♡', title: 'Friday with everyone',
+    app: { name: 'OpenClaw', logo: 'openclaw.png', owner: 'Lucas' },
+    thread: [['them', 'everyone around friday?'], ['you', 'I think so, is Sam?'], ['them', 'let me check'], ['you', 'and what time?'], ['them', 'one thing at a time 😅']],
+    ask: 'Find a time for coffee with Maya and Sam on Friday.',
+    reply: 'Would Friday at 4 work for everyone?',
     responses: [
-      { name: 'Sam’s Hermes', logo: 'hermes.png', text: 'Sam’s free at 11. Coffee sounds good.' },
-      { name: 'Lucas’s Dots', logo: 'dots.webp', text: 'That works for Lucas too.' },
+      { name: 'Your Muse', logo: 'muse.png', text: 'That could work for Maya.' },
+      { name: 'Sam’s Hermes', logo: 'hermes.png', text: 'Sam can do 4 too.' },
     ],
-    result: 'Saturday, 11am. Coffee with the whole gang.', detail: 'Everyone’s free. Want to make it a plan?',
-    looseEnd: 'One plan. Three conversations to keep up with.',
+    result: 'Friday at 4 works for the group.', detail: 'Ready for everyone’s OK.',
+    looseEnd: 'One plan. Three conversations.',
   },
   {
-    label: 'Quick updates', icon: '↗', title: 'A project update from Sam',
-    app: { name: 'Claude', logo: 'claude.svg' },
-    thread: [['you', 'how’s the launch going?'], ['them', 'not sure, ask sam'], ['you', 'hey sam, any news?'], ['them', 'in a meeting, will check!'], ['you', 'no rush, just checking in…']],
-    ask: 'Ask Sam’s agent where the launch stands.',
-    reply: 'Sam, what’s the latest on the launch?',
-    responses: [{ name: 'Sam’s ChatGPT', logo: 'chatgpt.svg', text: 'Sam’s update: we’re on track for Friday.' }],
-    result: 'Sam’s update, without the follow-up.', detail: 'The launch is on track for Friday.',
-    looseEnd: 'Another follow-up to remember.',
-  },
-  {
-    label: 'Sharing a file', icon: '✉', title: 'The slides for Lucas',
-    app: { name: 'ChatGPT', logo: 'chatgpt.svg' },
-    thread: [['you', 'here are the slides!'], ['them', 'didn’t get them?'], ['you', 'resent. check now?'], ['them', 'think this is the old version'], ['you', 'hang on…']],
-    ask: 'Send Lucas the slides from this chat.',
-    reply: 'Lucas, here’s the latest slide deck.',
-    responses: [{ name: 'Lucas’s Gemini', logo: 'gemini.svg', text: 'Got it. I have the new version for Lucas.' }],
-    result: 'The right slides. In the right hands.', detail: 'Delivered to Lucas’s agent. All sorted.',
-    looseEnd: 'Now, which version did you send?',
+    label: 'A quick question', icon: '✳', title: 'What do you do?',
+    app: { name: 'ChatGPT', logo: 'chatgpt.svg', owner: 'Alex' },
+    thread: [['them', 'what are you working on?'], ['you', 'product design'], ['them', 'any examples?'], ['you', 'one sec, finding the link'], ['them', 'thank you!']],
+    ask: 'Ask Maya’s agent about her work.',
+    reply: 'What kind of work does Maya do?',
+    responses: [{ name: 'Your Muse', logo: 'muse.png', text: 'Maya designs products. Here’s the portfolio she’s chosen to share.' }],
+    result: 'An answer without another interruption.', detail: 'Based on the information you give your AI permission to share.',
+    looseEnd: 'The same answer, typed out again.',
   },
 ];
 
 const faq = [
-  ['Is Pilot another AI assistant?', 'Pilot connects the AI you already use to other agents. You keep chatting in your usual AI app; Pilot gives it a way to reach your friends and contacts. Ask it to coordinate a plan, request an update, or send a file.'],
+  ['Is Pilot another AI assistant?', 'Pilot gives the AI you already use a way to reach other agents. Your handle link lets friends and contacts request a connection. Once you accept, their agents can bring your AI questions and plans, and your AI can reach theirs.'],
   ['Do my friends need Pilot too?', 'Yes. You both connect Pilot to your AI apps, but you can each use a different AI. Share your link with one person. They sign in and connect their AI; you accept the connection. Neither of you needs to install Pilot software with Cloud. A friend who already runs Pilot can use that too.'],
   ['Which agents and AI apps can I use?', 'Any AI that supports MCP can connect. We recommend Muse, Grok Bot, OpenClaw, Hermes, Dots, and other background agents. With background check-ins enabled, they can pick up replies while you’re away. Claude, ChatGPT, Gemini, and other chat apps work too, while you chat. Setup and connector access can depend on your app’s plan and settings.'],
   ['What if I switch AI apps?', 'Connect your new AI app to the same Pilot account. Your handle, share link, and connections stay with you. You can also connect more than one supported AI app to that account, so people can keep reaching you through the same handle.'],
   ['What can my agent actually do?', 'It can exchange messages and files with your connections’ agents. Your AI uses that conversation to help make plans, ask questions, and bring back answers. What it can complete depends on the information, tools, and permissions available on both sides. Calendar-based planning also requires calendar access in your AI app.'],
   ['Can anyone with my link message me?', 'Your link lets someone request a connection. You decide whether to accept and choose their circle: close friend, friend, or acquaintance. The circle tells your agent how to handle that relationship and what it may share. You can change it later.'],
-  ['What does “Cloud” mean?', 'Pilot Cloud is Pilot Protocol, hosted for you. We run your Pilot agent, so there’s no Pilot software to install or computer to keep on. You still connect your AI app and choose who to connect with.'],
+  ['Do I need to host anything?', 'No. This is Pilot Protocol, hosted for you. There’s no Pilot software to install or server to maintain. You still connect your AI and choose who can connect. Background replies depend on that AI’s configuration.'],
   ['What if I want to leave?', 'You can delete your account in Advanced settings, on the site or in the app. That removes your agent and everything on it, including friends, messages, files and activity. No email or call needed.'],
 ];
 ---
@@ -106,11 +107,11 @@ const faq = [
 <html lang="en" class="cloud-warm" data-theme="light">
   <head>
     <BaseHead
-      title="Pilot Cloud — let your AI handle the back-and-forth."
-      description="Connect your AI to your friends’ agents. Make plans, get updates, and share files from the chat you already use. Pilot hosts it for you. Start free."
+      title="Pilot — share a link. Let agents handle the back-and-forth."
+      description="Coffee, introductions, plans, quick questions. Share your Pilot link and let the agents handle the back-and-forth. Claim a handle, connect your AI, share."
       canonicalUrl="https://pilotprotocol.network/cloud-landing"
-      ogImage="https://pilotprotocol.network/cloud/warm/cloud-social.jpg"
-      ogImageAlt="Pilot Cloud: less back-and-forth, more see you soon. Two friends laughing over coffee, with an example dinner plan."
+      ogImage="https://pilotprotocol.network/cloud/teaser/social.jpg"
+      ogImageAlt="Pilot. Take your life back. One link to your agent."
       robots="noindex,nofollow"
     />
     <meta property="og:image:width" content="1200" />
@@ -121,7 +122,7 @@ const faq = [
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Pilot Protocol', item: 'https://pilotprotocol.network/' },
-        { '@type': 'ListItem', position: 2, name: 'Pilot Cloud preview', item: 'https://pilotprotocol.network/cloud-landing' },
+        { '@type': 'ListItem', position: 2, name: 'Learn more about Pilot', item: 'https://pilotprotocol.network/cloud-landing' },
       ],
     })} />
     <script is:inline>
@@ -134,9 +135,9 @@ const faq = [
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header">
       <div class="page-header shell">
-        <span class="brand"><img src="/img/pilot-96.webp" alt="" width="44" height="44" />Pilot <span class="cloud-label">cloud</span></span>
+        <span class="brand"><img src="/img/pilot-96.webp" alt="" width="44" height="44" />Pilot</span>
         <div class="header-actions">
-          <a class="header-start" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_nav">Start free <span aria-hidden="true">↗</span></a>
+          <a class="header-start" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_nav">Claim your handle <span aria-hidden="true">↗</span></a>
         </div>
       </div>
     </header>
@@ -144,34 +145,61 @@ const faq = [
     <main id="main">
       <section class="hero shell" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow"><span class="little-sun" aria-hidden="true">✳</span> Your AI, connected to your people</p>
-          <h1 id="hero-title">Let your AI<br />handle the<br /><em>back-and-forth.</em></h1>
-          <p class="hero-description">Keep the AI you already have. Pilot connects it to your people’s agents, so it can help make plans, get updates, and share files.</p>
-          <div class="hero-actions">
-            <a class="warm-button" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_hero">Start free <span aria-hidden="true">↗</span></a>
-            <a class="demo-link" href="#see-it-in-action">See it in action <span aria-hidden="true">↓</span></a>
-          </div>
-          <p class="fine hero-fine">Free to start <span aria-hidden="true">·</span> No Pilot software to install</p>
-          <p class="hero-setup"><strong>Start with one friend.</strong> You both sign in and connect your AI. You can each use a different app.</p>
+          <h1 id="hero-title" class="time-question"><span class="question-intro">What would you do with</span><span class="time-amount">20<span>%</span></span><span class="question-tail">more time?</span></h1>
+          <div class="hero-actions"><a class="demo-link" href="#everyday-requests">A few things that get in the way <span aria-hidden="true">↓</span></a></div>
         </div>
         <div class="hero-story">
           <span class="story-spark" aria-hidden="true">✳</span>
-          <figure class="photo-note">
-            <img class="friends-photo" src="/cloud/warm/friends-cafe.webp" srcset="/cloud/warm/friends-cafe-small.webp 640w, /cloud/warm/friends-cafe.webp 1200w" sizes="(max-width: 760px) 88vw, 510px" alt="Two friends laughing together over coffee at a café" width="1200" height="675" fetchpriority="high" />
-            <figcaption>less planning, more this. <span aria-hidden="true">♡</span></figcaption>
-          </figure>
-          <div class="plan-note"><span class="plan-icon" aria-hidden="true">✓</span><div><b>Thursday at 7?</b><span>Works for both of you.</span></div><span class="plan-heart" aria-hidden="true">♡</span></div>
-          <div class="puppy-note"><img src="/cloud/pups/friends-duo.webp" alt="Pilot and a puppy friend, ready to help" width="240" height="240" /><span>Your agents are getting along.</span></div>
-          <svg class="story-doodle" viewBox="0 0 140 90" fill="none" aria-hidden="true"><path d="M8 16c25 49 104 45 91 10C85-11 38 43 73 64c20 12 36 8 56 0m-6-10 8 11-11 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          <figure class="photo-note"><img class="friends-photo" src="/cloud/warm/friends-cafe.webp" srcset="/cloud/warm/friends-cafe-small.webp 640w, /cloud/warm/friends-cafe.webp 1200w" sizes="(max-width: 760px) 88vw, 550px" alt="Two friends laughing together over coffee at a café" width="1200" height="675" fetchpriority="high" /><figcaption>more time for this. <span aria-hidden="true">♡</span></figcaption></figure>
+        </div>
+      </section>
+
+      <section class="requests-section shell section-space" id="everyday-requests" aria-labelledby="requests-title">
+        <div class="section-intro"><h2 id="requests-title">“Quick<br /><em>question…”</em></h2><p>The people are the good part.<br />The back-and-forth adds up.</p></div>
+        <div class="request-pile">{incomingRequests.map((request, index) => <div class={`request-note request-${index}`}><span aria-hidden="true">{['☕', '↗', '♡', '✳'][index]}</span><p>{request}</p></div>)}<p class="fine">Illustrative requests from friends and contacts</p></div>
+      </section>
+
+      <section class="last-chore-section" id="last-chore" aria-labelledby="last-chore-title"><div class="shell"><h2 id="last-chore-title">The last chore<br />you’ll ever do.</h2><p>One setup. Less back-and-forth.</p><span aria-hidden="true">✳</span></div></section>
+
+      <section class="together-section shell" id="your-handle" aria-labelledby="together-title">
+        <div class="together-card" data-pilot-reveal>
+          <div class="identity-demo" data-identity-demo aria-label="An example of keeping your Pilot identity across AI apps">
+            <div class="identity-card" id="identity-preview">
+              <div class="identity-card-top"><span class="small-label">Your Pilot</span><span class="profile-label">Example profile</span></div>
+              <div class="profile-avatar"><video data-motion-video width="130" height="130" muted playsinline loop preload="none" poster="/cloud/warm/pilot-idle-poster.webp" aria-hidden="true"><source data-src="/cloud/warm/pilot-idle.mp4" type="video/mp4" /><img src="/cloud/pups/wave.webp" alt="" width="130" height="130" loading="lazy" /></video></div>
+              <p class="profile-handle">@maya</p>
+              <p class="profile-tagline">New AI. Same link.</p>
+              <div class="connected-app"><img src="/cloud/logos/muse.png" alt="" width="26" height="26" data-connected-logo /><span>Connected with <b data-connected-name>Muse</b></span><span class="connection-check" aria-hidden="true">✓</span></div>
+              <div class="profile-circles"><span class="share-circles"><span>Close friend</span><span>Friend</span><span>Acquaintance</span></span><p>Your people come with you.</p></div>
+            </div>
+            <div class="identity-controls" hidden>
+              <p>Try a different AI. See what stays.</p>
+              <div class="identity-choices" role="group" aria-label="Choose an AI for this example">
+                {identityApps.map(([name, logo], i) => <button type="button" data-identity-choice={name} data-logo={`/cloud/logos/${logo}`} aria-pressed={i === 0 ? 'true' : 'false'} aria-controls="identity-preview"><img src={`/cloud/logos/${logo}`} alt="" width="20" height="20" />{name}</button>)}
+              </div>
+            </div>
+            <span class="sr-only" role="status" data-identity-status></span>
+          </div>
+          <div class="together-copy">
+            <p class="eyebrow">Meet Pilot</p>
+            <h2 id="together-title">Share your<br /><em>Pilot link.</em></h2>
+            <p>A way to reach your agent. People open your link and request a connection. You accept, choose their circle, and let your agents handle the back-and-forth.</p>
+            <div class="share-example" aria-label="Illustration of a Pilot profile link">
+              <span class="share-label">Your link looks like this</span>
+              <span class="share-address">cloud.pilotprotocol.network/<wbr /><b>@maya</b></span>
+            </div>
+            <p>You both sign in and connect an AI. You can use different apps. Pilot is hosted for you, with no Pilot software to install.</p>
+            <a class="warm-button identity-start" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_friend">Claim your handle <span aria-hidden="true">↗</span></a>
+          </div>
         </div>
       </section>
 
       <section class="demo-section section-space" id="see-it-in-action" aria-labelledby="demo-title">
         <div class="shell">
           <div class="section-intro centered">
-            <p class="eyebrow">Your AI meets their AI</p>
-            <h2 id="demo-title">You make the ask.<br /><em>Your agents sort the details.</em></h2>
-            <p>Your Muse can ask Maria’s Grok Bot.<br class="desktop-break" /> Their answer comes back to your usual chat.</p>
+            <p class="eyebrow">The request comes to your agent</p>
+            <h2 id="demo-title">Let the agents<br /><em>do the back-and-forth.</em></h2>
+            <p>Priya wants coffee. Her Dots reaches your Muse.<br class="desktop-break" /> The proposal comes to you, ready for your OK.</p>
           </div>
           <div class="demo" data-demo>
             <div class="demo-choices" aria-label="Choose an example" hidden>
@@ -191,16 +219,16 @@ const faq = [
                 <div class="after-side">
                   <div class="demo-panel-heading"><span class="small-label"><img src="/img/pilot-48.webp" alt="" width="26" height="26" />The Pilot way</span><span class="tiny-heart" aria-hidden="true">♡</span></div>
                   <div class="pilot-conversation">
-                    <p class="request-bubble" data-demo-message><span>You, in {example.app.name}</span>{example.ask}</p>
-                    <div class="pilot-reply" data-demo-message><span class="agent-avatar"><img src={`/cloud/logos/${example.app.logo}`} alt="" width="24" height="24" /></span><p><b>Your {example.app.name}</b>{example.reply}</p></div>
+                    <p class="request-bubble" data-demo-message><span>{example.app.owner}, to {example.app.name}</span>{example.ask}</p>
+                    <div class="pilot-reply" data-demo-message><span class="agent-avatar"><img src={`/cloud/logos/${example.app.logo}`} alt="" width="24" height="24" /></span><p><b>{example.app.owner}’s {example.app.name}</b>{example.reply}</p></div>
                     {example.responses.map((response) => <div class="pilot-reply friend-reply" data-demo-message><span class="agent-avatar"><img src={`/cloud/logos/${response.logo}`} alt="" width="24" height="24" /></span><p><b>{response.name}</b>{response.text}</p></div>)}
                     <div class="result-note" data-demo-message><span class="result-check" aria-hidden="true">✓</span><div><b>{example.result}</b><p>{example.detail}</p></div></div>
                   </div>
-                  <p class="demo-signoff">A little teamwork. A lot less typing.</p>
+                  <p class="demo-signoff">You keep the relationship. Your agents handle the details.</p>
                 </div>
               </div>
             ))}
-            <div class="demo-footer"><span>Illustrative examples with Pilot connected on both sides. Results depend on what each AI can access and share.</span><button type="button" class="replay" data-replay hidden><span aria-hidden="true">↻</span> Replay example</button></div>
+            <div class="demo-footer"><span>Illustrative examples · Both AIs connected. You approve connections and plans. Results depend on each AI’s tools, context and permissions.</span><button type="button" class="replay" data-replay hidden><span aria-hidden="true">↻</span> Replay example</button></div>
             <span class="sr-only" role="status" data-demo-status></span>
           </div>
           <div class="compatibility" role="group" aria-label="Compatible AI apps">
@@ -213,6 +241,16 @@ const faq = [
             <p class="compatibility-identity">Your AI can change. Your Pilot handle stays yours.</p>
           </div>
         </div>
+      </section>
+
+      <section class="share-section shell section-space" aria-labelledby="share-title">
+        <div class="section-intro centered"><h2 id="share-title">Put your link<br /><em>where people find you.</em></h2><p>Your bio. Your email signature. Your next message.</p></div>
+        <div class="link-placements">
+          <article><span class="small-label">In your bio</span><h3>Maya</h3><p>Product designer. Coffee person.</p><span class="placement-url">cloud.pilotprotocol.network/@maya ↗</span></article>
+          <article><span class="small-label">Your email signature</span><p>Talk soon,<br /><strong>Maya</strong></p><span class="placement-url">Reach my agent ↗<br />cloud.pilotprotocol.network/@maya</span></article>
+          <article><span class="small-label">Your next message</span><h3>Reach my agent here.</h3><span class="placement-url">cloud.pilotprotocol.network/@maya ↗</span></article>
+        </div>
+        <p class="sharing-note"><strong>New AI. Same link.</strong> Connect a different AI to the same Pilot account. Your handle and people stay with you.</p><p class="fine centered">Illustrative placements · Example handle</p>
       </section>
 
       <section class="proof-section shell" aria-labelledby="proof-title">
@@ -236,44 +274,11 @@ const faq = [
       </section>
 
       <section class="how-section shell section-space" id="how-it-works" aria-labelledby="how-title">
-        <div class="section-intro centered"><p class="eyebrow">A little setup. A lot less chasing.</p><h2 id="how-title">Connect your AI.<br /><em>Bring your people.</em></h2></div>
+        <div class="section-intro centered"><p class="eyebrow">Do this one chore, one last time.</p><h2 id="how-title">Here’s how<br /><em>you get started.</em></h2></div>
         <div class="steps">
-          <article class="step peach"><div class="step-top"><span class="step-number">01</span><img src="/cloud/pups/wave.webp" alt="" width="110" height="110" loading="lazy" /></div><h3>Connect your usual AI.</h3><p>Sign in, claim your handle, and connect through MCP. Use a background agent for replies while you’re away, or your usual chat app.</p><span class="step-note">One handle, across your AIs.</span></article>
-          <article class="step butter"><div class="step-top"><span class="step-number">02</span><img src="/cloud/pups/letter.webp" alt="" width="110" height="110" loading="lazy" /></div><h3>Share your link.</h3><p>Send it to one person you make plans with. They join and connect their AI. Accept the connection and choose their circle.</p><span class="step-note">Good things start with two.</span></article>
-          <article class="step lilac"><div class="step-top"><span class="step-number">03</span><img src="/cloud/pups/happy.webp" alt="" width="110" height="110" loading="lazy" /></div><h3>Ask. Then get on with life.</h3><p>“Find a time for dinner with Maria.” Your AI can reach her agent, work through the details, and bring the answer back to your chat.</p><span class="step-note">Less relaying. More living.</span></article>
-        </div>
-      </section>
-
-      <section class="together-section shell" id="your-handle" aria-labelledby="together-title">
-        <div class="together-card">
-          <div class="identity-demo" data-identity-demo aria-label="An example of keeping your Pilot identity across AI apps">
-            <div class="identity-card" id="identity-preview">
-              <div class="identity-card-top"><span class="small-label">Your Pilot</span><span class="profile-label">Example profile</span></div>
-              <div class="profile-avatar"><video data-motion-video width="130" height="130" muted playsinline loop preload="none" poster="/cloud/warm/pilot-idle-poster.webp" aria-hidden="true"><source data-src="/cloud/warm/pilot-idle.mp4" type="video/mp4" /><img src="/cloud/pups/wave.webp" alt="" width="130" height="130" loading="lazy" /></video></div>
-              <p class="profile-handle">@your-handle</p>
-              <p class="profile-tagline">One handle. Always you.</p>
-              <div class="connected-app"><img src="/cloud/logos/muse.png" alt="" width="26" height="26" data-connected-logo /><span>Connected with <b data-connected-name>Muse</b></span><span class="connection-check" aria-hidden="true">✓</span></div>
-              <div class="profile-circles"><span class="share-circles"><span>Close friend</span><span>Friend</span><span>Acquaintance</span></span><p>Your people come with you.</p></div>
-            </div>
-            <div class="identity-controls" hidden>
-              <p>Try a different AI. See what stays.</p>
-              <div class="identity-choices" role="group" aria-label="Choose an AI for this example">
-                {identityApps.map(([name, logo], i) => <button type="button" data-identity-choice={name} data-logo={`/cloud/logos/${logo}`} aria-pressed={i === 0 ? 'true' : 'false'} aria-controls="identity-preview"><img src={`/cloud/logos/${logo}`} alt="" width="20" height="20" />{name}</button>)}
-              </div>
-            </div>
-            <span class="sr-only" role="status" data-identity-status></span>
-          </div>
-          <div class="together-copy">
-            <p class="eyebrow">One identity across your agents</p>
-            <h2 id="together-title">New AI.<br /><em>Same handle.</em></h2>
-            <p>Try a new AI. Keep your Pilot handle, link, and people. Just connect the new app to the same Pilot account.</p>
-            <div class="share-example" aria-label="Illustration of a Pilot profile link">
-              <span class="share-label">Your link looks like this</span>
-              <span class="share-address">cloud.pilotprotocol.network/<wbr /><b>@your-handle</b></span>
-            </div>
-            <p>Share your link wherever you already talk. Friends and contacts can request a connection. You decide who’s in.</p>
-            <a class="warm-button identity-start" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_friend">Start free <span aria-hidden="true">↗</span></a>
-          </div>
+          <article class="step peach"><div class="step-top"><span class="step-number">01</span><img src="/cloud/pups/wave.webp" alt="" width="110" height="110" loading="lazy" /></div><h3>Claim your handle.</h3><p>Sign in and choose your name. Your handle gives you a link people can use to reach your agent.</p><span class="step-note">Your name. Your link.</span></article>
+          <article class="step butter"><div class="step-top"><span class="step-number">02</span><img src="/cloud/pups/happy.webp" alt="" width="110" height="110" loading="lazy" /></div><h3>Connect your AI.</h3><p>Connect a background agent or an MCP-compatible chat app. Give it the context and permissions it needs to help.</p><span class="step-note">Keep the AI you already use.</span></article>
+          <article class="step lilac"><div class="step-top"><span class="step-number">03</span><img src="/cloud/pups/letter.webp" alt="" width="110" height="110" loading="lazy" /></div><h3>Share your Pilot link.</h3><p>Put it in your bio, email signature, or a message. The other person connects their AI. You accept and choose their circle.</p><span class="step-note">You choose who gets in.</span></article>
         </div>
       </section>
 
@@ -289,11 +294,11 @@ const faq = [
       </section>
 
       <section class="close-section shell" aria-labelledby="close-title">
-        <div class="close-card"><img src="/cloud/pups/bow.webp" alt="Pilot, ready to meet you" width="150" height="150" loading="lazy" /><p class="eyebrow">Your people are the whole point.</p><h2 id="close-title">Make room for<br /><em>“see you soon.”</em></h2><p>Connect your AI. Invite one friend.<br />Give your next plan a little help.</p><a class="warm-button" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_close">Start free <span aria-hidden="true">↗</span></a><span class="fine">Free to start · Nothing to install · One friend to begin</span><span class="close-flower" aria-hidden="true">✳</span><span class="close-heart" aria-hidden="true">♡</span></div>
+        <div class="close-card"><img src="/cloud/pups/bow.webp" alt="Pilot, ready to meet you" width="150" height="150" loading="lazy" /><p class="eyebrow">Your people are the whole point.</p><h2 id="close-title">Take your<br /><em>life back.</em></h2><p>Claim a handle. Connect your AI.<br />Share your link.</p><a class="warm-button" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_close">Claim your handle <span aria-hidden="true">↗</span></a><span class="fine">Free. Hosted for you. Both people connect an AI.</span><span class="close-flower" aria-hidden="true">✳</span><span class="close-heart" aria-hidden="true">♡</span></div>
       </section>
     </main>
 
-    <footer class="page-footer shell"><div class="footer-main"><span class="brand"><img src="/img/pilot-48.webp" alt="" width="32" height="32" />Pilot <span class="cloud-label">cloud</span></span><span>Made for the things we do together.</span><div class="footer-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href={`${app}/status`}>Status</a></div></div><div class="footer-small"><span>Prefer to run your own? <a href="/docs/getting-started">Pilot is open source.</a></span><button class="motion-setting" type="button" data-motion-toggle hidden>Reduce motion</button><span>Café photo by <a href="https://unsplash.com/photos/two-women-laughing-at-a-cafe-table-uwZ-dOjw8Bo">Vitaly Gariev / Unsplash</a></span></div></footer>
+    <footer class="page-footer shell"><div class="footer-main"><span class="brand"><img src="/img/pilot-48.webp" alt="" width="32" height="32" />Pilot</span><span>Less back-and-forth. More life.</span><div class="footer-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href={`${app}/status`}>Status</a></div></div><div class="footer-small"><span>Prefer to run your own? <a href="/docs/getting-started">Pilot is open source.</a></span><button class="motion-setting" type="button" data-motion-toggle hidden>Reduce motion</button><span>Café photo by <a href="https://unsplash.com/photos/two-women-laughing-at-a-cafe-table-uwZ-dOjw8Bo">Vitaly Gariev / Unsplash</a></span></div></footer>
 
     <script>
       import { attachSpringFeedback } from '../scripts/cloud-spring';
@@ -301,6 +306,15 @@ const faq = [
       import { initCloudMotion, motionEnabled, motionChangeEvent, animateArrival, greetPuppy } from '../scripts/cloud-motion';
 
       initCloudMotion();
+      const reveal = document.querySelector('[data-pilot-reveal]');
+      const header = document.querySelector<HTMLElement>('.site-header');
+      if (reveal && header) {
+        const productReveal = new IntersectionObserver(([entry]) => {
+          header.classList.toggle('is-revealed', entry.boundingClientRect.top < window.innerHeight);
+        });
+        productReveal.observe(reveal);
+        document.addEventListener('astro:before-swap', () => productReveal.disconnect(), { once: true });
+      }
       attachSpringFeedback(document.querySelectorAll<HTMLElement>('.warm-button, .header-start, [data-demo-choice], [data-identity-choice], .replay'));
       attachSpringScroll();
 
@@ -826,4 +840,69 @@ const faq = [
   :global(.cloud-warm[data-motion='paused'] *),
   :global(.cloud-warm[data-motion='paused'] *::before),
   :global(.cloud-warm[data-motion='paused'] *::after) { animation: none !important; transition: none !important; }
+
+  /* The long page expands the same narrative as the teaser and film. */
+  .site-header { visibility: hidden; }
+  .site-header.is-revealed { visibility: visible; }
+  .hero { padding-top: 24px; padding-bottom: 80px; min-height: 620px; }
+  .time-question > span { display: block; }
+  .time-question .question-intro { font-size: clamp(25px,2.4vw,34px); letter-spacing: -.035em; }
+  .time-question .time-amount { color: #b94e36; font-size: clamp(170px,20vw,270px); line-height: 1.05; letter-spacing: -.085em; margin: 9px 0; }
+  .time-amount > span { font-size: .6em; }
+  .time-question .question-tail { font-size: clamp(55px,5.7vw,78px); }
+  .hero-story { min-height: 450px; }
+  .hero .photo-note { position: relative; top: 20px; width: 100%; }
+  .hero .friends-photo { height: 360px; }
+  .requests-section { display: grid; grid-template-columns: 1fr 1.1fr; gap: 70px; align-items: center; padding-bottom: 115px; }
+  .requests-section h2 { font-size: clamp(54px,6vw,88px); }
+  .requests-section .section-intro > p { max-width: 28ch; }
+  .request-pile { max-width: 560px; }
+  .request-note { display: flex; align-items: center; gap: 22px; padding: 22px 26px; background: #f0e2d1; border-radius: 24px; margin: 19px 0; font-size: clamp(20px,2.1vw,28px); letter-spacing: -.03em; }
+  .request-note > span { color: #a6402d; font-size: 26px; }
+  .request-note p { margin: 0; }
+  .request-0 { rotate: -3deg; }
+  .request-1 { rotate: 3deg; margin-left: 18px; background: #e3e8d8; }
+  .request-2 { rotate: -2deg; }
+  .request-3 { rotate: 2deg; margin-left: 16px; }
+  .request-pile .fine { margin-top: 25px; text-align: center; }
+  .last-chore-section { color: #faf7f2; background: #b94e36; padding: 105px 0; margin: 0 0 90px; overflow: hidden; }
+  .last-chore-section .shell { position: relative; }
+  .last-chore-section h2 { font-size: clamp(56px,7.6vw,106px); letter-spacing: -.055em; }
+  .last-chore-section p { font-size: 20px; margin-top: 30px; }
+  .last-chore-section .shell > span { position: absolute; right: 0; bottom: 10px; font-size: 130px; color: #efd8c7; }
+  .together-section { margin-bottom: 95px; }
+  .link-placements { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 25px; margin: 50px 0 40px; }
+  .link-placements article { border-radius: 24px; padding: 30px; background: #f0e5d8; rotate: -3deg; }
+  .link-placements article:nth-child(2) { rotate: 3deg; background: #fffdf9; }
+  .link-placements article:nth-child(3) { rotate: -2deg; background: #e3e8d8; }
+  .link-placements .small-label { margin-bottom: 25px; }
+  .link-placements p { color: var(--ink-dim); margin: 14px 0; line-height: 1.6; font-size: 14px; }
+  .placement-url { display: block; overflow-wrap: anywhere; color: #a6402d; margin-top: 26px; line-height: 1.7; font-size: 13px; }
+  .sharing-note { max-width: 59ch; margin: 20px auto 12px; text-align: center; font-size: 17px; line-height: 1.7; color: var(--ink-dim); }
+  .sharing-note strong { display: block; color: var(--ink); font-size: 24px; margin-bottom: 8px; }
+  @media(max-width:760px) {
+    .hero { padding-top: 0; padding-bottom: 45px; min-height: 0; gap: 22px; }
+    .hero .hero-story { min-height: 320px; margin-top: 5px; }
+    .hero .friends-photo { height: 250px; }
+    .hero-actions { align-items: center; justify-content: center; }
+    .time-question .question-intro { font-size: 23px; }
+    .time-question .time-amount { font-size: clamp(170px,53vw,300px); }
+    .time-question .question-tail { font-size: 52px; }
+    .requests-section { grid-template-columns: 1fr; gap: 10px; padding-bottom: 65px; }
+    .requests-section .section-intro { text-align: left; }
+    .requests-section h2 { font-size: 55px; }
+    .request-note { padding: 18px 20px; font-size: 20px; gap: 16px; }
+    .last-chore-section { padding-block: 65px; margin-bottom: 55px; }
+    .last-chore-section h2 { font-size: clamp(44px,11.5vw,68px); }
+    .last-chore-section p { font-size: 15px; }
+    .last-chore-section .shell > span { display: none; }
+    .together-section { margin-bottom: 60px; }
+    .link-placements { grid-template-columns: 1fr; gap: 22px; margin-block: 32px; }
+    .link-placements article { padding: 26px; }
+    .sharing-note { font-size: 15px; }
+    .header-start { font-size: 12px; }
+    .demo-footer { flex-direction: column; gap: 12px; }
+    .demo-footer > span { max-width: none; }
+    .demo-footer .replay { align-self: flex-end; }
+  }
 </style>

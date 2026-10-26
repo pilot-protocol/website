@@ -16,7 +16,7 @@ The particular amplitudes and timing below are design decisions for Pilot, not u
 
 ## Motion map
 
-- **Hero:** a seven-pixel photo float over eight seconds, gentle puppy movement, and a short initial drawing/arrival for the plan and doodle. Headline, explanation, and main action stay still.
+- **Hero:** a seven-pixel photo float over eight seconds. The complete hypothetical time question stays still. The earlier hero puppy/plan/doodle overlays were removed for the link narrative.
 - **Sections:** one entrance of up to 18px over 650ms. Parallel cards stagger by 85ms. Text stays at full opacity throughout; the underlying HTML is visible and no animation completion is required to reveal content. Entrances are skipped while the page is hidden.
 - **Demo:** the first example plays once when its conversation is in view. User-selected scenarios and replay remain explicit controls. The conversation reserves its height during playback to avoid moving surrounding content. Pause restores all messages immediately.
 - **Identity:** changing AI animates the changed connection and gives the puppy a small greeting. Handle, link, and circles stay unchanged.
@@ -75,3 +75,7 @@ Updated the preview branch to the current main branch before publication. The st
 - Exercised all four example selectors, ChatGPT identity switching, and FAQ expansion. The footer motion control pauses the page, persists after reload, and resumes. Browser reduced-motion emulation pauses the page and disables the control. This was browser emulation, not a changed OS setting.
 - Strict TypeScript checking passes for all three new motion modules. The repository-wide TypeScript command still reports diagnostics in unchanged Cloudflare functions, analytics, and worker files, plus the local untracked film project. These files are outside this publication change.
 - The film project, its exports and music, and `.context/` are excluded from the website commit.
+
+### Link-story revision — 25 October 2026
+
+Learn more now follows the teaser’s seven-part narrative. Its header stays hidden until the Pilot-link reveal enters the viewport; no navigation was added. The illustrative demo now shows inbound coffee, introduction, group-plan and informational requests. The existing pause/reduced-motion, height-reservation, identity selection and cleanup logic remains. Historical counts and browser checks above apply to their named earlier revisions; current release checks are recorded in `cloud-teaser.md` and `pilot-film.md`.
