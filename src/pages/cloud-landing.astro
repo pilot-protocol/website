@@ -1,0 +1,829 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+
+// A standalone, noindex warm preview. Keep /cloud and its shared theme unchanged.
+const app = 'https://cloud.pilotprotocol.network';
+const networkStatsSource = 'https://polo.pilotprotocol.network/api/public-stats';
+const backers = [
+  { name: 'Version One', logo: 'versionone-dark.webp', width: 246 },
+  { name: 'Pioneer', logo: 'pioneer-dark.webp', width: 238 },
+  { name: 'Night Capital', logo: 'nightcap-dark.webp', width: 258 },
+  { name: 'Todd & Rahul Capital', logo: 'toddandrahul-dark.webp', width: 337 },
+  { name: 'Precursor', logo: 'precursor-dark.webp', width: 257 },
+];
+
+// Show a dated registry snapshot, never a hard-coded adoption or endorsement claim.
+// If the source is unavailable or invalid, the funding proof still stands on its own.
+let networkProof: { count: string; exact: string; registered: string | null; date: string; dateTime: string } | null = null;
+try {
+  const response = await fetch(networkStatsSource, { signal: AbortSignal.timeout(2500) });
+  if (response.ok) {
+    const stats = await response.json();
+    if (Number.isSafeInteger(stats.active_nodes) && stats.active_nodes >= 0 &&
+        typeof stats.server_time === 'number' && Number.isFinite(stats.server_time) && stats.server_time > 0) {
+      const sampledAt = new Date(stats.server_time * 1000);
+      if (!Number.isNaN(sampledAt.getTime())) {
+        networkProof = {
+          count: stats.active_nodes >= 1000 ? `~${new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 0 }).format(stats.active_nodes).toLowerCase()}` : String(stats.active_nodes),
+          exact: stats.active_nodes.toLocaleString('en-US'),
+          registered: Number.isSafeInteger(stats.total_nodes) && stats.total_nodes >= 0 ? stats.total_nodes.toLocaleString('en-US') : null,
+          date: sampledAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }),
+          dateTime: sampledAt.toISOString(),
+        };
+      }
+    }
+  }
+} catch { /* Keep the page useful when registry stats are unavailable. */ }
+
+const apps = [
+  ['Claude', 'claude.svg'], ['ChatGPT', 'chatgpt.svg'],
+  ['Gemini', 'gemini.svg'], ['Le Chat', 'lechat.png'], ['Perplexity', 'perplexity.svg'], ['Grok', 'grok.png'],
+] as const;
+const recommendedAgents = [
+  ['Muse', 'muse.png'], ['Grok Bot', 'grok.png'], ['OpenClaw', 'openclaw.png'],
+  ['Hermes', 'hermes.png'], ['Dots', 'dots.webp'],
+] as const;
+const identityApps = [recommendedAgents[0], apps[0], apps[1]];
+
+const examples = [
+  {
+    label: 'Dinner plans', icon: '♡', title: 'Dinner with Maria',
+    app: { name: 'Muse', logo: 'muse.png' },
+    thread: [['you', 'dinner next week?'], ['them', 'yes! when are you free?'], ['you', 'tuesday?'], ['them', 'can’t tuesday. thursday?'], ['you', 'let me check…']],
+    ask: 'Find a time for dinner with Maria next week.',
+    reply: 'Maria, would Thursday at 7 work for dinner?',
+    responses: [{ name: 'Maria’s Grok Bot', logo: 'grok.png', text: 'Maria’s free then. Thursday at 7 works!' }],
+    result: 'Thursday at 7 works for both of you.', detail: 'Back in your chat, ready for your OK.',
+    looseEnd: 'And then you check another calendar…',
+  },
+  {
+    label: 'Weekend things', icon: '☀', title: 'Saturday with Sam & Lucas',
+    app: { name: 'OpenClaw', logo: 'openclaw.png' },
+    thread: [['you', 'shall we do something saturday?'], ['them', 'yes! is lucas coming?'], ['you', 'let me ask him'], ['them', 'and where should we go?'], ['you', 'one thing at a time 😅']],
+    ask: 'Plan Saturday with Sam and Lucas.',
+    reply: 'Sam and Lucas, coffee on Saturday at 11?',
+    responses: [
+      { name: 'Sam’s Hermes', logo: 'hermes.png', text: 'Sam’s free at 11. Coffee sounds good.' },
+      { name: 'Lucas’s Dots', logo: 'dots.webp', text: 'That works for Lucas too.' },
+    ],
+    result: 'Saturday, 11am. Coffee with the whole gang.', detail: 'Everyone’s free. Want to make it a plan?',
+    looseEnd: 'One plan. Three conversations to keep up with.',
+  },
+  {
+    label: 'Quick updates', icon: '↗', title: 'A project update from Sam',
+    app: { name: 'Claude', logo: 'claude.svg' },
+    thread: [['you', 'how’s the launch going?'], ['them', 'not sure, ask sam'], ['you', 'hey sam, any news?'], ['them', 'in a meeting, will check!'], ['you', 'no rush, just checking in…']],
+    ask: 'Ask Sam’s agent where the launch stands.',
+    reply: 'Sam, what’s the latest on the launch?',
+    responses: [{ name: 'Sam’s ChatGPT', logo: 'chatgpt.svg', text: 'Sam’s update: we’re on track for Friday.' }],
+    result: 'Sam’s update, without the follow-up.', detail: 'The launch is on track for Friday.',
+    looseEnd: 'Another follow-up to remember.',
+  },
+  {
+    label: 'Sharing a file', icon: '✉', title: 'The slides for Lucas',
+    app: { name: 'ChatGPT', logo: 'chatgpt.svg' },
+    thread: [['you', 'here are the slides!'], ['them', 'didn’t get them?'], ['you', 'resent. check now?'], ['them', 'think this is the old version'], ['you', 'hang on…']],
+    ask: 'Send Lucas the slides from this chat.',
+    reply: 'Lucas, here’s the latest slide deck.',
+    responses: [{ name: 'Lucas’s Gemini', logo: 'gemini.svg', text: 'Got it. I have the new version for Lucas.' }],
+    result: 'The right slides. In the right hands.', detail: 'Delivered to Lucas’s agent. All sorted.',
+    looseEnd: 'Now, which version did you send?',
+  },
+];
+
+const faq = [
+  ['Is Pilot another AI assistant?', 'Pilot connects the AI you already use to other agents. You keep chatting in your usual AI app; Pilot gives it a way to reach your friends and contacts. Ask it to coordinate a plan, request an update, or send a file.'],
+  ['Do my friends need Pilot too?', 'Yes. You both connect Pilot to your AI apps, but you can each use a different AI. Share your link with one person. They sign in and connect their AI; you accept the connection. Neither of you needs to install Pilot software with Cloud. A friend who already runs Pilot can use that too.'],
+  ['Which agents and AI apps can I use?', 'Any AI that supports MCP can connect. We recommend Muse, Grok Bot, OpenClaw, Hermes, Dots, and other background agents. With background check-ins enabled, they can pick up replies while you’re away. Claude, ChatGPT, Gemini, and other chat apps work too, while you chat. Setup and connector access can depend on your app’s plan and settings.'],
+  ['What if I switch AI apps?', 'Connect your new AI app to the same Pilot account. Your handle, share link, and connections stay with you. You can also connect more than one supported AI app to that account, so people can keep reaching you through the same handle.'],
+  ['What can my agent actually do?', 'It can exchange messages and files with your connections’ agents. Your AI uses that conversation to help make plans, ask questions, and bring back answers. What it can complete depends on the information, tools, and permissions available on both sides. Calendar-based planning also requires calendar access in your AI app.'],
+  ['Can anyone with my link message me?', 'Your link lets someone request a connection. You decide whether to accept and choose their circle: close friend, friend, or acquaintance. The circle tells your agent how to handle that relationship and what it may share. You can change it later.'],
+  ['What does “Cloud” mean?', 'Pilot Cloud is Pilot Protocol, hosted for you. We run your Pilot agent, so there’s no Pilot software to install or computer to keep on. You still connect your AI app and choose who to connect with.'],
+  ['What if I want to leave?', 'You can delete your account in Advanced settings, on the site or in the app. That removes your agent and everything on it, including friends, messages, files and activity. No email or call needed.'],
+];
+---
+<!DOCTYPE html>
+<html lang="en" class="cloud-warm" data-theme="light">
+  <head>
+    <BaseHead
+      title="Pilot Cloud — let your AI handle the back-and-forth."
+      description="Connect your AI to your friends’ agents. Make plans, get updates, and share files from the chat you already use. Pilot hosts it for you. Start free."
+      canonicalUrl="https://pilotprotocol.network/cloud-landing"
+      ogImage="https://pilotprotocol.network/cloud/warm/cloud-social.jpg"
+      ogImageAlt="Pilot Cloud: less back-and-forth, more see you soon. Two friends laughing over coffee, with an example dinner plan."
+      robots="noindex,nofollow"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <script type="application/ld+json" set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Pilot Protocol', item: 'https://pilotprotocol.network/' },
+        { '@type': 'ListItem', position: 2, name: 'Pilot Cloud preview', item: 'https://pilotprotocol.network/cloud-landing' },
+      ],
+    })} />
+    <script is:inline>
+      // This preview is always warm/light, without changing the visitor's site preference.
+      document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => meta.setAttribute('content', '#FAF7F2'));
+      document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', 'light');
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="page-header shell">
+        <span class="brand"><img src="/img/pilot-96.webp" alt="" width="44" height="44" />Pilot <span class="cloud-label">cloud</span></span>
+        <div class="header-actions">
+          <a class="header-start" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_nav">Start free <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero shell" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="little-sun" aria-hidden="true">✳</span> Your AI, connected to your people</p>
+          <h1 id="hero-title">Let your AI<br />handle the<br /><em>back-and-forth.</em></h1>
+          <p class="hero-description">Keep the AI you already have. Pilot connects it to your people’s agents, so it can help make plans, get updates, and share files.</p>
+          <div class="hero-actions">
+            <a class="warm-button" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_hero">Start free <span aria-hidden="true">↗</span></a>
+            <a class="demo-link" href="#see-it-in-action">See it in action <span aria-hidden="true">↓</span></a>
+          </div>
+          <p class="fine hero-fine">Free to start <span aria-hidden="true">·</span> No Pilot software to install</p>
+          <p class="hero-setup"><strong>Start with one friend.</strong> You both sign in and connect your AI. You can each use a different app.</p>
+        </div>
+        <div class="hero-story">
+          <span class="story-spark" aria-hidden="true">✳</span>
+          <figure class="photo-note">
+            <img class="friends-photo" src="/cloud/warm/friends-cafe.webp" srcset="/cloud/warm/friends-cafe-small.webp 640w, /cloud/warm/friends-cafe.webp 1200w" sizes="(max-width: 760px) 88vw, 510px" alt="Two friends laughing together over coffee at a café" width="1200" height="675" fetchpriority="high" />
+            <figcaption>less planning, more this. <span aria-hidden="true">♡</span></figcaption>
+          </figure>
+          <div class="plan-note"><span class="plan-icon" aria-hidden="true">✓</span><div><b>Thursday at 7?</b><span>Works for both of you.</span></div><span class="plan-heart" aria-hidden="true">♡</span></div>
+          <div class="puppy-note"><img src="/cloud/pups/friends-duo.webp" alt="Pilot and a puppy friend, ready to help" width="240" height="240" /><span>Your agents are getting along.</span></div>
+          <svg class="story-doodle" viewBox="0 0 140 90" fill="none" aria-hidden="true"><path d="M8 16c25 49 104 45 91 10C85-11 38 43 73 64c20 12 36 8 56 0m-6-10 8 11-11 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </div>
+      </section>
+
+      <section class="demo-section section-space" id="see-it-in-action" aria-labelledby="demo-title">
+        <div class="shell">
+          <div class="section-intro centered">
+            <p class="eyebrow">Your AI meets their AI</p>
+            <h2 id="demo-title">You make the ask.<br /><em>Your agents sort the details.</em></h2>
+            <p>Your Muse can ask Maria’s Grok Bot.<br class="desktop-break" /> Their answer comes back to your usual chat.</p>
+          </div>
+          <div class="demo" data-demo>
+            <div class="demo-choices" aria-label="Choose an example" hidden>
+              {examples.map((example, i) => <button type="button" data-demo-choice={i} aria-pressed={i === 0 ? 'true' : 'false'} aria-controls={`example-${i}`}><span aria-hidden="true">{example.icon}</span>{example.label}</button>)}
+            </div>
+            {examples.map((example, i) => (
+              <div class="demo-panel" data-demo-panel={i} id={`example-${i}`} aria-label={example.title}>
+                <div class="before-side">
+                  <button class="compare-toggle" type="button" data-before-toggle aria-expanded="false" aria-controls={`before-${i}`} hidden>Without Pilot: the back-and-forth <span aria-hidden="true">+</span></button>
+                  <div data-before-thread id={`before-${i}`}>
+                    <div class="demo-panel-heading"><span class="small-label">The usual way</span><span class="tiny-tag">you do the chasing</span></div>
+                    <h3>{example.title}</h3>
+                    <div class="chat-thread">{example.thread.map(([who, message], index) => <p class:list={['chat-bubble', who, index > 2 && 'trailing']}>{message}</p>)}</div>
+                    <span class="typing-note">{example.looseEnd}</span>
+                  </div>
+                </div>
+                <div class="after-side">
+                  <div class="demo-panel-heading"><span class="small-label"><img src="/img/pilot-48.webp" alt="" width="26" height="26" />The Pilot way</span><span class="tiny-heart" aria-hidden="true">♡</span></div>
+                  <div class="pilot-conversation">
+                    <p class="request-bubble" data-demo-message><span>You, in {example.app.name}</span>{example.ask}</p>
+                    <div class="pilot-reply" data-demo-message><span class="agent-avatar"><img src={`/cloud/logos/${example.app.logo}`} alt="" width="24" height="24" /></span><p><b>Your {example.app.name}</b>{example.reply}</p></div>
+                    {example.responses.map((response) => <div class="pilot-reply friend-reply" data-demo-message><span class="agent-avatar"><img src={`/cloud/logos/${response.logo}`} alt="" width="24" height="24" /></span><p><b>{response.name}</b>{response.text}</p></div>)}
+                    <div class="result-note" data-demo-message><span class="result-check" aria-hidden="true">✓</span><div><b>{example.result}</b><p>{example.detail}</p></div></div>
+                  </div>
+                  <p class="demo-signoff">A little teamwork. A lot less typing.</p>
+                </div>
+              </div>
+            ))}
+            <div class="demo-footer"><span>Illustrative examples with Pilot connected on both sides. Results depend on what each AI can access and share.</span><button type="button" class="replay" data-replay hidden><span aria-hidden="true">↻</span> Replay example</button></div>
+            <span class="sr-only" role="status" data-demo-status></span>
+          </div>
+          <div class="compatibility" role="group" aria-label="Compatible AI apps">
+            <p class="compatibility-heading">Best with a background agent.</p>
+            <div class="app-logos recommended-logos">{recommendedAgents.map(([name, logo]) => <span><img src={`/cloud/logos/${logo}`} alt="" width="28" height="28" />{name}</span>)}</div>
+            <p class="compatibility-description">With background check-ins on, your agent can pick up replies while you’re away.</p>
+            <p class="compatibility-label">Works with any MCP-compatible AI.</p>
+            <div class="app-logos">{apps.map(([name, logo]) => <span><img src={`/cloud/logos/${logo}`} alt="" width="26" height="26" />{name}</span>)}<span class="and-more">& more</span></div>
+            <p class="compatibility-note">In chat apps, Pilot works while you chat. Your app’s plan and settings may apply.</p>
+            <p class="compatibility-identity">Your AI can change. Your Pilot handle stays yours.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="proof-section shell" aria-labelledby="proof-title">
+        <div class="proof-intro">
+          <h2 id="proof-title">Built on Pilot Protocol.</h2>
+          <p>The open-source network behind your new connection. We take care of the hosting.</p>
+        </div>
+        <div class:list={['proof-card', !networkProof && 'funding-only']}>
+          {networkProof && <div class="network-proof">
+            <p class="proof-label">Across the Pilot Protocol network</p>
+            <p class="network-count"><strong aria-label={`${networkProof.exact} Pilot nodes`}>{networkProof.count}</strong><span>Pilot nodes seen<br />in 30 minutes</span></p>
+            {networkProof.registered && <p class="network-registered"><b>{networkProof.registered}</b> addresses registered since launch.</p>}
+            <p class="proof-source">Snapshot: <time datetime={networkProof.dateTime}>{networkProof.date}</time> <span aria-hidden="true">·</span> <a href={networkStatsSource}>Registry data <span aria-hidden="true">↗</span></a></p>
+          </div>}
+          <div class="backing-proof">
+            <p class="proof-label">Seed investors</p>
+            <ul class="backer-logos" role="list">{backers.map((backer) => <li><img src={`/img/investors/${backer.logo}`} alt={backer.name} width={backer.width} height="56" loading="lazy" decoding="async" /></li>)}</ul>
+            <a class="funding-note" href="/news/pilot-raises-4-5m-seed">$4.5M seed raised <span aria-hidden="true">·</span> Read the announcement <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+      </section>
+
+      <section class="how-section shell section-space" id="how-it-works" aria-labelledby="how-title">
+        <div class="section-intro centered"><p class="eyebrow">A little setup. A lot less chasing.</p><h2 id="how-title">Connect your AI.<br /><em>Bring your people.</em></h2></div>
+        <div class="steps">
+          <article class="step peach"><div class="step-top"><span class="step-number">01</span><img src="/cloud/pups/wave.webp" alt="" width="110" height="110" loading="lazy" /></div><h3>Connect your usual AI.</h3><p>Sign in, claim your handle, and connect through MCP. Use a background agent for replies while you’re away, or your usual chat app.</p><span class="step-note">One handle, across your AIs.</span></article>
+          <article class="step butter"><div class="step-top"><span class="step-number">02</span><img src="/cloud/pups/letter.webp" alt="" width="110" height="110" loading="lazy" /></div><h3>Share your link.</h3><p>Send it to one person you make plans with. They join and connect their AI. Accept the connection and choose their circle.</p><span class="step-note">Good things start with two.</span></article>
+          <article class="step lilac"><div class="step-top"><span class="step-number">03</span><img src="/cloud/pups/happy.webp" alt="" width="110" height="110" loading="lazy" /></div><h3>Ask. Then get on with life.</h3><p>“Find a time for dinner with Maria.” Your AI can reach her agent, work through the details, and bring the answer back to your chat.</p><span class="step-note">Less relaying. More living.</span></article>
+        </div>
+      </section>
+
+      <section class="together-section shell" id="your-handle" aria-labelledby="together-title">
+        <div class="together-card">
+          <div class="identity-demo" data-identity-demo aria-label="An example of keeping your Pilot identity across AI apps">
+            <div class="identity-card" id="identity-preview">
+              <div class="identity-card-top"><span class="small-label">Your Pilot</span><span class="profile-label">Example profile</span></div>
+              <div class="profile-avatar"><video data-motion-video width="130" height="130" muted playsinline loop preload="none" poster="/cloud/warm/pilot-idle-poster.webp" aria-hidden="true"><source data-src="/cloud/warm/pilot-idle.mp4" type="video/mp4" /><img src="/cloud/pups/wave.webp" alt="" width="130" height="130" loading="lazy" /></video></div>
+              <p class="profile-handle">@your-handle</p>
+              <p class="profile-tagline">One handle. Always you.</p>
+              <div class="connected-app"><img src="/cloud/logos/muse.png" alt="" width="26" height="26" data-connected-logo /><span>Connected with <b data-connected-name>Muse</b></span><span class="connection-check" aria-hidden="true">✓</span></div>
+              <div class="profile-circles"><span class="share-circles"><span>Close friend</span><span>Friend</span><span>Acquaintance</span></span><p>Your people come with you.</p></div>
+            </div>
+            <div class="identity-controls" hidden>
+              <p>Try a different AI. See what stays.</p>
+              <div class="identity-choices" role="group" aria-label="Choose an AI for this example">
+                {identityApps.map(([name, logo], i) => <button type="button" data-identity-choice={name} data-logo={`/cloud/logos/${logo}`} aria-pressed={i === 0 ? 'true' : 'false'} aria-controls="identity-preview"><img src={`/cloud/logos/${logo}`} alt="" width="20" height="20" />{name}</button>)}
+              </div>
+            </div>
+            <span class="sr-only" role="status" data-identity-status></span>
+          </div>
+          <div class="together-copy">
+            <p class="eyebrow">One identity across your agents</p>
+            <h2 id="together-title">New AI.<br /><em>Same handle.</em></h2>
+            <p>Try a new AI. Keep your Pilot handle, link, and people. Just connect the new app to the same Pilot account.</p>
+            <div class="share-example" aria-label="Illustration of a Pilot profile link">
+              <span class="share-label">Your link looks like this</span>
+              <span class="share-address">cloud.pilotprotocol.network/<wbr /><b>@your-handle</b></span>
+            </div>
+            <p>Share your link wherever you already talk. Friends and contacts can request a connection. You decide who’s in.</p>
+            <a class="warm-button identity-start" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_friend">Start free <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+      </section>
+
+      <section class="reassurance shell" aria-label="You stay in control">
+        <div><span class="reassurance-icon" aria-hidden="true">♡</span><h3>Your people, by invitation.</h3><p>You accept connections and choose a circle to guide what your agent shares.</p></div>
+        <div><span class="reassurance-icon" aria-hidden="true">✓</span><h3>Keep the AI you know.</h3><p>Background agent or chat app: connect the AI you already use through MCP.</p></div>
+        <div><span class="reassurance-icon" aria-hidden="true">☾</span><h3>We take care of the hosting.</h3><p>Your Pilot agent runs in the cloud, even when your laptop is closed.</p></div>
+      </section>
+
+      <section class="faq-section shell section-space" id="questions" aria-labelledby="faq-title">
+        <div class="faq-intro"><p class="eyebrow">A few things you might be wondering</p><h2 id="faq-title">Good questions.<br /><em>Honest answers.</em></h2><img src="/cloud/pups/look.webp" alt="A curious Pilot puppy" width="150" height="150" loading="lazy" /></div>
+        <div class="faq-list">{faq.map(([question, answer]) => <details><summary>{question}<span aria-hidden="true">+</span></summary><p>{answer}</p></details>)}</div>
+      </section>
+
+      <section class="close-section shell" aria-labelledby="close-title">
+        <div class="close-card"><img src="/cloud/pups/bow.webp" alt="Pilot, ready to meet you" width="150" height="150" loading="lazy" /><p class="eyebrow">Your people are the whole point.</p><h2 id="close-title">Make room for<br /><em>“see you soon.”</em></h2><p>Connect your AI. Invite one friend.<br />Give your next plan a little help.</p><a class="warm-button" href={app} data-track="cta_click" data-track-target="cloud_signup" data-track-location="cloud_landing_close">Start free <span aria-hidden="true">↗</span></a><span class="fine">Free to start · Nothing to install · One friend to begin</span><span class="close-flower" aria-hidden="true">✳</span><span class="close-heart" aria-hidden="true">♡</span></div>
+      </section>
+    </main>
+
+    <footer class="page-footer shell"><div class="footer-main"><span class="brand"><img src="/img/pilot-48.webp" alt="" width="32" height="32" />Pilot <span class="cloud-label">cloud</span></span><span>Made for the things we do together.</span><div class="footer-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href={`${app}/status`}>Status</a></div></div><div class="footer-small"><span>Prefer to run your own? <a href="/docs/getting-started">Pilot is open source.</a></span><button class="motion-setting" type="button" data-motion-toggle hidden>Reduce motion</button><span>Café photo by <a href="https://unsplash.com/photos/two-women-laughing-at-a-cafe-table-uwZ-dOjw8Bo">Vitaly Gariev / Unsplash</a></span></div></footer>
+
+    <script>
+      import { attachSpringFeedback } from '../scripts/cloud-spring';
+      import { attachSpringScroll } from '../scripts/cloud-scroll';
+      import { initCloudMotion, motionEnabled, motionChangeEvent, animateArrival, greetPuppy } from '../scripts/cloud-motion';
+
+      initCloudMotion();
+      attachSpringFeedback(document.querySelectorAll<HTMLElement>('.warm-button, .header-start, [data-demo-choice], [data-identity-choice], .replay'));
+      attachSpringScroll();
+
+      const demo = document.querySelector<HTMLElement>('[data-demo]');
+      if (demo) {
+        const choices = [...demo.querySelectorAll<HTMLButtonElement>('[data-demo-choice]')];
+        const panels = [...demo.querySelectorAll<HTMLElement>('[data-demo-panel]')];
+        const replay = demo.querySelector<HTMLButtonElement>('[data-replay]');
+        const status = demo.querySelector<HTMLElement>('[data-demo-status]');
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const smallScreen = window.matchMedia('(max-width: 760px)');
+        const comparisons = panels.map((panel) => ({
+          toggle: panel.querySelector<HTMLButtonElement>('[data-before-toggle]')!,
+          thread: panel.querySelector<HTMLElement>('[data-before-thread]')!,
+        }));
+        const resizeComparisons = () => {
+          comparisons.forEach(({ toggle, thread }) => {
+            toggle.hidden = !smallScreen.matches;
+            thread.hidden = smallScreen.matches && toggle.getAttribute('aria-expanded') !== 'true';
+          });
+        };
+        comparisons.forEach(({ toggle, thread }) => toggle.addEventListener('click', () => {
+          const expanded = toggle.getAttribute('aria-expanded') !== 'true';
+          toggle.setAttribute('aria-expanded', String(expanded));
+          thread.hidden = !expanded;
+        }));
+        let current = 0;
+        let timers: ReturnType<typeof setTimeout>[] = [];
+        const stop = () => {
+          timers.forEach(clearTimeout);
+          timers = [];
+          demo.querySelectorAll<HTMLElement>('[data-demo-message]').forEach((message) => {
+            message.hidden = false;
+            message.classList.remove('message-arrive');
+          });
+          panels.forEach((panel) => panel.removeAttribute('aria-busy'));
+          panels.forEach((panel) => { panel.querySelector<HTMLElement>('.pilot-conversation')!.style.minHeight = ''; });
+          if (replay) replay.disabled = false;
+        };
+        const select = (index: number) => {
+          stop();
+          current = index;
+          choices.forEach((choice, i) => choice.setAttribute('aria-pressed', String(i === index)));
+          panels.forEach((panel, i) => { panel.hidden = i !== index; });
+          animateArrival(panels[index]);
+          if (status) status.textContent = `${panels[index].getAttribute('aria-label')} example selected.`;
+        };
+        choices.forEach((choice, index) => choice.addEventListener('click', () => select(index)));
+        const playExample = () => {
+          stop();
+          if (!replay) return;
+          const panel = panels[current];
+          const messages = [...panel.querySelectorAll<HTMLElement>('[data-demo-message]')];
+          const announceResult = () => {
+            panel.removeAttribute('aria-busy');
+            replay.disabled = false;
+            if (status) status.textContent = panel.querySelector('.result-note')?.textContent ?? 'Example complete.';
+          };
+          if (!motionEnabled() || reducedMotion.matches) { announceResult(); return; }
+          const conversation = panel.querySelector<HTMLElement>('.pilot-conversation')!;
+          conversation.style.minHeight = `${conversation.getBoundingClientRect().height}px`;
+          replay.disabled = true;
+          panel.setAttribute('aria-busy', 'true');
+          messages.forEach((message, i) => {
+            message.hidden = i !== 0;
+            timers.push(setTimeout(() => {
+              message.hidden = false;
+              message.classList.add('message-arrive');
+              if (i === messages.length - 1) announceResult();
+            }, i * 850));
+          });
+        };
+        replay?.addEventListener('click', playExample);
+        select(0);
+        demo.querySelector<HTMLElement>('.demo-choices')!.hidden = false;
+        if (replay) replay.hidden = false;
+        resizeComparisons();
+        smallScreen.addEventListener('change', () => { stop(); resizeComparisons(); });
+        reducedMotion.addEventListener('change', stop);
+        document.addEventListener(motionChangeEvent, stop);
+        const autoDemo = new IntersectionObserver((entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          autoDemo.disconnect();
+          if (current === 0 && motionEnabled()) playExample();
+        }, { threshold: .7 });
+        autoDemo.observe(panels[0].querySelector('.pilot-conversation')!);
+        document.addEventListener('astro:before-swap', () => { stop(); autoDemo.disconnect(); }, { once: true });
+      }
+
+      const identity = document.querySelector<HTMLElement>('[data-identity-demo]');
+      if (identity) {
+        const choices = [...identity.querySelectorAll<HTMLButtonElement>('[data-identity-choice]')];
+        const logo = identity.querySelector<HTMLImageElement>('[data-connected-logo]')!;
+        const name = identity.querySelector<HTMLElement>('[data-connected-name]')!;
+        const status = identity.querySelector<HTMLElement>('[data-identity-status]')!;
+        choices.forEach((choice) => choice.addEventListener('click', () => {
+          choices.forEach((item) => item.setAttribute('aria-pressed', String(item === choice)));
+          logo.src = choice.dataset.logo!;
+          name.textContent = choice.dataset.identityChoice!;
+          animateArrival(identity.querySelector('.connected-app')!);
+          greetPuppy(identity.querySelector('.profile-avatar')!);
+          status.textContent = `Example now using ${name.textContent}. Your handle, link, and connections stay the same.`;
+        }));
+        identity.querySelector<HTMLElement>('.identity-controls')!.hidden = false;
+      }
+    </script>
+  </body>
+</html>
+
+<style>
+  :global(html.cloud-warm), :global(html.cloud-warm[data-theme]) {
+    --bg: #faf7f2; --bg-2: #fffdf9; --bg-deep: #f0e9df;
+    --ink: #43352f; --ink-dim: #75665c; --ink-faint: #b4a499;
+    --line: #e9dfd4; --line-2: #d9cbbd;
+    --accent: #ba4e36; --accent-text: #a6402d; --accent-ink: #fffaf5;
+    --accent-dim: #f8e2d5; --accent-glow: #f8e2d5;
+    color-scheme: light; scroll-behavior: smooth; overflow-x: clip;
+  }
+  :global(.cloud-warm body) { background: #faf7f2; color: #43352f; font-size: 16px; overflow: visible; }
+  :global(.cloud-warm .consent-banner) { background: #fffdf9; box-shadow: 0 -8px 40px #6b44380b; }
+  :global(.cloud-warm .consent-btn) { font-family: var(--sans); text-transform: none; letter-spacing: 0; border-radius: 99px; }
+  :global(.cloud-warm [hidden]) { display: none !important; }
+  :global(.cloud-warm :is(a, button, summary):focus-visible) { outline: 3px solid #a6402d; outline-offset: 5px; }
+  :global(.cloud-warm ::selection) { background: #efd3c1; color: #43352f; }
+  :global(.cloud-warm [data-spring]) { transform: translateY(var(--spring-y, 0px)) scale(var(--spring-scale, 1)); }
+  :global(.cloud-warm [data-spring-moving]) { will-change: transform; }
+  main, section[id] { scroll-margin-top: 108px; }
+  main:focus, section[id]:focus { outline: none; }
+  .shell { width: min(1180px, calc(100% - 96px)); margin-inline: auto; }
+  .section-space { padding-block: 94px; }
+  .brand { display: inline-flex; align-items: center; gap: 9px; font-size: 26px; font-weight: 650; letter-spacing: -1.2px; }
+  .brand img { object-fit: contain; }
+  .cloud-label { align-self: center; background: #eee6da; color: #766352; font-size: 12px; font-weight: 550; letter-spacing: .02em; padding: 4px 10px; border-radius: 99px; margin-left: 2px; }
+  .site-header { position: sticky; top: 0; z-index: 100; background: #faf7f2f2; border-bottom: 1px solid #e9dfd480; -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+  .page-header { height: 84px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+  .header-actions { display: flex; align-items: center; gap: 26px; font-size: 13px; font-weight: 550; color: #6e5a4c; }
+  .header-actions a { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  .header-start { border: 1px solid #d6b6a2; border-radius: 99px; padding: 10px 19px; gap: 18px; color: #99452f; background: #fffaf4; }
+  .header-start:hover { background: #f4e5d8; color: #863921; }
+  .header-start span { font-size: 19px; line-height: 1; }
+  .motion-setting { min-height: 44px; border: 0; background: transparent; padding: 0; color: inherit; font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .motion-setting:disabled { text-decoration: none; cursor: default; }
+  .eyebrow { display: flex; align-items: center; gap: 9px; color: #8a533e; font-family: var(--sans); font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .14em; line-height: 1.6; }
+  .eyebrow::before { content: none; }
+  .little-sun { font-size: 25px; color: #c26943; line-height: 1; }
+  h1, h2, h3 { font-weight: 550; text-wrap: balance; }
+  h1 { font-size: clamp(52px, 5.3vw, 72px); letter-spacing: -.055em; line-height: 1.06; margin: 22px 0 24px; }
+  h1 em, h2 em { font-family: inherit; font-style: normal; font-weight: inherit; color: #ad503b; letter-spacing: inherit; }
+  h2 { font-size: clamp(37px, 4vw, 52px); line-height: 1.1; letter-spacing: -.04em; }
+  h3 { font-size: 22px; line-height: 1.25; letter-spacing: -.025em; }
+  .hero { display: grid; grid-template-columns: 1.05fr 1fr; align-items: center; gap: 48px; padding-top: 44px; padding-bottom: 54px; }
+  .hero-copy { padding-bottom: 18px; }
+  .hero-description { max-width: 405px; color: var(--ink-dim); font-size: 18px; line-height: 1.65; margin-bottom: 29px; }
+  .hero-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; }
+  .demo-link { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; font-size: 13px; font-weight: 550; color: #79513e; text-decoration: underline; text-decoration-color: #c6a28b; text-underline-offset: 5px; }
+  .demo-link:hover { color: #a6402d; }
+  .demo-link span { font-size: 18px; }
+  .warm-button { display: inline-flex; gap: 38px; align-items: center; justify-content: center; padding: 16px 25px; min-height: 56px; border-radius: 99px; color: #fffdf8; background: #b94e36; font-size: 16px; font-weight: 550; box-shadow: 0 5px 0 #823a2414; transition: background .2s, box-shadow .2s; }
+  .warm-button span { font-size: 23px; font-weight: 400; line-height: 1; }
+  .warm-button:hover { color: #fffdf8; background: #a4442e; box-shadow: 0 7px 0 #823a2414; }
+  .fine { color: #7c6c5e; font-size: 12px; line-height: 1.65; }
+  .hero-fine { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .hero-setup { max-width: 390px; margin-top: 23px; padding-left: 14px; border-left: 2px solid #d5b59c; color: #73604f; font-size: 14px; line-height: 1.65; }
+  .hero-setup strong { display: block; color: #5b4635; font-weight: 600; }
+  .hero-story { position: relative; min-height: 510px; isolation: isolate; margin-top: 18px; }
+  .hero-story::before { content: ''; position: absolute; z-index: -1; inset: 0 2% 18px 2%; background: #f3e8d8; border-radius: 48% 52% 48% 44%; transform: rotate(-8deg); }
+  .photo-note { position: absolute; top: 22px; right: -4px; width: 94%; background: #fffdfa; border-radius: 18px; padding: 12px 12px 0; transform: rotate(4deg); box-shadow: 0 16px 45px #5b3d2812, 0 2px 5px #5b3d2808; }
+  .friends-photo { display: block; width: 100%; height: 275px; object-fit: cover; object-position: 43% 50%; border-radius: 10px; }
+  .photo-note figcaption { display: flex; align-items: center; justify-content: center; gap: 25px; height: 60px; font-size: 20px; font-weight: 500; color: #71503a; }
+  .photo-note figcaption span { font-family: var(--sans); font-style: normal; color: #bd6951; }
+  .story-spark { position: absolute; z-index: 2; top: 0; left: 1%; color: #ba683e; font-size: 65px; line-height: 1; transform: rotate(15deg); }
+  .puppy-note { position: absolute; bottom: 0; left: -12px; text-align: center; width: 240px; transform: rotate(-4deg); }
+  .puppy-note img { display: block; width: 240px; height: 240px; object-fit: contain; }
+  .puppy-note span { display: inline-block; background: #fff5dc; font-size: 12px; color: #816147; padding: 7px 13px; border-radius: 99px; transform: translateY(-10px); }
+  .plan-note { position: absolute; bottom: 62px; right: -14px; display: flex; align-items: center; gap: 10px; padding: 17px; background: #eef2de; border: 5px solid #fffdf9; border-radius: 20px; transform: rotate(-4deg); box-shadow: 0 10px 26px #59413212; z-index: 2; }
+  .plan-note b, .plan-note div > span { display: block; }
+  .plan-note b { color: #475440; font-size: 17px; font-weight: 600; }
+  .plan-note div > span { color: #636c54; font-size: 12px; margin-top: 2px; }
+  .plan-icon { border-radius: 50%; background: #d9e2bb; color: #51613d; display: grid; place-items: center; width: 30px; height: 30px; }
+  .plan-heart { font-size: 25px; color: #7e8b68; margin-left: 7px; }
+  .story-doodle { position: absolute; width: 105px; height: 75px; bottom: 13px; right: 45px; color: #b69075; transform: rotate(8deg); }
+  .compatibility { text-align: center; padding-top: 46px; }
+  .compatibility > p { font-size: 13px; color: #766454; margin-bottom: 24px; }
+  .compatibility .compatibility-heading { font-size: 21px; font-weight: 550; color: #5b4635; margin-bottom: 22px; }
+  .recommended-logos { max-width: 800px; margin-inline: auto; }
+  .compatibility .compatibility-description { margin: 18px auto 0; line-height: 1.65; max-width: 58ch; }
+  .compatibility .compatibility-label { margin: 30px 0 20px; padding-top: 28px; border-top: 1px solid #e2d8c9; font-size: 15px; font-weight: 550; color: #5b4635; }
+  .compatibility .compatibility-note { margin: 20px 0 0; font-size: 12px; line-height: 1.6; }
+  .compatibility .compatibility-identity { margin: 20px 0 0; color: #8b513d; font-weight: 550; }
+  .app-logos { display: flex; gap: 33px; justify-content: center; flex-wrap: wrap; align-items: center; }
+  .app-logos span { display: inline-flex; gap: 9px; align-items: center; color: #716458; font-size: 17px; font-weight: 550; }
+  .app-logos img { object-fit: contain; }
+  .app-logos .and-more { color: #7a6b5d; font-size: 14px; font-weight: 400; }
+  .proof-section { padding-top: 60px; }
+  .proof-intro { text-align: center; margin-bottom: 25px; }
+  .proof-intro h2 { font-size: 27px; line-height: 1.2; letter-spacing: -.025em; }
+  .proof-intro p { color: var(--ink-dim); font-size: 14px; line-height: 1.7; margin-top: 10px; }
+  .proof-card { display: grid; grid-template-columns: .9fr 1.1fr; gap: 38px; align-items: center; padding: 30px 36px; border-radius: 22px; background: #f2ecdf; }
+  .proof-label { color: #755c48; font-size: 12px; font-weight: 550; line-height: 1.5; }
+  .network-count { display: flex; align-items: center; gap: 18px; margin-top: 9px; }
+  .network-count strong { color: #a6533e; font-size: 45px; line-height: 1.1; font-weight: 550; letter-spacing: -.045em; }
+  .network-count > span { color: #6e5d4e; font-size: 13px; line-height: 1.5; }
+  .network-registered { color: #705c4c; font-size: 12px; line-height: 1.6; margin-top: 10px; }
+  .network-registered b { font-weight: 600; }
+  .proof-source { color: #75614f; font-size: 11px; line-height: 1.6; margin-top: 8px; }
+  .proof-source > span { margin-inline: 5px; }
+  .proof-source a, .funding-note { text-decoration: underline; text-decoration-color: #b4a08d66; text-underline-offset: 3px; }
+  .proof-source a:hover, .funding-note:hover { color: #994a34; }
+  .backing-proof { border-left: 1px solid #dfd4c4; padding-left: 38px; }
+  .backer-logos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 22px 24px; list-style: none; margin: 21px 0; padding: 0; }
+  .backer-logos li { display: flex; align-items: center; min-height: 25px; }
+  .backer-logos img { display: block; height: 23px; width: auto; max-width: 100%; object-fit: contain; }
+  .funding-note { display: inline-block; color: #755b47; font-size: 11px; line-height: 1.7; }
+  .funding-note > span:first-child { margin-inline: 5px; }
+  .proof-card.funding-only { grid-template-columns: 1fr; }
+  .funding-only .backing-proof { border-left: 0; padding-left: 0; }
+  .demo-section { background: #f2ede4; border-radius: 48px 48px 0 0; padding-bottom: 82px; }
+  .section-intro { margin-bottom: 38px; }
+  .section-intro h2 { margin-top: 15px; }
+  .section-intro > p:last-child:not(.eyebrow) { font-size: 17px; color: var(--ink-dim); line-height: 1.65; margin-top: 20px; }
+  .centered { text-align: center; }
+  .centered .eyebrow { justify-content: center; }
+  .demo { max-width: 960px; margin-inline: auto; }
+  .demo-choices { display: flex; justify-content: center; flex-wrap: wrap; gap: 9px; margin-bottom: 24px; }
+  .demo-choices button { display: flex; align-items: center; gap: 8px; padding: 12px 18px; min-height: 46px; border-radius: 99px; border: 1px solid #ded4c7; background: transparent; font: 500 14px var(--sans); color: #716254; cursor: pointer; transition: background .18s, color .18s; }
+  .demo-choices button span { font-size: 19px; line-height: 1; }
+  .demo-choices button:hover { background: #fffbf4; }
+  .demo-choices button[aria-pressed='true'] { background: #fffaf3; color: #a84a33; border-color: #d7ac98; box-shadow: 0 3px 8px #83603b08; }
+  .demo-panel { display: grid; grid-template-columns: 1fr 1.05fr; background: #fffdf9; border-radius: 26px; overflow: hidden; box-shadow: 0 8px 30px #6d503309; }
+  .demo-panel + .demo-panel { margin-top: 24px; }
+  .demo-panel[hidden] + .demo-panel { margin-top: 0; }
+  .before-side, .after-side { padding: 30px; min-width: 0; }
+  .before-side { background: #f8f5ef; }
+  .compare-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; border: 0; padding: 0; background: transparent; color: #735b49; text-align: left; font: 500 13px var(--sans); cursor: pointer; }
+  .compare-toggle span { display: grid; place-items: center; flex: none; width: 25px; height: 25px; background: #eee5d9; border-radius: 50%; font-size: 19px; transition: transform .2s; }
+  .compare-toggle[aria-expanded='true'] span { transform: rotate(45deg); }
+  .after-side { background: #fffdf9; }
+  .demo-panel-heading { display: flex; justify-content: space-between; align-items: center; min-height: 29px; gap: 8px; margin-bottom: 23px; }
+  .small-label { font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .1em; color: #79604c; display: flex; gap: 8px; align-items: center; }
+  .tiny-tag { font-size: 12px; color: #796553; }
+  .tiny-heart { font-size: 29px; color: #b76c53; line-height: 1; }
+  .before-side h3 { font-size: 18px; margin-bottom: 22px; }
+  .chat-thread { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+  .chat-bubble { max-width: 90%; font-size: 13px; padding: 9px 13px; line-height: 1.5; background: #ede5da; border-radius: 15px 15px 15px 4px; color: #78695b; }
+  .chat-bubble.them { align-self: flex-end; background: #fffdf9; border-radius: 15px 15px 4px 15px; }
+  .chat-bubble.trailing { color: #746455; background: #f0ebe3; }
+  .typing-note { display: block; margin-top: 18px; color: #77614f; font-size: 12px; }
+  .pilot-conversation { min-height: 300px; display: flex; flex-direction: column; gap: 18px; }
+  .request-bubble { align-self: flex-end; background: #f5e4da; padding: 15px 18px; border-radius: 17px 17px 4px 17px; max-width: 93%; font-size: 15px; line-height: 1.5; }
+  .request-bubble > span { display: block; margin-bottom: 5px; font-size: 11px; font-weight: 600; color: #87533d; }
+  .pilot-reply { display: flex; gap: 11px; align-items: flex-start; font-size: 14px; line-height: 1.65; color: #756559; }
+  .pilot-reply img { flex: none; }
+  .agent-avatar { display: grid; place-items: center; width: 36px; height: 36px; flex: none; background: #f5eee4; border-radius: 12px; }
+  .agent-avatar img { object-fit: contain; }
+  .pilot-reply b { display: block; font-size: 12px; color: #5e4b3d; margin-bottom: 3px; }
+  .friend-reply { margin-left: 24px; padding: 13px; border-radius: 16px 16px 4px 16px; background: #f1edf5; color: #685770; }
+  .friend-reply .agent-avatar { background: #fffdf9; }
+  .friend-reply b { color: #5f496b; }
+  .result-note { display: flex; gap: 12px; align-items: flex-start; padding: 17px; border-radius: 16px; background: #edf0de; color: #536142; }
+  .result-check { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #d7dfbe; font-size: 13px; }
+  .result-note b { font-size: 15px; font-weight: 600; line-height: 1.45; display: block; }
+  .result-note p { font-size: 12px; margin-top: 5px; color: #626b4c; }
+  .demo-signoff { color: #876047; text-align: center; font-size: 13px; margin-top: 21px; }
+  .demo-footer { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 6px 0; color: #745e4c; font-size: 12px; line-height: 1.6; }
+  .replay { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; font: 500 12px var(--sans); color: #8b513d; cursor: pointer; border: 0; background: transparent; flex-shrink: 0; }
+  .replay span { font-size: 21px; }
+  .replay:hover { color: #a7412b; }
+  .replay:disabled { opacity: .55; cursor: default; }
+  .message-arrive { animation: message-arrive .35s ease both; }
+  @keyframes message-arrive { from { transform: translateY(7px); } to { transform: translateY(0); } }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding-top: 6px; }
+  .step { border-radius: 23px; padding: 26px 28px 29px; display: flex; flex-direction: column; }
+  .peach { background: #f7e4d9; }
+  .butter { background: #f3edcf; }
+  .lilac { background: #eee7f2; }
+  .step-top { display: flex; align-items: flex-start; justify-content: space-between; height: 108px; margin-bottom: 12px; }
+  .step-top img { object-fit: contain; margin-top: -5px; }
+  .step-number { background: #fffaf66b; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; font-size: 12px; color: #795e4a; }
+  .step p { color: #736154; font-size: 15px; line-height: 1.7; margin-top: 15px; }
+  .step-note { display: block; font-size: 12px; color: #765c46; padding-top: 24px; margin-top: auto; }
+  .together-card { display: grid; grid-template-columns: .9fr 1.1fr; gap: 60px; background: #f1e9dd; border-radius: 30px; padding: 55px 70px; align-items: center; }
+  .identity-demo { width: 100%; max-width: 360px; margin-inline: auto; min-width: 0; }
+  .identity-card { position: relative; background: #fffdf8; padding: 24px; border: 1px solid #e8daca; border-radius: 26px; box-shadow: 0 18px 36px #7652390c, 0 3px 6px #76523905; text-align: center; }
+  .identity-card-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .profile-label { font-size: 10px; color: #796554; }
+  .profile-avatar { width: 130px; height: 130px; border-radius: 50%; overflow: hidden; background: #f5e8d7; margin: 25px auto 15px; }
+  .profile-avatar :is(img, video) { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .profile-handle { font-size: 30px; font-weight: 550; line-height: 1.2; letter-spacing: -.04em; color: #a14b35; }
+  .profile-tagline { font-size: 13px; color: #79614f; margin-top: 7px; }
+  .connected-app { display: flex; align-items: center; gap: 10px; padding: 14px 12px; margin-top: 25px; border-radius: 14px; background: #f5f0e8; text-align: left; font-size: 12px; color: #73604f; }
+  .connected-app img { flex: none; object-fit: contain; }
+  .connected-app b { display: block; font-size: 14px; color: #4f4034; font-weight: 550; }
+  .connection-check { flex: none; width: 25px; height: 25px; display: grid; place-items: center; margin-left: auto; background: #e2e8cb; color: #53653e; border-radius: 50%; }
+  .profile-circles { border-top: 1px dashed #e7dccc; margin-top: 22px; padding-top: 22px; }
+  .profile-circles .share-circles { justify-content: center; margin-top: 0; }
+  .profile-circles > p { font-size: 12px; color: #79614f; margin-top: 12px; }
+  .identity-controls { text-align: center; margin-top: 23px; }
+  .identity-controls > p { font-size: 12px; color: #755c48; margin-bottom: 11px; }
+  .identity-choices { display: flex; justify-content: center; gap: 7px; }
+  .identity-choices button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 12px; min-height: 44px; border-radius: 99px; border: 1px solid #d7c9b8; background: #f9f4ec; font: 500 12px var(--sans); color: #715947; cursor: pointer; }
+  .identity-choices img { object-fit: contain; }
+  .identity-choices button:hover { background: #fffaf4; }
+  .identity-choices button[aria-pressed='true'] { background: #fffaf4; border-color: #a76246; box-shadow: 0 2px 6px #7652390a; color: #99452f; }
+  .together-copy h2 { margin-top: 15px; font-size: clamp(34px, 3.5vw, 45px); }
+  .together-copy > p:not(.eyebrow) { color: #7c6857; font-size: 15px; line-height: 1.75; margin-top: 18px; }
+  .share-example { margin-top: 22px; padding: 19px 20px; border-radius: 17px; background: #fffaf2; box-shadow: 0 4px 14px #76523906; }
+  .share-label { display: block; font-size: 12px; line-height: 1.5; color: #795d46; }
+  .share-address { display: block; margin-top: 7px; font-size: 15px; line-height: 1.65; color: #7b6556; overflow-wrap: anywhere; }
+  .share-address b { color: #a34a34; font-weight: 600; }
+  .share-circles { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 15px; }
+  .share-circles > span { padding: 5px 9px; border-radius: 99px; background: #f5dfd3; color: #765440; font-size: 11px; }
+  .share-circles > span:nth-child(2) { background: #eeeacb; }
+  .share-circles > span:nth-child(3) { background: #eee6f0; }
+  .identity-start { margin-top: 24px; }
+  .reassurance { display: grid; grid-template-columns: repeat(3, 1fr); gap: 50px; padding-block: 65px 20px; }
+  .reassurance-icon { display: grid; place-items: center; width: 39px; height: 39px; background: #eee9dd; color: #877258; border-radius: 13px; font-size: 23px; margin-bottom: 17px; }
+  .reassurance h3 { font-size: 18px; }
+  .reassurance p { font-size: 14px; line-height: 1.7; color: var(--ink-dim); margin-top: 11px; max-width: 31ch; }
+  .faq-section { display: grid; grid-template-columns: .9fr 1.1fr; gap: 80px; padding-bottom: 100px; }
+  .faq-intro h2 { margin-top: 17px; font-size: 44px; }
+  .faq-intro > img { margin-top: 25px; object-fit: contain; }
+  .faq-list { padding-top: 4px; }
+  .faq-list details { border-bottom: 1px solid #e6dbcd; }
+  .faq-list summary { list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 25px; padding-block: 22px; cursor: pointer; font-size: 16px; font-weight: 550; }
+  .faq-list summary::-webkit-details-marker { display: none; }
+  .faq-list summary > span { display: grid; place-items: center; background: #f0e9df; color: #98785d; width: 26px; height: 26px; border-radius: 50%; font-size: 19px; font-weight: 400; flex: none; transition: transform .2s; }
+  .faq-list details[open] summary > span { transform: rotate(45deg); }
+  .faq-list details p { font-size: 14px; line-height: 1.8; padding-bottom: 23px; color: var(--ink-dim); }
+  .faq-list summary:hover { color: #a04b34; }
+  .close-card { position: relative; text-align: center; background: #f5dfd1; border-radius: 32px; padding: 42px 30px 56px; overflow: hidden; }
+  .close-card > img { display: block; margin: -14px auto -2px; object-fit: contain; }
+  .close-card .eyebrow { justify-content: center; }
+  .close-card h2 { font-size: clamp(46px, 5vw, 66px); margin-top: 15px; }
+  .close-card > p:not(.eyebrow) { margin-top: 21px; color: #7e5b48; line-height: 1.7; font-size: 16px; }
+  .close-card .warm-button { margin-top: 25px; }
+  .close-card .fine { display: block; margin-top: 16px; color: #795f4f; }
+  .close-flower { position: absolute; left: 13%; top: 30%; font-size: 86px; color: #d39b72; transform: rotate(10deg); }
+  .close-heart { position: absolute; right: 13%; bottom: 23%; font-size: 87px; color: #c6836b; transform: rotate(15deg); }
+  .page-footer { padding-block: 45px 32px; }
+  .footer-main { display: flex; align-items: center; justify-content: space-between; gap: 25px; }
+  .footer-main .brand { font-size: 22px; }
+  .footer-main > span:not(.brand) { font-size: 13px; color: #796655; }
+  .footer-links { display: flex; gap: 22px; font-size: 12px; color: #7c6c5e; }
+  .footer-links a { display: inline-flex; align-items: center; min-height: 44px; }
+  .footer-small { border-top: 1px solid #e9e0d4; margin-top: 25px; padding-top: 19px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; font-size: 11px; color: #786351; line-height: 1.7; }
+  .footer-small a { text-decoration: underline; text-underline-offset: 3px; }
+  .skip-link { position: fixed; top: 12px; left: 12px; z-index: 10000; background: #fffdf9; color: #843c2a; border-radius: 12px; padding: 12px 20px; transform: translateY(-150%); }
+  .skip-link:focus { transform: translateY(0); }
+  /* A living scene, with a stable reading surface beside it. */
+  :global(.cloud-warm[data-motion='running']) .hero-story.is-ambient .photo-note { animation: floating-photo 8s ease-in-out infinite; }
+  :global(.cloud-warm[data-motion='running']) .hero-story.is-ambient .puppy-note img { animation: puppy-breathe 5.5s ease-in-out infinite; transform-origin: 50% 90%; }
+  :global(.cloud-warm[data-motion='running']) .hero-story.is-ambient .story-spark { animation: sun-hello 1.6s ease-out; }
+  :global(.cloud-warm[data-motion='running']) .hero-story.is-ambient .story-doodle path { stroke-dasharray: 280; animation: draw-doodle 1.8s ease-out; }
+  :global(.cloud-warm[data-motion='running']) .hero-story.is-ambient .plan-note { animation: plan-arrives 1s cubic-bezier(.16, 1, .3, 1); }
+  :global(.cloud-warm[data-motion='running']) .close-card.is-ambient > img { animation: puppy-breathe 5.5s ease-in-out infinite; transform-origin: 50% 90%; }
+  :global(.cloud-warm[data-page-visible='false']) .is-ambient *,
+  :global(.cloud-warm[data-page-visible='false']) .is-ambient { animation-play-state: paused !important; }
+  @keyframes floating-photo { 0%, 100% { transform: translateY(0) rotate(4deg); } 50% { transform: translateY(-7px) rotate(3deg); } }
+  @keyframes puppy-breathe { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-5px) rotate(2deg); } }
+  @keyframes sun-hello { from { transform: rotate(-25deg) scale(.85); } to { transform: rotate(15deg) scale(1); } }
+  @keyframes draw-doodle { from { stroke-dashoffset: 280; } to { stroke-dashoffset: 0; } }
+  @keyframes plan-arrives { from { transform: translateY(14px) rotate(-9deg); } to { transform: translateY(0) rotate(-4deg); } }
+  @keyframes logo-hello { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-4px) rotate(-5deg); } 75% { transform: translateY(-1px) rotate(3deg); } }
+  @media (hover: hover) {
+    :global(.cloud-warm[data-motion='running']) .app-logos span:hover img { animation: logo-hello .75s ease; }
+  }
+  @media (max-width: 1080px) {
+    .shell { width: calc(100% - 64px); }
+    .header-actions { gap: 20px; }
+    .hero { gap: 32px; }
+    .hero-story { min-height: 480px; }
+    .friends-photo { height: 245px; }
+    .photo-note figcaption { gap: 12px; font-size: 17px; }
+    .plan-note { right: -8px; bottom: 62px; padding: 12px; gap: 7px; max-width: 58%; }
+    .plan-note b { font-size: 15px; }
+    .plan-icon { flex: none; width: 24px; height: 24px; }
+    .plan-heart { display: none; }
+    .puppy-note { left: -10px; width: 48%; }
+    .puppy-note img { width: 100%; height: auto; }
+    .puppy-note span { font-size: 10px; white-space: nowrap; padding: 6px 9px; }
+    .app-logos { gap: 23px; }
+    .together-card { padding: 35px; gap: 32px; grid-template-columns: 1fr 1fr; }
+    .identity-card { padding: 20px; }
+    .identity-choices { gap: 5px; }
+    .identity-choices button { padding-inline: 8px; font-size: 11px; }
+    .identity-choices img { width: 18px; height: 18px; }
+    .before-side, .after-side { padding: 25px; }
+    .tiny-tag { display: none; }
+    .step { padding: 23px; }
+    .step h3 { font-size: 20px; }
+    .faq-section { gap: 50px; }
+  }
+  @media (max-width: 760px) {
+    .shell { width: calc(100% - 40px); }
+    main, section[id] { scroll-margin-top: 94px; }
+    .page-header { height: 74px; gap: 12px; }
+    .header-actions { gap: 8px; }
+    .header-start { padding-inline: 16px; gap: 12px; }
+    .page-header .brand { font-size: 21px; gap: 4px; }
+    .page-header .brand > img { width: 32px; height: 32px; }
+    .page-header .cloud-label { font-size: 10px; padding: 4px 7px; }
+    .hero { grid-template-columns: 1fr; gap: 24px; padding-top: 30px; padding-bottom: 20px; }
+    .hero-copy { text-align: center; }
+    .hero-copy .eyebrow { justify-content: center; font-size: 10px; letter-spacing: .1em; }
+    h1 { font-size: clamp(43px, 11.7vw, 70px); margin-top: 18px; }
+    .desktop-break { display: none; }
+    .hero-description { margin-inline: auto; font-size: 17px; max-width: 36ch; }
+    .hero-actions { justify-content: center; gap: 8px 20px; }
+    .hero-fine { justify-content: center; }
+    .hero-setup { margin-inline: auto; padding-left: 0; border-left: 0; max-width: 34ch; }
+    .hero-story { min-height: 480px; width: min(500px, 94%); margin: 6px auto 0; }
+    .friends-photo { height: 250px; }
+    .photo-note { right: 0; }
+    .photo-note figcaption { font-size: 20px; }
+    .story-spark { font-size: 54px; left: 0; }
+    .plan-note { bottom: 45px; right: -7px; width: 52%; padding: 11px; gap: 7px; }
+    .plan-note b { font-size: 15px; }
+    .plan-note div > span { font-size: 11px; }
+    .plan-icon { width: 24px; height: 24px; flex: none; }
+    .plan-heart { display: none; }
+    .puppy-note { left: 0; width: 45%; }
+    .puppy-note img { width: 100%; height: auto; }
+    .puppy-note span { font-size: 10px; white-space: nowrap; padding: 6px 9px; position: relative; left: 50%; transform: translate(-50%, -6px); }
+    .compatibility { padding-top: 36px; }
+    .app-logos { gap: 20px 26px; max-width: 420px; margin-inline: auto; }
+    .app-logos span { font-size: 14px; }
+    .app-logos img { width: 23px; height: 23px; }
+    .proof-section { padding-top: 42px; }
+    .proof-card { grid-template-columns: 1fr; gap: 23px; padding: 25px; border-radius: 20px; }
+    .network-count { gap: 16px; }
+    .network-count strong { font-size: 43px; }
+    .backing-proof { border-left: 0; border-top: 1px solid #dfd4c4; padding: 22px 0 0; }
+    .backer-logos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 24px; }
+    .backer-logos img { height: 21px; }
+    .funding-only .backing-proof { border-top: 0; padding-top: 0; }
+    .section-space { padding-block: 65px; }
+    .demo-section { border-radius: 30px 30px 0 0; }
+    .section-intro { margin-bottom: 30px; }
+    h2 { font-size: 39px; }
+    .section-intro > p:last-child:not(.eyebrow) { font-size: 16px; max-width: 34ch; margin-inline: auto; }
+    .demo-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 420px; margin-inline: auto; }
+    .demo-choices button { font-size: 12px; padding: 10px 14px; justify-content: center; }
+    .demo-panel { grid-template-columns: 1fr; border-radius: 21px; }
+    .before-side, .after-side { padding: 25px; }
+    .after-side { order: -1; }
+    .before-side { padding-block: 10px; }
+    .before-side [data-before-thread] { padding-block: 15px; }
+    .compare-toggle:not([hidden]) + [data-before-thread] .demo-panel-heading { display: none; }
+    .before-side .chat-thread { max-width: 440px; margin-inline: auto; }
+    .before-side .chat-bubble { font-size: 12px; padding: 7px 12px; }
+    .tiny-tag { display: block; font-size: 11px; }
+    .pilot-conversation { min-height: 0; gap: 18px; }
+    .demo-footer { align-items: flex-start; }
+    .demo-footer > span { max-width: 25ch; padding-top: 9px; }
+    .steps { grid-template-columns: 1fr; gap: 16px; }
+    .step { padding: 22px 26px 26px; }
+    .step-top { height: 104px; margin-bottom: 0; }
+    .step-top img { width: 100px; height: 100px; }
+    .step h3 { font-size: 23px; }
+    .step p { max-width: 48ch; margin-top: 12px; }
+    .step-note { padding-top: 18px; }
+    .together-card { grid-template-columns: 1fr; padding: 25px 27px 35px; gap: 28px; border-radius: 25px; }
+    .identity-demo { order: 1; }
+    .identity-card { padding: 21px; border-radius: 22px; }
+    .identity-choices { gap: 7px; }
+    .identity-choices button { padding-inline: 10px; font-size: 12px; }
+    .together-copy h2 { font-size: 38px; }
+    .reassurance { grid-template-columns: 1fr; gap: 28px; padding-top: 44px; padding-bottom: 0; }
+    .reassurance > div { display: grid; grid-template-columns: 40px 1fr; column-gap: 17px; }
+    .reassurance-icon { grid-row: span 2; margin-top: 1px; }
+    .reassurance p { max-width: 45ch; margin-top: 6px; }
+    .faq-section { grid-template-columns: 1fr; gap: 24px; }
+    .faq-intro { position: relative; }
+    .faq-intro h2 { font-size: 39px; }
+    .faq-intro > img { display: none; }
+    .faq-list summary { font-size: 15px; }
+    .close-card { padding: 28px 20px 40px; border-radius: 25px; }
+    .close-card > img { width: 125px; height: 125px; }
+    .close-card h2 { font-size: clamp(37px, 11.5vw, 54px); }
+    .close-card .eyebrow { font-size: 9px; }
+    .close-flower { font-size: 40px; left: 6%; top: 18%; }
+    .close-heart { font-size: 40px; right: 7%; bottom: 25%; }
+    .close-card .fine { font-size: 11px; max-width: 27ch; margin-inline: auto; }
+    .footer-main { flex-wrap: wrap; gap: 20px; }
+    .footer-main > span:not(.brand) { display: none; }
+    .footer-links { gap: 17px; }
+    .footer-small { font-size: 11px; }
+  }
+  @media (max-width: 400px) {
+    .page-header { width: calc(100% - 28px); }
+    .header-start { padding-inline: 13px; gap: 8px; }
+    .hero-actions { flex-direction: column; }
+    .hero-fine { margin-top: 7px; font-size: 11px; }
+    .hero-story { min-height: 440px; }
+    .friends-photo { height: 210px; }
+    .photo-note figcaption { font-size: 16px; height: 50px; }
+    .plan-note { bottom: 45px; gap: 7px; padding: 10px; border-width: 4px; }
+    .plan-note b { font-size: 14px; }
+    .plan-note div > span { font-size: 10px; }
+    .plan-icon { width: 24px; height: 24px; }
+    .plan-heart { display: none; }
+    .story-doodle { bottom: 2px; right: 18px; width: 90px; }
+    .tiny-tag { display: none; }
+    .demo-choices button { padding-inline: 12px; }
+    .demo-footer { gap: 8px; }
+    .after-side { padding: 22px; }
+    .friend-reply { margin-left: 0; padding: 12px; gap: 9px; }
+    .before-side { padding-inline: 22px; }
+    .together-card { padding-inline: 21px; }
+    .identity-card { padding: 17px; }
+    .identity-choices { gap: 5px; }
+    .identity-choices button { padding-inline: 8px; font-size: 11px; gap: 4px; }
+    .profile-handle { font-size: 27px; }
+    .profile-circles .share-circles { gap: 5px; }
+    .share-circles > span { padding-inline: 8px; font-size: 10px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(html.cloud-warm) { scroll-behavior: auto; }
+    :global(.cloud-warm [data-spring]) { transform: none; }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+  :global(html.cloud-warm[data-motion='paused']) { scroll-behavior: auto; }
+  :global(.cloud-warm[data-motion='paused'] *),
+  :global(.cloud-warm[data-motion='paused'] *::before),
+  :global(.cloud-warm[data-motion='paused'] *::after) { animation: none !important; transition: none !important; }
+</style>
