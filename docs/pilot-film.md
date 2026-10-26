@@ -1,29 +1,25 @@
 # Pilot film publication
 
-`/pilot-film` is a separate noindex viewing page with widescreen/vertical selection, ordinary video controls, downloads, and a full text transcript. It has no autoplay. The teaser loads no film files.
+`/pilot-film` is a separate noindex player with widescreen/vertical selection, ordinary controls, downloads and a full transcript. It has no autoplay. The campaign pages load no film assets.
 
-Revision 17 lasts 29.800 seconds at 60fps in 1920×1080 and 1080×1920. It follows the same seven-part story as `/cloud-teaser` and `/cloud-landing`: a hypothetical time question, everyday requests, the last chore, the Pilot link, agents coordinating with approval, the same link everywhere, and taking your life back. Pilot and agents enter at 14.633 seconds. The primary action is Claim your handle; setup is Claim, Connect, Share.
+Revision 18 is a 25.200-second teaser, 1,512 frames at 60fps, in 1920×1080 and 1080×1920. It responds to feedback that the previous cut was too fast and text-heavy. Four short requests replace the eight-request sequence. Each now holds for 115–116 frames (about 1.92 seconds), roughly twice the earlier typical hold. The problem headline has its own 3.833-second scene; it never competes with a request. Question text settles once after replacement and stays still for reading.
 
-## Sequential requests
+The retained requests are coffee, an introduction, feedback and finding a designer. The ending says “Let us help,” then “One link. Everyone can reach your agent.” A simple graphic links two people’s agent badges through the example handle @maya. “Approve who connects” remains visible beside the mechanism. The final callback is “Imagine that 20% back,” with Get your Pilot link and the Cloud destination. The longer chat demo, placement sequence and setup list are removed.
 
-From 3.117 to 11.750 seconds, “How does a ‘quick question’ turn into 30 minutes?” stays fixed while eight requests replace one another in a single large card. Each replacement happens on a measured drum attack. There is no accumulated wall, overlapping request text, or text crossfade. The first request and the longer feedback question last 1.433 seconds each; the other six last about 0.96 seconds. Alternating cream and clay cards mark the swaps. Both formats use identical text and timing.
+## Truth and provenance
 
-The previous film's later scene durations are retained. The longer request sequence adds 2.883 seconds, keeping the total below 30 seconds. The complete final CTA remains visible for 2.60 seconds before the picture fade. These reading holds follow the user's slower-pacing direction and override the motion skill's generic 0.6-second stillness target.
+20% is hypothetical in both the opening question and the final “Imagine” line. It is not a measured or guaranteed time saving. 30 minutes is rhetorical. Questions and the connection graphic are illustrative; no real message or completed task is presented. A public link allows connection requests; the approval line qualifies the broader reach statement.
 
-## Content and provenance
+Existing café photography, portraits, agent marks and Higgsfield reunion footage are reused. Higgsfield jobs: wide 43933a0b-8a7f-4269-8c5b-6da310ebea55, vertical 43a9edd7-b165-4cc2-8980-34a3ed8b14d2. One Inter Tight family and the cream/clay/ink palette are retained.
 
-The opening is the complete question “What would you do with 20% more time?” It is not a measured time-use statistic or a promised saving; 30 minutes is rhetorical. The link reveal groups the real handle URL format with `@maya`. Priya's agent reaches Maya's agent after Maya accepts the connection. A proposed coffee time becomes confirmed only after separate human approval. Both connected AIs and the illustrative demonstration are labeled. The same link stays in the same screen position through bio, email-signature and message cuts. The ending retains “You approve connections and plans.”
+Audio comes from the user-supplied first seven seconds of Imagine Dragons’ Believer, arranged into the previously approved original-tempo loop. This cut uses the same waveform and gain until its new final two-second fade (23.200–25.200s). No narration, added effects or tempo change. Picture fades 24.150–25.200s. This is provenance, not a representation of a music license.
 
-Picture: existing café photography, illustrated components and Higgsfield reunion footage (wide job `43933a0b-8a7f-4269-8c5b-6da310ebea55`, vertical job `43a9edd7-b165-4cc2-8980-34a3ed8b14d2`). Typeface and brand marks are reused from the website. One Inter Tight family, cream/clay/ink palette and a human ending align the three surfaces.
-
-Audio: the user-supplied first seven seconds of Imagine Dragons’ “Believer”, arranged into the approved drum loop at its original tempo. The revised WAV is sample-identical to the prior soundtrack through 24.48 seconds. An existing complete loop extends the cut; the final two seconds fade to silence. No narration or new effects. Picture fades over the final 1.05 seconds. This records provenance, not a representation of a music license.
-
-The editable production source, all text/timings, waveform provenance, previous cuts and independent reviews remain in the local `launch-video/drums/output/rhythm-v17/` archive. Only final MP4s, posters and the full transcript are published. Player assets use the `v=17` cache key.
+The editable project and review archive remain local at `launch-video/drums/output/rhythm-v18/`. Public files are the two MP4s, posters and transcript; the player uses v18 cache keys. The user's deliberate reading holds override the motion skill's generic stillness limit and composition count.
 
 ## Release verification
 
-Both exports fully decode and contain 1,788 frames at 60fps. Picture duration is 29.800 seconds; the AAC container duration is 29.803 seconds. Audio and picture start at zero. The final frame is completely black, and final-10ms decoded audio RMS is 3.8e-07. Encoded audio correlation to the arranged WAV is 0.999872. These are numerical measurements, not an independent listening test.
+Both exports fully decode, contain 1,512 frames at 60fps and have 25.200 seconds of picture. The AAC container is 25.216 seconds. Audio and video begin at zero; final frames are fully black. Encoded audio correlation to the arranged WAV is 0.999875; final-10ms decoded audio RMS is 5.71e-06. These are numerical measurements, not an independent listening test.
 
-All 26 major cuts and state changes were compared with measured waveform attacks; the maximum offset is 14.0ms, less than one 60fps frame. Independent component review inspected both formats every 0.1 seconds and immediately before, at and after every replacement. It found exactly the seven internal request changes, no overlap or blank replacement frame, and no clipped text. The headline stays fixed. Full-film review and measurements are archived in `VERIFICATION.md` and `checks.json`.
+The nine principal cuts/color changes fall within 7.334ms of measured waveform attacks. Independent component review checked exact replacement windows in both formats and found four separate readable requests, a legible connection/approval graphic and an explicitly hypothetical ending. Full-film review is archived in `VERIFICATION.md`. Intentional reading holds follow the client's pacing direction.
 
-Film lint/type checks, the website build, plain coverage, teaser scroll regressions and site integrity passed. The local player selects the correct v17 asset and download for each format.
+Film lint/type checking, website build, plain coverage, teaser scroll regressions and site integrity passed.
