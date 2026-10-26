@@ -14,7 +14,10 @@ const cue = document.querySelector<HTMLElement>('[data-scroll-cue]');
 const progressFill = document.querySelector<HTMLElement>('.story-progress > span');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const touchDevice = window.matchMedia('(hover: none), (pointer: coarse)');
-const nativeTimeline = CSS.supports('animation-timeline', 'scroll(root block)') && CSS.supports('animation-range', '0px 1px');
+// iPhone Safari can accept these properties without advancing this sticky
+// track's timeline. Touch devices use the measured scroll position directly;
+// one transform per frame retains native scrolling and avoids layout work.
+const nativeTimeline = !touchDevice.matches && CSS.supports('animation-timeline', 'scroll(root block)') && CSS.supports('animation-range', '0px 1px');
 let horizontal = false;
 let active = 0;
 let lastPainted = -1;
