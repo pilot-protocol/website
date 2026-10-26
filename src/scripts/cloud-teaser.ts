@@ -11,7 +11,10 @@ const next = document.querySelector<HTMLButtonElement>('[data-next]');
 const chapter = document.querySelector<HTMLElement>('[data-chapter]');
 const status = document.querySelector<HTMLElement>('[data-story-status]');
 const cue = document.querySelector<HTMLElement>('[data-scroll-cue]');
+const progressFill = document.querySelector<HTMLElement>('.story-progress > span');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const touchDevice = window.matchMedia('(hover: none), (pointer: coarse)');
+const nativeTimeline = CSS.supports('animation-timeline', 'scroll(root block)') && CSS.supports('animation-range', '0px 1px');
 let horizontal = false;
 let active = 0;
 let lastPainted = -1;
@@ -26,6 +29,7 @@ function setActive(index: number) {
   active = index;
   lastPainted = index;
   root.dataset.tone = panels[index]?.dataset.tone || 'light';
+  root.dataset.chapter = String(index);
   panels.forEach((panel, i) => {
     const inactive = horizontal && i !== index;
     if (inactive && panel.contains(document.activeElement)) stage?.focus({ preventScroll: true });
@@ -42,9 +46,10 @@ function paint() {
   pendingFrame = 0;
   if (!horizontal || !track || !stageHeight) return;
   const progress = Math.max(0, Math.min(panels.length - 1, (window.scrollY - startY) / stageHeight));
-  track.style.transform = `translate3d(${-progress * stageWidth}px, 0, 0)`;
-  stage?.style.setProperty('--progress', String(progress / (panels.length - 1)));
-  panels.forEach((panel, i) => panel.style.setProperty('--travel', String(Math.max(-1, Math.min(1, progress - i)))));
+  // Supported browsers animate the track on their scroll timeline. The JS
+  // fallback changes one transform, never inherited styles on every panel.
+  if (!nativeTimeline) track.style.transform = `translate3d(${-progress * stageWidth}px, 0, 0)`;
+  if (progressFill && !touchDevice.matches) progressFill.style.transform = `translateX(${progress * 100}%)`;
   setActive(Math.round(progress));
 }
 
@@ -65,15 +70,15 @@ function configure(keepPlace = false) {
     : active;
   const priorProgress = wasHorizontal && stageHeight ? (window.scrollY - startY) / stageHeight : priorIndex;
   // Don't let a transient measurement layout become a new native snap position.
-  root.classList.remove('teaser-snapping');
+  root.classList.remove('teaser-snapping', 'teaser-native');
   // Small landscape windows and large text need a page that can grow naturally.
-  const eligible = !reducedMotion.matches && window.innerHeight >= 660;
+  const eligible = !reducedMotion.matches && window.innerHeight >= 600;
   horizontal = eligible;
   root.classList.toggle('teaser-horizontal', eligible);
   story.style.height = '';
   track.style.transform = '';
   controls.hidden = !eligible;
-  panels.forEach(panel => { panel.inert = false; panel.style.removeProperty('--travel'); });
+  panels.forEach(panel => { panel.inert = false; });
   lastPainted = -1;
   if (eligible) {
     stageHeight = stage.clientHeight;
@@ -99,9 +104,11 @@ function configure(keepPlace = false) {
       controls.hidden = true;
     } else {
       story.style.setProperty('--teaser-step', `${stageHeight}px`);
-      // The last snap target needs a full viewport of scroll room, including
-      // when mobile browser chrome makes innerHeight differ from 100svh.
-      story.style.height = `${stageHeight * (panels.length - 1) + window.innerHeight}px`;
+      story.style.setProperty('--teaser-distance', `${stageHeight * (panels.length - 1)}px`);
+      story.style.setProperty('--teaser-shift', `${-100 * (panels.length - 1)}%`);
+      // Reserve the large viewport once. Collapsing mobile browser chrome must
+      // not rebuild the story or make the last chapter unreachable.
+      story.style.height = `calc(${stageHeight * (panels.length - 1)}px + 100lvh)`;
       startY = story.getBoundingClientRect().top + window.scrollY;
     }
   }
@@ -112,6 +119,7 @@ function configure(keepPlace = false) {
   if (horizontal) paint();
   else { root.dataset.tone = 'light'; panels.forEach(panel => panel.inert = false); }
   root.classList.toggle('teaser-snapping', horizontal);
+  root.classList.toggle('teaser-native', horizontal && nativeTimeline);
 }
 
 if (story && stage && track && panels.length && controls) {
@@ -145,10 +153,17 @@ if (story && stage && track && panels.length && controls) {
     stage.focus({ preventScroll: true });
     if (horizontal) goTo(0); else story.scrollIntoView();
   });
-  let resizeFrame = 0;
+  let resizeTimer = 0;
+  let viewportWidth = window.innerWidth;
+  let viewportHeight = window.innerHeight;
   window.addEventListener('resize', () => {
-    cancelAnimationFrame(resizeFrame);
-    resizeFrame = requestAnimationFrame(() => configure(true));
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    if (width === viewportWidth && (touchDevice.matches || height === viewportHeight)) return;
+    viewportWidth = width;
+    viewportHeight = height;
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(() => configure(true), 150);
   }, { passive: true });
   reducedMotion.addEventListener('change', () => configure(true));
   configure();
@@ -156,44 +171,18 @@ if (story && stage && track && panels.length && controls) {
   document.fonts.ready.then(() => configure(true));
 }
 
-const examples = {
-  plans: { ask: 'Dinner with Priya on Thursday?', agent: 'Priya’s Dots', logo: 'dots.webp', reply: 'After 7 works for Priya. How’s 7:30?', eyebrow: 'A plan, ready for your OK', title: 'Thursday, 7:30.', detail: 'Dinner with Priya. Finally.', action: 'Looks good', done: 'That’s a plan. See you Thursday!', approved: 'Plan approved · Example' },
-  updates: { ask: 'Sam, how’s the launch coming along?', agent: 'Sam’s Hermes', logo: 'hermes.png', reply: 'Sam’s latest update: on track for Friday.', eyebrow: 'The answer, without the follow-up', title: 'Friday. On track.', detail: 'One less person to chase.', action: 'Got it', done: 'Update noted. Back to your day.', approved: 'Update received · Example' },
-  intros: { ask: 'Does Priya know a good designer?', agent: 'Priya’s Dots', logo: 'dots.webp', reply: 'She knows Alex. Shall I ask if he’s open to an intro?', eyebrow: 'An introduction starts with permission', title: 'A good connection.', detail: 'Ask first. Connect when everyone agrees.', action: 'Ask Alex', done: 'The request goes to Alex. He gets to decide.', approved: 'Intro request · Example' },
-  files: { ask: 'Send Sam the latest deck from this chat.', agent: 'Sam’s Hermes', logo: 'hermes.png', reply: 'Got it. I have the latest version for Sam.', eyebrow: 'The right file, in the right hands', title: 'Deck. Delivered.', detail: 'No hunting through old messages.', action: 'All sorted', done: 'The latest version is with Sam’s agent.', approved: 'File received · Example' },
-};
-type Example = keyof typeof examples;
-let currentExample: Example = 'plans';
-const exampleButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-example]'));
+// A local illustration, not a booking or a message sent to another person.
 const approve = document.querySelector<HTMLButtonElement>('.result-approve');
-function showExample(key: Example) {
-  const example = examples[key];
-  currentExample = key;
-  for (const field of ['ask', 'agent', 'reply', 'eyebrow', 'title', 'detail'] as const) {
-    const element = document.querySelector(`[data-example-${field}]`);
-    if (element) element.textContent = example[field];
-  }
-  const logo = document.querySelector<HTMLImageElement>('[data-example-logo]');
-  if (logo) logo.src = `/cloud/logos/${example.logo}`;
-  exampleButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.example === key)));
-  if (approve) { approve.textContent = `${example.action} ✓`; approve.dataset.approved = 'false'; }
-}
-exampleButtons.forEach(button => button.addEventListener('click', () => showExample(button.dataset.example as Example)));
 if (approve) {
   approve.hidden = false;
   approve.addEventListener('click', () => {
-    if (approve.dataset.approved === 'true') { showExample(currentExample); return; }
-    const example = examples[currentExample];
-    const detail = document.querySelector('[data-example-detail]');
-    const eyebrow = document.querySelector('[data-example-eyebrow]');
-    if (detail) detail.textContent = example.done;
-    if (eyebrow) eyebrow.textContent = example.approved;
-    approve.textContent = 'Replay example ↺';
-    approve.dataset.approved = 'true';
+    const approved = approve.dataset.approved !== 'true';
+    approve.dataset.approved = String(approved);
+    approve.textContent = approved ? 'Replay example ↺' : 'Looks good ✓';
+    const label = document.querySelector('.result-label');
+    if (label) label.textContent = approved ? 'Approved by you. See you Thursday!' : 'Dinner with Priya';
   });
 }
-const choices = document.querySelector<HTMLElement>('.example-choices');
-if (choices) choices.hidden = false;
 
 const identityButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-identity]'));
 identityButtons.forEach(button => button.addEventListener('click', () => {

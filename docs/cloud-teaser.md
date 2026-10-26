@@ -1,61 +1,40 @@
 # Pilot horizontal teaser
 
-Standalone route: `/cloud-teaser`. This is a `noindex,nofollow` design preview, excluded from the sitemap. It does not replace `/cloud` or `/cloud-landing`.
+Standalone route: `/cloud-teaser`. This noindex preview is excluded from the sitemap and does not replace `/cloud` or `/cloud-landing`.
 
-## The story
+## Five-scene story
 
-1. **The last chore you’ll ever do.** The friend-group qualifier and an unresolved dinner conversation establish the coordination problem.
-2. **First, you need an agent.** Muse, Dots, Grok Bot, Hermes, and OpenClaw lead; MCP-compatible chat apps remain a smaller, explicit alternative. Background operation requires enabled check-ins.
-3. **Run your friend group on autopilot.** A two-agent exchange ends in a useful result. The visitor can try plans, updates, introductions, and files. The dinner example asks for approval; the introduction asks permission before connecting people.
-4. **Your agent. Meet their agents.** People using different AI apps connect through Pilot, by invitation.
-5. **New AI. Same handle.** Switching the sample AI changes the connected app, while the handle, link, and people remain. The profile is clearly an example, not a link to a real user.
-6. **Claim your handle. Invite your friends.** `Start now` opens `https://cloud.pilotprotocol.network`; `Learn more` opens `/cloud-landing`. Both people connect an AI. The service is hosted, free to start, and requests require acceptance.
+1. **The last chore you’ll ever do.** A full-screen café photograph and one line establish the promise: give the back-and-forth to your AI.
+2. **Bring your AI.** Muse, Dots, Grok Bot, Hermes, and OpenClaw surround Pilot. MCP-compatible chat apps remain an explicit alternative.
+3. **Your friend group, on autopilot.** Muse and Priya’s Dots arrange one dinner. The illustrative example labels both AIs as connected and requires human approval.
+4. **New AI. Same handle.** The visitor can switch the example AI while the handle and link remain. The example is not a real profile.
+5. **Less planning. More see you soon.** A reunion photograph closes on the human outcome. Claim your handle and invite a friend; Start now opens the Cloud app and Learn more opens `/cloud-landing`. Both people connect an AI.
 
-The short story deliberately leaves earnings, business-agent coverage, and ecosystem expansion out. Their conditions and roadmap status need more room than a teaser affords. Product qualifications follow `docs/cloud-messaging.md`.
+Earnings, future business coverage, and ecosystem expansion are omitted. Their conditions need more room than a teaser affords. Product qualifications follow `docs/cloud-messaging.md`.
 
-## Visual and interaction choices
+## Design and performance
 
-One typeface (Inter Tight), cream, clay/coral, soft green, large type, and existing Pilot illustrations. The film contributes full-screen color changes, the dinner exchange, and the portable handle. It contributes no soundtrack, autoplay, or timed reading pressure. Human photography closes on the reason to coordinate: seeing each other.
+One Inter Tight typeface, cream/clay colors, unframed photography, and sparse scenes replace the denser six-panel version. The café photograph is licensed stock; the reunion still comes from the existing Higgsfield film footage. Provenance is in `public/cloud/teaser/CREDITS.md`.
 
-The page uses the existing licensed café photo and crops for illustrative avatars. Its source and credit are in `public/cloud/warm/CREDITS.md`. Agent marks come from the existing landing-page assets. `public/cloud/teaser/social.jpg` is a separate social card branded Pilot.
+Native vertical document scrolling moves the story horizontally. Mandatory CSS snap points settle on full chapters; there is no wheel or touch interception, synthetic momentum, timed advance, background video, or soundtrack. Previous/next buttons and Left/Right keys are available. Inactive chapters are inert.
 
-Normal vertical document scrolling translates the story horizontally to the next panel on the right. Native mandatory scroll snapping settles on a complete chapter after the gesture; `scroll-snap-stop: always` marks each chapter as a stop for snap-based scrolling. Because the visual panels share a sticky viewport, one non-interactive document-position target per chapter supplies the vertical snap positions. They are disabled in the automatic vertical fallback. The last chapter reserves a complete viewport of scroll room even when mobile browser chrome changes its height.
+Supported browsers drive the track with a native CSS scroll timeline. The JavaScript fallback writes only its transform once per animation frame. The previous inherited per-panel custom-property writes and decorative parallax were removed. Chapter state changes only at boundaries; the progress bar does not animate on touch devices.
 
-A passive listener schedules one animation frame per scroll update. There is no wheel/touch interception, synthetic momentum, or automatic advance. The track and small illustration offsets share the same scroll position. Previous/next controls and Left/Right keys offer deliberate chapter navigation; browser-native scrolling keys still work. Resizing settles on the nearest complete chapter.
+The stage uses stable small-viewport height. Height-only resize events on touch devices no longer rebuild the layout or call scrollTo when browser chrome expands or collapses. Real width changes remeasure after a short debounce. The final chapter reserves large-viewport scroll space. These changes address identifiable sources of lag; no physical-phone frame-rate measurement is claimed.
 
-Native snapping references: [MDN scroll-snap-type](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/scroll-snap-type) and [MDN scroll-snap-stop](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/scroll-snap-stop).
+Reduced motion, short windows, or content that cannot fit automatically use the ordinary vertical page. All chapters are measured before horizontal enhancement enables. There is no reading-mode toggle. Without JavaScript, the complete story and destination links remain available. Local demo controls do not send messages or book anything.
 
-Inactive chapters are inert in horizontal mode, so keyboard focus and screen readers do not visit invisible controls. Chapter status changes only at chapter boundaries. The header contains only Pilot and Start now. Reduced motion, small landscape windows, oversized text, or content that cannot fit automatically use the ordinary vertical page; there is no reading-view toggle or stored mode preference. Compact phone layouts reduce illustration size and simplify the example card while retaining its disclosure and approval control. Without JavaScript, the entire story and both destination links remain available vertically; the sample interaction controls are hidden.
-
-References: [MDN sticky positioning](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/position), [WAI carousel interaction guidance](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/), [MDN inert](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/inert), and [MDN reduced motion](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-motion).
-
-## Files
-
-- `src/pages/cloud-teaser.astro`: story, metadata, and static accessible content.
-- `src/styles/cloud-teaser.css`: scoped responsive design.
-- `src/scripts/cloud-teaser.ts`: scroll snapping, automatic vertical fallback, and local illustrative demos.
-- `src/pages/sitemap.xml.ts`: preview exclusion.
+Implementation references: [WebKit scroll-driven animations](https://webkit.org/blog/17101/a-guide-to-scroll-driven-animations-with-just-css/), [Chrome scroll-driven animations](https://developer.chrome.com/docs/css-ui/scroll-driven-animations), [MDN scroll snapping](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/scroll-snap-type), and [MDN reduced motion](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-motion).
 
 ## Verification — 25 October 2026
 
-- `npm run build`: passed (334 Astro pages plus generated error documents).
-- `npm run check:plain`: passed, 100 required pairs.
-- `npm run check:site`: passed, 338 HTML files and 24,437 internal references; includes the new image, metadata, preview exclusion, and both CTA destinations.
-- Targeted TypeScript check for `cloud-teaser.ts`: passed. Repository-wide `npx tsc --noEmit` still fails in untouched Cloudflare function/worker types, analytics, and the untracked film directory. No errors point to the teaser.
-- Chrome at 1280 × 667: all six chapters fit horizontally; plan approval, switching to the updates example, handle switching from Muse to Dots, and chapter controls verified. The example handle and people stayed fixed.
-- Chrome at 390 × 844: horizontal story, agent marks, longest introduction example, and final CTA/photo composition visually checked. Native keyboard scrolling reached the final chapter.
-- Chrome at 820 × 1180: stacked portrait composition and horizontal enhancement verified. All chapters pass the content-fit check before that enhancement enables.
-- Chrome at 320 × 568: ordinary vertical fallback, wrapping, final CTA destinations, and the photo/footer checked.
-- Emulated `prefers-reduced-motion: reduce` switches to the full vertical page and removes horizontal controls. Restoring the preference re-enables the story.
-- Left/Right chapter navigation and native scrolling verified. Offscreen chapters are absent from Chrome’s accessibility tree while horizontal mode is active. Console showed only Vite development messages during the final pass.
-- Contrast pass: cream text on coral measures 4.67:1; small coral-scene text uses that pair. Large peach display text is reserved for headlines. No timed animation, audio, or video runs on this route.
+- Production build passes: 335 Astro pages plus generated error documents.
+- Plain coverage passes: 100 required pairs.
+- Site integrity passes: 339 HTML files and 24,447 internal references.
+- `check:teaser` exercises the actual TypeScript controller in both native/fallback modes: 50 height-only mobile resize events cause no reconfiguration or scrollTo; 30 scroll frames cause zero native transform writes and exactly one per frame in the fallback; width changes preserve the chapter; reduced motion removes horizontal mode and inert states. The regression check runs in CI.
+- Chrome desktop and 390×844 compositions were visually inspected. The 375×667 view fits all five scenes, including the dinner disclosure and final CTA. Native scrolling reaches complete chapters; the Muse-to-Dots switch retains the handle. The root class confirms the native scroll-timeline path is active.
+- Chrome’s reduced-motion emulation exposes the full vertical story and removes chapter controls; the preference was restored afterward.
+- Console inspection showed development-server messages, without application errors.
+- The separate `/pilot-film` page was checked at 375×667 in both formats. It starts paused and provides downloads and the full transcript. No film asset loads on the teaser.
 
-These are Chrome checks, including device emulation; they are not a claim of physical-device Safari testing. Build output contains the complete static story for the no-JavaScript reading path.
-
-### Snap and mobile follow-up
-
-- Removed the reading-mode button and its localStorage behavior as requested. The header is brand plus Start now.
-- Desktop partial and larger native scroll gestures settle on complete chapters. Reverse scrolling at 375 × 667 also settles cleanly; no custom wheel handler is used.
-- 375 × 667 now fits the horizontal story. The phone-specific layout simplifies the handle card, keeps sample buttons at least 40px tall, and fits the longest introduction example with its disclosure above the chapter controls. The fit check covers every chapter before horizontal mode enables.
-- Rechecked 390 × 844 after the follow-up: full chapter snapping remains enabled, including after a resize. A more compact result card keeps the longest introduction example above the controls. Mobile chapter arrows have 44px touch targets.
-- Type check of the teaser script, production build, and full site-integrity checks pass after these changes.
+Browser checks include Chrome device emulation, not physical iPhone/Safari testing. The previous version’s 320×568 check is not claimed as a fresh visual check of this revision; the same short-window fallback remains covered by the controller logic.
