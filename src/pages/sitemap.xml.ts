@@ -28,7 +28,7 @@ function routeFromKey(key: string): string {
 const REFERENCE = new Set(['error-codes', 'troubleshooting', 'diagnostics', 'configuration']);
 const LEGAL = new Set(['/privacy', '/cookies', '/terms', '/aup', '/publisher-agreement']);
 // Standalone design previews are intentionally noindex and shared by direct link.
-const PREVIEWS = new Set(['/cloud-landing']);
+const PREVIEWS = new Set(['/cloud-landing', '/cloud-teaser']);
 
 // The four offerings: the protocol (home), the service agents, the App Store
 // and Pilot Cloud.
