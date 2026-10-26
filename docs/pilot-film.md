@@ -1,30 +1,30 @@
 # Pilot film publication
 
-`/pilot-film` is a separate noindex player with widescreen/vertical selection, ordinary controls, downloads and a full transcript. It has no autoplay. The campaign pages load no film assets.
+`/pilot-film` is a separate noindex player with widescreen/vertical selection, normal controls, downloads and a full transcript. It has no autoplay. The teaser and Learn more pages are unchanged; neither loads film assets.
 
-Revision 19 is a 22.333-second teaser in exactly four main screens, at 1920×1080 and 1080×1920. Four requests replace one another within the second screen. This follows the user's clarification to make the film four slides, with less text and a slower pace.
+Revision 20 is an 18.5-second teaser in four main screens, wide and vertical. It follows the latest explicit direction to leave the website as it is and end the video at “Let us help.”
 
-1. A hypothetical question: “What would you do with 20% more time?”
-2. Compact context: “Quick question.” / “30 minutes later.” Four short requests cover coffee, an introduction, feedback and finding a designer. The first holds for 3.833 seconds so the viewer can read the context; the other three hold for about 1.92 seconds each.
-3. One combined screen: “Let us help. One link. Everyone can reach your agent.” A simple graphic joins two people's agent badges through the example handle @maya. “Approve who connects” stays visible. The screen lasts 5.767 seconds.
-4. A hypothetical callback: “Imagine that 20% back.” The single action is Get your Pilot link, with the Cloud destination. It remains fully present for 2.8 seconds before the picture fade.
+1. “What would you do with 20% more time?” over café photography.
+2. “How does a ‘quick question’ turn into 30 minutes?” as a separate readable headline.
+3. Four requests, one at a time: coffee, an introduction, feedback, finding a designer. Each holds about 1.92 seconds. There is no competing headline or constant text pulsing.
+4. Pilot. “Let us help.” The Cloud destination sits beneath it. This is the final screen; the link/agent explanation and 20% callback are absent.
 
-There is no separate problem scene, intermediate help scene, chat demo, link-placement montage or setup list. The warm palette, one Inter Tight family and existing human photography remain. Text settles once after a request change and then stays still for reading.
+The film lasts 18.500 seconds at 60fps (1,110 frames). The final screen appears at 14.633s and remains fully present until the picture fade starts at 17.450s. Audio fades 16.500–18.500s. Nothing follows the ending except black.
 
 ## Truth and provenance
 
-20% is hypothetical in both the opening question and final “Imagine” line. It is not measured or guaranteed time savings. 30 minutes is rhetorical. Requests and the connection graphic are illustrative; no real message or completed task is shown. The public link permits connection requests, which require approval as stated on screen.
+The 20% opening is a hypothetical question, not measured or guaranteed savings. 30 minutes is rhetorical. Requests are illustrative; no real task outcome is shown. This is a premise teaser, with the website carrying the fuller product explanation, as explicitly requested.
 
-Existing café photography, portraits, agent marks and Higgsfield reunion footage are reused. Higgsfield jobs: wide `43933a0b-8a7f-4269-8c5b-6da310ebea55`, vertical `43a9edd7-b165-4cc2-8980-34a3ed8b14d2`.
+The existing café photograph and Pilot mark are reused with one Inter Tight family and the warm cream/clay/ink palette. No Higgsfield reunion footage appears in this shortened cut: the later ending was removed.
 
-Audio is the user-supplied first seven seconds of Imagine Dragons' Believer, arranged into the approved original-tempo loop. The waveform and gain remain unchanged until the new final two-second fade, 20.333–22.333s. Picture fades 21.283–22.333s. No narration, new effects or tempo change. This is provenance, not a representation of a music license.
+Audio is the user-supplied first seven seconds of Imagine Dragons' Believer, arranged into the approved original-tempo drum loop, trimmed and faded. Gain and waveform remain unchanged before the new fade; no narration, new effects or tempo change. This records provenance, not a representation of a music license.
 
-Editable sources and review evidence remain local at `launch-video/drums/output/rhythm-v19/`. The two final MP4s, posters and full transcript are published with v19 player cache keys. Revision 18 was superseded before production by the four-screen clarification. The user's slower holds and four-screen structure override the motion skill's generic stillness and composition-count targets.
+Production sources and review evidence remain in local `launch-video/drums/output/rhythm-v20/`. Public files are the final MP4s, posters and timestamped transcript, with v20 player cache keys. Drafts 18 and 19 were superseded before production by the user's clarifications. The user's chosen stop point and deliberate reading holds override generic full-explainer/stillness requirements.
 
 ## Release verification
 
-Both masters fully decode and contain 1,340 frames at 60fps. Picture duration is 22.333333s; container duration is 22.336s including the AAC tail. Picture and audio begin at zero, both final frames are completely black, and final-10ms audio RMS is 0.000351. Encoded audio correlation to the arranged WAV is 0.999876. These are numerical measurements, not an independent listening test.
+Both masters fully decode and contain 1,110 frames at 60fps. Picture duration is 18.500s; container duration is 18.517s including AAC timing. Audio and picture begin at zero. Both final frames are completely black; final-10ms audio RMS is 3.9e-06. Encoded audio correlation to the arranged WAV is 0.999878. These are numerical measurements, not an independent listening test.
 
-Seven principal cuts/color changes are within 14.000ms of measured waveform attacks. Independent component review confirms native text fit, clean question swaps and the combined help/link layout in both formats. Final review and its limits are in `VERIFICATION.md`; intentional reading holds follow the client direction.
+The seven principal cuts/color changes are within 7.334ms of measured waveform attacks. Existing independent component review covers the reused opening/problem/request layouts. Fresh final-cut review is archived in `VERIFICATION.md`, including the ending and its stop point.
 
-Film lint/type checks, website build, plain coverage, teaser scroll regressions and site integrity passed.
+Film lint/type checks, website build, plain coverage, teaser scroll regressions and site integrity passed. A source diff confirms no changes to the teaser or Learn more pages or teaser motion files.
