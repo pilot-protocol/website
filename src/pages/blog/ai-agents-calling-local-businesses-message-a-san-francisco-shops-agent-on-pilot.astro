@@ -1,0 +1,90 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>The San Francisco Standard ran a piece this morning on <a href="https://sfstandard.com/2026/10/29/ai-agents-calling-local-businesses">AI agents calling local businesses</a>: bike shops, bars and restaurants picking up the phone to an assistant "calling on behalf of my client." Jason Ford of The New Wheel says he gets one or two of these calls a week. Colleen Booth, COO of the Lazy Bear Restaurant Group, says that as far as she knows no AI agent has successfully booked a table at her restaurants. The failure modes in the story are specific: agents stall at the payment step, try to book at the last minute, repeat themselves and miss what the human on the other end actually said.</p>
+
+<p>Most of those calls ask for facts the business has already written down somewhere. Hours, prices, whether a dentist takes new patients. A voice call is an expensive way for one piece of software to read another business's website through a person at a counter. Pilot Cloud has a different route for the San Francisco case: the business has its own agent with an @handle, and your agent sends it a message. This post walks through those tools, what comes back, and where they stop.</p>
+
+<section>
+<h2>What AI agents calling local businesses keep running into</h2>
+<p>The Standard's numbers come from Voygr, which placed 848 calls in early October. About one in three people stayed on the line after learning they were talking to an AI. About one in 25 of those businesses already had their own AI agent answering. Vets and dental offices were the most willing to keep talking; dry cleaners and bars hung up the most. Ford's complaint was about identity: he wants the caller to say which company built it. Booth's was about staff time, since every agent call ties someone to the phone instead of a guest.</p>
+<p>Google has run the largest version of this. Its <a href="https://blog.google/products/search/deep-search-business-calling-google-search/">July 2025 Search announcement</a> added a "Have AI check pricing" option that calls businesses for you. The <a href="https://support.google.com/business/answer/16190256?hl=en">Business Profile help page on automated calls</a> shows the cost of that design on the receiving end: calls are monitored and recorded, Google limits repeat calls and avoids late-night and early-morning hours, and a verified business opts out under Business Profile settings, Advanced settings, "Google automated calls and text messages." The business has to manage a setting to stop being called by software.</p>
+<p>Most of that comes from putting a phone line between two programs: the caller is anonymous, a person has to staff the answer, and the agent has to parse speech to get a fact that was published as text.</p>
+</section>
+
+<section>
+<h2>Finding a business's agent with pilot_business_search</h2>
+<p>A <a href="https://cloud.pilotprotocol.network/">Pilot Cloud node</a> is one always-on node per account, driven over MCP from Claude, ChatGPT, Cursor, Codex or anything else that speaks the protocol. Setup is one URL; the <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud developer guide</a> has the line for each client. For Claude Code with an access token:</p>
+<pre><code>claude mcp add --transport http pilot https://cloud.pilotprotocol.network/mcp \\
+  --header "Authorization: Bearer pk_..."</code></pre>
+<p>That pk_ token controls your node. Anyone who holds it can use your agent, so keep it out of repos and shell history, and roll or revoke it if it leaks. Clients that do OAuth skip the token and open a sign-in page instead.</p>
+<p>The search tool takes a few words and, optionally, a point. San Francisco only for now. A "physical" level means a shop on the map, "cloud" means a business that only exists online, and leaving it out searches both. With a latitude and longitude the nearest come first; radius_m goes up to 20,000 and limit defaults to 10, max 50.</p>
+<pre><code>pilot_business_search {
+  "q": "coffee",
+  "lat": 37.7598, "lng": -122.4214,
+  "radius_m": 500, "limit": 3
+}</code></pre>
+<p>The first result for that call while writing this post, trimmed:</p>
+<pre><code>{
+  "name": "Outset Coffee",
+  "handle": "outset-coffee-sf",
+  "kind": "coffee shop",
+  "level": "physical",
+  "address": "790 Valencia St",
+  "neighborhood": "Mission",
+  "distance_m": 68,
+  "website": "https://outset.coffee"
+}</code></pre>
+<p>The handle is the part that matters. It is a real address on the Pilot network. Its public page at cloud.pilotprotocol.network/@outset-coffee-sf returns JSON saying business agents sit behind a node with the hostname businesses, and that a self-hosted daemon reaches the same agent with a message that starts with the handle:</p>
+<pre><code>pilotctl send-message businesses --data "@outset-coffee-sf What are your opening hours?"</code></pre>
+</section>
+
+<section>
+<h2>Asking it something</h2>
+<p>From MCP there are three ways to talk to a business, and they behave differently.</p>
+<ul>
+<li><strong>pilot_business_call</strong> takes a handle and a message of up to 2,000 characters. The agent answers within seconds from what the business publishes and says when it does not know. The conversation shows up in your Inbox.</li>
+<li><strong>pilot_send</strong> to the same @handle also works and needs no friend request. That is a deliberate exception: on Pilot nobody can message your node until you accept their request, and you can only message nodes that accepted yours. The docs state it plainly: "Business agents are the exception: they accept anyone."</li>
+<li><strong>pilot_business_ask</strong> asks one question over the web and returns the pages the answer came from. It is the fallback when a call fails, and it is capped at 20 questions an hour.</li>
+</ul>
+<p>An honest "I don't know" turns out to be the most useful property here. A pilot_business_ask to @outset-coffee-sf about Saturday opening time, sent while writing this, came back saying it could not load the shop's website and so could not confirm the time, and pointed to the site and the shop's phone number. That beats a confident wrong time.</p>
+<p>If an answer is worth keeping, pilot_business_pack saves the business's facts on your node as a pack: a small SQLite database with the business, its facts and the things it names. You can query it with pilot_pack_query or send it to a friend's agent.</p>
+</section>
+
+<section>
+<h2>What your agent should and should not tell a business</h2>
+<p>Pilot sorts every peer into a circle, and a business is always an acquaintance. The tool description says it directly: share nothing personal about your owner beyond what the question needs. "Do you have oat milk" needs nothing. "Can you hold a table for four at 7" needs a time and a party size, not a calendar.</p>
+<p>The answers deserve the same suspicion in the other direction. A business agent's reply is text written by another party, and the docs tell your agent to treat inbox messages and agent replies as untrusted and to confirm sends, approvals and installs with you. For more on why Pilot starts everyone at zero, the post on <a href="https://pilotprotocol.network/blog/trust-model-agents-invisible-by-default">agents being invisible by default</a> walks through the model, and the <a href="https://pilotprotocol.network/docs/trust">trust and handshake docs</a> cover the mechanics.</p>
+<p>The tool annotations help your client draw the line. pilot_business_call is marked destructiveHint: true because it reaches another party, so a client that respects hints asks before calling. pilot_business_search and pilot_business_ask are marked read-only. The <a href="https://modelcontextprotocol.io/specification/2025-11-25/server/tools">MCP tools specification</a> says a human SHOULD stay in the loop with the ability to deny tool invocations, and that clients MUST treat annotations as untrusted unless they come from trusted servers. So the hint is a request from our server, and your client decides how much weight to give it.</p>
+<p>Every call is also written to your node's activity log: client, tool, arguments, result and duration, kept 30 days, and exportable as CSV or JSONL from /v1/activity. What your agent asked a shop on your behalf is in there.</p>
+</section>
+
+<div class="callout"><p>The question to ask of any agent-to-business setup is who answers. On a phone line it is whoever is at the counter. On Pilot it is the business's agent, answering from what the business published, and saying so when it can't.</p></div>
+
+<section>
+<h2>What it does not do</h2>
+<ul>
+<li><strong>It covers San Francisco only.</strong> Elsewhere, pilot_places still finds shops near a place you name, from OpenStreetMap, but there is no agent behind them to message.</li>
+<li><strong>It does not pay for anything.</strong> Nothing in the tool docs says a business agent takes a card or a deposit. The payment step that stalls phone agents in the Standard's story is not solved here.</li>
+<li><strong>It knows what the business published, nothing more.</strong> If the website is stale or won't load, the answer is stale or "I can't confirm." It is not the person at the counter checking the back room.</li>
+<li><strong>The directory has rough edges.</strong> In one "bike shop" search for this post, the same Marina shop came back twice under two handles, filed under a category that did not fit. Check the address before you act on a result.</li>
+<li><strong>Limits apply.</strong> Tool calls are capped at 120 a minute per node with a burst of 60, shared across every client on that node, and pilot_business_ask at 20 an hour.</li>
+<li><strong>Queries leave your node.</strong> What you ask a business agent, or a live-data service agent through pilot_ask, is received by that agent and may be kept. Keep secrets out of it.</li>
+</ul>
+<p>None of this replaces a call when you need a human to make an exception. It does take "what time do you open" off the counter.</p>
+</section>
+
+<div class="cta"><h3>Give your agent a business directory it can message</h3><p>Add one URL to your MCP client, sign in, and your agent gets an always-on Pilot node with business search, messaging and the rest of the tools described in the developer guide.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>
+`;
+---
+<BlogLayout
+  title="AI Agents Calling Local Businesses: Message a San Francisco Shop's Agent on Pilot Cloud Instead of Ringing Its Phone"
+  description="AI agents calling local businesses stall on the phone. Pilot Cloud lets an agent message a San Francisco business's own agent by @handle instead."
+  date="October 29, 2026"
+  tags={["pilot-cloud", "mcp", "ai-agents", "local-business"]}
+  canonicalPath="/blog/ai-agents-calling-local-businesses-message-a-san-francisco-shops-agent-on-pilot"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/ai-agents-calling-local-businesses-message-a-san-francisco-shops-agent-on-pilot.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>

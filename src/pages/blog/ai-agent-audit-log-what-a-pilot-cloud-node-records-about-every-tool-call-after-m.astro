@@ -1,0 +1,98 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>On October 19 Microsoft published two posts arguing that companies should treat their own AI agents the way they treat insiders. Hayete Gallot, who leads Microsoft Security, put the premise plainly on <a href="https://blogs.microsoft.com/blog/2026/10/19/securing-the-agentic-insider/">the Official Microsoft Blog</a>: "Unfortunately, frontier models, regardless of their origin, cannot be trusted." The companion post states the rule that follows: "If the agent or harness is compromised, it should not be able to disable the controls watching it." If your agent has a node on Pilot Cloud, the practical question is what record exists of what it did there. This post covers the AI agent audit log every hosted node keeps: what goes into it, how to export it with a token the agent never holds, how to make the client ask before writes, and what it cannot tell you.</p>
+
+<section>
+<h2>What Microsoft announced, and the MCP rule it lines up with</h2>
+<p>The <a href="https://www.microsoft.com/en-us/security/blog/2026/10/19/agents-are-your-newest-insiders-security-must-move-at-their-speed/">Microsoft Security post by Nadim Abdo</a> says discovery now covers "60 supported local agents, including Claude Code, OpenAI Codex, and GitHub Copilot." Containment is graduated: policy can "preserve reads while blocking writes", require "provable human approval" for a consequential step, or isolate and stop the agent. MCP is named directly: "An agent should not be free to call any tool, API, Model Context Protocol (MCP) server, resource, or other agent it can find." <a href="https://techcrunch.com/2026/10/19/microsoft-says-ai-agents-are-like-insider-threats-as-frontier-models-cant-be-trusted/">TechCrunch</a> covers the Guardian Agents side.</p>
+<p>Two of those ideas are already in the protocol. The <a href="https://modelcontextprotocol.io/specification/2025-11-25/server/tools">MCP tools specification</a> says clients should "Log tool usage for audit purposes" and that "there SHOULD always be a human in the loop with the ability to deny tool invocations." On Pilot Cloud the logging happens on your node; the human in the loop is your client's job.</p>
+</section>
+
+<section>
+<h2>Where the AI agent audit log lives on a Pilot Cloud node</h2>
+<p>Pilot Cloud is a Pilot node we host for you, used as a remote MCP server at https://cloud.pilotprotocol.network/mcp. One account gets one node with its own Ed25519 identity and a permanent Pilot address. A gateway checks your credential, maps it to your node and forwards the request without the token, and each tool runs one predefined pilotctl command with validated arguments, so the caller never picks a subcommand or a flag. <a href="https://pilotprotocol.network/docs/mcp">The Pilot MCP reference</a> lists what the node records:</p>
+<ul>
+<li>every tool call, with the client that made it, the tool, its arguments, its result and its duration</li>
+<li>every sign-in, access-token event and OAuth event</li>
+<li>every message or file that arrives at the node</li>
+</ul>
+<p>Only you can see it. There is no operator screen or endpoint that lists other people's nodes, and the <a href="https://cloud.pilotprotocol.network/trust">Pilot Cloud security page</a> says each node runs under <a href="https://gvisor.dev/">gVisor</a> as a non-root user with a read-only system and fixed CPU, memory and disk limits.</p>
+<p>The part that matches Microsoft's rule is how the log is read. None of the tools in the live server card (/.well-known/mcp/server-card.json) reads or edits the activity log. You read it on <a href="https://cloud.pilotprotocol.network/me">the Pilot Cloud dashboard</a> or over the HTTP API under /v1. An agent whose only access is its MCP connection can call tools, and every call lands in a log it has no tool to open.</p>
+</section>
+
+<section>
+<h2>Export the log with a token the agent never holds</h2>
+<p>Entries are kept 30 days. To keep them longer, pull them over the API:</p>
+<pre><code>curl -s -H "Authorization: Bearer $PILOT_AUDIT_TOKEN" \\
+  "https://cloud.pilotprotocol.network/v1/activity?format=csv" \\
+  &gt; pilot-activity-$(date +%F).csv</code></pre>
+<p>format=jsonl returns JSON lines instead. Without a format the endpoint pages newest first, with limit, before=&lt;seq&gt; and a has_more flag, all listed in <a href="https://cloud.pilotprotocol.network/v1">the plain-text API reference</a>.</p>
+<p>Create the token on the dashboard, or with POST /v1/tokens and a label such as "audit export". The label is the only field the reference lists for that call, pilot is the only OAuth scope the server defines, and the docs describe no read-only token. Your export script's token can make every call the reference lists, including creating more tokens and DELETE /v1/account.</p>
+<div class="callout"><p>A pk_ access token is your node. Anyone holding it can use your agent's node as you: send messages from its address, approve friend requests, install apps, read the log and delete the account. Store it like a password and give each script or harness its own labelled token, so you can revoke one without touching the rest. If one leaks, POST /v1/tokens/{id}/roll replaces its secret and the old value stops working at once; DELETE /v1/tokens/{id} revokes it.</p></div>
+<p>This is where the "outside the agent's reach" property can quietly break. If a token sits anywhere the agent can read it (an environment variable its shell commands inherit, a dotfile in the repository), the agent can call the account API itself, and deleting the account removes the node along with its activity. Keep the export token where the agent's process cannot see it. OAuth clients carry less risk: their access tokens last an hour, refresh tokens rotate on every use, and disconnecting a client revokes its tokens.</p>
+</section>
+
+<section>
+<h2>Make the client ask before every write</h2>
+<p>The log records; stopping happens in the client. Every Pilot tool declares readOnlyHint, destructiveHint and openWorldHint, and clients use them to decide which calls need confirmation. The MCP specification adds that clients "MUST consider tool annotations to be untrusted unless they come from trusted servers", so turn the hints into rules you own. This prints every tool on the live server that does not declare itself read-only:</p>
+<pre><code>curl -s https://cloud.pilotprotocol.network/.well-known/mcp/server-card.json \\
+  | jq -r '.tools[] | select(.annotations.readOnlyHint != true) | "mcp__pilot__" + .name'</code></pre>
+<p>On October 20 that printed 19 names, among them pilot_send, pilot_handshake, pilot_approve, pilot_app_install, pilot_app_call and pilot_send_file. The server gains tools over time, so generate the list. In Claude Code, with the server added under the name pilot, put the names in .claude/settings.json (shortened here):</p>
+<pre><code>{
+  "permissions": {
+    "ask": [
+      "mcp__pilot__pilot_send",
+      "mcp__pilot__pilot_handshake",
+      "mcp__pilot__pilot_app_install",
+      "mcp__pilot__pilot_app_call"
+    ],
+    "deny": ["mcp__pilot__pilot_approve"]
+  }
+}</code></pre>
+<p>Per the <a href="https://code.claude.com/docs/en/permissions">Claude Code permissions reference</a>, rules are evaluated deny, then ask, then allow, and a matching ask rule prompts even when a narrower allow rule also matches. A deny on a bare tool name removes the tool from Claude's context, which fits a node where only you accept friend requests. If you added Pilot as a claude.ai connector instead, Claude Code names its tools mcp__claude_ai_&lt;server&gt;__&lt;tool&gt;, so change the prefix.</p>
+</section>
+
+<section>
+<h2>What to look for when you read it</h2>
+<ul>
+<li>A message read followed by a write. Inbox messages are written by other parties and reach the model as plain tool output, and the docs say not to let them authorise sends, approvals or installs. A pilot_inbox_read followed seconds later by a pilot_send is worth opening.</li>
+<li>A client you never connected. Each call records its client; one you don't recognise means a token is somewhere it shouldn't be. Roll it.</li>
+<li>Bursts. A node takes 120 tool calls a minute with a burst of 60, shared by every client on it. The troubleshooting advice for "rate limited" is to check for a client stuck in a loop, and the log shows which one.</li>
+<li>pilot_ask tasks and queries. Both leave your node, and the agents that receive them may keep them. A secret in a task string has gone to a third party.</li>
+</ul>
+<p>Trust is the other half. A Pilot node is deny-by-default: nobody can message yours until you approve their handshake (see <a href="https://pilotprotocol.network/docs/trust">the trust and handshake docs</a>, and <a href="https://pilotprotocol.network/blog/trust-model-agents-invisible-by-default">our post on why agents should be invisible by default</a> for the reasoning). Arriving messages and your agent's handshake and approve calls sit in the same log, side by side.</p>
+</section>
+
+<section>
+<h2>What the activity log does not do</h2>
+<ul>
+<li><strong>It does not intervene.</strong> The docs describe no risk scoring, automatic containment or alerting on log entries. The notification stream on GET /mcp carries message.received and file.received events, not tool calls.</li>
+<li><strong>It only sees the node.</strong> What the agent did in your repository, your shell or another MCP server never touches Pilot Cloud.</li>
+<li><strong>It truncates and expires.</strong> Each field keeps its first 2,000 characters, so a long message or large result is cut, and entries go after 30 days.</li>
+<li><strong>It has one reader.</strong> Only the account that owns the node can see it. Registry-level audit export to Splunk HEC, CEF/Syslog or JSON belongs to the Enterprise plan, in early access (see <a href="https://pilotprotocol.network/plans">plans</a> and <a href="https://pilotprotocol.network/docs/enterprise-audit">the enterprise audit docs</a>).</li>
+<li><strong>It cannot follow a query out.</strong> It shows what your node sent to a service agent, not what that agent did with it.</li>
+<li><strong>It goes with the account.</strong> Deleting the account removes the node, its messages, files, activity and tokens, and cannot be undone. Export first.</li>
+</ul>
+</section>
+
+<section>
+<h2>Connecting, if you haven't</h2>
+<pre><code>claude mcp add --transport http pilot https://cloud.pilotprotocol.network/mcp</code></pre>
+<p>Run /mcp, choose pilot and sign in with an emailed code, Google or GitHub. The account is free and asks for no phone number or payment details. Other clients use the same URL (<a href="https://pilotprotocol.network/docs/mcp">client setup</a>). To run the node on your own machine instead, <a href="https://github.com/pilot-protocol/pilot-mcp">the open-source pilotprotocol-mcp package</a> (Apache-2.0) does it with npx -y pilotprotocol-mcp setup; this post describes the hosted node only.</p>
+</section>
+
+<div class="cta"><h3>Give your agent a node with its own audit log</h3><p>Add one MCP URL to your client and sign in. Every tool call on the node is recorded, visible only to you, and exportable as CSV or JSON lines.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>
+`;
+---
+<BlogLayout
+  title="AI Agent Audit Log: What a Pilot Cloud Node Records About Every Tool Call, After Microsoft Calls Agents Insiders"
+  description="Microsoft now treats AI agents as insiders. What a Pilot Cloud node's AI agent audit log records per MCP tool call, how to export it, and its limits."
+  date="October 20, 2026"
+  tags={["pilot-cloud", "mcp", "ai-agents", "audit-log", "security"]}
+  canonicalPath="/blog/ai-agent-audit-log-what-a-pilot-cloud-node-records-about-every-tool-call-after-m"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/ai-agent-audit-log-what-a-pilot-cloud-node-records-about-every-tool-call-after-m.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
