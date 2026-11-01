@@ -1,0 +1,70 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>OpenCode 1.19.1 went out on October 15 with a short note in its changelog: <a href="https://github.com/anomalyco/opencode/releases/tag/v1.19.1">session sharing has been discontinued</a>. Existing share links and the session-sharing commands no longer work, and importing sessions from share URLs is unsupported. If your team used /share to show someone what the agent was doing, you now need another way to share an OpenCode session. This post covers one: running the OpenCode TUI under <a href="https://shell.online/"><span class="brand-shell">shell.online</span>, which gives any terminal process a browser link</a>, so a phone or a teammate's laptop opens the live session. It also covers where that differs from what /share did, because some of the differences cut against you.</p>
+
+<section>
+<h2>What OpenCode's /share did, and what went away</h2>
+<p>The docs page for the feature was deleted in <a href="https://github.com/anomalyco/opencode/pull/55716">the pull request that retired the session sharing backend</a>, but its last version is still in the repository history and it was plain about the design. /share created a unique public URL under opncd.ai, synced the conversation history to OpenCode's servers, and made it readable by anyone with the link. A config key could set sharing to manual (the default), auto, or disabled, and /unshare removed the link and deleted the stored conversation.</p>
+<p>So it was a transcript service. The vendor held a copy of the conversation, and the URL alone was enough to read it. It also outlived the process: you could paste the link into an issue and someone could read it a week later.</p>
+<p>The setup below works differently on all three counts.</p>
+</section>
+
+<section>
+<h2>Share an OpenCode session as a live terminal link</h2>
+<pre><code>curl -fsSL https://shell.online/install | sh
+shell --name "opencode: auth refactor" opencode</code></pre>
+<p>shell starts a new OpenCode process under a pseudo-terminal on your machine and prints three things: a URL, an eight-character password, and a QR code. It does not attach to an OpenCode instance that is already running. If you want to pick up the last conversation, start OpenCode's own continue flag through shell:</p>
+<pre><code>shell -- opencode --continue</code></pre>
+<p>Sessions run in the background by default. shell list shows the sessions on this machine and their relay state, shell attach &lt;ID&gt; brings the TUI back into a local terminal (Ctrl-X, then D detaches again), and shell --foreground opencode keeps it in the terminal you launched it from while it is being shared. The --name label is what you will see in shell list, which helps once there are three agents running.</p>
+<p>On the other end, open the link and enter the password, or scan the QR code, which carries the password for one-scan access. What loads is the screen OpenCode itself draws on the host, not a re-rendering of its conversation somewhere else. On a phone, <a href="https://shell.online/mobile/">the mobile view adds controls for the keys a phone keyboard lacks</a> and a paste flow that shows you the text before inserting it, since a pasted line break can still run a command. Closing the browser tab does not stop OpenCode; the session ends when the OpenCode process exits.</p>
+</section>
+
+<section>
+<h2>Read-only for watching, interactive for pairing</h2>
+<p>The nearest thing to the old /share link is a read-only session:</p>
+<pre><code>shell --read-only --name "opencode: auth refactor" opencode</code></pre>
+<p>According to <a href="https://shell.online/security/">the shell.online security model</a>, input from a read-only viewer is rejected by both the relay and the CLI, so a modified browser cannot turn it into an interactive session. That is the mode for a reviewer who wants to see what the agent is doing to the codebase, or for watching your own run from a phone without the risk of a stray tap.</p>
+<p>Leave --read-only off when the other person needs to act: answer a permission prompt, type a follow-up instruction, or stop the agent with Ctrl-C. That is something /share never offered, and it is also where the risk lives.</p>
+<div class="callout"><p>The link and the password together are a credential. Anyone holding both can view the session and, unless it is read-only, type into OpenCode with your operating-system user's permissions, which includes approving whatever the agent asks to run. Keep the QR code private for the same reason, and send the link and the password over different channels when you can.</p></div>
+</section>
+
+<section>
+<h2>What the relay sees, compared with a synced transcript</h2>
+<p>With /share, the conversation sat on OpenCode's servers in a readable form. With shell.online, terminal traffic is end-to-end encrypted by default. Per <a href="https://shell.online/e2ee/">the encryption details page</a>, the host computer encrypts terminal data and authorized browsers decrypt it; both sides derive an AES-256-GCM frame key locally with PBKDF2-HMAC-SHA256 at 600,000 iterations from the password and a random salt. The salt sits in the link's #salt= fragment, and URL fragments are not sent in HTTP requests.</p>
+<p>The relay still learns things. It sees connection addresses, timing, encrypted frame sizes, labels, lifecycle events and terminal grid dimensions, and it can delay or drop traffic. Running with --no-e2ee removes the end-to-end layer and exposes terminal contents to the relay, so do not use it for an agent session that prints secrets.</p>
+<p>The trade you make for that: there is no stored transcript at all. Nobody can open the link after the process exits, there is nothing to import into another machine, and there is no permalink to drop into a bug report. If what you actually need is a durable record of what the agent said, a live terminal link is the wrong tool and you should keep a log some other way.</p>
+</section>
+
+<section>
+<h2>Don't widen opencode serve to reach it from a phone</h2>
+<p>OpenCode has its own HTTP server, and it is tempting to make that the route to your phone. <a href="https://opencode.ai/docs/server/">OpenCode's server docs</a> say that running opencode starts both a TUI and a server, with the TUI acting as the client, and that the TUI picks a random port and hostname. opencode serve defaults to 127.0.0.1 on port 4096, accepts --hostname and --port, and can be put behind HTTP basic auth with OPENCODE_SERVER_PASSWORD.</p>
+<p>A local HTTP server is reachable by more than you might think, because every web page your browser loads can send requests to it. <a href="https://github.com/anomalyco/opencode/security/advisories/GHSA-632h-h47v-g4x4">GHSA-632h-h47v-g4x4</a>, published September 24, is the recent example. <a href="https://securitylabs.datadoghq.com/articles/opencode-upgrade-remote-code-execution/">Christophe Tafani-Dereeper's write-up at Datadog Security Labs</a> shows the /global/upgrade endpoint accepting a text/plain body as JSON without checking the request's origin, so an auto-submitting form on a malicious page could make OpenCode install an attacker-supplied npm tarball and run its preinstall script. It affected 1.14.30 through 1.18.21 when installed through npm, pnpm or Bun, and was fixed in 1.18.22. OpenCode 1.19.0 then added validation of PTY connection origins and tickets. Binding that server to a LAN address so a phone can reach it adds the local network to the list of things that can talk to it.</p>
+<p>Wrapping the TUI in shell does not remove OpenCode's own server. The TUI still starts one, and keeping OpenCode up to date is still on you. What it avoids is opening a second way in. In <a href="https://github.com/TeoSlayer/shell.online">the shell.online source</a>, the host <a href="https://github.com/TeoSlayer/shell.online/blob/main/internal/relay/relay.go">dials out to the relay over a WebSocket</a>, and each session's local control channel is <a href="https://github.com/TeoSlayer/shell.online/blob/main/cmd/shell/local_transport_unix.go">a Unix socket set to mode 0600</a>, or on Windows a named pipe whose access list admits only SYSTEM, Administrators and your own user. The only TCP listeners in the CLI bind to 127.0.0.1 and are short-lived: the callback for shell login, and on Windows a readiness channel during background launch that checks a random 32-byte token. Nothing waits on a LAN port for the phone.</p>
+</section>
+
+<section>
+<h2>Ending the share, and the edge cases</h2>
+<ul>
+<li><strong>Revoke without stopping the agent.</strong> shell password rotate &lt;ID&gt; changes the password, salt and cipher generation and disconnects current viewers, without restarting OpenCode. This is the replacement for /unshare, except that nothing was stored to delete.</li>
+<li><strong>Stop it.</strong> shell kill -- &lt;ID&gt; ends that one session.</li>
+<li><strong>Set a deadline.</strong> shell --auto-close 2h opencode closes the share earlier than the process exit. It cannot keep the share alive after OpenCode exits.</li>
+<li><strong>Keep the host awake.</strong> The process stays on your computer. A sleeping or offline laptop cannot be controlled until it reconnects, and this is terminal sharing, not a cloud machine.</li>
+<li><strong>Upgrades.</strong> Installing a new shell release does not restart existing sessions, so a running OpenCode session keeps the binary it started with until you restart it.</li>
+</ul>
+<p>The full flag list is on <a href="https://shell.online/cli/">the command reference</a>, and <a href="https://pilotprotocol.network/blog/shell-online-live-terminal-browser-link">our earlier overview of shell.online</a> covers the general model if you have not used it before.</p>
+</section>
+
+<div class="cta"><h3>Share your next OpenCode run from the terminal it is running in</h3><p>One command prints a link, a password and a QR code. Add --read-only when watching is enough. The CLI is MIT licensed, and the code that handles the relay connection and local control sockets is in the public repository.</p><a href="https://shell.online/">Try shell.online</a></div>`;
+---
+<BlogLayout
+  title="Share an OpenCode Session After /share Was Retired: A Live Terminal Link Instead of a Public Transcript"
+  description="OpenCode 1.19.1 retired /share. How to share an OpenCode session as a live, end-to-end encrypted terminal link, and what you give up."
+  date="October 19, 2026"
+  tags={["shell-online", "opencode", "coding-agents", "terminal-sharing"]}
+  canonicalPath="/blog/share-an-opencode-session-after-share-was-retired-a-live-terminal-link-instead-o"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/share-an-opencode-session-after-share-was-retired-a-live-terminal-link-instead-o.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>

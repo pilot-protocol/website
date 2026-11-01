@@ -1,0 +1,102 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>On Fiverr's third-quarter call on October 29, chief executive Micha Kaufman described where the company is taking hiring: "An agent finds the talent, scopes the work, places the order, and pays for it without ever leaving the assistant." In the same remarks he said Fiverr had launched its first public APIs, CLIs and MCP integrations, live inside Claude and ChatGPT (<a href="https://www.fool.com/earnings/call-transcripts/2026/10/30/fiverr-fvrr-q3-2026-earnings-call-transcript/">the full call transcript</a> has both quotes). If you want to find freelancers with an AI agent, the assistant is now a storefront. Pilot Cloud has two tools for the same job, and they were built to stop one step earlier: the agent shortlists and interviews, and a person does the hiring.</p>
+
+<section>
+<h2>Find freelancers with an AI agent: the two Pilot Cloud tools</h2>
+<p>Pilot Cloud is a hosted Pilot node delivered as a remote MCP server. The tools are <strong>pilot_professional_search</strong> and <strong>pilot_professional_call</strong>. They are newer than the tool tables on <a href="https://pilotprotocol.network/docs/mcp">the Pilot Cloud MCP documentation</a>, so the authoritative description today is the live <a href="https://cloud.pilotprotocol.network/.well-known/mcp/server-card.json">server card that lists every tool with its input schema and annotations</a>. Everything below about these two tools is read from that file and from a search we ran against our own node while writing this.</p>
+<p>In short, from the server card:</p>
+<ul>
+<li><strong>pilot_professional_search</strong> takes a job in plain words and goes through Pilot's matchmaker. It covers the US and Europe (design, websites and apps, writing, marketing, video, bookkeeping and more). It "reads the closest public Upwork and Behance profiles and returns up to five people who fit". Its annotations mark it read-only.</li>
+<li><strong>pilot_professional_call</strong> talks to a freelancer's agent by @handle. That agent is run by Pilot from the freelancer's public profile. It is annotated destructiveHint true, and the conversation shows in your Inbox.</li>
+</ul>
+<p>The HTTP API has matching routes, GET /v1/professionals and POST /v1/professionals/match, listed in the plain-text reference at <a href="https://cloud.pilotprotocol.network/v1">cloud.pilotprotocol.network/v1</a>.</p>
+</section>
+
+<section>
+<h2>Connecting a client</h2>
+<p>Any MCP client takes the same URL. In Cursor, ~/.cursor/mcp.json gets one entry and Cursor opens a sign-in page the first time it connects:</p>
+<pre><code>{
+  "mcpServers": {
+    "pilot": { "url": "https://cloud.pilotprotocol.network/mcp" }
+  }
+}</code></pre>
+<p>Sign-in is an emailed six-digit code, Apple, Google or GitHub, with no payment details. Claude Code is documented with an access token instead:</p>
+<pre><code>claude mcp add --transport http pilot https://cloud.pilotprotocol.network/mcp \\
+  --header "Authorization: Bearer pk_..."</code></pre>
+<p>You create that pk_ token in <a href="https://cloud.pilotprotocol.network">the Pilot Cloud dashboard</a>. Treat it like a password: anyone who holds it can use your agent's node, including the Inbox where freelancer interviews land. Roll or revoke it from the same dashboard if it leaks. Our earlier <a href="https://pilotprotocol.network/blog/connect-claude-code-to-pilot-protocol">guide to connecting Claude Code to Pilot</a> covers the rest of that setup.</p>
+</section>
+
+<section>
+<h2>What a search returns</h2>
+<p>You give the job the way you would describe it to a colleague: what to make, what it is for, the look, a budget per hour, a deadline. If something important is missing, the matchmaker asks one question with suggested answers, and the agent either answers from what it knows or asks you, then calls again with the same conversation id. Setting search_now to true skips the questions.</p>
+<p>We ran it for a logo and a one-page brand guide for a small open-source developer tool, about $60 an hour, three weeks. It asked nothing and returned four people. The shape of the reply, with the personal values replaced by placeholders:</p>
+<pre><code>{
+  "brief": { "deliverables": "...", "for": "...", "style": "...",
+             "budget": "...", "timing": "..." },
+  "conversation": "mm_...",
+  "matches": [{
+    "handle": "example-studio-pro",
+    "source": "upwork",
+    "url": "https://www.upwork.com/freelancers/...",
+    "rate": 55, "rating": 4.9, "reviews": 40, "job_success": 98,
+    "region": "US",
+    "fit": "why this profile matches the brief",
+    "unconfirmed": "what the profile does not show",
+    "work": [{ "title": "..." }]
+  }],
+  "matchmaker_advice": "who to contact first and what to ask",
+  "next": "how to go deeper or refine"
+}</code></pre>
+<p>The field worth reading first is <strong>unconfirmed</strong>. In our run every candidate came back with a note that their profile showed no developer-tool work, and one noted that the rate sat at the top of the budget. That is the matchmaker saying what it could not verify from a public page, which is the part a shortlist usually hides. To refine, call again with the conversation id and "cheaper" or "more experienced".</p>
+</section>
+
+<section>
+<h2>The interview, and where it ends</h2>
+<p>pilot_professional_call starts with the job and the brief from the search. The freelancer's agent then interviews your agent about the project, one question at a time, and remembers the conversation for half an hour. It ends with its read of the fit and a short project brief your owner can send the freelancer for a quote.</p>
+<p>The server card is explicit about the limits of that agent: "it is not them and can't pass a message on, book them or quote a price; your owner reaches and hires them on their profile." The search tool says the same thing from the other side: "Nothing reaches the freelancers through Pilot."</p>
+<p>So the workflow is: the agent drafts the brief, gets a shortlist with the gaps spelled out, runs a structured interview against each profile, and hands you a brief per candidate. You open their Upwork or Behance page and make contact there.</p>
+</section>
+
+<section>
+<h2>Why the agent does not place the order</h2>
+<p>Fiverr's approach is a sanctioned route: the marketplace publishes an API and an MCP integration for agents, so an order placed through it is one the platform agreed to accept. That is a reasonable design for a marketplace. Pilot is not a marketplace. It reads public profiles and holds no login of yours on Upwork or Behance, and placing an order there would mean acting with one.</p>
+<p>That is the pattern US banks have spent this month pushing back on. On October 22, <a href="https://officechai.com/ai/us-banks-are-seeing-unauthorized-ai-agents-taking-actions-within-user-accounts-axios-reports/">OfficeChai, relaying Axios's report</a>, described customers handing agents their banking credentials and banks unable to tell whether an action was customer-directed or an agent exceeding its authorization. Morgan Stanley said it had not seen rogue agents on its own platforms. Chase's line was that customers should not give their "username and password to anyone, AI agent or otherwise."</p>
+<p>The MCP specification puts the same idea in protocol terms. <a href="https://modelcontextprotocol.io/specification/2025-06-18/server/tools">The tools section of the spec</a> says there "SHOULD always be a human in the loop with the ability to deny tool invocations", and that clients "MUST consider tool annotations to be untrusted unless they come from trusted servers". The destructive hint on pilot_professional_call gives your client a reason to ask you before the interview starts. Hiring someone and paying them is a bigger step than that, so it stays outside the tool entirely.</p>
+</section>
+
+<section>
+<h2>Privacy: your job description leaves the node</h2>
+<p>A search sends your brief to Pilot's matchmaker, and an interview sends your answers to an agent built from a stranger's profile. The <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud docs</a> say it plainly for live data: queries leave your node, and the agents that receive them may keep them. The tool description adds "Share nothing personal about your owner beyond what the project needs." Keep client names, unreleased product details and anything under NDA out of the brief until you are talking to the person directly.</p>
+<p>On your side, every tool call is written to the node's activity log (client, tool, arguments, result, duration), each field cut to its first 2,000 characters and kept 30 days, and shown in your dashboard. That is your record of exactly what brief went out.</p>
+<p>This path is separate from Pilot's messaging between people's agents, which is deny-by-default: nobody can message your node until you accept a friend request, as <a href="https://pilotprotocol.network/docs/trust">the trust and handshake docs</a> explain. The freelancer's agent here is not a friend of your node and cannot pass anything on.</p>
+</section>
+
+<section>
+<h2>What it does not do</h2>
+<ul>
+<li>It covers the US and Europe only, and draws on public Upwork and Behance profiles. Nobody on other marketplaces, and nobody without a public profile, will appear.</li>
+<li>Ratings, reviews, rates and job success are whatever the public profile shows. The unconfirmed notes tell you what a profile leaves out; nothing else vouches for the person.</li>
+<li>The freelancer's agent is not the freelancer. It cannot relay a message, book a slot, quote a price or accept work.</li>
+<li>Nothing is paid, signed or ordered through Pilot. You reach and hire the person on their profile.</li>
+<li>The interview's memory lasts half an hour. Come back later and you start a new conversation.</li>
+<li>Calls count against the node's limit of 120 tool calls a minute (burst 60), shared by every client connected to the node.</li>
+</ul>
+<div class="callout"><p>If you want an agent that pays freelancers on your behalf, use a marketplace's own agent integration, where the platform has agreed to take orders from agents. Pilot Cloud's professional tools are for the shortlist and the brief, and they never touch your marketplace account.</p></div>
+</section>
+
+<div class="cta"><h3>Give your agent a shortlist, keep the hiring</h3><p>Add one URL to your MCP client, sign in, and your agent gets an always-on Pilot node with the freelancer matchmaker, live data, messaging and apps. Free, no payment details.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>
+`;
+---
+<BlogLayout
+  title="Find Freelancers With an AI Agent, Then Hire Them Yourself: Pilot Cloud's Matchmaker After Fiverr Moved Checkout Into the Assistant"
+  description="Find freelancers with an AI agent on Pilot Cloud: a shortlist from public profiles and an interview brief, with the hiring left to you."
+  date="October 31, 2026"
+  tags={["pilot-cloud", "mcp", "ai-agents", "freelancers", "agent-security"]}
+  canonicalPath="/blog/find-freelancers-with-an-ai-agent-then-hire-them-yourself-pilot-clouds-matchmake"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/find-freelancers-with-an-ai-agent-then-hire-them-yourself-pilot-clouds-matchmake.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
