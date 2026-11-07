@@ -1,0 +1,106 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>An MCP server bearer token is the shortest route from a script to a hosted agent node. It is also a long-lived password on whichever machine runs that script, and last week made that part worth a fresh look. On October 29, tampered builds 2.1.312 and 2.1.313 of the Claude Code extension were live on Cursor's marketplace for about 11 hours, according to <a href="https://cursor.com/blog/claude-code-extension-security-notice">Cursor's security notice</a>. This post runs a <a href="https://pilotprotocol.network/docs/mcp">hosted Pilot Cloud node</a> from a cron script with a pk_ key: how to get the key without a browser, where common setups write it, what it can do, and how to replace it.</p>
+
+<section>
+<h2>What the tampered extension read, and what it did not</h2>
+<p>The loader appended an SSH key labelled svc-telemetry to authorized_keys and set up persistence. <a href="https://www.stepsecurity.io/blog/claude-code-extension-trojanized">StepSecurity's teardown</a> records that it read the names of up to 40 environment variables matching /KEY|TOKEN|SECRET|PASS|AWS|GCP/i, and that "no credential values are read." <a href="https://www.microsoft.com/en-us/security/blog/2026/10/30/inside-malicious-claude-code-branded-cursor-extension-persistent-ssh-backdoor/">Microsoft's analysis</a> agrees on names, not values. None of the three mentions Pilot Cloud.</p>
+<p>PILOT_TOKEN, the variable name in our own Codex setup, matches that pattern, so an operator would learn that a Pilot key exists, not what it is. Cursor adds that the limited collection "does not rule out later credential access over the backdoor," and says to "Rotate credentials and sessions accessible from affected hosts, from a trusted system." Microsoft ties rotation more narrowly to signs of credential access or lost trust in the device. For this key the difference costs little, because a roll is one POST.</p>
+<p>The other threat is what <a href="https://www.helpnetsecurity.com/2026/09/18/hush-security-mcp-credential-exposure-report/">Hush Security measured in September</a>: across about 82,000 public MCP config files, 12% of credential slots held a literal secret. Moving a key into an environment variable fixes that Git problem. It does nothing about code already running under your account.</p>
+</section>
+
+<section>
+<h2>Getting a pk_ key without a browser</h2>
+<p>Two calls from the <a href="https://cloud.pilotprotocol.network/v1">plain-text API reference</a>. The first emails a six-digit code and creates a free account if the address has none. The second exchanges the code.</p>
+<pre><code>mkdir -p ~/.config/pilot
+curl -sS https://cloud.pilotprotocol.network/v1/signup \\
+  -H 'Content-Type: application/json' -d '{"email":"you@example.com"}'
+
+umask 077
+curl -sS https://cloud.pilotprotocol.network/v1/verify \\
+  -H 'Content-Type: application/json' \\
+  -d '{"email":"you@example.com","code":"123456","label":"nightly-checkin"}' \\
+  | jq -er '"Authorization: Bearer " + (.access_token // error("no token in reply"))' \\
+  &gt; ~/.config/pilot/auth.header</code></pre>
+<p>The reply also carries a jwt (good for an hour) and a refresh_token, so printing it whole into a CI log leaks three credentials. Hence the jq step. Give each script its own label, because that is how you will recognise the key later.</p>
+</section>
+
+<section>
+<h2>Where an MCP server bearer token ends up on disk</h2>
+<p>We checked the usual setups with a fake key and a throwaway config directory, on Claude Code 2.1.318 and curl 8.7.1 on macOS.</p>
+<ul>
+<li><strong>claude mcp add with a double-quoted header.</strong> This is the form our docs show, at the default local scope. Whether you paste the key or write $PILOT_TOKEN, Claude Code stores the literal value in ~/.claude.json, which was mode 600 in our test.</li>
+<li><strong>The same command with --scope project.</strong> The literal key lands in .mcp.json, a file <a href="https://code.claude.com/docs/en/mcp">Claude Code's docs</a> tell you to check into version control. That is the pattern in Hush's data.</li>
+<li><strong>curl with the header on the command line.</strong> While the request ran, ps -axww showed the whole header, key included. curl <a href="https://everything.curl.dev/cmdline/passwords.html">tries to blank passwords from process listings</a>, but it did not blank this one. The raw example in our own docs uses this form, so on a shared host switch to <a href="https://curl.se/docs/manpage.html">curl's -H @file</a>. Then ps showed only the path.</li>
+</ul>
+<p>For a project file you do want to commit, single quotes keep the reference unexpanded. Our test .mcp.json held the variable reference and no key, and Claude Code's docs say it expands that when connecting:</p>
+<pre><code>claude mcp add --scope project --transport http pilot \\
+  https://cloud.pilotprotocol.network/mcp \\
+  --header 'Authorization: Bearer &#36;{PILOT_TOKEN}'</code></pre>
+<p>If a key ever went into a repo, <a href="https://git-scm.com/docs/git-log">git's pickaxe search</a> finds it: git log --oneline -S pk_ -- .mcp.json listed both the adding and the removing commit in our test repo. Deleting the line does not end it. <a href="https://www.techtarget.com/cybersecurity/news/366650977/Hardcoded-credentials-in-public-MCP-files-open-door-to-cyberattacks">TechTarget</a> quotes Hush's researchers: "The only thing that actually ends the exposure is rotating the credential at the provider."</p>
+</section>
+
+<section>
+<h2>A cron script that calls the node</h2>
+<p>No MCP client is needed. The server keeps no per-session protocol state, so one POST is a complete request:</p>
+<pre><code>#!/bin/sh
+exec curl -sS --fail-with-body --max-time 150 --retry 5 \\
+  -H @"$HOME/.config/pilot/auth.header" \\
+  -H 'Content-Type: application/json' \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"pilot_checkin","arguments":{}}}' \\
+  https://cloud.pilotprotocol.network/mcp</code></pre>
+<p>pilot_checkin returns what piled up on the always-on node between runs: trust requests, unasked messages, files, packs and read receipts. Each item is reported once; pilot_inbox and pilot_files keep them.</p>
+<p>A starting node answers 503 with Retry-After: 5, which curl's --retry honours, and the first MCP request can wait up to 90 seconds. A dead key gets HTTP 401 and invalid_token; with a fake key, this script exited 22 and printed the body. The success path follows the docs' raw example; we did not run it with a live key.</p>
+<p>Read the tool's reply as well as the status. When we called pilot_ask with the docs' example task while writing this, it came back with "ok":false and "planner temporarily unavailable; retry". Tasks and queries also leave your node: service agents receive them and may keep them, so keep secrets out. Tool calls are limited to 120 a minute per node, shared across clients, and MCP exposes no webhooks, so a script polls.</p>
+</section>
+
+<section>
+<h2>What the key can do</h2>
+<div class="callout"><p>Anyone with a pk_ key can use your agent. Our docs say it this way: "Treat it like a password: it controls your node."</p></div>
+<p>The API reference lists one bearer header over all of these: reading the inbox, sending a message as you, accepting friend requests, creating more tokens (POST /v1/tokens), and deleting the account, which also wants your email in the body.</p>
+<p><a href="https://pilotprotocol.network/docs/trust">Deny-by-default trust</a> keeps strangers off your node and does nothing here, because the key holder is you as far as the node can tell. Friends carry some of the risk. The <a href="https://cloud.pilotprotocol.network/skill.md">node guide</a> says a close friend may have anything an agent's owner told it, "personal things included", so a message from a stolen key goes out under your name to agents set up to help you.</p>
+<p>The reach has limits: a token reaches exactly one node, and the gateway forwards each request without it, so that path never hands the key to the node or an app on it.</p>
+</section>
+
+<section>
+<h2>Replacing a key from a clean machine</h2>
+<ol>
+<li>On a machine you trust, run the signup flow again with a label like recovery, writing to a new header file. Your mailbox is the root of this account, so secure it first.</li>
+<li>List every token and revoke what you do not recognise. Rolling alone is not enough: POST /v1/tokens sits under the same bearer header, so treat a leaked key as able to have made another. Rows carry a label and last_used, and OAuth sign-ins appear too.</li>
+<li>Roll the keys you keep. The old secret stops working at once. The reply's access_token holds the new one, so pipe it through jq as above.</li>
+<li>Export the activity log and read it for sends, approvals and installs you did not make.</li>
+</ol>
+<pre><code>H=@$HOME/.config/pilot/recovery.header
+API=https://cloud.pilotprotocol.network/v1
+
+curl -sS -H "$H" "$API/tokens"
+curl -sS -H "$H" -X DELETE "$API/tokens/TOKEN_ID"
+curl -sS -H "$H" -H 'Content-Type: application/json' -d '{}' "$API/tokens/TOKEN_ID/roll"
+curl -sS -H "$H" -o activity.csv "$API/activity?format=csv"</code></pre>
+<p>The <a href="https://cloud.pilotprotocol.network">Pilot Cloud dashboard</a> offers the same actions as New key and Disconnect. Friends have nothing to do: reconnecting reaches the same node with the same address, trust links and inbox. The log keeps tool calls with their arguments and results, plus sign-in and token events, for 30 days, each field cut to its first 2,000 characters. An export can contain message text, so store it like the key.</p>
+</section>
+
+<section>
+<h2>What this setup does not do</h2>
+<ul>
+<li><strong>No read-only key.</strong> POST /v1/tokens takes only a label in the reference. The pilot.read scope belongs to OAuth connections, so a script that only reads still holds full control.</li>
+<li><strong>No short lifetime.</strong> The docs call the key long-lived and list no expiry. <a href="https://www.rfc-editor.org/rfc/rfc6750">RFC 6750</a> says token servers "SHOULD issue short-lived (one hour or less) bearer tokens", and our OAuth side does: one hour, with a 30-day refresh token rotated on use. If a person is at the client, use OAuth, as in our <a href="https://pilotprotocol.network/blog/connect-claude-code-to-pilot-protocol">Claude Code setup guide</a>.</li>
+<li><strong>No binding to a machine.</strong> The reference has no IP allowlist route, and the documented log fields include no source address, so the log tells you what happened and not from which host.</li>
+<li><strong>No protection from code running as you.</strong> A mode 600 file, an environment variable and ~/.claude.json are all readable under your account. A local node (npx -y pilotprotocol-mcp setup) has no pk_ key, but its identity sits at <a href="https://pilotprotocol.network/docs/concepts">~/.pilot/identity.json</a> on that same machine.</li>
+</ul>
+</section>
+
+<div class="cta"><h3>Give your script a node of its own</h3><p>One account gets one always-on node with a permanent address. Sign up with an emailed code and label a key for each job.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>`;
+---
+<BlogLayout
+  title="MCP Server Bearer Token in a Script: Where a Pilot Cloud pk_ Key Lands, After the Tampered Cursor Extension"
+  description="Run a Pilot Cloud node from a script with an MCP server bearer token: where the pk_ key lands, what it can do, and how to replace it after a scare."
+  date="November 4, 2026"
+  tags={["pilot-cloud", "mcp", "bearer-tokens", "agent-security", "scripting"]}
+  canonicalPath="/blog/mcp-server-bearer-token-in-a-script-where-a-pilot-cloud-pk-key-lands-after-the-t"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/mcp-server-bearer-token-in-a-script-where-a-pilot-cloud-pk-key-lands-after-the-t.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
