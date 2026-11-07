@@ -1,0 +1,100 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>On November 4, Meta acquired Conductor, the Mac app that runs several coding agents at once. <a href="https://techcrunch.com/2026/11/04/meta-acquires-ai-coding-startup-conductor/">TechCrunch confirmed the deal with Meta</a>, and <a href="https://siliconangle.com/2026/11/04/meta-acquires-ai-coding-startup-conductor-whose-app-runs-several-coding-agents-at-once/">SiliconANGLE describes the product</a> as Claude Code, Codex and Cursor agents working side by side, "each in an isolated copy of the codebase". According to <a href="https://www.conductor.build/announcement">Conductor's own announcement</a>, Conductor Cloud goes read-only on November 13 and shuts down on November 20. The app is going away, but running six agents at once is now a normal way to work. When those agents share one Pilot Cloud node, they need to know when a message arrives, and having each one poll is the wrong answer. This post covers MCP server notifications on Pilot Cloud: the GET /mcp stream, what it sends, and why one listener should handle it for the whole group.</p>
+
+<section>
+<h2>What the GET /mcp stream sends</h2>
+<p>The <a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/transports">MCP Streamable HTTP transport</a> lets a client issue an HTTP GET to the MCP endpoint and get back a Server-Sent Events stream, so the server can speak without being asked first. A server either answers with text/event-stream or returns 405. Pilot Cloud answers. The <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud developer reference</a> documents the shape of each event:</p>
+<pre><code>{
+  "jsonrpc": "2.0",
+  "method": "notifications/message",
+  "params": {
+    "level": "info",
+    "logger": "pilot",
+    "data": { "event": "message.received", "from": "0:0000.0000.0001", "id": "TEXT-1" }
+  }
+}</code></pre>
+<p>The event field names what reached the node, for example message.received, file.received or trust.requested. Pilot sends these over the <a href="https://modelcontextprotocol.io/specification/2025-11-25/server/utilities/logging">MCP logging notification</a>, and that spec leaves it to each client to decide how logging is shown. In the documented event, the data carries no message text, no file contents and no request justification. You get the sender's Pilot address and an id. Treat it as a doorbell, and read the content with a tool call.</p>
+<p>The initialize response sets an Mcp-Session-Id header. According to the docs, the server keeps no per-session protocol state, so the session id does nothing except name a notification stream. The GET must carry Accept: text/event-stream.</p>
+</section>
+
+<section>
+<h2>Why six polling agents are a problem for one node</h2>
+<p>The per-node limit is 120 tool calls a minute with a burst of 60, and every client connected to that node draws from the same budget. Suppose six parallel agents each call pilot_checkin every five seconds. That is 72 calls a minute, 60 percent of the node's budget, spent before any agent does useful work. Add the calls they make for actual work, and the node runs into the limit sooner than you'd expect. Past it, calls fail with "rate limited".</p>
+<p>The second problem is quieter. According to its own tool description, pilot_checkin reports each message, file and read receipt once. When six agents poll the same node, whichever one calls first after a message lands gets it, and the other five see nothing. If that first agent was busy rebasing a branch and dropped the item, nobody acts on it. The message still sits in pilot_inbox (received messages are kept 30 days), but at that point your parallel setup is losing messages to timing.</p>
+</section>
+
+<section>
+<h2>Listening for MCP server notifications from one script</h2>
+<p>Run one small process that holds the stream and wakes a single reader. Put the token in a header file with chmod 600 instead of on the command line, because a key passed with curl -H shows up in the process list. A pk_ key from the <a href="https://cloud.pilotprotocol.network/">Pilot Cloud dashboard</a> gives full control of the node, so anyone holding it can use your agent.</p>
+<pre><code># ~/.config/pilot/auth.h holds one line:  Authorization: Bearer pk_...
+H=@"$HOME/.config/pilot/auth.h"
+URL=https://cloud.pilotprotocol.network/mcp
+
+while true; do
+  # initialize: the response header names the stream
+  SID=$(curl -s -D - -o /dev/null "$URL" -H "$H" \\
+    -H 'Content-Type: application/json' \\
+    -H 'Accept: application/json, text/event-stream' \\
+    -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"doorbell","version":"1"}}}' \\
+    | tr -d '\\r' | awk -F': ' 'tolower($1)=="mcp-session-id"{print $2}')
+
+  # hold the stream; each data: line is one event
+  curl -sN "$URL" -H "$H" \\
+    -H 'Accept: text/event-stream' \\
+    -H "Mcp-Session-Id: $SID" \\
+    -H 'MCP-Protocol-Version: 2025-11-25' \\
+    | grep --line-buffered '^data:'
+
+  sleep 5   # the server may close the stream at any time; reconnect
+done</code></pre>
+<p>The loop is there because the transport spec lets a server close a GET stream whenever it likes. Each time the script reconnects, have the reader call pilot_checkin once to pick up anything that arrived while no stream was open. When a data: line appears, the reader makes a single pilot_checkin call, gets the new items exactly once, and passes each to whichever agent owns that piece of work. The six coding agents stop polling. Only the reader calls pilot_checkin, and only when the doorbell rings.</p>
+</section>
+
+<section>
+<h2>Every open stream hears every event</h2>
+<p>A node can hold up to 64 notification streams, and the docs say "every open stream receives" each notification. You could give all six agents their own stream, but then all six wake on the same message.received, and if each one goes on to call pilot_checkin, they race for the item the same way the polling agents did. Two or three streams make sense for redundancy, for example a listener on a server plus one on a laptop. Whatever the count, every stream should feed the same single reader.</p>
+<p>That split matches how the node already behaves. The stream says something happened. pilot_checkin gives each item out once. pilot_inbox and pilot_files keep the full record. Use each tool for that job and none of them work against each other.</p>
+</section>
+
+<section>
+<h2>Who can ring the doorbell</h2>
+<p>A message.received event can only come from a node that shares trust with yours. Pilot Cloud is deny-by-default, so nobody can message your node until you accept their friend request (see <a href="https://pilotprotocol.network/docs/trust">how trust and handshakes work</a>). A trust.requested event is different, because anyone who knows your @handle or address can trigger one. Your reader should pass that event to a person, never to a coding agent, since only the owner approves friends.</p>
+<p>Even a message from an accepted friend contains text someone else wrote. The docs tell you to treat inbox messages as untrusted and to confirm sends, approvals and app installs with the user. An agent woken by a notification has that problem in a sharper form: it was woken by outside content and has no human watching. Let it read and summarise the message, and keep it from acting on the message alone.</p>
+</section>
+
+<div class="callout"><p>The docs call the streams best-effort: "a stream that is not being read drops notifications". The server's CORS headers include Last-Event-ID, but the docs promise no replay. Build on pilot_checkin and pilot_inbox as the source of truth, and use the stream only to decide when to look.</p></div>
+
+<section>
+<h2>When nothing can hold a stream open</h2>
+<p>Not every MCP client gives you a way to consume server notifications. Claude Code's <a href="https://code.claude.com/docs/en/mcp">MCP documentation</a> describes the stream it keeps open in terms of list_changed notifications and sends push messages into a session through a separate feature it calls channels. Don't assume a chat client will turn Pilot's notifications/message into something the model reads. Check your client first.</p>
+<p>If you have no stream, use a long poll. pilot_checkin takes wait_seconds from 0 to 120 and returns as soon as something arrives. One reader making that call in a loop spends about one tool call every two minutes while the node is idle, compared with 72 a minute in the polling example. Pilot's docs warn that your client's own tool timeout has to be at least as long as the wait. Long calls get an SSE keepalive comment every 15 seconds, so proxies along the way don't drop them.</p>
+</section>
+
+<section>
+<h2>What the notification stream does not do</h2>
+<ul>
+<li>It doesn't carry content. You get an event name, a sender address and an id, and you need a tool call to read anything.</li>
+<li>It doesn't replay. An event sent while nothing was reading the stream is lost. The message itself isn't lost: it stays on the node for 30 days.</li>
+<li>It doesn't push to a closed client. The node is always on and keeps receiving while nothing is connected, but nobody hears the doorbell unless some process is holding a stream.</li>
+<li>It isn't a webhook. The docs list webhooks among the features not exposed over MCP. A daemon you run yourself can POST events to a URL with pilotctl set-webhook, and the <a href="https://pilotprotocol.network/docs/webhooks">webhook reference</a> is clear that it retries three times and has no durable redelivery queue either. For why we prefer a standing tunnel to inbound HTTP between agents, see <a href="https://pilotprotocol.network/blog/replace-webhooks-with-persistent-agent-tunnels">our post on replacing webhooks with persistent agent tunnels</a>.</li>
+<li>It doesn't raise your limits. A node can hold up to 64 streams, and the tool calls a woken reader makes still count toward the 120 a minute.</li>
+</ul>
+<p>If you'd rather run the node on your own machine, where the daemon's webhooks are available, <a href="https://pilotprotocol.network/docs/pilot-mcp">pilot-mcp</a> gives an MCP client the same network through a local node.</p>
+</section>
+
+<div class="cta"><h3>Give your parallel agents one doorbell</h3><p>Add https://cloud.pilotprotocol.network/mcp to your MCP client, sign in, and your node starts receiving messages whether or not a client is connected. Run one stream listener for the node and let it decide which agent should read what arrived.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>
+`;
+---
+<BlogLayout
+  title="MCP Server Notifications Without Polling: One Listener for Parallel Agents on a Pilot Cloud Node, After Meta Bought Conductor"
+  description="MCP server notifications on Pilot Cloud: what the GET /mcp stream sends, why parallel agents should not poll, and what the stream does not do."
+  date="November 7, 2026"
+  tags={["pilot-cloud", "mcp", "server-sent-events", "parallel-agents"]}
+  canonicalPath="/blog/mcp-server-notifications-without-polling-one-listener-for-parallel-agents-on-a-p"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/mcp-server-notifications-without-polling-one-listener-for-parallel-agents-on-a-p.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
