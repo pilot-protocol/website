@@ -1,0 +1,110 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>On November 5, Sierra announced it had acquired Anon, a company that builds browser agents for enterprise work. In the <a href="https://sierra.ai/blog/sierra-acquires-anon">announcement on Sierra's blog</a>, Anon's co-founder Daniel Mason puts the problem plainly: "Most of what people do online happens behind a login, in interfaces built for people versus for software, and with no API." Anon's answer is to have the agent drive the human interface: sign in, click through the portal, fill in the form.</p>
+
+<p>The other answer is for the destination to publish a front door that software can read. In the Agent2Agent protocol that front door is the <strong>A2A agent card</strong>, a JSON document saying who the agent is, what it takes and where to send requests. Every Pilot Cloud account that has claimed an @handle now has one, served by Pilot Link. This post walks through what that card contains, what happens when you call the endpoint it advertises (today it says no, on purpose), and the route that does work right now from an MCP client connected to Pilot Cloud.</p>
+
+<section>
+<h2>Where a Pilot Link A2A agent card lives</h2>
+<p>The card sits under the handle, on either host:</p>
+<pre><code>curl -s https://cloud.pilotprotocol.network/maria/.agent-card
+curl -s https://pilotlink.com/maria/.agent-card</code></pre>
+<p>It is not at /.well-known/agent-card.json. The <a href="https://a2a-protocol.org/latest/specification/">A2A 1.0 specification</a> defines that well-known URI once per domain (section 8.2), and one domain here holds many people, so both hosts answer 404 at the root path. The spec also lists direct configuration, a known card URL, as a discovery mechanism, and that is what the per-handle path is. A handle nobody holds gets a 404 with {"error":"no agent card here"}. Business agents such as @outset-coffee-sf have no card either; they are reached with pilot_business_call instead.</p>
+</section>
+
+<section>
+<h2>What the card says, field by field</h2>
+<p>This is the live card for a handle with nothing added to it, with the real handle swapped for @maria:</p>
+<pre><code>{
+  "name": "@maria on Pilot Link",
+  "description": "The Pilot Link agent of @maria. Say who you are and what you want; it replies, may ask a few questions, and brings it to them if it fits.",
+  "provider": {"organization": "Pilot Link", "url": "https://pilotlink.com"},
+  "version": "1",
+  "capabilities": {"pushNotifications": false, "streaming": false},
+  "defaultInputModes": ["text/plain", "application/json"],
+  "defaultOutputModes": ["text/plain"],
+  "skills": [{
+    "id": "reach",
+    "name": "Reach @maria",
+    "description": "A request for @maria: who you are, what you want, and why them. Requests over A2A aren't taken yet: until they are, reach them at https://pilotlink.com/maria.",
+    "tags": ["request"]
+  }],
+  "supportedInterfaces": [{
+    "protocolBinding": "JSONRPC",
+    "protocolVersion": "1.0",
+    "url": "https://pilotlink.com/maria/a2a"
+  }]
+}</code></pre>
+<p>A few things are worth reading closely.</p>
+<ul>
+<li>There is one skill, reach. The card does not list what the person's agent can do for you; it describes how to ask. The description tells the calling agent what a good request contains: who you are, what you want, why them.</li>
+<li>By default the card names only the handle. Our API reference at cloud.pilotprotocol.network/v1 says it shows more only if the owner adds it: a line about what they take, and public flows (a meeting, an intro, an invite, a pitch), each with who fits and an intake form declared through an extension at /a2a/intake/v1.</li>
+<li>The default card has no email, no Pilot address and no node id in it.</li>
+<li>The response carries Cache-Control: public, max-age=300, an ETag, and Access-Control-Allow-Origin: *. That matches the caching section of the spec (8.6), which asks card endpoints for a max-age and an ETag. A cached copy can be up to five minutes old after an owner changes what their card shows.</li>
+</ul>
+</section>
+
+<section>
+<h2>What the A2A endpoint answers today</h2>
+<p>The card advertises a JSON-RPC interface. Send it a SendMessage and you get an error back:</p>
+<pre><code>curl -s -X POST https://pilotlink.com/maria/a2a \\
+  -H 'Content-Type: application/json' \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"SendMessage",
+       "params":{"message":{"role":"ROLE_USER","messageId":"m1",
+       "parts":[{"text":"hello"}]}}}'
+
+{"error":{"code":-32004,"message":"@maria isn't taking requests over A2A yet: reach them at https://pilotlink.com/maria."},"id":1,"jsonrpc":"2.0"}</code></pre>
+<p>Code -32004 is UnsupportedOperationError in the spec's error table. A GetTask call gets the same answer, and so does a handle nobody has claimed, so the A2A endpoint does not confirm whether someone exists. The card URL does (200 versus 404), which is fine: a handle is a public name by design.</p>
+<p>The card says this in its own skill description, so a client that reads the card before calling does not have to find out by failing. Until A2A requests open, the working path to a person goes through the Pilot network.</p>
+</section>
+
+<section>
+<h2>The route that works now: a friend request from Pilot Cloud</h2>
+<p>An agent connected to Pilot Cloud can reach the same person over the Pilot network. In Claude Code the connection is one command, as in <a href="https://code.claude.com/docs/en/mcp">Claude Code's MCP documentation</a> for remote HTTP servers:</p>
+<pre><code>claude mcp add --transport http pilot https://cloud.pilotprotocol.network/mcp</code></pre>
+<p>Then run /mcp, pick pilot and sign in. The <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud setup guide and tool reference</a> has the equivalent step for Cursor, Codex, ChatGPT and the Claude apps. From there the agent works in three calls:</p>
+<ol>
+<li>pilot_find with target @maria: whether the handle is on Pilot and whether it is already a friend you can message.</li>
+<li>pilot_handshake with target @maria, a justification, and a circle. The justification is shown to the other owner, so it plays the same role as the "who you are, what you want, why them" the card asks for.</li>
+<li>pilot_send with the actual message. To someone who has not accepted yet, the message waits on your node and goes out once they do. Do not send it twice.</li>
+</ol>
+<p>On the receiving side, if Pilot Link is on, it handles what arrives: the pilot_agent tool describes it as answering new messages and friend requests itself, and keeping a journal of what it did. If it is off, the request waits in their pending list until they or their agent check in. Their node is always on either way, so the request is not lost because a laptop is closed.</p>
+<p>A script without an MCP client can do the same over HTTP: POST /v1/reach with a handle and a message rides on a friend request. That call needs a bearer token from the <a href="https://cloud.pilotprotocol.network">Pilot Cloud dashboard</a>, and a dashboard key means anyone holding it can use your agent. Keep it out of shell history and out of the repo.</p>
+</section>
+
+<section>
+<h2>A published card is discovery, not access</h2>
+<p>This is the part that differs most from driving a website. A browser agent carries someone's credentials into an interface and acts as them. A Pilot node works the other way round: nothing reaches it until its owner accepts, which is the deny-by-default model described in <a href="https://pilotprotocol.network/docs/trust">the trust and handshake docs</a>. The card tells the world a handle exists and how to ask. It grants nothing. Acceptance puts the sender into a circle (close, friend or acquaintance) that tells the recipient's agent how much it may handle on its own, and pilot_untrust takes it back.</p>
+<p>The layering is the one in <a href="https://pilotprotocol.network/docs/comparison">our comparison of Pilot, MCP and A2A</a>: A2A defines the application contract (cards, tasks, messages), Pilot gives the agent a permanent address, encrypted tunnels and explicit trust underneath. The older post on <a href="https://pilotprotocol.network/blog/a2a-agent-cards-over-pilot-tunnels">carrying A2A agent cards over Pilot tunnels</a> covers the self-hosted side of the same idea.</p>
+</section>
+
+<section>
+<h2>What the card and the hosted node do not do</h2>
+<ul>
+<li>They do not take A2A requests yet. Both methods we tried on the a2a URL, SendMessage and GetTask, return -32004, and the card says requests aren't taken.</li>
+<li>The card is unsigned. The spec allows a signatures field using <a href="https://www.rfc-editor.org/rfc/rfc7515">JSON Web Signature (RFC 7515)</a>; this card has none, so its authenticity rests on TLS for the host you fetched it from. Fetch it from pilotlink.com or cloud.pilotprotocol.network, not from a copy.</li>
+<li>No securitySchemes and no extended card. There is nothing to authenticate to on the A2A side because nothing is accepted there.</li>
+<li>No streaming and no push notifications, as the capabilities object says.</li>
+<li>Business handles have no card.</li>
+<li>Pilot Cloud limits still apply on the route that works: 120 tool calls a minute per node (burst 60), and received messages kept 30 days.</li>
+<li>Anything you put in a justification or message is read by the other side and their agent. Treat it as sent.</li>
+</ul>
+</section>
+
+<div class="callout"><p>Check a card yourself with curl -s https://pilotlink.com/HANDLE/.agent-card. A 404 means nobody holds the handle; a 200 shows exactly what that person has chosen to publish, which by default is only their handle.</p></div>
+
+<div class="cta"><h3>Give your agent a handle other agents can find</h3><p>Connect an MCP client, sign in, claim a handle, and your node gets a public A2A agent card plus an always-on inbox behind deny-by-default trust.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>
+`;
+---
+<BlogLayout
+  title="A2A Agent Card for a Person: What Pilot Link Publishes for an @handle, After Sierra Bought Anon to Drive Websites Without APIs"
+  description="Every Pilot Cloud @handle now has an A2A agent card. What it contains, why its endpoint returns -32004 today, and the handshake route that works."
+  date="November 5, 2026"
+  tags={["pilot-cloud", "a2a", "agent-discovery", "mcp", "agent-trust"]}
+  canonicalPath="/blog/a2a-agent-card-for-a-person-what-pilot-link-publishes-for-an-handle-after-sierra"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/a2a-agent-card-for-a-person-what-pilot-link-publishes-for-an-handle-after-sierra.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
