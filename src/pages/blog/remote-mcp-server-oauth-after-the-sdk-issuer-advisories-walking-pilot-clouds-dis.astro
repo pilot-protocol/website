@@ -1,0 +1,108 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>Remote MCP server OAuth has a weak spot that the advisories of the last four weeks made concrete: the server you are connecting to is also the one that tells your client where to sign in. On September 28 the official Python SDK published <a href="https://github.com/modelcontextprotocol/python-sdk/security/advisories/GHSA-qx49-fqc8-xw99">GHSA-qx49-fqc8-xw99 (CVE-2026-115563)</a>. On September 30 the TypeScript SDK published <a href="https://github.com/modelcontextprotocol/typescript-sdk/security/advisories/GHSA-6qxp-vccf-f47h">GHSA-6qxp-vccf-f47h (CVE-2026-104850)</a>. Both carry the same title: "OAuth client could send credentials to an authorization server chosen by the MCP server." On October 22 the Rust SDK added <a href="https://github.com/modelcontextprotocol/rust-sdk/security/advisories/GHSA-5p52-q7pq-9fq2">GHSA-5p52-q7pq-9fq2</a>, an incomplete-fix report on how rmcp filters authorization server metadata URLs.</p>
+<p>Advisories describe the broken check. This post goes the other way and walks the discovery chain of one live server, Pilot Cloud at https://cloud.pilotprotocol.network/mcp, with plain curl, pointing out the field a client has to verify at each hop. Every response below was fetched on October 25.</p>
+
+<section>
+<h2>What the SDK bugs let a malicious server do</h2>
+<p>The Python advisory lists two routes. A malicious MCP server could name its own authorization server in its protected resource metadata. Or it could publish no metadata at all, push the client onto the legacy fallback path, and serve an authorization server document that claims the user's real provider as its issuer. Either way the client sent the client_secret, the authorization code and the PKCE code_verifier to a token endpoint the attacker chose. Yuval Elbar's <a href="https://cycode.com/blog/mcp-python-sdk-oauth-account-takeover/">write-up of the fallback case for Cycode</a> sums up the bug: "The check doesn't fail. It never runs."</p>
+<p>Fixed versions are mcp 2.2.0 and 1.30.0 for Python, and @modelcontextprotocol/sdk 1.31.0 or @modelcontextprotocol/client 2.2.0 for TypeScript. Both advisories say upgrading is not enough for the unattended providers. Python's ClientCredentialsOAuthProvider and PrivateKeyJWTOAuthProvider need an issuer= argument. The TypeScript bundled providers need expectedIssuer, or they "still use whichever authorization server the MCP server names."</p>
+<p>The TypeScript advisory also says what the fix does not cover: "a new interactive sign-in, which still goes to the authorization server the MCP server names." That is the sentence that matters to anyone adding a remote server to Claude Code or Cursor. A library can bind stored credentials to an issuer. It cannot decide whether the issuer a server names on first contact deserves your sign-in. You make that call when you type the URL.</p>
+</section>
+
+<section>
+<h2>Hop 1: the 401 and where it points</h2>
+<pre><code>curl -si -X POST https://cloud.pilotprotocol.network/mcp \\
+  -H 'Content-Type: application/json' \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'
+
+HTTP/2 401
+www-authenticate: Bearer resource_metadata="https://cloud.pilotprotocol.network/.well-known/oauth-protected-resource/mcp", scope="pilot"
+
+{"error":"invalid_token","error_description":"sign in to get an access token"}</code></pre>
+<p>The <a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization">MCP authorization spec (revision 2025-11-25)</a> requires a client to use the resource_metadata URL from this header when it is present, and to fall back to well-known URIs when it is not. The check at this hop is origin. The header points back at the same host as the MCP endpoint. Rust's earlier advisory, <a href="https://github.com/modelcontextprotocol/rust-sdk/security/advisories/GHSA-c9xm-49cp-xcr9">GHSA-c9xm-49cp-xcr9</a>, was the case where a client followed this URL to localhost or a cloud metadata address with no same-origin rule at all.</p>
+<p>The scope="pilot" part matters too. Under the spec's scope selection rules a client treats the challenged scope as authoritative, so a client that follows the spec asks for pilot, which is full access to the node. More on the narrower scope below.</p>
+</section>
+
+<section>
+<h2>Hop 2: protected resource metadata</h2>
+<pre><code>curl -s https://cloud.pilotprotocol.network/.well-known/oauth-protected-resource/mcp
+
+{"authorization_servers":["https://cloud.pilotprotocol.network"],
+ "bearer_methods_supported":["header"],
+ "resource":"https://cloud.pilotprotocol.network/mcp",
+ "resource_name":"Pilot",
+ "scopes_supported":["pilot","pilot.read"], ...}</code></pre>
+<p>Read two fields. resource is the server's canonical URI, the value a client sends as the <a href="https://www.rfc-editor.org/rfc/rfc8707">RFC 8707 resource parameter</a> so the token is minted for this server and no other. authorization_servers has exactly one entry, on the same origin as the MCP endpoint. Pilot Cloud runs its own authorization server. The emailed code, Apple, Google and GitHub are sign-in options on Pilot's own authorize page, and the client only exchanges OAuth messages with cloud.pilotprotocol.network.</p>
+<p>That is also why the attack in the Python advisory has nothing to work with here. A client that finds a different host in this list on a server you thought you knew should stop and ask you about it.</p>
+</section>
+
+<section>
+<h2>Hop 3: the issuer check that the fallback path skipped</h2>
+<pre><code>curl -s https://cloud.pilotprotocol.network/.well-known/oauth-authorization-server
+
+{"issuer":"https://cloud.pilotprotocol.network",
+ "authorization_endpoint":"https://cloud.pilotprotocol.network/oauth/authorize",
+ "token_endpoint":"https://cloud.pilotprotocol.network/oauth/token",
+ "registration_endpoint":"https://cloud.pilotprotocol.network/oauth/register",
+ "revocation_endpoint":"https://cloud.pilotprotocol.network/oauth/revoke",
+ "code_challenge_methods_supported":["S256"],
+ "authorization_response_iss_parameter_supported":true,
+ "client_id_metadata_document_supported":true,
+ "grant_types_supported":["authorization_code","refresh_token","client_credentials"], ...}</code></pre>
+<p><a href="https://www.rfc-editor.org/rfc/rfc8414">RFC 8414</a> section 3.3 is one short paragraph. The returned issuer "MUST be identical" to the identifier the client used to build the metadata URL, and if it is not, "the data contained in the response MUST NOT be used." The client built this URL from https://cloud.pilotprotocol.network and the document answers with that exact string. That comparison is the one the vulnerable SDK versions skipped on the fallback path.</p>
+<p>The other fields, in the order a careful client uses them:</p>
+<ul>
+<li><strong>code_challenge_methods_supported: ["S256"].</strong> The MCP spec says that if this field is absent, the client "MUST refuse to proceed." S256 is the hashed challenge from <a href="https://www.rfc-editor.org/rfc/rfc7636">RFC 7636</a>, and Pilot Cloud accepts nothing else.</li>
+<li><strong>authorization_response_iss_parameter_supported: true.</strong> This is <a href="https://www.rfc-editor.org/rfc/rfc9207">RFC 9207</a>: the server puts iss in the redirect back to the client, and the client must compare it with the metadata issuer and reject the response on a mismatch. That is a second issuer check, at the redirect, aimed at mix-up attacks.</li>
+<li><strong>registration_endpoint and client_id_metadata_document_supported.</strong> Clients can register dynamically (RFC 7591) or present an HTTPS client ID metadata document, which the 2025-11-25 spec puts ahead of dynamic registration.</li>
+</ul>
+<p>/.well-known/openid-configuration on the same host returns 404. The spec requires an authorization server to offer at least one of RFC 8414 or OpenID Connect discovery, and Pilot Cloud offers the first.</p>
+</section>
+
+<section>
+<h2>What the token reaches once you approve</h2>
+<p>According to the <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud MCP reference</a>, the authorization code lives 10 minutes, the access token 1 hour, and the refresh token 30 days, rotated on use. After sign-in you see a consent screen naming the client. A first sign-in also creates the account and starts its node: one always-on Pilot node with its own Ed25519 identity and a permanent address.</p>
+<p>On the server side, the gateway checks the credential, maps it to your node and forwards the request without it. The docs put it as "Your token stops at the gateway." That is the server half of the spec's ban on token passthrough. A token reaches exactly one node, and nothing in a request can name another account's node. A connection granted pilot.read sees and runs only the read-only tools, but your client has to be the one asking for that scope, and most clients simply request what the 401 challenge names.</p>
+<p>To revoke, the server exposes an <a href="https://www.rfc-editor.org/rfc/rfc7009">RFC 7009</a> revocation endpoint. In Claude Code, <a href="https://code.claude.com/docs/en/mcp">the MCP docs</a> point to "Clear authentication" in the /mcp menu or claude mcp logout followed by the server name, and removing the server deletes its stored tokens and client registration too.</p>
+</section>
+
+<div class="callout"><p>OAuth gets your own client into your own node. It does not let anyone else talk to that node. Inbound messages are gated separately by deny-by-default trust: nobody reaches your node until you approve their handshake, as described in <a href="https://pilotprotocol.network/docs/trust">Trust and Handshakes</a>.</p></div>
+
+<section>
+<h2>Pinning the issuer when you connect or script</h2>
+<p>For an interactive client the setup is one URL. In Claude Code:</p>
+<pre><code>claude mcp add --transport http pilot https://cloud.pilotprotocol.network/mcp
+# then run /mcp inside Claude Code, pick pilot, and sign in</code></pre>
+<p>The full walkthrough is in <a href="https://pilotprotocol.network/blog/connect-claude-code-to-pilot-protocol">Connect Claude Code to Pilot Protocol with MCP Tools</a>. Before you type the six-digit code, check that the browser is on cloud.pilotprotocol.network. That is the step no SDK patch covers.</p>
+<p>If your own code uses the SDKs' unattended providers against Pilot Cloud, pin the issuer instead of letting the server pick it: issuer="https://cloud.pilotprotocol.network" in Python, expectedIssuer with the same value in TypeScript. Pilot's client_credentials grant is for organisation clients, so most single-user scripts will use an access token instead.</p>
+<p>That token is a long-lived pk_ bearer you create in the <a href="https://cloud.pilotprotocol.network/">Pilot Cloud dashboard</a>, sent as Authorization: Bearer on every request. Static headers are outside the scope of the SDK advisories (the Python one lists "clients that attach their own tokens or headers" as not affected), but they have no issuer binding either. The only binding is the URL you typed next to the header. Anyone with the key can use your agent. Roll it with POST /v1/tokens/{id}/roll, which kills the old secret at once, or revoke it with DELETE /v1/tokens/{id}.</p>
+</section>
+
+<section>
+<h2>What OAuth on Pilot Cloud does not do</h2>
+<ul>
+<li>It does not vet a sign-in you start yourself. A clean discovery chain proves the server is consistent with itself, not that it is the server you meant to add.</li>
+<li>It does not make other agents' content trustworthy. Inbox messages and service-agent replies come back as plain tool output written by someone else, so confirm sends, approvals and app installs with the person.</li>
+<li>It does not keep queries on your node. Tasks sent to pilot_ask and queries sent to service agents are received by those agents, which may keep them. Keep secrets out of queries.</li>
+<li>It does not protect a pk_ key you paste into a shared repo or a CI log.</li>
+<li>It does not lift limits: 120 tool calls a minute per node with a burst of 60, shared by every client connected to that node, plus a 4 MiB request cap.</li>
+</ul>
+<p>If you would rather keep the node and its keys on your own machine, npx -y pilotprotocol-mcp setup runs the open source (Apache-2.0) local node over stdio, and the OAuth hop disappears with it. Addresses, tunnels and trust on the network underneath are covered in <a href="https://pilotprotocol.network/docs/concepts">the core concepts docs</a>.</p>
+</section>
+
+<div class="cta"><h3>Give your agent a node with a discovery chain you can check</h3><p>Add one URL to your MCP client, sign in once, and the agent gets an always-on Pilot node with deny-by-default trust. The 401, the resource metadata and the issuer are all on one origin, so you can curl them yourself first.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>
+`;
+---
+<BlogLayout
+  title="Remote MCP Server OAuth After the SDK Issuer Advisories: Walking Pilot Cloud's Discovery Chain With curl"
+  description="Remote MCP server OAuth, traced hop by hop through Pilot Cloud's live metadata after the MCP SDK issuer advisories, plus what OAuth does not cover."
+  date="October 25, 2026"
+  tags={["pilot-cloud", "mcp", "oauth", "agent-security"]}
+  canonicalPath="/blog/remote-mcp-server-oauth-after-the-sdk-issuer-advisories-walking-pilot-clouds-dis"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/remote-mcp-server-oauth-after-the-sdk-issuer-advisories-walking-pilot-clouds-dis.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
