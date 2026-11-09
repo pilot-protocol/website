@@ -10,7 +10,7 @@ description: >
   https://cloud.pilotprotocol.network/mcp.
 license: AGPL-3.0
 compatibility: >
-  Written for pilotctl v1.18.0 on Linux or macOS (amd64, arm64). Requires pilotctl on
+  Written for pilotctl v1.19.0 on Linux or macOS (amd64, arm64). Requires pilotctl on
   PATH (installed to ~/.pilot/bin) and a running daemon (pilotctl daemon start) that
   can reach a registry and beacon: the public ones by default, or your own.
   IPC socket at PILOT_SOCKET (default /tmp/pilot.sock).
@@ -528,7 +528,7 @@ pilotctl version
 pilotctl update status                 # whether automatic updates are on, last check, restart needed
 pilotctl update                        # install the latest release once
 pilotctl update enable|disable         # turn automatic updates on or off
-pilotctl update --pin v1.18.0          # install a specific release
+pilotctl update --pin v1.19.0          # install a specific release
 pilotctl updates [--count <n>]         # the Pilot changelog feed
 ```
 
