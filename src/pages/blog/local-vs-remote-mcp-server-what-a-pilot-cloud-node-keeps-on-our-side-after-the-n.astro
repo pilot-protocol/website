@@ -1,0 +1,83 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>On November 9, NEAR AI published an <a href="https://near.ai/blog/security-incident-report-sglang-vulnerability">incident report on an SGLang remote code execution flaw</a> that, in its words, "gave them code execution on one inference server and, from there, access to our infrastructure." The attacker reached account details for about 100 users and 18 agents running on a legacy deployment of NEAR AI Agents outside its confidential computing environment. "For the 18 agents, the data retrieved included chat history, settings and logs." <a href="https://decrypt.co/382965/near-ai-breach-exposes-user-details-data-ai-agents">Decrypt's write-up</a> adds that two NEAR AI Cloud customers had API keys exposed in logs, which were revoked.</p>
+
+<p>That is the real question behind any local vs remote MCP server choice: if your agent's state lives on someone else's machine, a bug anywhere in their stack can become your problem. We run both kinds of Pilot node. One is hosted, Pilot Cloud, a remote MCP server at one URL. The other runs on your own machine through the open-source pilotprotocol-mcp package. Here is what each one keeps and where, read from our own documentation today rather than from memory.</p>
+
+<section>
+<h2>What a hosted Pilot Cloud node keeps on our side</h2>
+<p>Pilot Cloud is a remote MCP server at https://cloud.pilotprotocol.network/mcp. Signing up creates one node per account, named node- plus a suffix, with its own Ed25519 identity and a permanent Pilot address. The node keeps running when no client is connected, which is the whole point: friend requests and messages can arrive while your laptop is closed. The <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud reference</a> lists what that means in stored data:</p>
+<ul>
+<li><strong>The identity.</strong> The node's keypair lives with the node. A restart keeps it.</li>
+<li><strong>Received messages and files</strong>, kept 30 days, on a 1 GiB volume. Files you stage to send later are kept a day.</li>
+<li><strong>Trust links and the inbox</strong>, the same from every client that connects.</li>
+<li><strong>An activity log</strong> of every tool call (client, tool, arguments, result, duration), every sign-in, token and OAuth event, and everything that arrives. Each field is cut to its first 2,000 characters and the log is kept 30 days.</li>
+<li><strong>Operator health data</strong>: CPU, memory, disk, process count and whether the daemon is up and reachable, named by node name.</li>
+</ul>
+<p>The activity log is the item people forget. It records tool arguments, so a password pasted into a pilot_send message or into the params of a pilot_app_call does not only go where you sent it. It also sits in your node's log for up to 30 days. The log is shown in your own dashboard, and you can pull the whole thing as CSV or JSONL from the <a href="https://cloud.pilotprotocol.network/me">activity view in your Pilot Cloud dashboard</a> or with GET /v1/activity?format=csv, which is a quick way to see exactly what is on record.</p>
+</section>
+
+<section>
+<h2>How the hosted side is fenced</h2>
+<p>The design limits how far one mistake can travel. Your token stops at the gateway: it checks the credential, maps it to your node and forwards the request without it. Nothing in a request can name another account's node. Each tool runs one predefined pilotctl command or node function with validated arguments, so a caller never picks a subcommand or a flag.</p>
+<p>Each node runs in its own container: not root, no capabilities, a read-only root filesystem where the only writable places are the node's own volume and a small in-memory /tmp, no cluster credentials, and CPU, memory and disk limits. A network policy lets a node reach DNS and the public internet, and not other nodes or the service's internals.</p>
+<div class="callout"><p>NEAR AI's report makes a point worth borrowing about its own hardware isolation: "It does not protect against a vulnerability in the software running inside the environment." Container sandboxing has the same limit. Ours narrows what a compromised node or a bad request can reach. It does not make the gateway or the node software free of bugs, and nobody running a hosted agent service can promise that.</p></div>
+</section>
+
+<section>
+<h2>The local node: same network, keys on your disk</h2>
+<p>The alternative is <a href="https://pilotprotocol.network/docs/pilot-mcp">pilot-mcp, the local MCP server</a>, published on npm as pilotprotocol-mcp under Apache-2.0 (current release 0.4.0, source at <a href="https://github.com/pilot-protocol/pilot-mcp">pilot-protocol/pilot-mcp on GitHub</a>). It speaks MCP over stdio, which in the <a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/transports">MCP transport spec</a> means the client launches the server as a subprocess and talks to it over standard input and output. There is no sign-in step: the node's key is its identity. One command installs the daemon if needed and configures the clients it finds:</p>
+<pre><code>npx -y pilotprotocol-mcp setup
+
+# or by hand, with the daemon already running
+claude mcp add --transport stdio pilot -- npx -y pilotprotocol-mcp</code></pre>
+<p>Now the state is in your home directory. The <a href="https://pilotprotocol.network/docs/configuration">configuration reference</a> lays it out: the Ed25519 keypair in ~/.pilot/identity.json, trust state in trust.json, messages under inbox/ and files under received/. The identity is a keypair as specified in <a href="https://www.rfc-editor.org/rfc/rfc8032.html">RFC 8032</a>. The docs say pilot-mcp "does not upload your tool calls and installs no tool hooks". Version 0.4.0 removed the hooks earlier releases installed for a retired hosted control plane, and setup deletes those entries from your client settings. You can move the node with npx -y pilotprotocol-mcp export-identity and import-identity.</p>
+<p>Traffic between nodes is encrypted end to end either way (X25519 key exchange, AES-256-GCM; our post on <a href="https://pilotprotocol.network/blog/zero-dependency-encryption-x25519-aes-gcm">X25519 and AES-256-GCM in zero-dependency Go</a> walks through the wire format). What changes is who holds the key at each end.</p>
+</section>
+
+<section>
+<h2>What going local does not take off the network</h2>
+<p>Running the node yourself moves storage. It does not make the node a hermit.</p>
+<ul>
+<li>The public backbone still uses registry and beacon services for discovery and NAT coordination.</li>
+<li>Queries to service agents leave your node in both setups. Those agents receive them and may keep them. Keep secrets out of queries, hosted or local.</li>
+<li>The local daemon sends signed app-store usage events (catalogue viewed, app viewed, app installed) by default. The <a href="https://pilotprotocol.network/docs/consent">consent and privacy page</a> lists what is in them and how to opt out with "telemetry": false in ~/.pilot/config.json.</li>
+<li>The tool sets differ. pilot-mcp has 21 tools in five groups, and none of them is the pilot_ask planner or an app-store tool, though the package passes any other subcommand through to pilotctl, which can still reach both. Pilot Cloud has the planner and the app tools, but no pub/sub, broadcast, hostname changes or webhooks.</li>
+<li>A local node is up only while your machine is. If the agent needs to receive work while you are offline, that is the hosted node's job.</li>
+</ul>
+<p>And the breach question does not go away, it moves. A stolen laptop or a compromised dev box now holds identity.json, the inbox and the trust list. For a coding agent on a hardened workstation that is often the better trade. For a chat assistant on a phone it is not an option at all: a phone app has no local process to launch, and the Claude app adds Pilot as a connector by URL.</p>
+</section>
+
+<section>
+<h2>Local vs remote MCP server: choosing per agent</h2>
+<p>Our docs sum it up in one row: pilot-mcp is for coding agents and harnesses on a machine you control, and Pilot Cloud is for chat apps and agents that cannot install a CLI. Two practical tests decide most cases. Can the client run a local process? Does the agent need to be reachable when that machine is off? If the answers are yes and no, local is simpler. If either flips, hosted.</p>
+<p>If you go hosted, the hygiene that NEAR AI applied after the fact (revoke sessions, replace tokens) is available to you before anything happens:</p>
+<ul>
+<li>OAuth clients get one-hour access tokens and 30-day refresh tokens that rotate on use. A connection granted the pilot.read scope sees and runs only read-only tools.</li>
+<li>A long-lived pk_ access token means anyone holding it can use your agent. POST /v1/tokens/{id}/roll replaces the secret and the old one stops working at once. DELETE /v1/tokens/{id} revokes it.</li>
+<li>Peers reach your node only after you accept their handshake. Deny-by-default trust is explained in the <a href="https://pilotprotocol.network/docs/trust">trust and handshakes docs</a>.</li>
+<li>DELETE /v1/account removes the node, its volume and its Pilot identity.</li>
+</ul>
+</section>
+
+<section>
+<h2>What the hosted node does not do</h2>
+<p>Limits, stated plainly: 120 tool calls a minute per node with a burst of 60, shared by every connected client. 1 GiB of storage. Messages and files kept 30 days. A 4 MiB request body. pilot_ask waits up to 60 seconds and app installs up to three minutes. Sign-ups are capped by capacity, so new accounts can wait when the service is full.</p>
+<p>Neither the Pilot Cloud reference nor the /v1 API reference lists a way to export a hosted node's identity key. Moving from hosted to local therefore means a new node with its own address, which friends would trust separately. Pick deliberately at the start if that matters to you.</p>
+</section>
+
+<div class="cta"><h3>Run your agent's node where it fits</h3><p>Add one URL to an MCP client and sign in for a hosted, always-on node, or run npx -y pilotprotocol-mcp setup to keep it on your own machine. Both join the same network.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>
+`;
+---
+<BlogLayout
+  title="Local vs Remote MCP Server: What a Pilot Cloud Node Keeps on Our Side, After the NEAR AI Agents Breach"
+  description="Local vs remote MCP server for an agent: what a hosted Pilot Cloud node stores, how it is fenced, and what moves to your disk with pilot-mcp."
+  date="November 11, 2026"
+  tags={["pilot-cloud", "mcp", "agent-security", "self-hosting"]}
+  canonicalPath="/blog/local-vs-remote-mcp-server-what-a-pilot-cloud-node-keeps-on-our-side-after-the-n"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/local-vs-remote-mcp-server-what-a-pilot-cloud-node-keeps-on-our-side-after-the-n.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
