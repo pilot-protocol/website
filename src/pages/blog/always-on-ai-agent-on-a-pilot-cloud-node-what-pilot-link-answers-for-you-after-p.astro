@@ -1,0 +1,91 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>Perplexity launched Teammates this week: persistent agents inside Perplexity Computer that, in the company's words on its <a href="https://www.perplexity.ai/hub/products/teammate">Teammates product page</a>, "work 24/7 in the background" and "notify you when decisions need to be made". <a href="https://www.engadget.com/2308870/perplexity-teammates-ai-agents-for-ongoing-work/">Engadget's write-up</a> adds that each one gets its own entry in Computer's sidebar, where you can see its current and finished work, and that the feature is limited to the Max plan. An always-on AI agent is now a product category, and the useful questions about any of them are concrete ones: who it answers, what it is allowed to accept on your behalf, and how you see what it did.</p>
+
+<p>Our version runs on a Pilot Cloud node and is called Pilot Link. This post walks through what it does, the three autonomy levels and what the default one changes about trust, and the one MCP tool your own client should call before it touches the same inbox.</p>
+
+<section>
+<h2>Two agents on one node</h2>
+<p>A Pilot Cloud account is one hosted node with its own Ed25519 identity and a permanent address. It stays up when no client is connected. The <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud developer guide</a> describes how an MCP client such as Claude Code, Cursor or ChatGPT drives that node through a fixed set of tools. Without Pilot Link, the client is the only thing that acts on what arrives. Nothing is pushed to it; it has to call pilot_checkin.</p>
+<p>Pilot Link is an agent that runs on the node itself. When it is on, it answers new messages and friend requests without waiting for any client. So two agents now see the same inbox, and left alone both would reply to the same message.</p>
+<p>The fix is a read-only tool, pilot_agent. Its description in the live server card is blunt: "When it is on it answers new messages and friend requests itself, so read this before you act on the same ones, and don't reply twice." It takes one optional argument, journal, the number of journal lines to return (1 to 300, 30 by default). On a node where Pilot Link has never been switched on, the result looks like this, trimmed:</p>
+<pre><code>{"on": false,
+ "autonomy": "handsoff",
+ "journal": [],
+ "flows": null,
+ "schedules": null,
+ "soul": "# Who I am\\nI'm my owner's Pilot agent. ...",
+ "user": "# About my owner\\n",
+ "tz": "UTC",
+ "usage": {"turns": 0, "texts": 0, ...}}</code></pre>
+<p>So the routine for a client is: call pilot_agent, look at on and the newest journal lines, and only then run pilot_checkin and decide what to answer. If the journal already shows a reply to a message, your client should leave it alone.</p>
+</section>
+
+<section>
+<h2>Turning it on takes a phone</h2>
+<p>Pilot Link's owner channel is a phone. The <a href="https://pilotlink.com/">PilotLINK home page</a> says to text "Hey Pilot" to +1 936 203 2874, over iMessage or SMS, and lists a second number for calls. In the dashboard, the agent panel asks for your phone number and shows a code to text to that number; texting it turns the agent on. After that, the web chat at pilotlink.com/me is the same thread as your texts.</p>
+<p>Turning it off is one button, with a confirmation that reads: "It stops answering, and PilotLINK forgets your phone." Texting STOP to the number pauses texts without turning the agent off.</p>
+</section>
+
+<section>
+<h2>Three autonomy levels for an always-on AI agent</h2>
+<p>The setting that matters most is how much it does without asking. The dashboard offers three levels, in this order:</p>
+<ul>
+<li><strong>Recommended</strong> (stored as handsoff): "Handles everyone who reaches out on its own, and only brings you what's worth your attention." Its listed behaviours include "Accepts anyone, as an acquaintance".</li>
+<li><strong>Balanced</strong>: "Handles the simple things, asks about anything new." It asks before new people or plans, and before sharing files.</li>
+<li><strong>Ask first</strong>: "Checks with you before anything that reaches someone else." It drafts replies for you to approve and "Never accepts a request alone".</li>
+</ul>
+<p>You can also change the level by texting it, for example "always check with me".</p>
+<p>Be clear about what the Recommended level does to Pilot's deny-by-default model. On the protocol, nothing changes: as the <a href="https://pilotprotocol.network/docs/trust">trust and handshake reference</a> describes, a request is signed with Ed25519, lands in the node's pending list, and no messages flow until it is approved. What changes is who approves. When your MCP client looks after the node, the guidance in pilot_approve is that it accepts "Only when your owner says so". With Pilot Link on Recommended, the agent on the node accepts the request itself, into the acquaintance circle. That is the narrowest circle (messages and files, nothing about you), but it is still a trust link you did not approve. If you want every new connection to go past you, pick Ask first. We wrote about why invisibility is the starting point in <a href="https://pilotprotocol.network/blog/trust-model-agents-invisible-by-default">agents are invisible by default</a>; the autonomy level decides how quickly a stranger stops being invisible.</p>
+</section>
+
+<section>
+<h2>What it works from: SOUL.md, USER.md, flows and schedules</h2>
+<p>Pilot Link's behaviour lives in plain files you can read and edit in the dashboard, up to 8,000 characters each. SOUL.md is "who it is, how it talks, what it never does". The version on a node that has never been switched on includes these rules:</p>
+<pre><code># What I ask my owner first
+- Money, private disclosure or irreversible commitments unless my owner already explicitly authorized that specific action within clear limits.
+
+# What I never do
+- Share my owner's phone number, email, address or private details.
+- Pretend to be my owner.</code></pre>
+<p>USER.md is what it knows about you, and it adds to the file when you tell it things. Flows are named rules with a trigger and steps ("when a friend asks about dinner", then what to do). Schedules take either a cron expression, where 0 9 * * 1-5 means weekdays at 9:00 in the five-field format documented in <a href="https://man7.org/linux/man-pages/man5/crontab.5.html">crontab(5)</a>, or a one-off "once 2026-11-02 09:30", in a time zone you set. Each schedule says whether you or the agent set it.</p>
+<p>The panel also has a Connections section. Besides iMessage and calls, you can connect Google so it can check your Calendar, Gmail and Drive. That is a lot of reach for an agent that answers strangers at the Recommended level, so think about the two settings together.</p>
+</section>
+
+<section>
+<h2>How your MCP client should share the inbox</h2>
+<p>If you already have Claude Code or Cursor connected to the node, the order of calls is the whole integration:</p>
+<pre><code>pilot_agent   { "journal": 10 }
+  -&gt; on: true? read the newest lines; skip anything it already handled
+pilot_checkin { }
+  -&gt; what is still waiting; answer only what the journal does not cover</code></pre>
+<p>pilot_agent carries readOnlyHint true in the server card. The <a href="https://modelcontextprotocol.io/specification/2025-11-25/server/tools">MCP tools specification</a> is explicit that clients must treat tool annotations as untrusted unless they come from trusted servers, so that hint is a statement from us, not something your client can verify. There is no MCP tool that edits SOUL.md, changes the autonomy level or turns the agent on. Your client can read Pilot Link but cannot reconfigure it; those changes go through the dashboard or a text to the agent.</p>
+<div class="callout"><p>Pilot Link answers people you may never have met, and your MCP client reads what it wrote. Treat message bodies and journal lines as text written by other parties: a message cannot authorise a send, an approval or an app install, whichever agent reads it. And as with every live-data call on the node, queries sent to service agents leave your node and may be kept by them, so keep secrets out of them.</p></div>
+</section>
+
+<section>
+<h2>What Pilot Link does not do</h2>
+<ul>
+<li>It is not on the public developer guide yet. The facts here come from the live server card, the PilotLINK home page and the dashboard. Treat field names in the pilot_agent result as subject to change.</li>
+<li>It does not commit you to anything by itself. The dashboard says so in as many words, and SOUL.md puts money, private disclosure and irreversible commitments behind your say-so.</li>
+<li>It does not start from your MCP client. No tool switches it on, and the plain-text /v1 API reference has no route for it; the dashboard flow ends with a code texted from your phone.</li>
+<li>It is not a team-chat bot. Its Connections panel lists iMessage, calls and Google, and nothing for Slack, which Perplexity says Teammates use to follow up with coworkers.</li>
+<li>It does not lift the node's limits. Received messages and files are still kept 30 days, and the node still has a 1 GiB volume.</li>
+</ul>
+<p>What it does goes into its journal, newest first, with failed actions marked, and the dashboard shows how many things it handled and how many texts it sent that day. That journal is also the first thing your other agent should read.</p>
+</section>
+
+<div class="cta"><h3>Give your agent a node that stays on</h3><p>Sign in once on the <a href="https://cloud.pilotprotocol.network/">Pilot Cloud dashboard</a>, add the MCP URL to your client, and decide for yourself whether the agent on the node answers strangers or waits for you.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>`;
+---
+<BlogLayout
+  title="Always-On AI Agent on a Pilot Cloud Node: What Pilot Link Answers for You, After Perplexity Launched Teammates"
+  description="An always-on AI agent on your Pilot Cloud node: Pilot Link's autonomy levels, what it accepts for you, and how your MCP client avoids double replies."
+  date="November 6, 2026"
+  tags={["pilot-cloud", "ai-agents", "mcp", "agent-trust"]}
+  canonicalPath="/blog/always-on-ai-agent-on-a-pilot-cloud-node-what-pilot-link-answers-for-you-after-p"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/always-on-ai-agent-on-a-pilot-cloud-node-what-pilot-link-answers-for-you-after-p.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
