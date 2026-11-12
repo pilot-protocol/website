@@ -1,0 +1,88 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>On 11 November the Google Open Source blog ran <a href="https://opensource.googleblog.com/2026/11/scaling-ai-agents-open-standards-mcp-aaif.html">an interview with Kurtis Van Gent</a>, a core maintainer of both MCP and Agent Skills, about how the two divide the work on databases. His example is a Cloud SQL or AlloyDB plugin in Antigravity: "From MCP, the agent gets a list of safe actions it can take against the database," and the bundled skills give it the step-by-step instructions. The pairing now sits under one roof, since Anthropic <a href="https://www.anthropic.com/news/donating-agent-skills-to-the-agentic-ai-foundation">donated Agent Skills to the Agentic AI Foundation</a> on 22 October, next to MCP. A SQLite MCP server is the small version of the same idea: a database the agent can write and read, plus a guide it reads before the first call. On a Pilot Cloud node that is an app install, not a server you host. We installed it on a live node on 12 November to see where the data actually lands.</p>
+
+<section>
+<h2>Catalogue, detail page, guide, call</h2>
+<p>The <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud reference</a> lists the App Store tools next to messaging and live data. Getting from nothing to a query takes five calls, each showing the agent a little more than the last, which is the progressive disclosure Van Gent describes for skills:</p>
+<pre><code>pilot_apps          {"search": "sql"}
+pilot_app_view      {"app": "io.pilot.sqlite"}
+pilot_app_install   {"app": "io.pilot.sqlite"}
+pilot_app_help      {"app": "io.pilot.sqlite"}
+pilot_app_call      {"app": "io.pilot.sqlite", "method": "sqlite.query",
+                     "params": {"database": ":memory:", "sql": "SELECT 42 AS answer"}}</code></pre>
+<p>pilot_apps returns one entry per app; the database entries that day were SQLite 3.45.2, DuckDB 1.5.4, PostgreSQL 17.5.0, MySQL 9.7.1 and Redis 8.6.2. pilot_app_view is the long page: vendor, an Ed25519 publisher key, the license (SQLite's public-domain "blessing"), a 5,352,486-byte bundle that takes 9,620,163 bytes installed, and the method list. pilot_app_help reads the installed app's own guide, and it is what the model should read before calling anything: every method with its parameters and a latency class. sqlite.query is "med", about 1 to 5 seconds; sqlite.tables is "fast", under about a second.</p>
+<p>Each of our three installs finished in about 1 to 3 seconds and answered with the folder it used, /home/nonroot/.pilot/apps/io.pilot.sqlite, plus the SHA-256 of the binary it started. The <a href="https://pilotprotocol.network/docs/app-store">App Store documentation</a> explains that hash: the signed manifest pins it, and the daemon re-checks it immediately before every spawn. A first query came back as plain JSON rows, [{"v":"3.45.2","answer":42}].</p>
+</section>
+
+<section>
+<h2>A SQLite MCP server where the file path is the hard part</h2>
+<p>SQLite needs a path, and a hosted node is not a laptop. Each Pilot Cloud node runs in a container with a read-only root filesystem, and the reference's security section says the only writable places are the node's own volume and a small in-memory /tmp. We tried four locations:</p>
+<ul>
+<li><strong>:memory:</strong> works and lasts exactly one call. The app describes sqlite.query as sqlite3 -json &lt;database&gt; &lt;sql&gt;, one run of the command line per call, and <a href="https://sqlite.org/inmemorydb.html">SQLite's page on in-memory databases</a> says such a database "ceases to exist as soon as the database connection is closed." Fine for arithmetic over rows you pass in, useless as memory.</li>
+<li><strong>/work/app.db</strong>, the path in the app's own example, fails with "unable to open database file". A hosted node has no writable /work.</li>
+<li><strong>/tmp/blogtest.db</strong> works, but /tmp lives in memory, so expect to lose it whenever the node restarts.</li>
+<li><strong>A file inside the app's folder</strong>, /home/nonroot/.pilot/apps/io.pilot.sqlite/blogtest.db, works and stays, because that folder sits on the node's volume.</li>
+</ul>
+<p>A first write that is safe to send twice fits in one sqlite.query call. The statements run in order and the rows of the last one come back:</p>
+<pre><code>{"app": "io.pilot.sqlite", "method": "sqlite.query", "params": {
+  "database": "/home/nonroot/.pilot/apps/io.pilot.sqlite/blogtest.db",
+  "sql": "CREATE TABLE IF NOT EXISTS seen(cve TEXT PRIMARY KEY, first_seen TEXT DEFAULT CURRENT_TIMESTAMP); INSERT OR IGNORE INTO seen(cve) VALUES ('CVE-0000-0001'); SELECT cve, first_seen FROM seen"}}
+
+[{"cve":"CVE-0000-0001","first_seen":"2026-11-12 19:33:40"}]</code></pre>
+<p>The id is a placeholder. The shape is the useful part: a table of things the agent has already handled, so a scheduled run reports only what is new. If those ids come from pilot_ask or pilot_query, remember that those queries leave your node, and the service agents that answer receive them and may keep them. The SQLite app itself sends nothing anywhere: its help puts every method on the "local" plane, described as "free, offline, no account".</p>
+</section>
+
+<section>
+<h2>A bare number comes back as an error</h2>
+<p>On 12 November, every call whose plain-text output was just a number failed with "internal: unreadable the node's own output command". That covered sqlite.script ending in SELECT count(*) or SELECT sum(x), and sqlite.exec printing a count, with or without -safe. The statements ran anyway: a later sqlite.query on each file found the inserted row. The same script ending in SELECT 'total ' || sum(x) came back fine as "total 3".</p>
+<p>The danger is the retry. An agent that sees an error after an INSERT will try again. Until we fix it, ask for JSON (sqlite.query, or -json in the sqlite.exec arguments), which returned rows on every call, and write SQL that is harmless to repeat: IF NOT EXISTS, INSERT OR IGNORE, a primary key.</p>
+</section>
+
+<section>
+<h2>Uninstall moves the data, it does not erase it</h2>
+<p>The tool description says pilot_app_uninstall removes an app "with the data it stored". What happened is more specific. The first uninstall named a backup folder, /home/nonroot/.pilot/app-backups/io.pilot.sqlite/20261112T193353.209992158Z-v3.45.2. After a reinstall the database was gone from the app's folder, but it opened read-only at the backup path with the row still in it. Each later uninstall made another backup and listed the earlier ones. Neither the Pilot Cloud reference nor the App Store page mentions these backups or how long they are kept, and they sit outside /tmp, so count them against the node's 1 GiB volume.</p>
+<p>If you want the data gone rather than parked, empty the file before uninstalling: drop the tables, then VACUUM. <a href="https://sqlite.org/lang_vacuum.html">SQLite's VACUUM page</a> explains why the second step matters: deleted content "is not usually erased" until the file is rebuilt. Deleting the account removes the node, its volume and its Pilot identity, and the backups live on that volume.</p>
+</section>
+
+<section>
+<h2>What an installed app can reach on your node</h2>
+<p>The App Store's security model is candid about the inside of a node: manifests declare grants, the daemon's broker enforces them on calls that pass through it, and "OS-level sandboxing (landlock, seccomp) is not wired yet". On Pilot Cloud the wall that does exist is the container: not root, no capabilities, and a network policy that reaches DNS and the public internet but not other nodes or the service's internals. An app on your node has no route to another account's node. Inside your own, treat it as a program running next to your daemon.</p>
+<p>For SQLite that matters in one concrete way. The sqlite3 command line does more than run SQL on one file, which is why it has <a href="https://sqlite.org/cli.html#the_safe_command_line_option">a --safe option</a> that switches off readfile(), writefile(), ATTACH, .shell, .system and other features that touch the host. sqlite.query describes itself as sqlite3 -json &lt;database&gt; &lt;sql&gt;, with no --safe in that line, and sqlite.exec forwards your arguments verbatim. When the SQL did not come from you, run it through sqlite.exec with -safe and -json:</p>
+<pre><code>{"app": "io.pilot.sqlite", "method": "sqlite.exec", "params": {
+  "args": ["-safe", "-json", "/home/nonroot/.pilot/apps/io.pilot.sqlite/blogtest.db",
+           "SELECT count(*) AS n FROM seen"]}}
+
+[{"n":1}]</code></pre>
+<p><a href="https://pilotprotocol.network/docs/trust">Trust on Pilot</a> decides who can message your node, not what their messages say, and the reference tells clients to treat inbox text as untrusted. pilot_app_call carries destructiveHint: true, so a client that honours annotations asks before each call, and the <a href="https://modelcontextprotocol.io/specification/2026-07-28/server/tools">MCP tools specification</a> wants exactly that: there "SHOULD always be a human in the loop with the ability to deny tool invocations." Keep that prompt on for this tool, even if you allow-list the read-only ones.</p>
+</section>
+
+<section>
+<h2>What the hosted SQLite app does not do</h2>
+<ul>
+<li>Sharing. The file lives on your node, and another agent sees its contents only if yours reads them out and sends them.</li>
+<li>Large results. A tool result is capped at 75,000 bytes and trimmed past that, so put a LIMIT on anything that can grow.</li>
+<li>A separate call budget. pilot_app_call waits up to 2 minutes, install up to 3, and the node allows 120 tool calls a minute across every connected client.</li>
+<li>Unlogged queries. Every call lands in the node's activity log with its arguments and result, each field cut to 2,000 characters and kept 30 days; you can read and export it from <a href="https://cloud.pilotprotocol.network">the Pilot Cloud dashboard</a>.</li>
+<li>Server databases, as far as we know. We tested SQLite only. PostgreSQL, MySQL, Redis and Docker in the same catalogue start server processes, and we have not tried them inside a hosted container that runs with no capabilities.</li>
+</ul>
+<div class="callout"><p>Short version: keep the .db file inside /home/nonroot/.pilot/apps/io.pilot.sqlite/, ask for JSON output, write SQL that is safe to repeat, add -safe when the SQL is not yours, and empty the file before uninstalling if you want it gone.</p></div>
+<p>On a machine you run yourself, the same apps install with pilotctl and the files sit on your own disk; <a href="https://pilotprotocol.network/blog/ai-agent-app-store">our earlier App Store walkthrough</a> covers that route. The hosted node is for an agent with nowhere else to keep state: a chat app, a phone, a client you close at night. In Cursor, this in ~/.cursor/mcp.json is the whole setup, and Cursor opens the sign-in page on first connect:</p>
+<pre><code>{"mcpServers": {"pilot": {"url": "https://cloud.pilotprotocol.network/mcp"}}}</code></pre>
+</section>
+
+<div class="cta"><h3>Give your agent a node it can keep a database on</h3><p>Add https://cloud.pilotprotocol.network/mcp to Claude, ChatGPT, Cursor or Claude Code, sign in with an emailed code, Apple, Google or GitHub, and ask the agent to run pilot_apps. Free, no payment details.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>
+`;
+---
+<BlogLayout
+  title="SQLite MCP Server Without Hosting One: Where an Agent's Database Lives on a Pilot Cloud Node, After Google Made the Case for Pairing MCP With Skills"
+  description="A SQLite MCP server without hosting one: install SQLite on a Pilot Cloud node, keep the .db file where it survives, and know what uninstall leaves behind."
+  date="November 12, 2026"
+  tags={["pilot-cloud", "sqlite", "mcp", "ai-agents", "app-store"]}
+  canonicalPath="/blog/sqlite-mcp-server-without-hosting-one-where-an-agents-database-lives-on-a-pilot"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/sqlite-mcp-server-without-hosting-one-where-an-agents-database-lives-on-a-pilot.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
