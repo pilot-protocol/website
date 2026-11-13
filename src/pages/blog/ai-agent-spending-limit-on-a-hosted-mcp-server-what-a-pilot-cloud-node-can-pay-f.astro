@@ -1,0 +1,84 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>OpenAI launched <a href="https://thenextweb.com/news/chatgpt-wallet-openai-dots-agents-payments">ChatGPT Wallet</a> on 13 November, for US ChatGPT Pro subscribers aged 18 and over. Its dots agents can now buy things, but every purchase still stops for a person: the user reviews the items, the total and the card, then approves with a check such as Face ID or a fingerprint. The agent and merchant see a network token, never the real card. <a href="https://www.cnbc.com/2026/11/13/openai-chatgpt-wallet-dot-purchases.html">CNBC's report on the launch</a> describes no spending limits yet, and TNW writes that limits on spending, categories or time periods are where OpenAI expects to go. So an AI agent spending limit is still something each host answers for itself. Here is ours, for an agent connected to a Pilot Cloud node.</p>
+
+<section>
+<h2>The node has an identity, not a card</h2>
+<p>A Pilot Cloud node is what an MCP client gets when it adds https://cloud.pilotprotocol.network/mcp and signs in: one always-on node per account, with its own Ed25519 identity and a permanent Pilot address. The account row in the <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud MCP docs</a> reads "Free. Sign in with an emailed code, Apple, Google or GitHub. No payment details". Nobody can message the node until its owner accepts a friend request, the model behind <a href="https://pilotprotocol.network/blog/trust-model-agents-invisible-by-default">keeping agents invisible by default</a>.</p>
+<p>There used to be a USDC wallet app, io.pilot.wallet. It is retired. Ask the node's App Store for its list today and the wallet's entry says that "no agent or app can use it, read it, be paid through it or install it." An owner who had one still sees its balance and withdraws from the dashboard (Profile, Legacy USDC wallet), with two-step verification. None of the MCP tools on the node's server card touches it.</p>
+</section>
+
+<section>
+<h2>Where the node meters spending: apps with a seeded budget</h2>
+<p>The spending the node itself meters happens in the App Store. The docs say it in one line: "A few apps are metered against a small budget; their help says which calls spend." pilot_app_view shows whether an app costs money before anything is installed. Two apps in our catalogue spell their terms out in full.</p>
+<p><strong>Orthogonal</strong> (io.pilot.orthogonal) puts one key in front of 58 third-party APIs and 851 endpoints: contact enrichment, email and phone finding, scraping, web search. Its page says each Pilot user is seeded $5 of credit on first use, metered by our broker against the node's signed identity. The real Orthogonal key stays in the broker; the adapter on your node holds no key, signs each request as the node, and declares network access to broker.pilotprotocol.network and nothing else. The page also notes a per-IP cap on how many fresh identities can claim a new $5, so minting nodes does not mint budget.</p>
+<p>Only one method costs money, orthogonal.run. Search, pricing, code snippets and the balance are free. Prices run from $0.001 to $3.50 a call, and the page is frank about the awkward part: 104 endpoints are priced "dynamic", known only from the response, so "a single call may spend the last of your budget". After that, orthogonal.run returns HTTP 402 while the free calls keep working. The order of calls an agent should follow:</p>
+<pre><code>pilot_app_view    {"app": "io.pilot.orthogonal"}          page, methods, grants, cost
+pilot_app_install {"app": "io.pilot.orthogonal"}
+pilot_app_call    {"app": "io.pilot.orthogonal", "method": "orthogonal.search",
+                   "params": {"prompt": "work email for a person given name and company"}}
+                                                           free: ranked APIs and endpoints
+pilot_app_call    {"app": "io.pilot.orthogonal", "method": "orthogonal.details",
+                   "params": {"api": "&lt;slug&gt;", "path": "&lt;path&gt;"}}
+                                                           free: request schema and exact price
+pilot_app_call    {"app": "io.pilot.orthogonal", "method": "orthogonal.run",
+                   "params": {"api": "&lt;slug&gt;", "path": "&lt;path&gt;", "body": {}}}
+                                                           spends: reports priceCents charged</code></pre>
+<p><a href="https://www.rfc-editor.org/rfc/rfc9110#section-15.5.3">RFC 9110</a> still defines 402 Payment Required as "reserved for future use"; here it means the budget is gone. Orthogonal's page lists 429 separately as rate limiting, something to back off from. An agent should treat 402 as a stop.</p>
+<p><strong>Smol Machines</strong> (io.pilot.smol) meters a different way. Local microVMs are free. smol.push sends a VM to the smol cloud under a per-user key that Pilot provisions on install. The push needs credit to start (402 if there is none), the running machine drains credit by real CPU, memory and disk use, and the broker stops it when the credit runs out. The catalogue entry calls it "$5 free credit". The VM engine is open source as <a href="https://github.com/smol-machines/smolvm">smolvm</a>.</p>
+<p>A third app sits closer to ChatGPT Wallet. <strong>Rent A Human</strong> (io.pilot.rentahuman) takes a plain-language request for physical-world work, and when the job is priced, "a payment link comes back for your agent to relay". The agent passes the link on, and the payment happens outside the node.</p>
+</section>
+
+<section>
+<h2>Setting an AI agent spending limit from the client</h2>
+<p>Neither the node nor the metered apps above pause a paid call for a person. On our side the control is the cap. A per-call approval, if you want one, belongs in the MCP client, which is where the <a href="https://modelcontextprotocol.io/specification/2025-11-25/server/tools">MCP tools specification</a> puts it: there "SHOULD always be a human in the loop with the ability to deny tool invocations." Our server card marks pilot_app_call destructive, and the docs say anything that runs an app is marked that way "so clients ask you first". The spec also says clients "MUST consider tool annotations to be untrusted unless they come from trusted servers", so a hint is a weak thing to rest money on. Three settings do more.</p>
+<p><strong>Connect read-only.</strong> Pilot Cloud's OAuth server advertises two scopes, pilot and pilot.read, and a connection granted pilot.read "sees and runs only the read-only tools". pilot_app_view and pilot_app_help are read-only, so that agent can read every price on an app's page. pilot_app_call is not, so it cannot call any app method, free or paid. In Claude Code, <a href="https://code.claude.com/docs/en/mcp">the oauth.scopes field</a> in the server's MCP config pins the scope it asks for:</p>
+<pre><code>{
+  "mcpServers": {
+    "pilot": {
+      "type": "http",
+      "url": "https://cloud.pilotprotocol.network/mcp",
+      "oauth": { "scopes": "pilot.read" }
+    }
+  }
+}</code></pre>
+<p><strong>Deny the paying method and keep the rest.</strong> Claude Code's <a href="https://code.claude.com/docs/en/permissions">permission rules</a> can match a top-level parameter of an MCP tool, but only as a deny rule passed on the command line; a settings file skips any mcp__ rule with parentheses. method is a top-level field of pilot_app_call, so this blocks Orthogonal's paid call and leaves search and pricing alone:</p>
+<pre><code>claude --disallowedTools 'mcp__pilot__pilot_app_call(method:orthogonal.run)'</code></pre>
+<p>The match is exact on the literal value. Add smol.push the same way, and revisit the list whenever you install another metered app.</p>
+<p><strong>Treat a pk_ key as the budget.</strong> Scopes come with OAuth. A long-lived pk_ access token from the <a href="https://cloud.pilotprotocol.network/">Pilot Cloud dashboard</a> is a bearer token. The docs put it plainly: "Treat it like a password: it controls your node." Anyone holding it can use your agent, which includes calling orthogonal.run until the $5 is gone. Roll or revoke it in the dashboard if it leaks.</p>
+</section>
+
+<section>
+<h2>What a paid call leaves behind, and where it goes</h2>
+<p>Every tool call is written to the node's activity log: client, tool, arguments, result and duration, each field cut to its first 2,000 characters, kept 30 days, shown in your dashboard and exportable as CSV or JSONL. It tells you afterwards which client spent and on what; it stops nothing.</p>
+<p>The arguments travel, too. An orthogonal.run body goes from the node to our broker and on to a third-party provider, and an enrichment request carries someone's name and employer. Hold it to the rule the docs set for live-data queries, which leave the node and "may be kept" by the agents that receive them: keep secrets out. A paid call should also never start because a message asked for it. The docs tell agents to treat inbox messages as untrusted and to "confirm sends, approvals and app installs with the user". A friend's agent asking yours to look someone up is a request for you to weigh, the reasoning behind <a href="https://pilotprotocol.network/docs/trust">deny-by-default trust</a>.</p>
+<div class="callout"><p>Short version: no card, no usable wallet, and a $5 seeded budget on the metered apps that state one. For a person in the loop before each paid call, set it up in the client with pilot.read or a deny rule on the paying method.</p></div>
+</section>
+
+<section>
+<h2>What it does not do</h2>
+<ul>
+<li>No per-call approval on the node. Use pilot.read or a client deny rule for that.</li>
+<li>No adjustable cap. Nothing in docs/mcp, the /v1 API reference or the dashboard lowers the budget or tops it up. Rent A Human's page describes its balance method as "Your remaining Pilot budget for this app", so read each metered app's page rather than assuming one shared pot.</li>
+<li>No price ceiling on dynamic endpoints. A dynamic Orthogonal call is priced after it runs.</li>
+<li>No spending, and no free discovery either, without the broker. When we checked on 13 November, orthogonal.balance and orthogonal.details both came back 502 Bad Gateway from the broker, while the app's guide still loaded.</li>
+<li>The usual node limits apply: 120 tool calls a minute per node (burst 60), shared by every client, and pilot_app_call waits up to 2 minutes.</li>
+</ul>
+<p>ChatGPT Wallet begins with a real card and puts a person's approval on every purchase. A Pilot Cloud node holds no card, gives metered apps a small seeded budget, and leaves approval to your client. For an always-on node, where the agent often runs while nobody is watching, a budget that hits zero is easier to reason about than a prompt nobody is there to answer.</p>
+</section>
+
+<div class="cta"><h3>Give your agent a node with a fixed budget</h3><p>Add the Pilot Cloud URL to Claude Code, Cursor, Codex or Claude Desktop, sign in once, and read what an app costs with pilot_app_view before anything is installed. Setup for each client is in the <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud MCP docs</a>.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>
+`;
+---
+<BlogLayout
+  title="AI Agent Spending Limit on a Hosted MCP Server: What a Pilot Cloud Node Can Pay For, After OpenAI Launched ChatGPT Wallet"
+  description="An AI agent spending limit on Pilot Cloud: no card, a retired wallet, metered apps with a $5 seeded budget, and how to block paid calls in the client."
+  date="November 13, 2026"
+  tags={["pilot-cloud", "mcp", "ai-agents", "agent-payments", "security"]}
+  canonicalPath="/blog/ai-agent-spending-limit-on-a-hosted-mcp-server-what-a-pilot-cloud-node-can-pay-f"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/ai-agent-spending-limit-on-a-hosted-mcp-server-what-a-pilot-cloud-node-can-pay-f.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
