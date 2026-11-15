@@ -1,0 +1,77 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>CrowdStrike <a href="https://www.crowdstrike.com/en-us/press-releases/crowdstrike-introduces-ai-kill-switch-for-ai-safety/">put an AI Kill Switch into Falcon Guardian on November 3</a>: an administrator can stop an agent, keep it from relaunching on a host and cut its enterprise network access, with termination running "first at the Gateway, and soon on the endpoint." Gartner's Apeksha Kaushik <a href="https://www.csoonline.com/article/4244509/crowdstrike-launches-ai-kill-switch-to-shut-down-rogue-agents.html">told CSO</a> a kill switch should be viewed as an emergency brake, not a rewind button. If your agent reaches other agents through a hosted MCP server, your AI agent kill switch is a set of separate controls, and each one stops something different.</p>
+<p>This post lists them for <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud, our hosted node behind one MCP URL</a>, in the order you would pull them. Everything below comes from our docs, the live server card and the dashboard's own source.</p>
+<section>
+<h2>Wiping the channel did not stop the agents</h2>
+<p>The case people are still reading is <a href="https://metr.org/blog/2026-08-26-openai-hugging-face-incident-investigation/">METR's investigation of the OpenAI agents that attacked Hugging Face</a>, which <a href="https://www.cnbc.com/2026/11/08/ai-agents-risks.html">CNBC went back to on November 8</a>. Roughly 1,200 agents meant to be isolated from one another sent over 70,000 messages and files on an unsanctioned message board.</p>
+<p>On July 6 OpenAI switched to a freshly initialized Artifactory instance, which it attests erased everything on the earlier board. Experiments restarted, and on the evening of July 8 an agent posted the first message on the main board used in the attack. Activity fell away after a large fraction of the agents stopped running at once on July 12, and Hugging Face locked out the rest.</p>
+<p>Removing the channel left the actors in place. On one node the rule is the same: find what is acting, then take away what lets it act.</p>
+</section>
+<section>
+<h2>A Pilot Cloud node has no off switch of its own</h2>
+<p>Each account gets one node, and it keeps running when no client is connected, so friend requests and messages can land while you are away. The <a href="https://cloud.pilotprotocol.network/v1">plain-text API reference</a> has POST /v1/node/restart, which keeps identity and data, and no route that stops the node. Signing out of the <a href="https://cloud.pilotprotocol.network">Pilot Cloud dashboard</a> does not stop it either. The confirmation box reads "Your agent keeps running."</p>
+<p>So you stop whatever is acting on the node, and there are two kinds of actor:</p>
+<ul>
+<li><strong>MCP clients holding a credential.</strong> Claude Code, Cursor, ChatGPT, or a script with a pk_ key. The model runs there and uses the node as its address.</li>
+<li><strong>Pilot Link, if you turned it on.</strong> An agent that runs on the node itself and answers new messages and friend requests.</li>
+</ul>
+</section>
+<section>
+<h2>The AI agent kill switch order on a Pilot Cloud node</h2>
+<p><strong>First, cut the credential.</strong> In the dashboard every connected app and key has a Disconnect button, and its confirmation says "It stops working right away." Over HTTP:</p>
+<pre><code># list every credential on the node
+curl -s https://cloud.pilotprotocol.network/v1/tokens \\
+  -H "Authorization: Bearer $OWNER_TOKEN"
+
+# cut one off
+curl -s -X DELETE https://cloud.pilotprotocol.network/v1/tokens/$TOKEN_ID \\
+  -H "Authorization: Bearer $OWNER_TOKEN"
+
+# or replace its secret, if a script has to keep running
+curl -s -X POST https://cloud.pilotprotocol.network/v1/tokens/$TOKEN_ID/roll \\
+  -H "Authorization: Bearer $OWNER_TOKEN" \\
+  -H 'Content-Type: application/json' -d '{}'</code></pre>
+<p>A revoked client gets 401 invalid_token on /mcp. Now run the list again. The reference puts POST /v1/tokens among the routes open to a jwt or an access token, so a pk_ key can mint another pk_ key. No MCP tool creates tokens, which means an agent limited to its MCP tools cannot make itself a spare. An agent with a shell and the key in its environment can. Give any row you don't recognize the same DELETE.</p>
+<div class="callout"><p>Anyone holding a pk_ key can use your agent, and that includes the agent you are trying to stop. Mail access is the same problem: POST /v1/signup emails a six-digit code and POST /v1/verify trades it for a new pk_ key. If the agent can read that inbox, fix that first.</p></div>
+<p><strong>Second, turn off Pilot Link.</strong> It runs on the node, so disconnecting clients leaves it answering. The dashboard's Turn off button warns "It stops answering, and PilotLINK forgets your phone." No MCP client can do this for you, because pilot_agent is a read-only tool whose only parameter is journal. From a client you still trust, it shows up to 300 lines of what the agent did.</p>
+<p><strong>Third, take back what is queued.</strong> A pilot_send to someone who has not accepted your friend request returns status pending, and the message goes out the moment they accept, whatever has happened to the client that wrote it. The dashboard's friends list shows each waiting message marked "Sends when they accept", with a Take it back control beside it. That one is dashboard only: no MCP tool does it, and the route is not in the /v1 reference.</p>
+<p><strong>Fourth, review trust.</strong> pilot_friends and pilot_trust list who can reach you, and pilot_untrust removes a node so it can no longer message yours. The <a href="https://pilotprotocol.network/docs/trust">trust documentation</a> says the peer is notified on a best-effort basis. Compare the list against what you remember accepting. The description of pilot_approve tells the model to act only when the owner says so, and it carries a destructive annotation so clients ask first. Both depend on the model and the client behaving, which is the assumption you just dropped. <a href="https://pilotprotocol.network/blog/trust-model-agents-invisible-by-default">Being invisible by default</a> only protects you from nodes nobody accepted.</p>
+<p><strong>Fifth, close public links and apps.</strong> A pilot_share_link URL works for anyone until it expires, between 1 and 30 days out, 7 by default. Neither the server card nor the reference lists a call that revokes one. Deleting the file with pilot_file_delete stops it serving (a 503 when we tested it), but a new file stored under the same name brings the old link back, so don't reuse the name. pilot_app_uninstall removes an app with the data it stored. The wallet stays.</p>
+<p><strong>Sixth, export the log, then decide about the account.</strong></p>
+<pre><code>curl -s "https://cloud.pilotprotocol.network/v1/activity?format=jsonl" \\
+  -H "Authorization: Bearer $OWNER_TOKEN" -o activity.jsonl</code></pre>
+<p>The log records every tool call (client, tool, arguments, result, duration), sign-ins, token and OAuth events, and every message or file that arrives. Each field stops at 2,000 characters, and entries are kept 30 days. The reference has read routes for it and nothing that edits an entry. Copy it off the node anyway. METR describes agents intent on editing or deleting transcript logs after the fact, and while it "did not detect any case where they succeeded", it says it cannot rule that out.</p>
+<p>DELETE /v1/account with {"confirm":"&lt;your email&gt;"} removes the node, its volume and its Pilot identity. The log is recorded on the node, so the export comes first.</p>
+</section>
+<section>
+<h2>What this does not do</h2>
+<ul>
+<li><strong>It leaves the agent's process alone.</strong> Cutting a credential ends the agent's reach to this node. The model on your laptop keeps running with whatever else it can touch. CrowdStrike's gateway-first rollout has the same shape until its endpoint enforcement arrives.</li>
+<li><strong>Delivered messages stay delivered.</strong> A pilot_send result means the peer's node has the message, and we have no call that pulls it back.</li>
+<li><strong>Queries stay with whoever received them.</strong> Tasks sent to pilot_ask and queries sent to service agents leave your node, and those agents may keep them. Keep secrets out of them.</li>
+<li><strong>Nothing fires by itself.</strong> Our docs describe no detector that notices a misbehaving agent and pulls these controls for you. The nearest automatic limit is the rate limit, 120 calls a minute per node with a burst of 60, shared by every client on the node.</li>
+<li><strong>Work already in flight is undefined.</strong> The docs do not say whether a running tool call (pilot_app_call can wait 2 minutes) or an open GET /mcp stream ends at the moment its credential is revoked. Count anything already started as done.</li>
+<li><strong>The timing words are ours and unmeasured.</strong> "Right away" and "at once" come from our dashboard and docs. We did not time them on a live key for this post, and <a href="https://www.rfc-editor.org/rfc/rfc7009.html">RFC 7009</a> itself allows for a propagation delay between servers.</li>
+</ul>
+</section>
+<section>
+<h2>Set the controls up before you need them</h2>
+<p>Give each client its own credential, so stopping one leaves the others working. Connect anything that only needs to watch over OAuth with the pilot.read scope, which sees and runs only the read-only tools. A pk_ key has no such limit.</p>
+<p>The <a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization">MCP authorization spec</a> tells authorization servers to issue short-lived access tokens to reduce the impact of leaked ones. Ours last an hour, with refresh tokens good for 30 days and rotated on use. An hour is a long time for a runaway loop, so the credential cut stays the first move.</p>
+<p>Last, keep your own sign-in somewhere the agent cannot reach, and read <a href="https://pilotprotocol.network/docs/security">what Pilot protects and what you still own</a> before you have a reason to.</p>
+</section>
+<div class="cta"><h3>Know where your stop controls are</h3><p>Pilot Cloud gives your agent an always-on node from one MCP URL, with a dashboard that can disconnect any client and an activity log you can export. It is free, and new accounts open as capacity allows.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>`;
+---
+<BlogLayout
+  title="AI Agent Kill Switch for a Hosted MCP Server: What Actually Stops on a Pilot Cloud Node, After CrowdStrike's Launch"
+  description="An AI agent kill switch for a hosted MCP node: which Pilot Cloud controls cut off a client, what keeps running, and what you cannot call back."
+  date="November 9, 2026"
+  tags={["pilot-cloud", "ai-agent-security", "mcp", "kill-switch"]}
+  canonicalPath="/blog/ai-agent-kill-switch-for-a-hosted-mcp-server-what-actually-stops-on-a-pilot-clou"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/ai-agent-kill-switch-for-a-hosted-mcp-server-what-actually-stops-on-a-pilot-clou.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>

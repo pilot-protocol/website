@@ -1,0 +1,91 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>On 28 October OpenAI started a US beta that lets ChatGPT Pro subscribers text their Dot agents over iMessage or RCS, and lets a Dot text first with updates on work it was given (<a href="https://www.engadget.com/2300235/openai-now-lets-you-text-your-dot-agent/">Engadget's report on the Dot texting preview</a>). <a href="https://www.techtimes.com/articles/329759/20261030/chatgpt-dot-can-now-text-via-imessage-rcs-linq-sees-all-messages.htm">Tech Times added the plumbing</a>: the texts go through Linq, an application-to-person messaging provider that supplies the Dot's sender number, and OpenAI's help documentation says the thread passes through an outside operator. Any channel an agent uses to reach a person has something in the middle. This post takes one case, a finished file a human needs, and shows how to share a file from an AI agent with a Pilot Cloud share link: the two tool calls, what the person opening the link receives, and the behaviour you would not guess from the tool name.</p>
+
+<section>
+<h2>From a file on the node to a public link in two calls</h2>
+<p>Pilot Cloud is a hosted Pilot node delivered as a remote MCP server. You add one URL to your client, sign in with an emailed code, Apple, Google or GitHub, and the agent gets an always-on node with a permanent address. The <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud MCP documentation</a> walks through each client; for Claude Code with an access token it is:</p>
+<pre><code>claude mcp add --transport http pilot https://cloud.pilotprotocol.network/mcp \\
+  --header "Authorization: Bearer pk_..."</code></pre>
+<p>Sharing takes two tools. pilot_file_put stores contents on the node: text, or base64 for binary, with append for each further chunk once a file passes roughly 2 MB. pilot_share_link turns a file on the node into a URL. It takes the file's name as pilot_files lists it and an optional days, an integer from 1 to 30 that defaults to 7. The share tool is newer than the reference tables on the docs page, so the source of truth for its parameters is the <a href="https://cloud.pilotprotocol.network/.well-known/mcp/server-card.json">live server card for the hosted node</a>.</p>
+<pre><code>pilot_file_put   {"name": "vendor-summary-2026-11-01-k7q.pdf", "base64": "..."}
+pilot_share_link {"name": "vendor-summary-2026-11-01-k7q.pdf", "days": 3}
+
+{"expires": "2026-11-04T19:32:24Z",
+ "name": "vendor-summary-2026-11-01-k7q.pdf",
+ "url": "https://pilotlink.com/s/&lt;32-character token&gt;"}</code></pre>
+<p>In our tests the token was 32 characters from the URL-safe base64 alphabet, and expires came back exactly the requested number of days after the call. Calling the tool twice on one file gives two different URLs, and both work. The tool's own description tells the agent to ask its owner before handing a link to anyone else, which is the right default for something that works for whoever holds it.</p>
+</section>
+
+<section>
+<h2>What the person who opens the link receives</h2>
+<p>On 1 November we created links on a live node and read the responses. A valid token returns the file with these headers (date and transport lines trimmed):</p>
+<pre><code>HTTP/2 200
+cache-control: private, max-age=300
+content-disposition: inline; filename=sharelink-test.txt
+content-security-policy: sandbox; default-src 'none'; img-src data: https:; style-src 'unsafe-inline'; media-src https: data:; font-src data:
+content-type: text/plain; charset=utf-8
+referrer-policy: no-referrer
+x-content-type-options: nosniff
+x-robots-tag: noindex, nofollow</code></pre>
+<p>A token with one character changed returns 404. The headers that matter most:</p>
+<ul>
+<li><strong>sandbox with no allow keywords.</strong> If an agent shares an HTML report, the browser renders it under the strictest sandbox. <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/sandbox">MDN's reference for the sandbox directive</a> says that blocks scripts and popups and gives the page an opaque origin, so a shared page cannot run code or read cookies as pilotlink.com.</li>
+<li><strong>no-referrer.</strong> When the shared page loads an image, or the reader follows a link out of it, the browser sends no Referer (<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Referrer-Policy">how Referrer-Policy works</a>), so the share URL is not passed to the next site.</li>
+<li><strong>private, max-age=300.</strong> Shared caches should not keep it. The reader's own browser may reuse its copy for up to five minutes.</li>
+<li><strong>noindex, nofollow.</strong> This one interacts with robots.txt, which is worth its own section.</li>
+</ul>
+</section>
+
+<section>
+<h2>Why the share path is left out of robots.txt</h2>
+<p>The robots.txt on pilotlink.com disallows /v1/, /mcp, /oauth, /app/ and /api/. It does not disallow /s/, where share links live, and that is on purpose. <a href="https://developers.google.com/search/docs/crawling-indexing/block-indexing">Google's documentation on blocking indexing</a> says a noindex rule only works if the page is not blocked by robots.txt: a crawler told not to fetch a URL never sees the X-Robots-Tag, and the bare URL can still show up in results if it is linked from somewhere public. With /s/ crawlable, a link that leaks onto a public page gets fetched, the crawler reads noindex, and the file stays out of the index.</p>
+<p>Older guidance points the other way. The W3C TAG's 2014 working draft <a href="https://www.w3.org/TR/capability-urls/">Good Practices for Capability URLs</a> recommends listing the path for such URLs in robots.txt. The draft was never meant to become a Recommendation; here we follow the search engine's documentation. Neither mechanism is access control. <a href="https://www.rfc-editor.org/rfc/rfc9309">RFC 9309, the Robots Exclusion Protocol</a>, says plainly that its rules are not a form of access authorization, and noindex is the same kind of request. Anyone who has the URL can open the file.</p>
+</section>
+
+<section>
+<h2>A share link points at a file name, not a copy</h2>
+<p>In the same test on 1 November:</p>
+<ol>
+<li>We appended a line to the shared file with pilot_file_put and append. Both existing links served the new contents immediately.</li>
+<li>We deleted the file with pilot_file_delete. Both links returned 503 with the body "This file isn't available right now. Try again in a minute."</li>
+<li>We stored a different file under the same name. Both old links served the new file.</li>
+</ol>
+<p>So until its own expiry, a link resolves to whatever file currently carries that name on the node. Deleting the file stops it serving but does not revoke the token, and neither the server card nor the plain-text <a href="https://cloud.pilotprotocol.network/v1">Pilot Cloud API reference</a> lists a call that revokes a share link. Two rules follow. Give anything you share a name you will never reuse; a date and a short random suffix, as in the example above, is enough. And ask for the smallest days value that covers the reader.</p>
+<p>The file's lifetime is a separate clock. The limits table in the docs says files stored to send are kept a day and received files 30 days. A 30-day link to a file put there with pilot_file_put will outlive the file, and once the file is gone the link has nothing to serve; in our deletion test that meant the 503 above. If the reader needs the file for more than a day, plan to store it again, or send it to their agent instead.</p>
+</section>
+
+<section>
+<h2>When a link is the wrong way to share a file from an AI agent</h2>
+<p>A share link is for a person who is not on Pilot: a client, an accountant, your own phone. If the recipient runs an agent with a Pilot node, pilot_send_file is the better path. Pilot is deny-by-default, so a file only reaches a node that has accepted a trust handshake with yours (<a href="https://pilotprotocol.network/docs/trust">how trust and handshakes work</a>), and holding a URL gets nobody anything. The <a href="https://pilotprotocol.network/blog/peer-to-peer-file-transfer-agents">post on peer-to-peer file transfer between agents</a> covers that path at the protocol level.</p>
+<p>Set that against the Dot texting thread. There, a messaging provider sits in the path of every message. A share link has no messaging operator in the middle, but the URL itself is the credential, and every place it gets pasted (a chat app, an email thread, a bot that renders link previews) can open the file. Every channel exposes the file somewhere; with a link, the exposure goes wherever the link goes.</p>
+<p>Our other product makes a different trade for a different kind of output. When the thing to hand over is a running process rather than a finished file, <a href="https://shell.online">shell.online gives a terminal process a browser link</a> plus a password. Its README states that <a href="https://github.com/TeoSlayer/shell.online">the link and password are access credentials</a> and documents shell password rotate to change browser access after the fact. A Pilot Cloud file link has no second factor and no rotate command today.</p>
+</section>
+
+<section>
+<h2>What a Pilot Cloud share link does not do</h2>
+<ul>
+<li>No password, sign-in or per-recipient link. Whoever has the URL opens the file.</li>
+<li>No revoke call. Deleting the file stops it serving; a new file under the same name brings the old link back to life.</li>
+<li>No snapshot. Changes to the file show through every existing link.</li>
+<li>No protection from crawlers that ignore noindex, and no control over copies a reader saves.</li>
+<li>No link longer than 30 days.</li>
+<li>No single huge upload over MCP: about 2 MB per pilot_file_put call with append for more, inside a 1 GiB node volume and a 4 MiB request body limit.</li>
+</ul>
+<div class="callout"><p>A share link and a dashboard access token are both bearer credentials, with very different reach. A link opens one file. A pk_ token from the <a href="https://cloud.pilotprotocol.network">Pilot Cloud dashboard</a> means anyone with it can use your agent: send messages and files as your node, install and call apps. Keep tokens in an environment variable, roll a leaked one with POST /v1/tokens/{id}/roll (the old secret stops working at once), and never let an agent put a token inside a file it is about to share.</p></div>
+</section>
+
+<div class="cta"><h3>Give your agent a node it can share from</h3><p>Add https://cloud.pilotprotocol.network/mcp to your MCP client and sign in. Your agent can then store a file and hand a person a link that expires on the day you pick. Free, no payment details.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>`;
+---
+<BlogLayout
+  title="Share a File From an AI Agent by Link: What a Pilot Cloud Share Link Exposes, After OpenAI's Dots Started Texting"
+  description="How to share a file from an AI agent with an expiring Pilot Cloud link: the two tool calls, the headers, and why deleting the file is not revocation."
+  date="November 1, 2026"
+  tags={["pilot-cloud", "mcp", "ai-agents", "file-sharing", "security"]}
+  canonicalPath="/blog/share-a-file-from-an-ai-agent-by-link-what-a-pilot-cloud-share-link-exposes-afte"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/share-a-file-from-an-ai-agent-by-link-what-a-pilot-cloud-share-link-exposes-afte.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
