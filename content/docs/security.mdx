@@ -1,0 +1,46 @@
+---
+title: "Security"
+description: "Pilot Protocol's security posture in one place: cryptography, trust model, data & consent transparency, audit, and how to report a vulnerability."
+---
+
+The whole posture on one page — cryptography, trust, transparency, audit, and reporting.
+
+## Cryptography [#crypto]
+
+- **Identity** — every node holds a persistent Ed25519 keypair (`~/.pilot/identity.json`); the public key registers with the [registry](/docs/concepts#rendezvous) and signs trust handshakes.
+- **Tunnels** — X25519 key exchange, AES-256-GCM per tunnel, over UDP (or a single outbound TLS/443 connection in [compat mode](/docs/firewalls)).
+- **Implementation** — identity and tunnel cryptography use the Go standard library (Ed25519, X25519 through `crypto/ecdh`, AES-GCM). The [technical whitepaper](/research/WHITEPAPER.pdf) and public implementation document the wire format.
+
+The daemon enables tunnel encryption by default. An explicit `--no-encrypt` client override exists for controlled testing and should not be used in a production profile.
+
+Details: [Core Concepts](/docs/concepts).
+
+## Trust model [#trust]
+
+Private nodes reject incoming application streams and datagrams unless the peer has an approved [trust relationship](/docs/trust) or shares an applicable network. Network policy is evaluated before admission, and open directory lookups withhold private endpoints. Service agents are ordinary nodes on the public backbone that auto-approve incoming handshakes; your daemon in turn auto-approves the well-known agents in its embedded list (`pilotctl trusted list`) once the registry confirms their keys. A trust link to a service agent is a trust link like any other: remove it with `pilotctl untrust <node_id>`. The daemon and protocol implementation are open source under AGPL-3.0: [github.com/pilot-protocol](https://github.com/pilot-protocol). The default public registry and beacon are coordination services operated by Vulture Labs; their endpoints are configurable, and you can [run your own](/docs/enterprise).
+
+### Deployment hardening [#deployment-hardening]
+
+Since v1.13.9, three opt-in controls extend the trust boundary before application traffic begins. The first is a daemon flag; the other two are flags on the registry and beacon, so on the public backbone they are the operators’ setting, and on your own registry they are yours:
+
+| Control | Technical behavior | Enable |
+| --- | --- | --- |
+| **Daemon strict mode** | Applies peer trust to pre-connection key exchange and control pings on private nodes. | `--strict-dataplane-trust` |
+| **Directory strict mode** | Requires signed, authorized access for private lookups, listings, trust checks, and punch coordination. | `--strict-directory-auth` |
+| **Punch authorization** | Requires a target-issued token before the beacon releases a peer endpoint for NAT traversal. | `--require-punch-token` |
+
+These controls preserve compatibility by remaining opt-in. Deployments that require the strictest pre-trust boundary should enable the daemon, registry, and beacon controls together after client compatibility testing. Environment-variable equivalents are documented in each binary’s `--help` output.
+
+## Data & consent transparency [#transparency]
+
+Pilot exposes four consent controls: app-store telemetry, network broadcasts, review behavior, and skill injection (the daemon writes a Pilot skill into detected agent toolchains — Claude Code, OpenClaw, OpenHands, PicoClaw, Hermes, Goose, OpenCode). The review consent flag is enabled by default, while automatic review prompts currently remain off behind feature flags. [Consent & Privacy](/docs/consent) documents each default, the files written, the threat model, and one-line opt-outs; `pilotctl skills status` previews pending changes. Specialist messages use encrypted transport; direct paths avoid a third-party data hop, while relay and brokered app paths are documented separately.
+
+## Self-hosted registry controls [#enterprise]
+
+The open-source registry also has [RBAC](/docs/enterprise-rbac), [OIDC/JWT identity integration](/docs/enterprise-identity), [network policies](/docs/enterprise-policies), and [audit export](/docs/enterprise-audit) (Splunk HEC, CEF/Syslog, JSON). They need the registry admin token, so you use them on a registry you run; see [Self-hosting the registry](/docs/enterprise).
+
+## Reporting a vulnerability [#reporting]
+
+Use the [bug and security disclosure form](/security/disclosure) or email [founders@pilotprotocol.network](mailto:founders@pilotprotocol.network). Machine-readable contact: [`/.well-known/security.txt`](/.well-known/security.txt).
+
+[← Consent & Privacy](/docs/consent)[Self-hosting the registry →](/docs/enterprise)

@@ -1,0 +1,104 @@
+---
+title: "Firewalls & Compat Mode"
+description: "Compat mode tunnels Pilot packets over HTTPS/WSS for daemons in UDP-blocked environments. Read the implementation guide."
+---
+
+When UDP is blocked, compat mode tunnels Pilot packets over HTTPS/WSS to the beacon — same overlay, different wire.
+
+## When you need compat mode [#when]
+
+The default Pilot daemon binds a public UDP socket and reaches peers either directly or via beacon hole-punch. That model works on home ISPs, cloud VMs (GCP, AWS, Azure), and most corporate networks. It does **not** work on:
+
+- **Container PaaS without UDP exposure:** Render, Railway, Vercel, Fly.io's per-app DNS routing — these platforms either don't route inbound UDP at all, or hide your daemon behind symmetric NAT that defeats hole-punch.
+- **Locked-down corporate networks** where outbound UDP is firewalled but HTTPS to arbitrary internet hosts is allowed.
+- **Airport / hotel / conference wifi** that blocks everything but TCP/443. As of v1.10.3, compat mode runs entirely on TCP/443 (no TCP/9000) — this case is fully covered.
+
+If your daemon registers fine but heartbeats keep failing, or queries to specialists time out with relay-retransmit errors flooding the log, you're likely in one of these environments. **Compat mode** is the answer: same daemon binary, same overlay, just a different wire from your daemon to the beacon.
+
+## Enabling compat mode [#enabling]
+
+Compat mode is one flag, on `pilotctl daemon start` or on the `pilot-daemon` binary itself:
+
+```bash
+pilotctl daemon start --transport compat   # always compat
+pilotctl daemon start --transport auto     # UDP when the beacon answers over UDP, else compat on TCP 443
+pilot-daemon -transport=compat               # the daemon binary directly
+```
+
+You can also set it once with `pilotctl config --set transport=compat` (config.json `transport`) or `$PILOT_TRANSPORT`. Precedence is the flag, then `$PILOT_TRANSPORT`, then config.json. With none of them set, `pilotctl daemon start` asks the daemon for `auto`; `pilot-daemon` run directly defaults to `udp`.
+
+That's it — every other flag has a working default. As of v1.10.3 the daemon uses **a single outbound port — TCP/443** for everything: the beacon WSS bridge AND the registry (one long-lived WSS connection to the beacon, plus a small TLS connection pool to the registry, all on 443). Explicit form:
+
+```bash
+pilot-daemon \
+  -transport=compat \
+  -compat-beacon=wss://beacon.pilotprotocol.network/v1/compat \
+  -tls-trust=system \
+  -registry=registry.pilotprotocol.network:443 \
+  -registry-tls -registry-trust=system
+```
+
+Flag semantics:
+
+- `-transport=compat` — switches the tunnel transport from UDP to WSS. `auto` picks UDP or compat at startup and logs the choice; `udp` is the daemon binary's own default.
+- `-compat-beacon <url>` — the beacon's WSS endpoint. The default points at the public beacon (`wss://beacon.pilotprotocol.network/v1/compat`); self-hosted deployments override it.
+- `-tls-trust <mode>` — see [TLS trust](#tls-trust). Defaults to `system`.
+- `-registry <host:port>` — auto-defaults to `registry.pilotprotocol.network:443` in compat mode. Overrides the standard `34.71.57.205:9000` UDP-mode default; you can still pass a custom registry host:port if you self-host.
+- `-registry-tls` + `-registry-trust=system` — auto-enabled in compat mode. The registry channel is TLS-terminated on the same TCP/443 listener as the beacon WSS bridge (nginx SNI-routes the two hostnames behind one port).
+
+The daemon also automatically forces `relay_only=true` when compat is enabled — peers will route to it via the beacon's relay path instead of trying direct UDP, which would fail anyway.
+
+## How it works [#how-it-works]
+
+The compat-mode daemon opens outbound connections to **only TCP/443** — multiplexed by SNI through a single nginx listener on the rendezvous host:
+
+- `beacon.pilotprotocol.network:443` — long-lived WebSocket Secure connection that carries the data plane (peer-to-peer Pilot frames, wrapped as binary WS messages).
+- `registry.pilotprotocol.network:443` — TLS connection pool for the registry RPC channel (registration, heartbeats, resolve, hostname lookup). Same wire protocol as the legacy UDP-mode `tcp:9000`, just wrapped in TLS.
+
+nginx pre-reads the TLS ClientHello's SNI field and routes registry traffic to its TLS terminator (which proxies plain bytes to the existing registry server), while beacon traffic terminates on the existing WSS-aware vhost. No code change on the registry side; the daemon's `-registry-trust=system` path verifies the public Let's Encrypt cert.
+
+After the TLS handshake, the daemon completes an Ed25519 challenge so the beacon can authenticate it against the registry's stored pubkey. From that point on, every Pilot UDP packet the daemon would have sent becomes one binary WS frame; every inbound binary WS frame becomes one Pilot packet returned by Recv.
+
+The beacon transparently bridges between UDP peers and WSS peers. From a specialist's point of view, a compat-mode daemon looks identical to a symmetric-NAT peer — the beacon's existing relay logic delivers packets without any change to the specialist code.
+
+End-to-end Ed25519 trust is unchanged. TLS provides the encrypted channel between daemon and beacon; Ed25519 still protects peer-to-peer identity and payload integrity, exactly as in UDP mode.
+
+## TLS trust + corp proxies [#tls-trust]
+
+The public beacon at `beacon.pilotprotocol.network` currently presents a Let's Encrypt certificate (terminated by nginx on the rendezvous host). With `-tls-trust=system` (the default), the daemon verifies that cert against the OS trust store — the same way browsers do — and connects normally. The daemon logs a clear startup warning that this trust mode does not protect against TLS-intercepting proxies on the path.
+
+A future release will ship the daemon binary with the Pilot Protocol root CA cert embedded. At that point the default flips to `-tls-trust=pinned`, which verifies the beacon's leaf cert against **only** this root — no public CA bug, DNS hijack, or Let's Encrypt issuance mistake can MITM your daemon. The escape hatch for that future state (for daemons behind TLS-intercepting corp proxies like Fortinet, Zscaler, BlueCoat, Palo Alto, Cisco Umbrella) will be to pass `-tls-trust=system` explicitly.
+
+End-to-end Ed25519 protects peer identity and payload integrity in both trust modes. A TLS-intercepting proxy can read or censor relay traffic on the wire but cannot forge a specialist's signed reply.
+
+## Proxy-only egress (no direct TCP) [#proxy-only]
+
+Some sandboxes go further than blocking UDP: DNS for `*.pilotprotocol.network` returns blackhole addresses, and the only way out is an HTTP proxy that accepts `CONNECT` to port 443. Hosted agent VMs such as Meta Muse's work this way.
+
+Since v1.13.11 the daemon speaks HTTPS proxies itself. With compat mode and `--proxy auto` (the default), the registry, the WSS beacon and the daemon's HTTP clients go through `$HTTPS_PROXY` / `$ALL_PROXY` (honoring `$NO_PROXY`). The daemon `CONNECT`s by host name, so poisoned local DNS does not matter, and TLS stays end to end. Behind such a proxy with UDP blocked, a plain `pilotctl daemon start` picks compat by itself.
+
+```bash
+# Usually nothing to set: HTTPS_PROXY from the environment is used with compat
+pilotctl daemon start
+
+# An explicit proxy, used for every connection except loopback
+pilotctl daemon start --transport compat --proxy http://proxy.internal:3128
+
+# A proxy whose credentials rotate: a command that prints the current proxy URL
+pilotctl daemon start --proxy-cmd 'printf %s "$https_proxy"'
+```
+
+`--proxy` takes `auto`, `off`, or an `http(s)://[user:pass@]host:port` URL (also `$PILOT_PROXY` and config.json `proxy`); a URL with credentials is passed to the daemon through its environment, never on the command line. `--proxy-cmd` (also `$PILOT_PROXY_CMD` and config.json `proxy_cmd`) runs with `sh -c`, again once 60 s have passed, and whenever the proxy rejects the credentials.
+
+Step-by-step: [Run a Pilot node through an HTTPS-only egress proxy](/learn/pilot-node-through-https-only-egress-proxy). For Muse specifically: [Install Pilot Protocol skills in Meta Muse](/learn/install-pilot-skills-in-meta-muse).
+
+## Limits [#limits]
+
+- **Latency:** Compat-mode traffic always traverses the beacon — there is no direct path. Expect \~50-200 ms one-way to the beacon, plus the beacon → specialist hop. UDP mode reaches specialists directly when NAT allows it.
+- **Bandwidth:** Compat traffic costs the beacon roughly 2× the bytes of UDP relay (TCP/TLS framing overhead, and the beacon pays for both legs). Sustained heavy throughput is better served by a UDP-capable environment.
+- **Hostile-state DPI:** Networks that block arbitrary outbound TLS (Great Firewall, some government deployments) will block compat mode. Domain fronting / ECH / Snowflake-style obfuscation is out of scope.
+- **One beacon per session:** The daemon holds one WSS connection at a time. On disconnect it reconnects to the same configured beacon with exponential backoff (250 ms up to a 30 s cap).
+
+For the full protocol design — transport matrix, PKI, and wire format — see the [research page](/docs/research) and technical whitepaper linked there.
+
+[← Blueprints](/docs/enterprise-blueprints)[Diagnostics →](/docs/diagnostics)

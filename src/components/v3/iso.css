@@ -1,0 +1,187 @@
+/* Variant C: isometric faces, tunnels and tags, in both themes. */
+.iso-scene {
+  --iso-t: #ffffff;
+  --iso-l: #eceae3;
+  --iso-r: #dcdad2;
+  --iso-edge: rgb(20 20 18 / 0.1);
+  --iso-ground-t: #fbfbf8;
+  --iso-ground-l: #e8e7e0;
+  --iso-ground-r: #d9d8d0;
+  --iso-ink-t: #3a3a37;
+  --iso-ink-l: #232321;
+  --iso-ink-r: #151514;
+  --iso-glass: rgb(255 255 255 / 0.55);
+  --iso-tunnel-bed: rgb(20 20 18 / 0.08);
+  --iso-tag-bg: #ffffff;
+  --iso-tag-fg: #141413;
+  --iso-tag-sub: #7f7f78;
+  --iso-shadow: drop-shadow(0 18px 24px rgb(20 20 18 / 0.12));
+}
+.dark .iso-scene {
+  --iso-t: #34342f;
+  --iso-l: #262624;
+  --iso-r: #1c1c1a;
+  --iso-edge: rgb(242 242 236 / 0.08);
+  --iso-ground-t: #242422;
+  --iso-ground-l: #1b1b1a;
+  --iso-ground-r: #141413;
+  --iso-ink-t: #0f0f0e;
+  --iso-ink-l: #0a0a09;
+  --iso-ink-r: #050505;
+  --iso-glass: rgb(242 242 236 / 0.08);
+  --iso-tunnel-bed: rgb(242 242 236 / 0.07);
+  --iso-tag-bg: #262624;
+  --iso-tag-fg: #f2f2ec;
+  --iso-tag-sub: #9b9b93;
+  --iso-shadow: drop-shadow(0 18px 24px rgb(0 0 0 / 0.45));
+}
+
+.iso polygon {
+  stroke: var(--iso-edge);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+.iso-paper .iso-t { fill: var(--iso-t); }
+.iso-paper .iso-l { fill: var(--iso-l); }
+.iso-paper .iso-r { fill: var(--iso-r); }
+.iso-lime .iso-t { fill: #d2f76a; }
+.iso-lime .iso-l { fill: #b4dc3e; }
+.iso-lime .iso-r { fill: #98bd2c; }
+.iso-lime polygon { stroke: rgb(11 11 10 / 0.12); }
+.iso-ink .iso-t { fill: var(--iso-ink-t); }
+.iso-ink .iso-l { fill: var(--iso-ink-l); }
+.iso-ink .iso-r { fill: var(--iso-ink-r); }
+.iso-glass polygon { fill: var(--iso-glass); stroke: var(--iso-edge); }
+.iso-ground .iso-t { fill: var(--iso-ground-t); }
+.iso-ground .iso-l { fill: var(--iso-ground-l); }
+.iso-ground .iso-r { fill: var(--iso-ground-r); }
+
+.iso-keys {
+  fill: var(--iso-l);
+  stroke: none;
+}
+.iso-slot {
+  stroke: var(--iso-edge);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.iso-led {
+  fill: #b4dc3e;
+}
+.iso-display {
+  fill: #1f1f1d;
+  stroke: rgb(11 11 10 / 0.25);
+  stroke-width: 1;
+}
+.iso-display-glow {
+  fill: #c6f24e;
+}
+.iso-screen {
+  fill: #c6f24e;
+  opacity: 0.9;
+}
+
+/* Rings around the beacon light. */
+.iso-ring {
+  fill: none;
+  stroke: #9fd11f;
+  stroke-width: 1.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: iso-ring 2.8s var(--ease-out) infinite;
+}
+.iso-ring-2 {
+  animation-delay: 1.4s;
+}
+@keyframes iso-ring {
+  0% { transform: scale(0.4); opacity: 0.9; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* Tunnels */
+.iso-tunnel-bed {
+  fill: none;
+  stroke: var(--iso-tunnel-bed);
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.iso-tunnel-line,
+.iso-tunnel-dash {
+  fill: none;
+  stroke: #9fd11f;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 1s var(--ease-in-out);
+}
+.dark .iso-tunnel-line,
+.dark .iso-tunnel-dash {
+  stroke: #c6f24e;
+}
+.iso-tunnel[data-on="true"] .iso-tunnel-line {
+  stroke-dashoffset: 0;
+}
+.iso-tunnel[data-on="true"] .iso-tunnel-dash {
+  stroke-dasharray: 0.012 0.018;
+  stroke-dashoffset: 0;
+  animation: iso-dash 1.6s linear infinite;
+}
+@keyframes iso-dash {
+  to { stroke-dashoffset: -0.06; }
+}
+.iso-packet-top { fill: #d2f76a; }
+.iso-packet-l { fill: #b4dc3e; }
+.iso-packet-r { fill: #98bd2c; }
+
+/* Tags */
+.iso-tag-bg {
+  fill: var(--iso-tag-bg);
+  stroke: var(--iso-edge);
+  filter: drop-shadow(0 6px 10px rgb(20 20 18 / 0.1));
+}
+.dark .iso-tag-bg {
+  filter: drop-shadow(0 6px 12px rgb(0 0 0 / 0.5));
+}
+.iso-tag-lime .iso-tag-bg { fill: #c6f24e; stroke: rgb(11 11 10 / 0.12); }
+.iso-tag-lime .iso-tag-label,
+.iso-tag-lime .iso-tag-sub { fill: #0b0b0a; }
+.iso-tag-ink .iso-tag-bg { fill: #0b0b0a; }
+.iso-tag-ink .iso-tag-label { fill: #f2f2ec; }
+.iso-tag-stem {
+  stroke: var(--iso-edge);
+  stroke-width: 1.5;
+}
+.iso-tag-label {
+  fill: var(--iso-tag-fg);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.iso-tag-label.iso-mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: -0.02em;
+}
+.iso-tag-sub {
+  fill: var(--iso-tag-sub);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+}
+.dark .iso-invert {
+  filter: invert(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iso-ring,
+  .iso-tunnel[data-on="true"] .iso-tunnel-dash {
+    animation: none;
+  }
+  .iso-tunnel-line,
+  .iso-tunnel-dash {
+    transition: none;
+  }
+}

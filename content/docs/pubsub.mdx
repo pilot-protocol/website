@@ -1,0 +1,163 @@
+---
+title: "Pub/Sub"
+description: "Subscribe to topics, publish events, and use wildcard filtering with Pilot Protocol's event stream. Read the implementation guide."
+---
+
+Subscribe to topics, publish events, and stream data in real time.
+
+## Overview [#overview]
+
+Every daemon runs an event stream broker on **port 1002**. Agents can subscribe to topics on any trusted peer and receive events in real time. Publishers send events to a topic, and the broker distributes them to all active subscribers.
+
+Pub/sub is designed for fan-out scenarios where multiple consumers need the same data stream - monitoring, coordination, event-driven workflows. For one-to-one messaging, use [stream connections](/docs/messaging#connect) or [data exchange](/docs/messaging#send-message) instead.
+
+## Architecture [#architecture]
+
+Each daemon runs its own **independent broker** - there is no central message server. The broker lives inside the daemon process and manages subscriptions for that node only.
+
+When you subscribe to topics on another agent, your daemon opens a connection to their event stream port (1002). The remote broker registers your subscription and pushes matching events over that connection. When you publish to another agent, your daemon sends the event to their broker, which fans it out to all active subscribers.
+
+This means:
+
+- Each node is both a potential publisher and broker
+- Subscribers connect **to the publisher**, not to a shared server
+- No single point of failure for event delivery - if one node goes down, other nodes' brokers continue operating independently. Peer discovery and trust still resolve through the registry.
+- Subscriptions are per-connection - if the connection drops, the subscription is gone
+
+## Subscribing [#subscribe]
+
+### Bounded subscription [#bounded-subscription]
+
+Collect a fixed number of events and return a JSON array:
+
+```bash
+pilotctl --json subscribe other-agent status --count 5 --timeout 60s
+```
+
+Returns: `events` \[\{`topic`, `data`, `bytes`\}\], `timeout` (bool)
+
+### Unbounded subscription [#unbounded-subscription]
+
+Stream events indefinitely as NDJSON (one JSON object per line):
+
+```bash
+pilotctl --json subscribe other-agent status
+```
+
+With `--json` and no `--count`, each line is a standalone JSON object (without `--json`, subscribe prints human lines like `[status] online`): `{"topic":"status","data":"online","bytes":6}`
+
+## Publishing [#publish]
+
+```bash
+pilotctl publish other-agent status --data "processing complete"
+pilotctl publish other-agent metrics --data '{"cpu":42,"mem":1024}'
+```
+
+Events are delivered to all active subscribers of the topic on the target node. Returns: `target`, `topic`, `bytes`
+
+## Wildcards [#wildcards]
+
+Use `*` as the topic to subscribe to all topics at once:
+
+```bash
+pilotctl subscribe other-agent "*" --count 10
+```
+
+`*` is a full wildcard - it matches every topic published on the target's event stream broker in a single subscription. Topics are opaque strings, so `events.*` is not a prefix glob — it is treated as the literal topic `events.*` (no error, but it only matches that exact string). There is no multi-level wildcard; `*` is the only wildcard form, and it always matches all topics.
+
+## NDJSON streaming [#ndjson]
+
+Without `--count`, subscriptions stream NDJSON indefinitely. This is ideal for integration with tools that process line-delimited JSON:
+
+```bash
+# Pipe events to jq for processing
+pilotctl subscribe other-agent status | jq '.data'
+
+# Log events to a file
+pilotctl subscribe other-agent "*" >> events.jsonl
+
+# Monitor metrics in real time
+pilotctl subscribe other-agent metrics | while read -r line; do
+  echo "\$line" | jq -r '"CPU: \(.data | fromjson | .cpu)%"'
+done
+```
+
+## Delivery guarantees [#guarantees]
+
+| Property | Guarantee |
+| --- | --- |
+| **Delivery** | At-most-once, no acknowledgments. (The broker retries a failed write once after \~20 ms and drops a subscriber after 3 consecutive failures.) |
+| **Ordering** | Events arrive in publish order per connection. |
+| **Persistence** | None. Events are not stored anywhere. |
+| **Replay** | Not supported. Missed events are gone. |
+| **Disconnection** | If a subscriber disconnects, events published during the disconnection are lost. Reconnecting starts a fresh subscription. |
+
+Pub/sub is designed for real-time streaming where dropping an occasional event is acceptable. If you need guaranteed delivery, use [data exchange](/docs/messaging#send-message) (messages persist in the inbox) or [stream connections](/docs/messaging#connect) (synchronous request-response).
+
+## Limits [#limits]
+
+- **Topic name:** max 1024 bytes
+- **Payload:** max 16 MB per event
+- **Publish rate:** 100 events/s per publisher with a burst budget of 200; publishes beyond that are dropped and emit a [`pubsub.rate_limited`](/docs/webhooks#events) webhook event
+- **Subscribers:** no hard limit - bounded by available connections
+
+## Topic conventions [#topics]
+
+Topic names are arbitrary strings. There is no enforced hierarchy, but using dot-separated namespaces keeps things organized:
+
+- `status` - agent status updates (online, processing, idle)
+- `metrics.cpu` - CPU utilization metrics
+- `metrics.memory` - memory usage metrics
+- `task.completed` - task completion events
+- `log.error` - error log stream
+
+Keep topic names short and descriptive. Since `*` is the only wildcard and matches everything, prefix-based filtering (like `metrics.*`) is not supported - subscribe to the specific topic you need, or use `*` and filter client-side.
+
+## How it works under the hood [#internals]
+
+The event stream uses a simple wire protocol:
+
+1. **Subscribe:** the subscriber opens a connection to port 1002 and sends an initial event with the topic name and an empty payload. The broker registers the subscription.
+2. **Publish:** the publisher sends an event to the broker with the topic and payload. The broker iterates over all active subscribers for that topic and writes the event to each.
+3. **Wire format:** each event is `[2-byte topic length][topic][4-byte payload length][payload]`.
+
+The broker is a simple in-memory fan-out - no queues, no disk I/O, no acknowledgments. This keeps latency low and throughput high.
+
+## Use cases [#use-cases]
+
+### Real-time monitoring [#real-time-monitoring]
+
+An agent publishes system metrics every few seconds. A dashboard agent subscribes and renders them. Note: `publish` always targets a peer, never yourself — the publisher invokes `publish` against the dashboard (or any subscriber), and the dashboard's broker fans the event out to its own subscribers. For a node to expose its own metrics, it runs a small SDK loop that calls `publish` for each interested peer (or uses the SDK's broker directly).
+
+```bash
+# The monitored node publishes to the dashboard's broker
+pilotctl publish dashboard-agent metrics --data '{"cpu":42,"mem":1024,"disk":80}'
+
+# The dashboard subscribes to its OWN broker to receive them
+pilotctl --json subscribe dashboard-agent metrics >> dashboard-data.jsonl
+```
+
+### Coordination [#coordination]
+
+A controller publishes tasks, workers subscribe and pick them up:
+
+```bash
+# Workers subscribe to the controller's broker
+pilotctl --json subscribe controller-agent tasks --count 1
+
+# Controller publishes to a worker's broker (publish targets a peer, not itself)
+pilotctl publish worker-agent tasks --data '{"job":"process-batch-42"}'
+```
+
+### Event-driven workflows [#event-driven-workflows]
+
+Trigger actions in response to events from other agents:
+
+```bash
+# React to completion events
+pilotctl subscribe pipeline-agent task.completed | while read -r event; do
+  echo "Task done, starting next stage..."
+done
+```
+
+**Webhooks integration:** The daemon fires webhook events for pub/sub activity - `pubsub.subscribed`, `pubsub.unsubscribed`, and `pubsub.published`. See [Webhooks](/docs/webhooks) for details. **Further reading:** [Replace Your Message Broker With Twelve Lines of Go](/blog/replace-message-broker-twelve-lines-go) [← Built-in Services](/docs/services)[Webhooks →](/docs/webhooks)

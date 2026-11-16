@@ -1,0 +1,414 @@
+/* Essentials: four scenes on one stage. Every timed element's resting style is its final state;
+   its animation starts from the earlier state and fires at `--t` × the step length (`--dur`).
+   Reduced motion therefore shows the finished scene, and pausing freezes everything at once. */
+
+.ess-stage {
+  --ess-lime: var(--color-lime);
+  background-color: var(--color-bg-deep);
+  background-image: radial-gradient(circle at center, color-mix(in srgb, var(--color-fg) 9%, transparent) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+  background-position: center;
+}
+/* Lime lines and packets need a touch more weight on the pale stage. */
+:root:not(.dark) .ess-stage {
+  --ess-lime: color-mix(in srgb, var(--color-lime) 72%, var(--color-lime-ink));
+}
+.ess-lime {
+  background-color: var(--ess-lime);
+}
+
+@keyframes ess-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+@keyframes ess-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes ess-out {
+  from {
+    opacity: 1;
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    filter: blur(3px);
+  }
+}
+@keyframes ess-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.97);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+@keyframes ess-lift-out {
+  from {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+    filter: blur(4px);
+  }
+}
+@keyframes ess-press {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(0.94);
+  }
+}
+@keyframes ess-ring {
+  from {
+    stroke-dashoffset: 44;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes ess-caption {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(6px);
+  }
+}
+
+.ess-in,
+.ess-fade,
+.ess-out,
+.ess-inout,
+.ess-drop,
+.ess-press {
+  animation-delay: calc(var(--dur) * var(--t, 0));
+}
+.ess-in {
+  animation-name: ess-in;
+  animation-duration: 550ms;
+  animation-timing-function: var(--ease-out);
+  animation-fill-mode: both;
+}
+.ess-fade {
+  animation-name: ess-fade;
+  animation-duration: 450ms;
+  animation-timing-function: ease;
+  animation-fill-mode: both;
+}
+.ess-out {
+  opacity: 0;
+  animation-name: ess-out;
+  animation-duration: 350ms;
+  animation-timing-function: ease;
+  animation-fill-mode: both;
+}
+/* Shows at --t, leaves at --t2. */
+.ess-inout {
+  opacity: 0;
+  animation:
+    ess-in 550ms var(--ease-out) both,
+    ess-out 350ms ease forwards;
+  animation-delay: calc(var(--dur) * var(--t, 0)), calc(var(--dur) * var(--t2, 1));
+}
+/* A notification: drops in at --t, lifts away at --t2. */
+.ess-drop {
+  opacity: 0;
+  animation:
+    ess-drop 600ms var(--ease-out) both,
+    ess-lift-out 400ms var(--ease-out) forwards;
+  animation-delay: calc(var(--dur) * var(--t, 0)), calc(var(--dur) * var(--t2, 1));
+}
+.ess-press {
+  animation-name: ess-press;
+  animation-duration: 320ms;
+  animation-timing-function: var(--ease-out);
+}
+
+/* ---------- Packets ---------- */
+
+/* Along a horizontal wire (md and up) or a vertical one (phones). */
+@keyframes ess-run-x {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  12%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    left: calc(100% - 8px);
+    opacity: 0;
+  }
+}
+@keyframes ess-run-x-back {
+  0% {
+    left: calc(100% - 8px);
+    opacity: 0;
+  }
+  12%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    left: 0;
+    opacity: 0;
+  }
+}
+@keyframes ess-run-y {
+  0% {
+    top: 0;
+    opacity: 0;
+  }
+  12%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    top: calc(100% - 8px);
+    opacity: 0;
+  }
+}
+@keyframes ess-run-y-back {
+  0% {
+    top: calc(100% - 8px);
+    opacity: 0;
+  }
+  12%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    top: 0;
+    opacity: 0;
+  }
+}
+
+.ess-wire > .ess-pk {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--ess-lime);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ess-lime) 22%, transparent);
+  opacity: 0;
+}
+/* Horizontal on md+, vertical on phones (the scenes stack there). */
+.ess-wire-x > .ess-pk,
+.ess-wire-xy > .ess-pk {
+  top: calc(50% - 4px);
+}
+.ess-wire-y > .ess-pk {
+  left: calc(50% - 4px);
+}
+.ess-pk-fwd {
+  animation: ess-run-x var(--pk-ms, 1600ms) var(--ease-in-out) infinite;
+  animation-delay: var(--pk-delay, 0ms);
+}
+.ess-pk-back {
+  animation: ess-run-x-back var(--pk-ms, 1600ms) var(--ease-in-out) infinite;
+  animation-delay: var(--pk-delay, 0ms);
+}
+.ess-wire-y > .ess-pk-fwd {
+  animation-name: ess-run-y;
+}
+.ess-wire-y > .ess-pk-back {
+  animation-name: ess-run-y-back;
+}
+@media (max-width: 767.98px) {
+  .ess-wire-xy > .ess-pk {
+    top: auto;
+    left: calc(50% - 4px);
+  }
+  .ess-wire-xy > .ess-pk-fwd {
+    animation-name: ess-run-y;
+  }
+  .ess-wire-xy > .ess-pk-back {
+    animation-name: ess-run-y-back;
+  }
+}
+/* One-shot packets that wait for their moment in the scene. */
+.ess-pk-once {
+  animation-iteration-count: 1 !important;
+  animation-delay: calc(var(--dur) * var(--t, 0)) !important;
+}
+
+/* A lime segment riding an SVG path (paths use pathLength=100). */
+@keyframes ess-dash {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+@keyframes ess-dash-back {
+  from {
+    stroke-dashoffset: -100;
+  }
+  to {
+    stroke-dashoffset: 24;
+  }
+}
+.ess-dash {
+  stroke-dasharray: 18 200;
+  stroke-dashoffset: 24;
+  animation: ess-dash var(--pk-ms, 1800ms) var(--ease-in-out) infinite;
+  animation-delay: var(--pk-delay, 0ms);
+}
+.ess-dash-back {
+  stroke-dasharray: 18 200;
+  stroke-dashoffset: 24;
+  animation: ess-dash-back var(--pk-ms, 1800ms) var(--ease-in-out) infinite;
+  animation-delay: var(--pk-delay, 0ms);
+}
+
+/* Logos taking turns in one tile. */
+@keyframes ess-turn {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+    filter: blur(4px);
+  }
+  6%,
+  24% {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+  30%,
+  100% {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+    filter: blur(4px);
+  }
+}
+.ess-turn {
+  opacity: 0;
+  animation: ess-turn var(--turn-ms, 6400ms) var(--ease-out) infinite;
+  animation-delay: var(--turn-delay, 0ms);
+}
+/* Three-way rotation (address scene): visible for a third of the cycle. */
+@keyframes ess-third {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(4px);
+  }
+  5%,
+  30% {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+  35%,
+  100% {
+    opacity: 0;
+    transform: translateY(-6px);
+    filter: blur(4px);
+  }
+}
+.ess-third {
+  opacity: 0;
+  animation: ess-third 6300ms var(--ease-out) infinite;
+  animation-delay: var(--turn-delay, 0ms);
+}
+@keyframes ess-third-on {
+  0%,
+  33.3% {
+    background-color: var(--color-card);
+    color: var(--color-fg);
+    box-shadow: var(--shadow-tile);
+  }
+  36%,
+  100% {
+    background-color: transparent;
+    color: var(--color-dim);
+    box-shadow: none;
+  }
+}
+.ess-third-on {
+  color: var(--color-dim);
+  animation: ess-third-on 6300ms var(--ease-out) infinite;
+  animation-delay: var(--turn-delay, 0ms);
+}
+@keyframes ess-tick {
+  0%,
+  4% {
+    transform: scale(1);
+    background-color: color-mix(in srgb, var(--color-lime) 35%, transparent);
+  }
+  12% {
+    transform: scale(1.06);
+  }
+  30%,
+  100% {
+    transform: scale(1);
+    background-color: color-mix(in srgb, var(--color-lime) 18%, transparent);
+  }
+}
+.ess-tick {
+  background-color: color-mix(in srgb, var(--color-lime) 18%, transparent);
+  animation: ess-tick 2100ms var(--ease-out) infinite;
+}
+
+/* ---------- Tabs ---------- */
+.ess-ring {
+  stroke-dasharray: 44;
+  stroke-dashoffset: 0;
+}
+.ess-ring[data-run="true"] {
+  animation: ess-ring var(--dur) linear both;
+}
+.ess-caption {
+  animation: ess-caption 600ms var(--ease-out) both;
+}
+
+[data-paused="true"] .ess-stage,
+[data-paused="true"] .ess-stage *,
+[data-paused="true"] .ess-ring {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ess-stage *,
+  .ess-caption {
+    animation: none !important;
+  }
+  .ess-pk,
+  .ess-dash,
+  .ess-dash-back {
+    display: none;
+  }
+  /* Rotations rest on their first item. */
+  .ess-turn[data-first="true"],
+  .ess-third[data-first="true"] {
+    opacity: 1;
+  }
+  .ess-third-on[data-first="true"] {
+    background-color: var(--color-card);
+    color: var(--color-fg);
+    box-shadow: var(--shadow-tile);
+  }
+}

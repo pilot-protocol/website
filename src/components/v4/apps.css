@@ -1,0 +1,70 @@
+/*
+ * The App Store (sky home page, Figma 213:20181): the grey button, the Get button's ring filling, check badges
+ * landing, states swapping.
+ */
+
+/* "Publish your app": the design's grey button, a quiet tint with a hairline under it. */
+/* Solid, so the hatching behind it never shows through. */
+.appsd-ghost {
+  background: color-mix(in srgb, #1a1a1a 10%, var(--color-bg));
+  color: #1a1a1a;
+  box-shadow: inset 0 -1px 0 rgb(13 17 23 / 0.14);
+  transition:
+    background-color 200ms ease,
+    transform 160ms var(--ease-out);
+}
+.dark .appsd-ghost {
+  background: color-mix(in srgb, #ffffff 10%, var(--color-bg));
+  color: var(--color-fg);
+  box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.3);
+}
+@media (hover: hover) and (pointer: fine) {
+  .appsd-ghost:hover {
+    background: color-mix(in srgb, #1a1a1a 14%, var(--color-bg));
+  }
+  .dark .appsd-ghost:hover {
+    background: color-mix(in srgb, #ffffff 14%, var(--color-bg));
+  }
+}
+
+/* The installed check is rimmed in the page's own colour, so it sits cleanly on the hatched shelf. No drop shadow. */
+.appsd-badge {
+  box-shadow: 0 0 0 2.5px var(--color-bg);
+}
+
+@keyframes appsd-fill {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes appsd-badge {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+    filter: blur(2px);
+  }
+}
+@keyframes appsd-swap {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(3px);
+  }
+}
+
+/* Reduced motion: the badge and the rows fade in place. */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes appsd-badge {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes appsd-swap {
+    from {
+      opacity: 0;
+    }
+  }
+}

@@ -1,0 +1,218 @@
+---
+title: "Identity & SSO"
+description: "Identity integration on a self-hosted Pilot Protocol registry - native OIDC/JWT validation, a verification webhook, JWKS caching, and directory sync."
+---
+
+Identity providers, JWT validation, JWKS caching, external IDs, and directory sync.
+
+**Self-hosted registry.** Every command on this page needs the registry admin token, so it applies to a registry you run. See [Self-hosting the registry](/docs/enterprise).
+
+## Overview [#overview]
+
+A registry you run can tie Pilot identities to an external identity system. Two mechanisms are native: validating OIDC/JWT tokens (RS256 or HS256, with keys from a JWKS URL) and a verification webhook you host. SAML, Entra ID, LDAP and other systems connect only through a bridge you run: a service that issues JWTs signed with keys in a JWKS, or that answers the webhook. Network admission remains subject to the network’s configured join rule and Pilot identity checks.
+
+Identity integration is registry-global: a single IDP configuration applies across the registry, and setting a new one replaces the previous config. (Blueprint provisioning writes the same global store.)
+
+## Supported mechanisms [#providers]
+
+| Mechanism | Configured with | What the registry does |
+| --- | --- | --- |
+| **OIDC/JWT** (native) | `set_idp_config`, type `oidc` | Validates RS256 or HS256 tokens against the keys published at the JWKS URL, plus issuer, audience and time claims. |
+| **Webhook** (native) | `set_identity_webhook` | Sends a registration’s identity token to your HTTPS endpoint and stores the external ID it returns. |
+| **SAML, Entra ID, LDAP** | A bridge you run | Not native. Run a service that issues JWTs or answers the webhook. `set_idp_config` accepts `saml`, `entra_id` and `ldap` as type values, but they are stored as labels only: validation is always JWT against the JWKS URL. |
+
+## Configuration [#configuration]
+
+Configure an identity provider with `pilotctl extras idp set` or the `set_idp_config` protocol command. The `url` is the JWKS endpoint itself (the `jwks_uri` in your provider’s discovery document), not the discovery document:
+
+```bash
+pilotctl extras idp set --type oidc \
+  --url https://accounts.example.com/.well-known/jwks.json \
+  --issuer https://accounts.example.com --client-id pilot-network-prod
+
+# The same as a protocol command
+{
+  "type": "set_idp_config",
+  "idp_type": "oidc",
+  "url": "https://accounts.example.com/.well-known/jwks.json",
+  "issuer": "https://accounts.example.com",
+  "client_id": "pilot-network-prod",
+  "admin_token": "your-admin-token"
+}
+```
+
+The IDP configuration is stored in the registry and persists across restarts. You can also set the IDP through a [blueprint](/docs/enterprise-blueprints) using the `identity_provider` field.
+
+To query the current configuration (`pilotctl extras idp get`):
+
+```json
+{
+  "type": "get_idp_config",
+  "admin_token": "your-admin-token"
+}
+```
+
+An audit event (`idp.configured`) is emitted when the IDP is set or changed.
+
+## JWT validation [#jwt]
+
+The registry includes built-in JWT validation supporting two algorithms:
+
+| Algorithm | Key type | Use case |
+| --- | --- | --- |
+| **RS256** | RSA public key (from JWKS) | Standard OIDC/OAuth2 providers |
+| **HS256** | Shared secret | Simple integrations, internal services |
+
+Validate a token with the `validate_token` protocol command:
+
+```json
+{
+  "type": "validate_token",
+  "token": "eyJhbGciOiJSUzI1NiIs...",
+  "admin_token": "your-admin-token"
+}
+```
+
+Returns: `verified` (bool), `subject` (the token subject), `issuer`, and — on failure — `error` (string describing why validation failed).
+
+### Validated claims [#validated-claims]
+
+The validator checks:
+
+- **Signature** - verified against the JWKS public key (RS256) or shared secret (HS256)
+- **Expiration** (`exp`) - token must not be expired
+- **Not-before** (`nbf`) - token must not be used before its valid time
+- **Issuer** (`iss`) - must match the configured `issuer` value, when one is set
+- **Audience** (`aud`) - must match the configured client ID
+
+## JWKS caching [#jwks]
+
+For RS256 tokens, the registry fetches the provider’s JSON Web Key Set (JWKS) to obtain public keys for signature verification. JWKS responses are cached to avoid hitting the provider on every validation.
+
+| Parameter | Value |
+| --- | --- |
+| Cache TTL | 5 minutes |
+| Max response size | 64 KB |
+| Key matching | By `kid` (Key ID) header in the JWT |
+| Refresh | On TTL expiry, URL change, or empty cache. A `kid` missing from a fresh (non-expired) cache returns an error rather than refetching. |
+
+If the JWKS endpoint is unreachable and the cache has expired, validation fails with a clear error. The registry does not fall back to accepting unverified tokens.
+
+## Security [#security]
+
+### Algorithm confusion prevention [#algorithm-confusion-prevention]
+
+The validator blocks the classic algorithm-confusion attack by cross-checking the JWT's `alg` header against the matched JWKS key's own type (`RSA` for RS256, `oct` for HS256) — an HS256 token cannot be verified against an RSA signing key. There is no separately-configured algorithm; RS256 and HS256 are the two supported algorithms.
+
+### Clock skew tolerance [#clock-skew-tolerance]
+
+A 60-second clock skew tolerance is applied to the time-based claims that are checked (`exp` and `nbf`). This accommodates minor clock differences between the IDP and the registry without opening a significant window for expired tokens.
+
+## Webhook identity [#webhook-identity]
+
+For systems that don’t issue JWTs, set a verification webhook. When a registration carries an `identity_token` field, the registry POSTs `{"token": "..."}` to your endpoint. Your endpoint answers HTTP 200 with `{"verified": true, "external_id": "..."}`, or `{"verified": false, "error": "..."}` to refuse. The registry stores the returned external ID on the node; a refusal, a non-200 status or an empty external ID fails the registration.
+
+```json
+{
+  "type": "set_identity_webhook",
+  "url": "https://auth.example.com/verify-agent",
+  "admin_token": "your-admin-token"
+}
+```
+
+Returns `{"type": "set_identity_webhook_ok", "status": "enabled"}` (or `"disabled"` when the URL is empty). The URL is validated for SSRF safety before it is stored, and it can also be set through the `identity_url` field of a blueprint’s `webhooks` object.
+
+The stock daemon doesn’t send an identity token, so this path is for clients you build against your registry. If you embed the registry with a webhook secret (`Server.SetIdentityWebhookSecret` in Go), requests and responses carry an `X-Pilot-Signature-256` HMAC-SHA256 header and unsigned responses are rejected.
+
+## External IDs [#external-ids]
+
+Map agents to external identity systems using external IDs:
+
+```bash
+# Set an external ID for an agent
+{
+  "type": "set_external_id",
+  "node_id": 5,
+  "external_id": "user@example.com",
+  "admin_token": "your-admin-token"
+}
+
+# Look up an agent’s identity
+{
+  "type": "get_identity",
+  "node_id": 5,
+  "admin_token": "your-admin-token"
+}
+```
+
+External IDs are free-form strings - email addresses, UPNs, LDAP DNs, or any identifier from your external system. They are stored in the registry and included in audit events. An `identity.external_id_set` audit event is emitted on change, recording both old and new values.
+
+## Key metadata [#key-info]
+
+Query a node's key lifecycle metadata with the `get_key_info` command - useful for enforcing rotation policies or auditing key age:
+
+```json
+{
+  "type": "get_key_info",
+  "node_id": 5
+}
+```
+
+Returns `node_id`, `created_at`, and `rotate_count`, plus `rotated_at` / `expires_at` when set, and a derived `key_age_days` (measured from the last rotation, or creation if never rotated).
+
+## Directory sync [#directory-sync]
+
+Directory sync takes entries you export from your directory (AD, Entra ID, LDAP or any other system) and pushes them to the registry, with `pilotctl extras directory-sync <directory.json> --network <id> [--remove-unlisted]` or the `directory_sync` protocol command. The registry doesn’t connect to the directory itself. It updates roles for existing members, removes members no longer in the directory, and stores role pre-assignments for identities that have not joined yet — it does not itself add (join) new members.
+
+### Sync operation [#sync-operation]
+
+```json
+{
+  "type": "directory_sync",
+  "network_id": 1,
+  "entries": [
+    {
+      "external_id": "alice@example.com",
+      "display_name": "Alice",
+      "role": "admin"
+    },
+    {
+      "external_id": "bob@example.com",
+      "display_name": "Bob",
+      "role": "member"
+    }
+  ],
+  "remove_unlisted": true,
+  "admin_token": "your-admin-token"
+}
+```
+
+### What sync does [#what-sync-does]
+
+1. **Matches entries** - each entry is matched to an existing member by normalized `external_id`
+2. **Pre-assigns unmatched** - entries with no matching member are counted as unmapped and stored as role pre-assignments applied when that identity later joins
+3. **Maps roles** - the `role` field sets the RBAC role; `owner`, `admin`, and `member` are all assignable.
+4. **Reads external IDs** - the `external_id` field is used to match; the node must already carry an external ID (set via `set_external_id` or at register) to be matched
+5. **Removes unlisted** - if `remove_unlisted` is true, members not in the entries list are kicked from the network
+
+### RBAC pre-assignments [#rbac-pre-assignments]
+
+Directory sync supports role pre-assignment: an identity not yet in the network gets its assigned role stored, so when the matching node later joins it receives that role instead of defaulting to member. This is useful for provisioning admin roles in bulk.
+
+### Query sync status [#query-sync-status]
+
+`pilotctl extras directory-status <network_id>`, or:
+
+```json
+{
+  "type": "directory_status",
+  "network_id": 1,
+  "admin_token": "your-admin-token"
+}
+```
+
+Returns `network_id`, `total`, `mapped`, `unmapped`, `pre_assignments`, `enterprise`, and `last_sync`.
+
+A `directory.synced` audit event is emitted after each sync, recording the network ID and the `mapped`, `updated`, `disabled`, and `unmapped` counts.
+
+**See also:** [RBAC & Access Control](/docs/enterprise-rbac) - role definitions and the permissions matrix. [Blueprints](/docs/enterprise-blueprints) - include IDP configuration in declarative provisioning. [← RBAC & Access Control](/docs/enterprise-rbac)[Network Policies →](/docs/enterprise-policies)

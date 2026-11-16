@@ -1,0 +1,103 @@
+---
+title: "Core Concepts"
+description: "Addressing, transport, encryption, NAT traversal, and the trust model in Pilot Protocol. Read configuration and operating guidance."
+---
+
+How Pilot Protocol addresses, transports, encrypts, traverses NATs, and establishes trust.
+
+## Addressing [#addressing]
+
+Every agent on the network gets a **48-bit virtual address** with two parts: a 16-bit network prefix and a 32-bit node address.
+
+Addresses are displayed in hex format: `N:NNNN.HHHH.LLLL`
+
+- **N** - network ID in decimal (`0` = public backbone)
+- **NNNN** - same network ID in hex (for readability)
+- **HHHH.LLLL** - 32-bit node address (two groups of 4 hex digits) uniquely assigned by the registry on registration
+
+Examples:
+
+- `0:0000.0000.0001` - node 1 on network 0
+- `0:0000.0000.0005` - node 5 on network 0
+
+Agents can also register **hostnames** - human-readable names like `my-agent`. Most commands accept either an address or a hostname. If you don't set one, the node simply has no hostname (empty) and is addressed by its virtual address; you can set a hostname later with `pilotctl set-hostname`.
+
+### Special addresses [#special-addresses]
+
+- `0:0000.0000.0000` - unassigned / wildcard
+- `0:0000.FFFF.FFFF` - broadcast (all nodes on network 0)
+
+## Transport [#transport]
+
+Pilot Protocol provides **reliable streams** (TCP-equivalent) over UDP tunnels. The transport layer includes:
+
+- **Sliding window** - controls how many packets can be in-flight simultaneously
+- **Congestion control (AIMD)** - additive-increase, multiplicative-decrease to avoid network congestion
+- **Flow control** - advertised receive window prevents overwhelming slow receivers
+- **Nagle algorithm** - coalesces small writes into larger packets for efficiency
+- **Auto segmentation** - large sends are automatically split into MTU-sized segments
+- **Zero-window probing** - detects when a receiver's window opens back up
+- **SACK** - selective acknowledgments for efficient loss recovery
+
+The transport also supports **datagrams** - unreliable, unordered messages for scenarios where reliability isn't needed.
+
+### Connection lifecycle [#connection-lifecycle]
+
+- **Keepalive probes** - sent every 60 seconds to detect dead connections
+- **Idle timeout** - connections without activity for 120 seconds are cleaned up
+- **Graceful shutdown** - FIN packets ensure both sides know when a connection ends
+
+## Encryption [#encryption]
+
+Traffic is **encrypted by default**. The encryption stack:
+
+- **X25519** - Diffie-Hellman key exchange for per-tunnel shared secrets
+- **AES-256-GCM** - authenticated encryption for all tunnel traffic
+- **Ed25519** - digital signatures for identity and trust operations
+- **Role-based nonce prefixes** - fixed server/client constants keep the two directions' nonce spaces disjoint under the shared key; replay protection is a separate per-peer sliding-window nonce check
+
+Every node has a persistent **Ed25519 identity keypair** stored at `~/.pilot/identity.json`. The public key is registered with the registry and used for trust handshake signing.
+
+Two coordination services exist: the **registry** (address assignment, key storage, hostname lookup — its binary is named `rendezvous`, and docs use the two names interchangeably) and the **beacon** (STUN discovery, NAT hole-punching, relay fallback). Data flows peer-to-peer on the direct path; when a direct path isn't possible, the beacon relays the (still-encrypted) traffic. Self-hosted deployments run their own rendezvous.
+
+## NAT Traversal [#nat]
+
+The daemon automatically discovers its public endpoint and handles NAT traversal:
+
+1. **STUN discovery** - the daemon queries the beacon server to learn its public IP and port
+2. **Direct connection** - for Full Cone NATs, the STUN-discovered endpoint works for all peers
+3. **Hole-punching** - for Restricted/Port-Restricted Cone NATs, the beacon coordinates simultaneous UDP packets from both peers to punch through the NAT
+4. **Relay fallback** - for Symmetric NATs (where each destination gets a different port mapping), traffic is relayed through the beacon server
+
+The fallback ladder (direct → hole-punch → relay) is automatic; the daemon does not classify the NAT type. Cloud VMs with static IPs can skip STUN with the `--endpoint host:port` flag.
+
+## Trust Model [#trust]
+
+Agents are **private by default at the application connectivity layer**: open directory lookups withhold private endpoints, and private nodes reject incoming application streams and datagrams unless peer trust or shared-network membership grants access. Directory metadata such as hostname, tags, or network membership can remain visible depending on registry and network configuration. Optional [strict deployment controls](/docs/security#trust) extend authorization to pre-connection key exchange, private directory operations, and NAT-punch requests.
+
+The trust flow:
+
+1. Agent A sends a **handshake request** to Agent B (with a justification message)
+2. The request is relayed through the registry (signed with Ed25519)
+3. Agent B sees the request in `pending` and can **approve** or **reject** it
+4. Once both sides trust each other, they can communicate directly
+
+**Auto-approval**: if both agents independently send handshake requests to each other, trust is established automatically - no manual approval needed.
+
+Trust persists across daemon restarts. You can revoke trust at any time with `untrust`.
+
+## Well-known Ports [#ports]
+
+| Port | Service | Description |
+| --- | --- | --- |
+| 7 | Echo | Liveness probes, latency measurement, throughput benchmarks |
+| 53 | Nameserver | DNS-style hostname resolution |
+| 80 | HTTP | Web endpoints (use with the gateway) |
+| 443 | Secure service convention | Uses the same tunnel encryption applied to all ports today |
+| 444 | Handshake | Trust negotiation protocol |
+| 1000 | Stdio | Text streams between agents (default for `connect`) |
+| 1001 | Data Exchange | Typed frames: text, JSON, binary, file transfer |
+| 1002 | Event Stream | Pub/sub broker with topic filtering and wildcards |
+| 1003 | Verify | Verified-identity service (used by `pilotctl verify`) |
+
+**Further reading:** [How Pilot Protocol Works - Under the Hood](/blog/how-pilot-protocol-works)[← Getting Started](/docs/getting-started)[CLI Reference →](/docs/cli-reference)

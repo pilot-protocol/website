@@ -1,0 +1,66 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Production: the sky design at pilotprotocol.network (npm run deploy).
+  // No account_id: Wrangler takes it from CLOUDFLARE_ACCOUNT_ID, as the CI deploy does, or from `wrangler login`.
+  "name": "pilot-protocol-website",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  // The apex is attached to the Cloudflare Pages project "pilotprotocol" today; remove it there before the first deploy.
+  // Worker routes on the same zone (pilot-release: /install.sh, /.well-known/*, /api/*) still run in front of this Worker.
+  "routes": [{ "pattern": "pilotprotocol.network", "custom_domain": true }],
+  "preview_urls": false,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  // Payload's database and uploads. Create them once with `wrangler d1 create pilot-protocol-website` and
+  // `wrangler r2 bucket create pilot-protocol-website-media`, then put the database id in every database_id below.
+  // Local tooling (next dev, builds, previews) uses local copies under .wrangler/state.
+  "d1_databases": [
+    {
+      "binding": "D1",
+      "database_name": "pilot-protocol-website",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+    }
+  ],
+  "r2_buckets": [{ "binding": "R2", "bucket_name": "pilot-protocol-website-media" }],
+  "observability": { "enabled": true },
+  // The Worker's source maps exceed Cloudflare's 60 MiB limit; they're only for debugging.
+  "upload_source_maps": false,
+  "env": {
+    // The green design as a second Worker on workers.dev only: npm run deploy:green (same database and uploads).
+    "green": {
+      "name": "pilot-protocol-website-green",
+      "workers_dev": true,
+      "routes": [],
+      "assets": {
+        "directory": ".open-next/assets",
+        "binding": "ASSETS"
+      },
+      "d1_databases": [
+        {
+          "binding": "D1",
+          "database_name": "pilot-protocol-website",
+          "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+        }
+      ],
+      "r2_buckets": [{ "binding": "R2", "bucket_name": "pilot-protocol-website-media" }],
+      "observability": { "enabled": true },
+      "upload_source_maps": false
+    },
+    // Only for running Payload against production from your machine: `npm run deploy:database`.
+    "remote": {
+      "d1_databases": [
+        {
+          "binding": "D1",
+          "database_name": "pilot-protocol-website",
+          "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+          "remote": true
+        }
+      ],
+      "r2_buckets": [{ "binding": "R2", "bucket_name": "pilot-protocol-website-media", "remote": true }]
+    }
+  }
+}

@@ -1,0 +1,79 @@
+/* Hero network: packets, the request toast and its state swaps. */
+.hero-packet {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 2px;
+  background: var(--color-packet);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-packet) 22%, transparent);
+  offset-rotate: 0deg;
+  offset-anchor: center;
+  will-change: offset-distance, opacity;
+}
+
+.hero-toast {
+  animation: hero-toast-in 420ms var(--ease-out) both;
+}
+.hero-toast[data-phase="out"] {
+  animation: hero-toast-out 360ms var(--ease-out) both;
+}
+@keyframes hero-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+    filter: blur(4px);
+  }
+}
+@keyframes hero-toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+    filter: blur(3px);
+  }
+}
+
+.hero-swap {
+  transition:
+    opacity 260ms var(--ease-out),
+    transform 260ms var(--ease-out),
+    filter 260ms var(--ease-out);
+}
+.hero-swap[data-on="false"] {
+  opacity: 0;
+  transform: scale(0.9);
+  filter: blur(2px);
+  pointer-events: none;
+}
+
+/* The approve button gets pressed just before the request flips to trusted. */
+.hero-approve {
+  animation: hero-press 1500ms var(--ease-out) both;
+}
+@keyframes hero-press {
+  0%,
+  80% {
+    transform: none;
+    background: var(--color-fg);
+    color: var(--color-bg);
+  }
+  88% {
+    transform: scale(0.92);
+    background: var(--color-lime);
+    color: var(--color-ink);
+  }
+  100% {
+    transform: none;
+    background: var(--color-lime);
+    color: var(--color-ink);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-toast,
+  .hero-approve {
+    animation: none;
+  }
+}

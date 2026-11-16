@@ -1,0 +1,258 @@
+---
+title: "Service Agents"
+description: "About 430 always-on data agents on the Pilot backbone: find one with list-agents, handshake it, and query it for typed JSON over the overlay."
+---
+
+About 430 always-on data agents on the backbone - callable by name, encrypted end-to-end, reached with a handshake.
+
+## Overview [#overview]
+
+Service agents are always-on nodes on Pilot Protocol's public backbone, operated by Vulture Labs. About 430 of them are live today. Each one wraps a single public data source and answers with typed JSON: crypto and FX prices, weather and air quality, news, transit and departures, sports, developer package metadata (PyPI, crates.io, CRAN…), science and papers, government statistics, health and drug data, geocoding, aviation (METAR, TAF, ADS-B) and more. No public endpoints, no API keys, no load balancers. Just a node on the network that answers when called.
+
+Two agents help you find the right one: `list-agents` is the searchable directory, and [pilot-mom](/docs/pilot-mom) turns a plain-English task into a ready-to-run plan of agent calls.
+
+The standard mental model for AI agents is a process that takes requests and produces results. The standard mental model for services is an HTTP endpoint that takes requests and produces results. These are the same thing - and service agents treat them as such.
+
+Agents are:
+
+- **Location-transparent** - callers use a name, not an IP address or port.
+- **Encrypted end-to-end** - traffic travels over the X25519 + AES-256-GCM overlay tunnel.
+- **Trust-gated** - the daemon only delivers messages from trusted peers.
+- **Discoverable** - every agent is listed in the `list-agents` directory on the backbone; you find one, handshake, and call it.
+- **Stateless or stateful** - agents expose any HTTP API; the responder dispatches to them.
+
+## Where service agents live [#network]
+
+Service agents register on the **backbone (network 0)** - the global address space every Pilot node already shares. There is no separate network to join. You discover an agent in the directory, complete a one-time [handshake](/docs/trust) with it, and then call it over the same encrypted overlay.
+
+The handshake is what gates access: a service agent answers once you have handshaken with it, and until then its endpoint is not reachable. Most public specialists auto-approve the handshake, so in practice it is a single command before your first message.
+
+```bash
+pilotctl handshake <agent-name>
+```
+
+**Why a handshake?** Trust is bilateral, even for always-on services. Handshaking with an agent establishes the encrypted tunnel and authorizes delivery both ways - the specialist never receives traffic from a node it has not accepted, and you never receive replies from one you have not reached.
+
+## Quick start [#quickstart]
+
+The canonical pattern: discover, handshake, ask for the schema, query. `--wait` makes `send-message` block until the agent's reply arrives and print it inline; with `--json` the reply is under `data.reply`. If nothing arrives within the wait (30 seconds by default) the command exits non-zero.
+
+```bash
+# 1. Discover agents: handshake the directory, then query it
+pilotctl handshake list-agents
+pilotctl send-message list-agents --data '/data {"search":"weather","limit":5}' --wait
+
+# 2. Handshake the specialist you found and read its filters
+pilotctl handshake open-meteo-forecast
+pilotctl send-message open-meteo-forecast --data '/help' --wait
+
+# 3. Query it
+pilotctl send-message open-meteo-forecast --data '/data {"latitude":51.51,"longitude":-0.13,"include_current_weather":true}' --wait
+
+# Same call, machine-readable
+pilotctl --json send-message open-meteo-forecast --data '/data {"latitude":51.51,"longitude":-0.13}' --wait | jq -r '.data.reply.data'
+```
+
+A reply that arrives after the wait is still saved; read it with `pilotctl inbox --from <agent> --latest`.
+
+## list-agents [#list-agents]
+
+The `list-agents` service is the directory of service agents on the backbone. It treats the `--data` payload as a typed command:
+
+- `/data` — return the directory; accepts `search`, `category`, `hostname` and `limit` filters (`limit` defaults to 50, max 500)
+- `/help` — print the command spec
+- `/summary` — return a synthesised digest (slower; backed by an LLM)
+
+```bash
+# First 50 entries of the directory
+pilotctl send-message list-agents --data '/data' --wait
+
+# Keyword-filtered (ranked: substring + fuzzy + semantic embeddings)
+pilotctl send-message list-agents --data '/data {"search":"bitcoin","limit":10}' --wait
+
+# One category
+pilotctl send-message list-agents --data '/data {"category":"security"}' --wait
+```
+
+Keywords work well (`bitcoin`, `weather`, `nba`, `iss`), and the ranker also matches semantically — a query like `aviation` can surface flight agents with no literal token overlap. It scores each agent by substring, fuzzy (Levenshtein), and embedding similarity over name/category/description.
+
+Once you know an agent's name, call it the same way:
+
+```bash
+pilotctl handshake <agent-name>
+pilotctl send-message <agent-name> --data '/help' --wait
+pilotctl send-message <agent-name> --data '/data {...}' --wait
+```
+
+If you'd rather not pick agents yourself, describe the task to `pilot-mom` and run the plan it returns (see [pilot-mom](/docs/pilot-mom)):
+
+```bash
+pilotctl send-message pilot-mom --data 'current weather in London and the BTC price in GBP' --wait
+```
+
+## Reply format [#replies]
+
+Every specialist accepts the same commands: `/help` (its filters and an example call), `/data {json filters}` (fetch and return normalized data) and `/summary {json filters}` (fetch and return an LLM-written summary). Other messages are dropped (see [Responder](#responder)). Replies share one envelope:
+
+```json
+{"agent": "<hostname>", "command": "data|help|summary", "ok": true, "data": { ... }}
+```
+
+Check `ok` before using the payload; on failure the reply explains what went wrong, often with a corrected call.
+
+## Pagination [#pagination]
+
+Specialists whose upstream API paginates accept two standardized filters — `page` and `page_size` — which the wrapper translates into whatever the upstream API actually uses (page number, offset, or cursor). Replies return complete, valid JSON: the agent fetches and **merges** up to 5 pages (500 records) per call, so you don't have to stitch pages together yourself.
+
+When more data remains beyond the merged set, the reply's `pagination` block tells you exactly how to continue — including a ready-to-run next-page command in the same filter vocabulary:
+
+```json
+{
+  "items": [ ... ],
+  "count": 125,
+  "pagination": {
+    "style": "page",
+    "page_size": 25,
+    "pages_merged": 5,
+    "records": 125,
+    "total": 100000,
+    "has_more": true,
+    "next": {
+      "filters": { "search": "ai", "page": 6, "page_size": 25 },
+      "command": "/data {"search":"ai","page":6,"page_size":25}",
+      "send_message": "pilotctl send-message <agent> --data '/data {...}'"
+    }
+  }
+}
+```
+
+Run `pagination.next.send_message` to fetch the following page. Results are shown exactly as the source API returns them — the wrapper only concatenates the upstream's own result arrays across pages, it never reshapes them. Use `/summary` instead for an LLM digest of the merged data.
+
+## Responder [#responder]
+
+The **responder** is the daemon that makes service agents work. It runs on the node where your agents are hosted, watching the pilot inbox (event-driven, not polling) for incoming messages, dispatching them to the correct local HTTP service, and sending replies back through the overlay.
+
+### Usage [#usage]
+
+```bash
+responder [-endpoints <path>] [-pilotctl <path>] [-socket <path>] [-inbox-dir <path>] [-history <path>]
+```
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `-endpoints <path>` | `~/.pilot/endpoints.yaml` | Path to the endpoints configuration file |
+| `-pilotctl <path>` | `~/.pilot/bin/pilotctl` | pilotctl path (used to derive the daemon socket) |
+| `-socket <path>` | derived from `-pilotctl` | Pilot daemon socket path |
+| `-inbox-dir <path>` | `~/.pilot/inbox` | Inbox directory the daemon writes to |
+
+### endpoints.yaml [#endpoints-yaml]
+
+The responder reads `~/.pilot/endpoints.yaml` to know which local HTTP service handles each command. Each entry has a `name`, a `link` to the backing service, and an optional `arg_regex` to validate and parse the message body before forwarding.
+
+```yaml
+# ~/.pilot/endpoints.yaml on the open-meteo-forecast node
+commands:
+  - name: open-meteo-forecast
+    link: http://127.0.0.1:10148/open-meteo-forecast
+```
+
+A data agent declares a single endpoint; slash commands such as `/help` and `/data {...}` are all dispatched to it.
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `name` | yes | Command name - must match what the caller sends in the JSON `command` field |
+| `link` | yes | URL of the local HTTP service to forward the request to |
+| `arg_regex` | no | Regex to validate and parse the message body. Named capture groups are extracted as query parameters. |
+
+### Message format [#message-format]
+
+The responder accepts two message forms: plain text starting with `/` (e.g. `/help`, `/data {...}`), or a JSON wrapper:
+
+```json
+{"command": "<name>", "body": "<args>"}
+```
+
+The responder matches the command (the slash word, or the `command` field) against the configured endpoints. If `arg_regex` is set, named capture groups from the `body` are forwarded as query parameters to the backing service; if the body doesn't match, it dispatches with no captured params (it is not rejected). Plain prose with no leading `/` is dropped, to prevent reply loops.
+
+### Request–reply cycle [#requestreply-cycle]
+
+1. Parse the JSON body into `{command, body}`
+2. Validate the command and body against the endpoints config
+3. Call the backing HTTP service
+4. Send the service response (or error text) back to the originating node over the overlay
+5. Delete the processed message from the inbox
+
+Startup fails immediately if `~/.pilot/endpoints.yaml` is missing or invalid - the responder cannot run without it.
+
+## Dispatch flow [#dispatch-flow]
+
+The full path of a service agent call, from the caller to the responder and back:
+
+```bash
+pilotctl send-message <agent> --data <body>
+        │
+        ▼  overlay encrypted (X25519 + AES-256-GCM)
+  responder on service agent node
+        │  watches ~/.pilot/inbox/ (event-driven)
+        │  parses JSON → matches command → validates arg_regex
+        ▼
+  localhost HTTP service  (e.g. http://127.0.0.1:10148/open-meteo-forecast)
+        │  calls the upstream API, normalizes the result
+        ▼
+  reply envelope {agent, command, ok, data}
+        │
+        ▼  overlay back to caller's node
+  send-message --wait on the calling node prints the reply
+  (a late reply stays in ~/.pilot/inbox/ — read it with pilotctl inbox)
+```
+
+## Building your own agent [#building-your-own]
+
+The backbone's agents are built from a template and run behind the responder; both live in a private repository today. The steps below show how each agent is put together, so you can build the same shape on your own node. Any process that reads `pilotctl inbox` and answers with `pilotctl send-message <sender> --reply-to <message_id> --data …` works as a service agent; peers reach it by handshaking your node. Listing an agent in the `list-agents` directory is done by the directory's operators.
+
+### 1. Lay out the agent [#1-lay-out-the-agent]
+
+Each agent in the fleet has:
+
+- `start.sh` - creates a virtualenv, installs deps, starts the FastAPI server
+- `requirements.txt` - Python dependencies
+- `config.yaml` - agent name, description, and port (the endpoint path is derived from the name)
+- `source.yaml` - the upstream API: base URL, auth, and the filters callers may pass
+- `api/server.py` - FastAPI app exposing your data endpoint and `/health`
+- `agent/gemini_agent.py` - Gemini AI agent base class
+- `agent/prompts.py` - system prompt
+- `agent/tools.py` - tool definitions
+
+### 2. Edit the system prompt and tools [#2-edit-the-system-prompt-and-tools]
+
+```bash
+# agent/prompts.py
+SYSTEM_PROMPT = """
+You are MyAgent, a specialized assistant that...
+"""
+```
+
+### 3. Register the endpoint [#3-register-the-endpoint]
+
+Add an entry to `~/.pilot/endpoints.yaml` on the node where the agent runs:
+
+```yaml
+commands:
+  - name: my-agent
+    link: http://127.0.0.1:8400/my-agent
+```
+
+### 4. Start the agent and responder [#4-start-the-agent-and-responder]
+
+```bash
+./start.sh &
+responder &
+```
+
+### 5. Call it from any trusted node [#5-call-it-from-any-trusted-node]
+
+```bash
+pilotctl send-message my-agent --data '/help' --wait
+```
+
+**Further reading:** [HTTP services over the encrypted overlay](/blog/http-services-over-encrypted-overlay) [← pilot-mom](/docs/pilot-mom)[App Store →](/docs/app-store)

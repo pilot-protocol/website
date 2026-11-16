@@ -1,0 +1,152 @@
+---
+title: "Troubleshooting"
+description: "Troubleshooting guide for Pilot Protocol: common issues with daemon startup, connectivity, NAT traversal, trust, networks, and encryption."
+---
+
+Common issues and how to fix them.
+
+## Daemon won’t start [#daemon-wont-start]
+
+### Symptom: “address already in use” [#symptom-address-already-in-use]
+
+Another process is holding the tunnel port (the daemon binds an OS-assigned UDP port by default, or the port you passed to `--listen`) or the IPC socket.
+
+1. Check for existing daemon: `pilotctl daemon status`
+2. Stop it: `pilotctl daemon stop`
+3. If the socket is stale: `rm -f /tmp/pilot.sock`
+4. Try again: `pilotctl daemon start`
+
+### Symptom: “invalid email” on startup [#symptom-invalid-email-on-startup]
+
+If you pass `--email` with a malformed address, the daemon refuses to start. Email is otherwise optional — omitting `--email` causes the daemon to synthesise `<fingerprint>@nodes.pilotprotocol.network` from the public-key fingerprint.
+
+```bash
+pilotctl daemon start --email you@example.com
+```
+
+Or set it in `~/.pilot/config.json`:
+
+```json
+{ "email": "you@example.com" }
+```
+
+## Cannot reach the registry [#cannot-reach-registry]
+
+### Symptom: “cannot reach registry” or “connection refused” [#symptom-cannot-reach-registry-or-connection-refused]
+
+1. Check the registry address: `pilotctl config`
+2. Test connectivity: `nc -zv 34.71.57.205 9000`
+3. Override if needed: `export PILOT_REGISTRY=host:9000`
+4. Check firewall rules - outbound TCP port 9000 must be open
+
+## Connection timeouts [#connection-timeouts]
+
+### Symptom: connections to peers time out [#symptom-connections-to-peers-time-out]
+
+1. Verify the peer is online: `pilotctl ping <hostname>`
+2. Check that the peer’s tunnel UDP port is reachable - find the port in the peer’s daemon log (`~/.pilot/pilot.log`, the “discovered public endpoint” line). Note `pilotctl info` redacts endpoints, so it will not show the port.
+3. If both peers are behind NAT, ensure the beacon is reachable on UDP port 9001
+4. Check for mutual trust or shared network: `pilotctl trust`
+
+If `ping` works, trust and the network path are already established — the SYN trust gate applies to every port, including the echo port ping uses. A connection failure on another port means the target service isn't listening there, or a port policy blocks it.
+
+## NAT traversal failures [#nat-traversal]
+
+### Full Cone NAT [#full-cone-nat]
+
+Direct connections should work. If they don’t, check that the STUN discovery succeeded (visible in daemon logs).
+
+### Restricted / Port-Restricted Cone NAT [#restricted-port-restricted-cone-nat]
+
+Requires the beacon for hole-punching. Verify:
+
+1. Beacon is reachable: `nc -zuv 34.71.57.205 9001`
+2. The daemon’s tunnel UDP port is not blocked by a local firewall - find the port in `~/.pilot/pilot.log` (the “discovered public endpoint” line); `pilotctl info` redacts it
+3. Both peers can reach the beacon
+
+### Symmetric NAT [#symmetric-nat]
+
+Direct connections are not possible. Pilot automatically falls back to relay through the beacon. If relay fails:
+
+1. Ensure both peers can reach the beacon on UDP 9001
+2. Check daemon logs for “relay” messages
+3. If using a fixed endpoint (`--endpoint`), verify the address and port are correct
+
+## Trust and handshake issues [#trust-issues]
+
+### Symptom: handshake times out [#symptom-handshake-times-out]
+
+The target must approve the handshake. Check:
+
+1. Is the target online? `pilotctl find <hostname>`
+2. Does the target have pending requests? `pilotctl pending` (on the target)
+3. Auto-approve may be off - the target must run `pilotctl approve <node_id>`
+
+### Symptom: “connection refused” despite trust [#symptom-connection-refused-despite-trust]
+
+Trust may have been revoked. Check:
+
+1. `pilotctl trust` - verify the peer is listed
+2. If missing, re-establish: `pilotctl handshake <peer>`
+
+## Network membership issues [#network-membership]
+
+### Symptom: “network membership limit reached” [#symptom-network-membership-limit-reached]
+
+The network reached its configured member cap. Options:
+
+- Raise the network policy’s member limit: `pilotctl network policy <network_id> --max-members <n>`
+- Remove an existing agent with `pilotctl network kick`
+
+See [Error codes](/docs/error-codes) for the full entry.
+
+### Symptom: agents can’t communicate despite being in the same network [#symptom-agents-cant-communicate-despite-being-in-the-same-networ]
+
+1. Verify membership: `pilotctl network members <network_id>`
+2. Check that both agents are online: `pilotctl find <hostname>`
+3. Test basic connectivity: `pilotctl ping <hostname>`
+4. If using invite-only, ensure the invite was accepted
+
+## IPC socket errors [#ipc-socket]
+
+### Symptom: “daemon is not running” but it is [#symptom-daemon-is-not-running-but-it-is]
+
+The IPC socket path may be wrong or stale.
+
+1. Check the socket: `ls -la /tmp/pilot.sock`
+2. Remove stale socket: `rm -f /tmp/pilot.sock`
+3. Restart the daemon: `pilotctl daemon stop && pilotctl daemon start`
+4. If using a custom socket, set: `export PILOT_SOCKET=/path/to/socket`
+
+### Symptom: “text file busy” when updating binaries [#symptom-text-file-busy-when-updating-binaries]
+
+The daemon is still running and holding the binary open.
+
+1. Stop the daemon: `pilotctl daemon stop`
+2. Remove old binary: `rm -f ~/.pilot/bin/pilot-daemon`
+3. Install new version: `curl -fsSL https://pilotprotocol.network/install.sh | sh`
+
+## Encryption key issues [#encryption]
+
+### Symptom: “encrypted packet but no key” [#symptom-encrypted-packet-but-no-key]
+
+Keys can desynchronize after multiple restarts of both peers.
+
+1. Restart the daemon on both sides
+2. Re-establish trust: `pilotctl untrust <node_id>` then `pilotctl handshake <hostname>`
+3. If in a network, remove and re-add the agents with `pilotctl network kick` then `pilotctl network invite`
+
+## General diagnostic steps [#diagnostic-steps]
+
+When something isn’t working, follow this checklist:
+
+1. **Check daemon status:** `pilotctl daemon status` - is it running?
+2. **Check identity:** `pilotctl info` - do you have a node ID and address?
+3. **Check registry:** `pilotctl peers` - can you see other nodes?
+4. **Check connectivity:** `pilotctl ping <peer>` - can you reach the peer?
+5. **Check trust:** `pilotctl trust` - is the peer in your trust list?
+6. **Check networks:** `pilotctl network list` - are you in the right network?
+7. **Check logs:** `cat ~/.pilot/pilot.log` - look for error messages
+8. **Test echo port:** `pilotctl connect <peer> 7` - the echo server should respond
+
+**See also:** [Error Codes](/docs/error-codes) for a complete reference · [Diagnostics](/docs/diagnostics) for built-in tools [← Error Codes](/docs/error-codes)[vs MCP / A2A / ACP →](/docs/comparison)

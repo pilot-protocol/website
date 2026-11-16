@@ -1,0 +1,307 @@
+---
+title: "Go SDK"
+description: "Go SDK for Pilot Protocol - the driver package for building services, custom agents, and integrations. Read the implementation guide."
+---
+
+Use the driver package to build services, custom agents, and integrations in Go.
+
+## Installation [#install]
+
+```bash
+go get github.com/pilot-protocol/common
+```
+
+The SDK is the `driver` package in the `pilot-protocol/common` module. Import it as:
+
+```go
+import "github.com/pilot-protocol/common/driver"
+```
+
+Requires Go 1.25+ and a running daemon (the driver communicates with the daemon over a Unix socket at `/tmp/pilot.sock`).
+
+## Quick start [#quickstart]
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/pilot-protocol/common/driver"
+)
+
+func main() {
+    // Connect to the local daemon
+    d, err := driver.Connect("")
+    if err != nil {
+        panic(err)
+    }
+    defer d.Close()
+
+    // Get node info
+    info, _ := d.Info()
+    fmt.Println("Address:", info["address"])
+
+    // Dial a remote agent on port 1000
+    conn, err := d.Dial("0:0000.0000.0005:1000")
+    if err != nil {
+        panic(err)
+    }
+    defer conn.Close()
+
+    conn.Write([]byte("hello"))
+    buf := make([]byte, 4096)
+    n, _ := conn.Read(buf)
+    fmt.Println("Response:", string(buf[:n]))
+}
+```
+
+## Driver [#driver]
+
+The `Driver` is the main entry point. It connects to the local daemon via IPC and provides methods for all protocol operations.
+
+### Connect [#connect]
+
+```go
+func Connect(socketPath string) (*Driver, error)
+```
+
+Creates a new driver connected to the local daemon. Pass `""` for the default socket path (`/tmp/pilot.sock`, or `$XDG_RUNTIME_DIR/pilot.sock` when that is set on Linux). Override by passing a custom path. Note: the `PILOT_SOCKET` environment variable is read by the `pilotctl` CLI only — it has no effect on the SDK.
+
+### Dial [#dial]
+
+```bash
+func (d *Driver) Dial(addr string) (*Conn, error)
+```
+
+Opens a stream connection to a remote address and port. Address format: `"N:XXXX.YYYY.YYYY:PORT"`. Returns a `*Conn` that implements `net.Conn`.
+
+### DialAddr [#dialaddr]
+
+```bash
+func (d *Driver) DialAddr(dst protocol.Addr, port uint16) (*Conn, error)
+```
+
+Like `Dial` but takes a parsed `protocol.Addr` and port number directly. Applies a default dial timeout so a non-responsive daemon cannot block the caller indefinitely.
+
+### DialAddrTimeout [#dialaddrtimeout]
+
+```bash
+func (d *Driver) DialAddrTimeout(dst protocol.Addr, port uint16, timeout time.Duration) (*Conn, error)
+```
+
+Like `DialAddr` but with an explicit client-side timeout. If the daemon does not respond within `timeout`, the dial is cancelled.
+
+### Listen [#listen]
+
+```bash
+func (d *Driver) Listen(port uint16) (*Listener, error)
+```
+
+Binds a port and returns a `*Listener` that accepts incoming connections. Use this to build custom services.
+
+### Info [#info]
+
+```bash
+func (d *Driver) Info() (map[string]interface{}, error)
+```
+
+Returns the daemon's status: node ID, address, hostname, uptime, peers, connections, encryption status, and traffic stats.
+
+### Health [#health]
+
+```bash
+func (d *Driver) Health() (map[string]interface{}, error)
+```
+
+Lightweight health check. Returns basic status without the full info payload.
+
+### Close [#close]
+
+```bash
+func (d *Driver) Close() error
+```
+
+Disconnects from the daemon and releases resources.
+
+## Conn [#conn]
+
+`Conn` implements the standard `net.Conn` interface. You can use it with any Go library that works with `net.Conn` - including `net/http`, `bufio`, `io.Copy`, and TLS wrappers.
+
+| Method | Description |
+| --- | --- |
+| `Read(b []byte) (int, error)` | Read data from the connection. Blocks until data arrives or deadline expires. |
+| `Write(b []byte) (int, error)` | Write data to the connection. |
+| `Close() error` | Close the connection (sends FIN to remote). |
+| `LocalAddr() net.Addr` | Returns the local pilot address. |
+| `RemoteAddr() net.Addr` | Returns the remote pilot address. |
+| `SetDeadline(t time.Time) error` | Sets both the read and write deadlines to `t`. |
+| `SetReadDeadline(t time.Time) error` | Sets the read deadline. A zero value means no deadline. |
+| `SetWriteDeadline(t time.Time) error` | Sets the write deadline. A passed deadline makes `Write` return `os.ErrDeadlineExceeded`; it is enforced before each chunk. Because `Write` only enqueues to the local daemon over IPC (it never blocks on the remote peer), this bounds a slow local write rather than a slow peer. A zero value clears it. |
+
+## Listener [#listener]
+
+`Listener` accepts incoming connections on a bound port. It follows the standard `net.Listener` pattern.
+
+| Method | Description |
+| --- | --- |
+| `Accept() (net.Conn, error)` | Blocks until a new connection arrives. Returns a `*Conn`. |
+| `Close() error` | Stops accepting connections and unblocks any pending `Accept` call. |
+| `Addr() net.Addr` | Returns the bound pilot address. |
+
+## Datagrams [#datagrams]
+
+Unreliable, connectionless packets. Use for fire-and-forget data or broadcast to network members.
+
+### SendTo [#sendto]
+
+```bash
+func (d *Driver) SendTo(dst protocol.Addr, port uint16, data []byte) error
+```
+
+Sends an unreliable datagram to the given address and port.
+
+### Broadcast [#broadcast]
+
+```bash
+func (d *Driver) Broadcast(netID uint16, port uint16, data []byte, adminToken string) error
+```
+
+Fans a datagram out to every member of `netID`. Requires an admin token. Best-effort delivery — no per-recipient ACK.
+
+### RecvFrom [#recvfrom]
+
+```bash
+func (d *Driver) RecvFrom() (*Datagram, error)
+```
+
+Receives the next incoming datagram. Blocks until a datagram arrives.
+
+## Trust & handshakes [#trust]
+
+| Method | Description |
+| --- | --- |
+| `Handshake(nodeID uint32, justification string)` | Send a trust request to a remote node. |
+| `ApproveHandshake(nodeID uint32)` | Approve a pending trust request. |
+| `RejectHandshake(nodeID uint32, reason string)` | Reject a pending trust request. |
+| `PendingHandshakes()` | List pending trust requests. |
+| `WaitForTrust(nodeID uint32, timeoutMs uint32)` | Block until mutual trust with `nodeID` is live or the timeout elapses. |
+| `TrustedPeers()` | List all trusted peers. |
+| `RevokeTrust(nodeID uint32)` | Remove a peer from the trusted set. |
+
+All trust methods return `(map[string]interface{}, error)` with JSON-decoded response data.
+
+## Admin methods [#admin]
+
+| Method | Description |
+| --- | --- |
+| `SetHostname(hostname string)` | Set or clear the daemon's hostname. |
+| `SetVisibility(public bool)` | Set visibility on the registry (public or private). |
+| `SetTags(tags []string)` | Set capability tags (max 3). |
+| `SetWebhook(url string)` | Set or clear the webhook URL. Empty string disables. |
+| `RotateKey()` | Generate a new Ed25519 keypair and re-register with the registry. Replaces `~/.pilot/identity.json` in place — no rollback. |
+| `ResolveHostname(hostname string)` | Resolve a hostname to node info. |
+| `Deregister()` | Remove this node from the registry. |
+| `Disconnect(connID uint32)` | Close a connection by ID. |
+| `PreferDirect(nodeID uint32)` | Best-effort hint asking the daemon to prefer a direct path over a relay for `nodeID` (e.g. to unstick a beacon-mediated tunnel). An old daemon returns an "unknown command" error - treat that as a no-op and proceed. |
+
+## Verified identity [#verified-identity]
+
+Verified-address badges and recovery enrollment. The `badge`, `badgeSig`, `enrollment`, and `enrollmentSig` strings are produced out-of-band by the verifier sidecar; the daemon signs proof of the current key before forwarding to the registry.
+
+| Method | Description |
+| --- | --- |
+| `SubmitBadge(badge, badgeSig string)` | Attach a verified-address badge to this node's registry entry. The registry verifies the badge offline against the pinned issuer key. Optional - nodes without a badge keep working. |
+| `EnrollRecovery(enrollment, enrollmentSig string)` | Record an opaque recovery commitment so the address can be recovered if the current key is lost. The raw external identity never leaves the verifier - only the commitment. |
+
+## Request signing (reqsig) [#request-signing]
+
+Sign and verify request-signature envelopes (`common/reqsig`) so a peer can prove a request came from a given pilot address. The daemon constructs the envelope itself (its own address, a fresh timestamp and nonce) and signs only the canonical form - it never signs caller-supplied raw strings.
+
+| Method | Description |
+| --- | --- |
+| `SignEnvelope(audience, bodyHash string)` | Sign a reqsig envelope for `audience` over `bodyHash` (64-hex sha256 of the request body). Returns `{envelope, signature, address}`. |
+| `VerifyEnvelope(envelope, sigB64 string, checkStanding bool)` | Verify a canonical envelope + base64 signature. The daemon resolves the signer's key from cache then the registry. With `checkStanding` it also reports the signer's registry standing. A failed check is not an error - the reply carries `valid=false` plus a reason. |
+| `VerifyEnvelopeMaxSkew(envelope, sigB64 string, checkStanding bool, maxSkewSecs uint32)` | Same as `VerifyEnvelope` with an explicit freshness window in seconds. `0` selects the daemon default. |
+
+## Managed networks & policy [#managed]
+
+Inspect and drive managed-network engines and their programmable policy. Policy and member-tag writes are gated by an admin token (see [Network Policies](/docs/enterprise-policies)).
+
+| Method | Description |
+| --- | --- |
+| `ManagedStatus(networkID uint16)` | Return the status of a managed network engine. |
+| `ManagedForceCycle(networkID uint16)` | Force a prune/fill cycle in a managed network. |
+| `ManagedReconcile(networkID uint16)` | Ask the policy runner for `networkID` to poll the registry and refresh its peer set without running a policy cycle. Returns `{network_id, peers}`. |
+| `PolicyGet(networkID uint16)` | Retrieve the active policy for a network. |
+| `PolicySet(networkID uint16, policyJSON []byte, adminToken string)` | Send a policy document for immediate application. The `adminToken` authenticates the caller; managed-mode daemons reject an empty token. |
+| `MemberTagsGet(networkID uint16, nodeID uint32)` | Retrieve admin-assigned member tags for a node in a network. |
+| `MemberTagsSet(networkID uint16, nodeID uint32, tags []string)` | Set admin-assigned member tags for a node in a network. |
+
+## Networks [#networks]
+
+| Method | Description |
+| --- | --- |
+| `NetworkList()` | List all networks known to the registry. |
+| `NetworkJoin(networkID uint16, token string)` | Join a network. Pass empty string for open networks. |
+| `NetworkLeave(networkID uint16)` | Leave a network. |
+| `NetworkMembers(networkID uint16)` | List all members of a network. |
+| `NetworkInvite(networkID uint16, targetNodeID uint32)` | Invite a node to a network (requires admin token). |
+| `NetworkPollInvites()` | Check for pending network invites. |
+| `NetworkRespondInvite(networkID uint16, accept bool)` | Accept or reject a network invite. |
+
+## Examples [#examples]
+
+### Echo server [#echo-server]
+
+```bash
+d, _ := driver.Connect("")
+defer d.Close()
+
+ln, _ := d.Listen(3000)
+defer ln.Close()
+
+for {
+    conn, err := ln.Accept()
+    if err != nil {
+        break
+    }
+    go func(c net.Conn) {
+        defer c.Close()
+        io.Copy(c, c)  // echo back
+    }(conn)
+}
+```
+
+### Send a message and get a response [#send-a-message-and-get-a-response]
+
+```bash
+d, _ := driver.Connect("")
+defer d.Close()
+
+conn, _ := d.Dial("0:0000.0000.0005:1000")
+defer conn.Close()
+
+conn.Write([]byte("what is your status?"))
+
+buf := make([]byte, 4096)
+n, _ := conn.Read(buf)
+fmt.Println(string(buf[:n]))
+```
+
+### HTTP server over pilot [#http-server-over-pilot]
+
+```bash
+d, _ := driver.Connect("")
+defer d.Close()
+
+ln, _ := d.Listen(80)
+defer ln.Close()
+
+http.Serve(ln, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprintf(w, "Hello from pilot!")
+}))
+```
+
+Because `Listener` implements `net.Listener` and `Conn` implements `net.Conn`, the standard `net/http` server works out of the box.
+
+**See also:** [Python SDK](/docs/python-sdk) - if you prefer Python. [Built-in Services](/docs/services) - the three services that come out of the box. [CLI Reference](/docs/cli-reference) - command-line equivalents of every SDK method. **Source code:** [common/driver](https://github.com/pilot-protocol/common/tree/main/driver) on GitHub [← CLI Reference](/docs/cli-reference)[Python SDK →](/docs/python-sdk)

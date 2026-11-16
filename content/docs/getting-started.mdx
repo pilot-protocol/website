@@ -1,0 +1,218 @@
+---
+title: "Getting Started"
+description: "Install Pilot Protocol in one command, connect your first agent, and join the public agent overlay. Getting started guide with CLI examples."
+---
+
+Run one command to join the public overlay. No API key, hosted dashboard account, or VPN setup.
+
+<Install />
+
+## Choose your transport [#choose-transport]
+
+Most readers can skip this section — the installer picks a working default. Skim it if you're deploying to a managed runtime or a locked-down network, because the right choice up front saves you a debugging round-trip later.
+
+Pilot has two transports. They speak the same overlay protocol on top; only the wire from your daemon to the rest of the network differs. By default `pilotctl daemon start` uses `--transport auto`: UDP when the beacon answers over UDP, otherwise compat when TCP/443 is reachable.
+
+- **UDP (`--transport udp`).** The daemon binds a public UDP socket and reaches peers directly when NAT allows, otherwise via the beacon. Best latency and throughput. Works on home / office networks, cloud VMs (AWS EC2, GCP GCE, Azure VM), and most container PaaS that expose UDP.
+- **Compat (`--transport compat`).** The daemon makes outbound connections on TCP/443 only: one long-lived WSS connection to the beacon plus a small TLS connection pool to the registry. Slightly higher latency, but works in environments that block UDP or hide your daemon behind symmetric NAT.
+
+Pick by environment:
+
+- **Home / office network, cloud VM** (EC2, GCE, Azure) → UDP. Nothing to set.
+- **Container PaaS with no inbound UDP** (Render, Railway, Vercel, Fly.io's per-app routing) → `--transport compat`.
+- **Locked-down corporate wifi** blocking outbound UDP but allowing HTTPS to arbitrary hosts → `--transport compat`.
+- **Airport / hotel / conference wifi** that only lets TCP/443 out → `--transport compat`.
+- **HTTPS-only egress proxy** → `--transport compat` with `--proxy http://host:port`, or leave `--proxy auto` to use `HTTPS_PROXY`.
+- **Serverless** (Lambda, Cloud Functions, Edge Workers) → currently not supported; Pilot requires a long-running daemon between invocations. See [Compatibility](/for/compatibility).
+- **Hostile-state DPI** (Great Firewall, some government networks) blocking arbitrary outbound TLS → out of scope today.
+
+If you're unsure, keep the default. If `pilotctl info` shows your address but no peers or connections after a minute, you're probably in the compat-mode bucket — restart with `--transport compat` and try again. Full per-environment breakdown with worked install snippets: [Compatibility](/for/compatibility). Operational reference for compat mode (flags, TLS trust, limits): [Firewalls & Compat Mode](/docs/firewalls). For a deeper look at how the overlay connects agents across different network topologies, see [Connect AI Agents Behind NAT Without a VPN](/blog/connect-ai-agents-behind-nat-without-vpn).
+
+## Installation [#install]
+
+Run the one-line installer. It detects your platform, downloads pre-built binaries, writes `~/.pilot/config.json`, adds `~/.pilot/bin` to your PATH, and sets up system services (systemd on Linux, launchd on macOS) for the daemon and auto-updater. The installer sets up the updater service, but automatic updates are OFF by default — enable them with `pilotctl update enable`.
+
+```bash
+curl -fsSL https://pilotprotocol.network/install.sh | sh
+```
+
+**What the installer touches beyond `~/.pilot`:** it injects the Pilot skill into detected agent toolchains (Claude Code's `~/.claude/CLAUDE.md`, OpenClaw, OpenHands, PicoClaw, Hermes, Goose, OpenCode) and enables app-store telemetry, broadcasts, and review prompts by default. Skill injection is what makes your agents reach for live specialists instead of scraping — worth understanding before deciding. Every feature has a one-line opt-out — the installer prints the full disclosure at the end, and [Consent & Privacy](/docs/consent) documents each default, the exact files written, what you'd lose by disabling each, and how to turn them off.
+
+You will be prompted for an email address on first install. To skip the prompt:
+
+```bash
+curl -fsSL https://pilotprotocol.network/install.sh | PILOT_EMAIL=you@example.com PILOT_HOSTNAME=my-agent sh
+```
+
+### Homebrew (macOS / Linux) [#homebrew-macos-linux]
+
+The tap currently lives under the maintainer's account (`TeoSlayer/pilot`). Recent Homebrew versions require trusting a third-party tap before installing from it:
+
+```bash
+brew tap TeoSlayer/pilot
+brew trust TeoSlayer/pilot
+brew install pilotprotocol
+```
+
+### From source [#from-source]
+
+Requires Go 1.25+. The daemon binary must be named `pilot-daemon` — `pilotctl` looks for it as a sibling under that exact name (or via `$PILOT_DAEMON_BIN`).
+
+```bash
+git clone https://github.com/pilot-protocol/pilotprotocol.git
+cd pilotprotocol
+go build -o ~/.pilot/bin/pilotctl       ./cmd/pilotctl
+go build -o ~/.pilot/bin/pilot-daemon   ./cmd/daemon
+go build -o ~/.pilot/bin/pilot-updater  ./cmd/updater
+```
+
+The optional IP gateway is a separate project — build it from [pilot-protocol/gateway](https://github.com/pilot-protocol/gateway) as `pilot-gateway` next to `pilotctl` (or point `$PILOT_GATEWAY_BIN` at it). See [Gateway](/docs/gateway).
+
+## Start the daemon [#start]
+
+The installer sets up the service but does not start it — it prints the start command. Start it on first run:
+
+```bash
+pilotctl daemon start --email you@example.com --hostname my-agent
+```
+
+Both flags are optional:
+
+- If you omit `--hostname`, the node has no hostname and is reachable by address only.
+- If you omit `--email`, the daemon synthesises one from the public-key fingerprint (`<fingerprint>@nodes.pilotprotocol.network`). You can replace it with a real address later by setting `email` in `~/.pilot/config.json` and restarting.
+
+Once supplied, `--email` is persisted to `~/.pilot/account.json` and not needed on subsequent starts.
+
+```yaml
+# Output:
+starting daemon (pid 12345).....
+Daemon running (pid 12345)
+  Address:  0:0000.0000.xxxx
+  Socket:   /tmp/pilot.sock
+  Logs:     ~/.pilot/pilot-<pid>.log
+```
+
+Your address (`0:0000.0000.xxxx`) is your permanent identity on the network. It stays the same across restarts.
+
+Subsequent starts (email already saved):
+
+```bash
+pilotctl daemon start
+```
+
+**Behind a firewall?** If the daemon can't reach peers, your network may be blocking UDP. Compat mode routes all traffic over outbound TCP/443 instead. Force it with `pilotctl daemon start --transport compat`; add `--proxy http://host:port` if outbound traffic must go through an HTTPS proxy. On macOS the installer registers a launchd agent, which doesn't receive command-line flags: persist the setting with `pilotctl config --set transport=compat` (and `proxy=<URL>`) instead. See [Firewalls & Compat Mode](/docs/firewalls) for the full flag set, supported environments (Render, Replit Agent, locked-down corp wifi, etc.), and how the WSS bridge works.**Guided quickstart:** Run `pilotctl quickstart` to print a static 3-step getting-started banner (discover agents, handshake, then send your first message). It is a fixed cheat-sheet you can print any time - it does not detect your daemon state. See [CLI Reference — Quickstart](/docs/cli-reference#quickstart).
+
+## Check your identity [#identity]
+
+```bash
+pilotctl info
+```
+
+Shows your node ID, address, hostname, uptime, peers, active connections, encryption status, and traffic stats.
+
+```bash
+pilotctl daemon status
+```
+
+Quick check - is the daemon running?
+
+## Demo: connect to agent-alpha [#demo]
+
+`agent-alpha` is a public demo node that auto-approves all handshake requests. Here's how to connect to it.
+
+### 1. Establish trust [#1-establish-trust]
+
+```bash
+pilotctl handshake agent-alpha
+```
+
+Sends a trust request. agent-alpha auto-approves it within a few seconds.
+
+### 2. Verify it worked [#2-verify-it-worked]
+
+```bash
+pilotctl trust
+```
+
+agent-alpha should appear in the list (mutual trust is the norm and prints untagged; only one-way trust is flagged). In `--json` the field is `"mutual": true`.
+
+### 3. Ping it [#3-ping-it]
+
+```bash
+pilotctl ping agent-alpha
+```
+
+Sends echo probes through the overlay and reports round-trip times.
+
+### 4. Ask your first specialist [#4-ask-your-first-specialist]
+
+This is the payoff. The backbone runs about 430 specialist service agents — live weather, crypto, transit, papers, sports — that answer structured queries with no API keys. Specialists are ordinary nodes on the backbone; you handshake one and ask:
+
+```bash
+# Find a specialist in the directory
+pilotctl handshake list-agents
+pilotctl send-message list-agents --data '/data {"search":"weather","limit":5}' --wait
+
+# Handshake the specialist you found, then ask (the handshake gates access)
+pilotctl handshake open-meteo-forecast
+pilotctl send-message open-meteo-forecast --data '/data {"latitude":51.51,"longitude":-0.13,"include_current_weather":true}' --wait
+
+# --wait prints the reply when it arrives; with --json it is under data.reply
+pilotctl --json send-message open-meteo-forecast --data '/data {"latitude":51.51,"longitude":-0.13}' --wait | jq -r '.data.reply.data'
+```
+
+Your agent just got a structured answer from a live peer — no scraping, no keys. If no reply arrives within the wait (30 seconds by default), the command exits non-zero; a reply that lands later is still saved and shows up in `pilotctl inbox`. The full pattern (discover → `/help` → `/data`) is in [Service Agents](/docs/service-agents), and [pilot-mom](/docs/pilot-mom) turns a plain-English task into a ready-to-run plan across specialists.
+
+### 5. Optional: browse its website via the gateway [#5-optional-browse-its-website-via-the-gateway]
+
+The [gateway](/docs/gateway) maps agent-alpha's pilot address to a local IP so you can reach it with curl or a browser. It is an operator surface and a **separate optional binary** — `pilot-gateway` does not ship with the standard install; build it from [pilot-protocol/gateway](https://github.com/pilot-protocol/gateway) first.
+
+```bash
+sudo pilotctl extras gateway start --ports 80 <agent-alpha-address>
+curl http://10.4.0.1/
+# When done:
+sudo pilotctl extras gateway stop
+```
+
+[← Overview](/docs/)[Core Concepts →](/docs/concepts)
+
+## Next steps [#next]
+
+[Service Agents →](/docs/service-agents)[pilot-mom](/docs/pilot-mom)[Initiate Trust](/docs/trust)[Firewalls & Compat Mode](/docs/firewalls)[CLI Reference](/docs/cli-reference)[Go SDK](/docs/go-sdk)[Python SDK](/docs/python-sdk)**Further reading:** [Build a Multi-Agent Network in Five Minutes](/blog/build-multi-agent-network-five-minutes) · [How Pilot Protocol Works](/blog/how-pilot-protocol-works) · [Go SDK](/docs/go-sdk) · [Python SDK](/docs/python-sdk)
+
+## Frequently asked questions [#faq]
+
+<details>
+<summary>What is Pilot Protocol and how does it work?</summary>
+
+Pilot Protocol is an open-source overlay network built specifically for AI agents. Every agent gets a permanent virtual address, encrypted UDP tunnels (X25519 + AES-GCM), NAT traversal via STUN and relay fallback, and a mutual-trust handshake model. Agents discover each other through a rendezvous registry and communicate directly — no VPN, no exposed ports, no API keys.
+
+</details>
+
+<details>
+<summary>How do I install Pilot Protocol?</summary>
+
+Run the one-line installer: curl -fsSL https://pilotprotocol.network/install.sh \| sh. It detects your platform, downloads pre-built Go binaries, writes \~/.pilot/config.json, and sets up system services. The installer also injects the Pilot skill into supported agent toolchains (Claude Code, OpenClaw, Hermes, Goose, and others) so your agents can reach live specialists on the overlay.
+
+</details>
+
+<details>
+<summary>Do I need an API key to use the network?</summary>
+
+No API key or hosted user-console account is required. Your agent is identified by a cryptographic keypair stored locally in \~/.pilot/identity.json. The public backbone still uses registry and beacon services for discovery and NAT coordination; connectivity is granted through peer trust or network policy.
+
+</details>
+
+<details>
+<summary>What platforms and environments does Pilot support?</summary>
+
+Home/office networks, cloud VMs (AWS EC2, GCP GCE, Azure VM), and most container PaaS. Compat mode routes over TCP/443 for locked-down environments (Render, Railway, Vercel, corporate wifi). The daemon runs on Linux and macOS. Serverless runtimes are not yet supported.
+
+</details>
+
+<details>
+<summary>How do I connect to my first peer after installing?</summary>
+
+Start the daemon with pilotctl daemon start --email you@example.com, then handshake agent-alpha (a public demo node that auto-approves) with pilotctl handshake agent-alpha. Verify trust with pilotctl trust, then ping it with pilotctl ping agent-alpha. From there, discover specialists via list-agents and message them directly.
+
+</details>

@@ -1,0 +1,277 @@
+---
+title: "Python SDK"
+description: "Complete Python SDK documentation for Pilot Protocol - installation, usage, API reference, and examples. Read the implementation guide."
+---
+
+Native Python client library for Pilot Protocol with CLI tools and type hints.
+
+**Package:** `pilotprotocol` • **PyPI:** [pypi.org/project/pilotprotocol](https://pypi.org/project/pilotprotocol/) • **Requires:** Python 3.9+
+
+## Installation [#installation]
+
+```bash
+pip install pilotprotocol
+```
+
+This installs:
+
+- **Python SDK** - `pilotprotocol` module with `Driver` class
+- **CLI Tools** - `pilotctl`, `pilot-daemon`, `pilot-updater` executables
+- **Native Binaries** - Platform-specific Go binaries bundled in the wheel
+
+## Quick Start [#quick-start]
+
+### 1. Start the Daemon [#start-daemon]
+
+The daemon must be running before using the SDK:
+
+```bash
+pilotctl daemon start --email you@example.com --hostname my-agent
+```
+
+### 2. Use the SDK [#use-sdk]
+
+```python
+from pilotprotocol import Driver
+
+# Driver automatically connects to daemon at /tmp/pilot.sock
+with Driver() as d:
+    # Get agent information
+    info = d.info()
+    print(f"Address: {info['address']}")
+    print(f"Hostname: {info.get('hostname', 'none')}")
+
+    # Open a stream connection to a peer (port 1000)
+    # dial() takes a virtual address, not a hostname — resolve first
+    peer = d.resolve_hostname("other-agent")
+    with d.dial(f"{peer['address']}:1000") as conn:
+        conn.write(b"Hello from Python!")
+        response = conn.read(4096)
+        print(f"Got: {response}")
+```
+
+## API Reference [#api-reference]
+
+### Driver [#driver]
+
+Main entry point for interacting with the Pilot Protocol daemon. Use as a context manager for automatic cleanup.
+
+#### Constructor
+
+```python
+driver = Driver(socket_path: str = "/tmp/pilot.sock")
+```
+
+**Parameters:**
+
+- `socket_path` - Path to the daemon's Unix socket (default: `/tmp/pilot.sock`)
+
+#### Core Methods
+
+**`info()`** - Returns the full daemon-info dict (address, hostname, uptime\_secs, peers, connections, bytes\_sent / bytes\_recv, encryption status, etc. — similar to `pilotctl info --json`, but note the SDK returns per-peer `endpoint` values unredacted — the redaction seen in `pilotctl` output is done by the CLI's display layer, not the daemon).
+
+```python
+d.info() -> dict
+# {"address": "0:0000.0000.0042", "hostname": "my-agent", "uptime_secs": 3600,
+#  "peers": 5, "encrypted_peers": 5, "bytes_sent": 1234, ...}
+```
+
+**`dial()`** - Opens a stream connection to a peer. Returns a `Conn` object. The target must be a *virtual address* (`N:XXXX.YYYY.YYYY:PORT`) — hostnames are not accepted, so resolve first with `resolve_hostname()`.
+
+```python
+peer = d.resolve_hostname("other-agent")
+with d.dial(f"{peer['address']}:1000") as conn:
+    conn.write(b"data")
+    response = conn.read(1024)
+```
+
+**`listen()`** - Listens for incoming connections on a port. Returns a `Listener`.
+
+```python
+with d.listen(5000) as listener:
+    conn = listener.accept()
+    data = conn.read(1024)
+```
+
+**`resolve_hostname()`** - Resolves a hostname to a virtual address.
+
+```python
+d.resolve_hostname("other-agent") -> {"address": "0:0000.0000.0042"}
+```
+
+#### High-Level Service Methods
+
+**`send_message()`** - Send via data exchange service (port 1001).
+
+```python
+result = d.send_message("other-agent", b"Hello!", "text")
+```
+
+**`send_file()`** - Send a file via data exchange (port 1001).
+
+```python
+result = d.send_file("other-agent", "/path/to/file.pdf")
+```
+
+**`publish_event()`** - Publish via event stream (port 1002).
+
+```python
+d.publish_event("other-agent", "sensor/temp", b"23.5")
+```
+
+**`subscribe_event()`** - Subscribe to events. The broker supports two topic forms only: an *exact* topic name, or the bare string `"*"` as a catch-all that delivers every published event. Segment wildcards like `sensor/*` are **not** supported — that string is treated as a literal topic name and will only match publishers that published to the exact topic `sensor/*`.
+
+```python
+# subscribe_event is a generator — iterate it to receive (topic, data) tuples
+for topic, data in d.subscribe_event("other-agent", "sensor.temp"):
+    print(f"{topic}: {data}")
+
+# Catch-all — "*" receives every topic the peer publishes
+for topic, data in d.subscribe_event("other-agent", "*"):
+    print(f"{topic}: {data}")
+```
+
+#### Administration Methods
+
+- `set_hostname(hostname: str)` - Set or update hostname
+- `set_visibility(public: bool)` - Set public visibility
+- `set_tags(tags: list[str])` - Set capability tags (max 3)
+- `set_webhook(url: str)` - Set or clear webhook URL
+
+### Conn [#conn]
+
+Represents an active stream connection. Supports context management (`with` statement).
+
+- `write(data: bytes) -> int` - Write data, returns bytes written
+- `read(size: int = 4096) -> bytes` - Read data (blocks until data arrives)
+- `close()` - Close the connection
+
+### Listener [#listener]
+
+Listens for incoming connections. Supports context management.
+
+- `accept() -> Conn` - Accept incoming connection (blocks)
+- `close()` - Close the listener
+
+## Usage Examples [#usage-examples]
+
+### Echo Server [#example-echo]
+
+```python
+from pilotprotocol import Driver
+
+with Driver() as d:
+    with d.listen(5000) as listener:
+        print("Listening on port 5000...")
+
+        while True:
+            conn = listener.accept()
+            data = conn.read(4096)
+            print(f"Received: {data.decode()}")
+            conn.write(data)  # Echo back
+            conn.close()
+```
+
+### Send Messages [#example-messages]
+
+```python
+from pilotprotocol import Driver
+import json
+
+with Driver() as d:
+    # Send text
+    d.send_message("other-agent", b"Hello!", "text")
+
+    # Send JSON
+    payload = json.dumps({"command": "status"}).encode()
+    d.send_message("other-agent", payload, "json")
+```
+
+### Pub/Sub Events [#example-pubsub]
+
+```python
+from pilotprotocol import Driver
+
+with Driver() as d:
+    d.publish_event("other-agent", "sensor.temperature", b"23.5")
+
+    # Subscribe to a specific topic (exact match) — or use "*" to receive everything.
+    # subscribe_event is a generator; iterate it to receive (topic, data) tuples.
+    for topic, data in d.subscribe_event("other-agent", "sensor.temperature"):
+        print(f"{topic}: {data.decode()}")
+```
+
+### File Transfer [#example-file]
+
+```python
+from pilotprotocol import Driver
+
+with Driver() as d:
+    result = d.send_file("other-agent", "/path/to/document.pdf")
+    print(f"Sent {result['filename']}: {result['sent']} bytes")
+```
+
+## Error Handling [#error-handling]
+
+```python
+from pilotprotocol import Driver, PilotError
+
+with Driver() as d:
+    try:
+        conn = d.dial("nonexistent-agent:1000")
+    except PilotError as e:
+        print(f"Error: {e}")  # e.g., "no route to host"
+```
+
+**Common exceptions:**
+
+- `PilotError` - Connection failures, protocol errors
+- `FileNotFoundError` - the native library could not be located (a missing file in `send_file` raises `PilotError`, not this)
+- `ValueError` - Invalid parameters
+
+## CLI Tools [#cli-tools]
+
+The package includes CLI wrappers for the Go binaries:
+
+- `pilotctl` - Main CLI tool (equivalent to the Go binary)
+- `pilot-daemon` - Start the daemon
+- `pilot-updater` - Background auto-updater
+
+These are standard Python console script entry points that execute the bundled binaries.
+
+## Platform Support [#platform-support]
+
+The SDK provides platform-specific wheels for:
+
+- **Linux** - x86\_64 (manylinux)
+- **macOS** - x86\_64, ARM64 (Apple Silicon)
+
+Windows support is planned for a future release.
+
+## Architecture [#architecture]
+
+The Python SDK uses `ctypes` to call Go functions exported via CGO:
+
+- **FFI Layer** - `ctypes` bindings to `libpilot.so/.dylib`
+- **Single Source of Truth** - All SDK calls go through the same Go code the CLI uses
+- **Memory Management** - Automatic cleanup of Go-allocated strings
+- **Handle Pattern** - Opaque handles for connections and listeners
+- **Error Handling** - Go errors converted to Python exceptions
+
+```bash
+┌─────────────┐    ctypes/FFI    ┌──────────────┐    Unix socket    ┌────────┐
+│  Python SDK │ ───────────────► │  libpilot.so │ ─────────────────► │ Daemon │
+│  (client.py)│                  │  (Go c-shared)│                   │        │
+└─────────────┘                  └──────────────┘                    └────────┘
+```
+
+## Additional Resources [#resources]
+
+- [PyPI Package](https://pypi.org/project/pilotprotocol/)
+- [SDK Source Code](https://github.com/pilot-protocol/sdk-python)
+- [SDK repository](https://github.com/pilot-protocol/sdk-python)
+- [Announcement Blog Post](/blog/python-sdk-pilot-protocol)
+
+Further reading: [Build an OpenClaw Agent That Self-Organizes](/blog/build-openclaw-agent-self-organizes-pilot) builds autonomous Python agents on Pilot (via the `pilotctl` CLI).
+
+[← Go SDK](/docs/go-sdk)[Node.js SDK →](/docs/node-sdk)

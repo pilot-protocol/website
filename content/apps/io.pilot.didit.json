@@ -1,0 +1,99 @@
+{
+ "kind": "app",
+ "slug": "io.pilot.didit",
+ "name": "Didit",
+ "seoTitle": "Didit: Agent App Methods & Install | Pilot Protocol",
+ "description": "One API for identity and fraud — KYC, liveness, face match, AML, and more, with a no-broker key you mint in one call. See setup and usage details.",
+ "headText": [
+  "Didit",
+  "Didit",
+  "·",
+  "io.pilot.didit",
+  "One API for identity and fraud — KYC, liveness, face match, AML, and more, with a no-broker key you mint in one call.",
+  "Security",
+  "Live on catalogue",
+  "Install",
+  "Copy",
+  "pilotctl appstore install",
+  "io.pilot.didit"
+ ],
+ "metrics": {
+  "version": "v1.0.0",
+  "methods": "40",
+  "size": "8.9 MB",
+  "permissions": "7 declared",
+  "platforms": "macOS · Linux"
+ },
+ "icon": "/appicons/optimized/io.pilot.didit-240.webp",
+ "related": [
+  "io.pilot.aegis"
+ ],
+ "toc": [
+  {
+   "id": "about-didit",
+   "text": "About Didit",
+   "level": 2
+  },
+  {
+   "id": "your-own-key-minted-in-one-call-no-email-no-code",
+   "text": "Your own key, minted in one call — no email, no code",
+   "level": 3
+  },
+  {
+   "id": "the-fast-path",
+   "text": "The fast path",
+   "level": 3
+  },
+  {
+   "id": "what-each-area-does",
+   "text": "What each area does",
+   "level": 3
+  },
+  {
+   "id": "pricing",
+   "text": "Pricing",
+   "level": 3
+  },
+  {
+   "id": "notes",
+   "text": "Notes",
+   "level": 3
+  },
+  {
+   "id": "methods-40",
+   "text": "Methods · 40",
+   "level": 2
+  },
+  {
+   "id": "full-usage-demo",
+   "text": "Full usage demo",
+   "level": 2
+  },
+  {
+   "id": "worked-examples",
+   "text": "Worked examples",
+   "level": 3
+  },
+  {
+   "id": "good-to-know",
+   "text": "Good to know",
+   "level": 3
+  },
+  {
+   "id": "next",
+   "text": "Next",
+   "level": 3
+  },
+  {
+   "id": "whats-new",
+   "text": "What’s New",
+   "level": 2
+  },
+  {
+   "id": "platform-compatibility",
+   "text": "Platform Compatibility",
+   "level": 2
+  }
+ ],
+ "html": "<h2 id=\"about-didit\">About Didit</h2><p><b>Didit is one API for identity and fraud</b> — KYC/ID verification, liveness, face match, AML screening, proof of address, database validation, and email/phone OTP, wrapped as a single Pilot app. It fronts Didit's full platform: <b>hosted verification sessions</b>, reusable <b>workflows</b>, <b>users</b>, <b>billing</b>, <b>blocklists</b>, <b>questionnaires</b>, and <b>webhooks</b> — 40 methods in all.</p><h3 id=\"your-own-key-minted-in-one-call-no-email-no-code\">Your own key, minted in one call — no email, no code</h3><p>The hard part of using an identity provider is usually onboarding: signing up, confirming an email code, and wiring the key. This app removes all of it. <b><code>didit.signup</code> takes no arguments</b> and returns a working key:</p><ul><li>It signs a keyless request (your Pilot identity) to Pilot's Didit broker. The broker provisions a mailbox on Pilot infrastructure, registers a Didit account, reads Didit's one-time email code <b>server-side</b>, verifies it, and hands back your account's <code>api_key</code>.</li><li>The adapter caches <code>{email, api_key}</code> to <code>$APP/secrets.json</code>. From then on <b>every other method sends your key as <code>x-api-key</code> automatically</b> — you never see an inbox, a code, or the key unless you ask (<code>didit.account</code>).</li><li><b>Idempotent:</b> the broker mints at most one Didit account per Pilot identity, so a repeat call — or a fresh install on another machine — returns the *same* account. The account is entirely <b>yours</b>: verifications bill to <b>your</b> Didit balance (top up with <code>didit.billing_topup</code>), and Pilot adds no markup. Each account includes Didit's <b>500 free full-KYC checks/month</b>; account creation, management, sessions CRUD, users, billing, blocklists, questionnaires and webhooks are all <b>free</b> — you pay only per verification you run.</li></ul><h3 id=\"the-fast-path\">The fast path</h3><p>1. <code>didit.signup {}</code> → your key is cached (one call, ~5s, no email). 2. <code>didit.create_workflow</code> <code>{workflow_label:\"KYC\", features:[{feature:\"OCR\"},{feature:\"LIVENESS\"},{feature:\"FACE_MATCH\"}]}</code> → get <code>uuid</code>. 3. <code>didit.create_session</code> <code>{workflow_id, vendor_data:\"user-123\"}</code> → send the user to the returned <code>url</code>. 4. <code>didit.get_decision</code> <code>{session_id}</code> (or a webhook) → read the Approved/Declined result and extracted data.</p><p><code>didit.account</code> returns your provisioned email + key any time.</p><h3 id=\"what-each-area-does\">What each area does</h3><ul><li><b>Sessions</b> — hosted flows where the user completes verification at a Didit URL, so you never handle document images: <code>create_session</code>, <code>get_decision</code>, <code>list_sessions</code>, <code>update_session_status</code> (approve/decline/resubmit), <code>delete_session</code>, <code>batch_delete_sessions</code>, <code>share_session</code> / <code>import_session</code> (B2B KYC reuse), <code>list_reviews</code>, <code>create_review</code>.</li><li><b>Workflows</b> — templates built from an ordered <code>features</code> array (<code>OCR</code>, <code>LIVENESS</code>, <code>FACE_MATCH</code>, <code>AML</code>, <code>PROOF_OF_ADDRESS</code>, <code>PHONE_VERIFICATION</code>, <code>EMAIL_VERIFICATION</code>, <code>DATABASE_VALIDATION</code>, <code>IP_ANALYSIS</code>, <code>AGE_ESTIMATION</code>, <code>NFC</code>, <code>QUESTIONNAIRE</code>, <code>KYB_*</code>), each with an optional per-feature <code>config</code>: <code>create_workflow</code>, <code>list_workflows</code>, <code>get_workflow</code>, <code>update_workflow</code>, <code>delete_workflow</code>.</li><li><b>Standalone checks (JSON, no session)</b> — <code>aml</code> (sanctions/PEP/adverse-media, $0.20), <code>database_validation</code> (gov sources, from $0.05).</li><li><b>Contact</b> — <code>email_send</code>/<code>email_check</code> ($0.03) and <code>phone_send</code>/<code>phone_check</code> (from $0.03) OTP verification.</li><li><b>Billing</b> — <code>billing_balance</code>, <code>billing_topup</code> (Stripe checkout URL).</li><li><b>Governance</b> — <code>blocklist_*</code> (auto-flag repeat faces/docs/phones/emails), <code>questionnaire_*</code> (custom forms), <code>users_*</code> (people grouped by your <code>vendor_data</code>), <code>get_webhook</code>/<code>update_webhook</code> (set + rotate the HMAC secret programmatically).</li></ul><h3 id=\"pricing\">Pricing</h3><p>Pay-per-check on <b>your</b> Didit balance — no Pilot markup. See the full rate card in <code>didit.help</code>. Highlights: full KYC bundle <b>$0.33/check</b> (first <b>500/month free</b>), ID verification $0.15, passive liveness $0.10, face match $0.05, <b>face search free</b>, AML $0.20, PoA $0.20, email/phone from $0.03. Image-upload APIs (direct ID scan, liveness, face match, face search, age estimation, PoA) run through the <b>hosted session</b> flow rather than as direct methods.</p><h3 id=\"notes\">Notes</h3><ul><li>The adapter dials exactly two hosts: Pilot's broker (<code>broker.pilotprotocol.network</code>) for the one-call <code>didit.signup</code>, and Didit (<code>verification.didit.me</code>) for every operational call with your cached key. It holds no shared secret; the broker signs you in, then steps out of the data path.</li><li>Plain request/response REST — no websockets, no async jobs. Rate limits: ~600 session-creates/min, 300/min per other method; the account OTP register is 5/IP/hour.</li><li>Errors surface verbatim: <code>401</code> (run <code>didit.signup</code> first), <code>403</code> (top up credits), <code>429</code> (back off).</li></ul><h2 id=\"methods-40\">Methods · 40</h2><code>didit.signup</code>Get your own Didit API key in ONE call — no email, no code, no human step. This signs a keyless request to Pilot's Didit broker, which provisions a mailbox on Pilot infrastructure, registers a Didit account, reads the emailed one-time code server-side, verifies it, and returns your account's api_key. The adapter caches {email, api_key} to $APP/secrets.json, and from then on EVERY other didit.* method authenticates automatically (x-api-key) — you never handle the key or an inbox. Idempotent: the broker mints at most one account per Pilot identity, so a repeat call (or a fresh install) returns the SAME account. Run this ONCE before any other method. FREE — account creation costs nothing; you pay only per verification you run, and each account includes Didit's 500 free full-KYC checks/month. The account (email + key) is retrievable any time via didit.account. Takes no arguments.<code>didit.account</code>Retrieve your cached Didit account — the email the broker provisioned for you and your api_key — plus a signed_up flag. Local, instant, FREE (reads $APP/secrets.json; no backend call). Use it to confirm you're signed up or to read your key. If signed_up is false, call didit.signup first.<code>didit.billing_balance</code>Check your remaining Didit credit balance (and auto-refill settings). FREE. Returns {balance, auto_refill_enabled, auto_refill_amount, auto_refill_threshold}. Verifications draw down this balance; check it before a batch of checks.<code>didit.billing_topup</code>Add credit to your Didit balance. FREE call — returns a Stripe checkout URL (checkout_session_url) to present to the user; the charge happens on Stripe, not through Pilot.<code>didit.create_workflow</code>Create a verification workflow — the reusable template that defines which checks a hosted session runs, in order. FREE to create; you're billed per feature only when a session actually runs it. Returns {uuid} — pass it as workflow_id to didit.create_session. The v3 API takes a `features` ARRAY (in the order users complete them); each item is {feature, config?} where feature is one of OCR, NFC, LIVENESS, FACE_MATCH, PROOF_OF_ADDRESS, QUESTIONNAIRE, DOCUMENT_AI, PHONE_VERIFICATION, EMAIL_VERIFICATION, DATABASE_VALIDATION, AML, IP_ANALYSIS, AGE_ESTIMATION, KYB_REGISTRY, KYB_DOCUMENTS, KYB_KEY_PEOPLE. Example: [{\"feature\":\"OCR\"},{\"feature\":\"LIVENESS\",\"config\":{\"face_liveness_method\":\"PASSIVE\"}},{\"feature\":\"FACE_MATCH\"}]. The API uses a strict field whitelist — any undeclared key (e.g. workflow_type) is a 400. Max 50 workflows per account.<code>didit.list_workflows</code>List your verification workflows with their features and total_price. FREE.<code>didit.get_workflow</code>Get one workflow by id. FREE.<code>didit.update_workflow</code>Update a workflow (partial — send only the fields to change; same field set as create_workflow, e.g. a replacement `features` array, workflow_label, status, is_default). FREE.<code>didit.delete_workflow</code>Delete a workflow. FREE. Existing sessions are unaffected. Returns 204.<code>didit.create_session</code>Start a hosted verification session for a user and get a URL to send them to. This is Didit's recommended path for ID/liveness/face-match/AML/PoA/etc. — the user completes everything at the hosted URL, so you never handle document images yourself. COST is the sum of the features the workflow enables (e.g. a full KYC bundle ≈ $0.33/check; 500 full-KYC checks/month are free), charged to your Didit balance when the session runs. Returns {session_id, session_token, url, status}. Poll didit.get_decision or set a webhook for the result. Nested objects (contact_details, expected_details) are passed as JSON objects.<code>didit.get_decision</code>Get the full decision and extracted data for a session — status plus id_verifications, liveness_checks, face_matches, aml_screenings, phone/email verifications, poa_verifications, database_validations, ip_analyses, and reviews. FREE (reading results). Image URLs in the response expire after 60 minutes. Statuses: Not Started | In Progress | In Review | Approved | Declined | Abandoned | Expired | Resubmitted.<code>didit.list_sessions</code>List/filter your sessions (paginated). FREE.<code>didit.update_session_status</code>Manually override a session's status (approve/decline/resubmit) — the programmatic-review action. FREE. For Resubmitted, pass nodes_to_resubmit; the session must be Declined, In Review, or Abandoned.<code>didit.delete_session</code>Permanently delete a session and all its data. FREE. Returns 204.<code>didit.batch_delete_sessions</code>Delete many sessions at once by number (or all). FREE.<code>didit.share_session</code>Generate a share_token so a partner can import a finished session (B2B KYC reuse). FREE. Works only for finished sessions.<code>didit.import_session</code>Import a session shared by a partner via its share_token. FREE.<code>didit.list_reviews</code>List the manual-review activity for a session (status changes, notes). FREE.<code>didit.create_review</code>Add a manual review decision to a session (Approved/Declined/In Review). FREE.<code>didit.aml</code>Screen a person or company against sanctions, PEP, and adverse-media watchlists (standalone, no session). COST $0.20/check on your Didit balance. Returns matches with scores and categories.<code>didit.database_validation</code>Cross-check identity fields against government / authoritative databases (standalone). COST from $0.05/check (1x1, single source) to $0.30 (2x2, two-source cross-validation); varies by country/source. Covers 1,000+ sources across 18+ countries.<code>didit.email_send</code>Send a one-time verification code to an email address. Part of email verification ($0.03 per completed verification, charged to your Didit balance).<code>didit.email_check</code>Verify the email OTP the user received. Completes an email verification ($0.03).<code>didit.phone_send</code>Send a one-time code by SMS / WhatsApp / Telegram. Part of phone verification (from $0.03 per completed verification, varies by channel).<code>didit.phone_check</code>Verify the phone OTP the user received. Completes a phone verification (from $0.03).<code>didit.blocklist_add</code>Add a session's face/document/phone/email to your blocklist so future matches auto-flag (FACE_IN_BLOCKLIST, etc.). FREE.<code>didit.blocklist_remove</code>Remove items from your blocklist. FREE.<code>didit.blocklist_list</code>List your blocklisted items. FREE.<code>didit.create_questionnaire</code>Create a custom form (7 element types) to attach to a questionnaire_verification workflow. FREE.<code>didit.list_questionnaires</code>List your questionnaires. FREE.<code>didit.get_questionnaire</code>Get one questionnaire. FREE.<code>didit.update_questionnaire</code>Update a questionnaire (partial). FREE.<code>didit.delete_questionnaire</code>Delete a questionnaire. FREE. Returns 204.<code>didit.list_users</code>List verified individuals (grouped by vendor_data) with status and session counts. FREE.<code>didit.get_user</code>Get one user by your vendor_data. FREE.<code>didit.update_user</code>Update a user's display name / manual status / metadata. FREE.<code>didit.batch_delete_users</code>Delete many users by vendor_data (or all). FREE.<code>didit.get_webhook</code>Get your webhook configuration (url, version, HMAC secret_shared_key, capture_method). FREE.<code>didit.update_webhook</code>Set/rotate your webhook config programmatically — no console needed. FREE.<code>didit.help</code>Discovery: every method with params, latency, and the per-endpoint pricing rate card.<h2 id=\"full-usage-demo\">Full usage demo</h2><p>When you need KYC/ID, liveness, face-match, AML, or email/phone OTP verification and want your own Didit key minted in one call with no email and no code.</p>Run this first — Mint your own Didit key in one call (no email, no code)Call<pre><code>pilotctl appstore call io.pilot.didit didit.signup '{}'</code></pre>→<code>{\"signed_up\":true,\"email\":\"...@...\",\"api_key\":\"...\"}</code><p>Run this ONCE. It caches your key locally; every other didit.* call then authenticates as you. Idempotent per Pilot identity, so a repeat call returns the same account.</p><h3 id=\"worked-examples\">Worked examples</h3>Build a KYC workflow (ID + liveness + face match)Call<pre><code>pilotctl appstore call io.pilot.didit didit.create_workflow '{\"workflow_label\":\"KYC\",\"features\":[{\"feature\":\"OCR\"},{\"feature\":\"LIVENESS\",\"config\":{\"face_liveness_method\":\"PASSIVE\"}},{\"feature\":\"FACE_MATCH\"}]}'</code></pre>→<code>{\"uuid\":\"wf_...\"}</code>Start a hosted session and get the user URLCall<pre><code>pilotctl appstore call io.pilot.didit didit.create_session '{\"workflow_id\":\"wf_...\",\"vendor_data\":\"user-123\"}'</code></pre>→<code>{\"session_id\":\"...\",\"url\":\"https://verify.didit.me/...\",\"status\":\"Not Started\"}</code><p>Send the user to url; they complete verification there, so you never handle document images. Poll get_decision or set a webhook.</p>Read the decision + extracted dataCall<pre><code>pilotctl appstore call io.pilot.didit didit.get_decision '{\"session_id\":\"...\"}'</code></pre>→<code>{\"status\":\"Approved\",\"id_verifications\":[...],\"face_matches\":[...]}</code>Standalone AML screening (no session)Call<pre><code>pilotctl appstore call io.pilot.didit didit.aml '{\"full_name\":\"Jane Doe\",\"entity_type\":\"person\",\"country\":\"USA\"}'</code></pre>→<code>{\"matches\":[...],\"total_hits\":0}</code>Check your Didit credit balanceCall<pre><code>pilotctl appstore call io.pilot.didit didit.billing_balance '{}'</code></pre>→<code>{\"balance\":12.50,\"auto_refill_enabled\":false}</code><h3 id=\"good-to-know\">Good to know</h3><ul><li>Run didit.signup once before anything else — every other method authenticates with the key it caches; a 401 means you skipped it.</li><li>Verification calls bill to YOUR own Didit account/balance (the key signup minted), not to Pilot — top up with didit.billing_topup (min $50); 500 full-KYC checks/month are free.</li><li>signup is idempotent per Pilot identity: a repeat call (or a fresh install) returns the SAME account, not a new one.</li><li>create_workflow takes a features ARRAY in completion order and uses a strict field whitelist — any undeclared key (e.g. workflow_type) is a 400.</li><li>Image-upload checks (ID scan, liveness, face match, PoA) run only via the hosted create_session flow, not as direct methods.</li></ul><h3 id=\"next\">Next</h3><ul><li><code>io.pilot.didit didit.help '{}'</code></li></ul><h2 id=\"whats-new\">What’s New</h2>v1.0.0Latest—<ul><li>Initial release — the full Didit identity platform over one byo HTTPS app: 39 methods + didit.help.</li><li>One-call broker signup: didit.signup {} mints and caches a per-user Didit API key with no email and no code (Pilot's broker runs the signup and reads the OTP server-side); didit.account retrieves it; ops stay direct to Didit.</li><li>KYC/ID, liveness, face match, AML, proof-of-address, database validation, email/phone OTP, hosted sessions, workflows, billing, blocklist, questionnaires, users, webhooks — per-endpoint pricing in didit.help.</li></ul><h2 id=\"platform-compatibility\">Platform Compatibility</h2>macOSApple Silicon5.1 MBSupportedmacOSIntel4.9 MBSupportedLinuxarm645.0 MBSupportedLinuxamd644.4 MBSupported"
+}

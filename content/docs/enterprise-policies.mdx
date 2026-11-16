@@ -1,0 +1,172 @@
+---
+title: "Network Policies"
+description: "Network policies on a self-hosted Pilot Protocol registry - membership caps, port whitelists, descriptions, and merge-on-update semantics."
+---
+
+Membership caps, port whitelists, and network metadata for enterprise networks.
+
+**Self-hosted registry.** Setting a policy needs the registry admin token (or the network’s own admin token), so it applies to networks on a registry you run. See [Self-hosting the registry](/docs/enterprise).
+
+## Overview [#overview]
+
+Network policies let owners and admins enforce constraints on enterprise networks. Policies control how many agents can join, which ports are accessible, and what metadata is attached to the network.
+
+Policies use **merge-on-update** semantics: you only send the fields you want to change, and unmentioned fields keep their current values. This makes partial updates safe - setting `max_members` does not reset `allowed_ports`.
+
+## MaxMembers [#max-members]
+
+Caps the total number of agents that can be members of the network at any given time. The owner counts toward the cap.
+
+| Behavior | What happens |
+| --- | --- |
+| Join attempt at capacity | Rejected with “membership limit reached” |
+| Invite accept at capacity | Rejected - the invite remains pending but the agent cannot join until a slot opens |
+| Value of 0 | No limit (default) |
+| Reducing below current count | Rejected - the registry refuses to set `max_members` below the current member count (“cannot set max\_members to N: network already has M members”). Remove members first, then lower the cap. |
+
+```bash
+# Set a membership cap of 50 agents
+pilotctl extras network policy <network_id> --max-members 50
+```
+
+## AllowedPorts [#allowed-ports]
+
+Restricts which Pilot ports are accessible within the network. When set, only connections to listed ports are permitted between network members. Connections to unlisted ports are silently dropped.
+
+| Behavior | What happens |
+| --- | --- |
+| Empty list (default) | All ports allowed |
+| Non-empty list | Only listed ports are accessible |
+| Maximum entries | 100 ports per policy |
+
+```bash
+# Allow only HTTP, HTTPS, and data exchange ports
+pilotctl extras network policy <network_id> --allowed-ports 80,443,1001
+```
+
+To reset the port whitelist (allow all ports again), set an empty list directly via the registry RPC `set_network_policy` with `"allowed_ports": []`.
+
+Port policies are enforced at the connection acceptance layer. The daemon checks the destination port against the network’s allowed ports list before accepting the connection.
+
+## Description [#description]
+
+A free-text metadata field for the network. Use it for human-readable context: purpose, team name, environment, or compliance notes.
+
+| Constraint | Value |
+| --- | --- |
+| Maximum length | 256 characters |
+| Default | Empty string |
+
+```bash
+pilotctl extras network policy <network_id> --description "Production fleet - US East region"
+```
+
+## Setting policies [#setting]
+
+### Set a policy [#set-a-policy]
+
+```bash
+pilotctl extras network policy <network_id> --max-members 50 --allowed-ports 80,443
+```
+
+Protocol command: `set_network_policy`. Requires owner or admin role (or admin token).
+
+```json
+{
+  "type": "set_network_policy",
+  "network_id": 1,
+  "max_members": 50,
+  "allowed_ports": [80, 443],
+  "description": "Production fleet",
+  "admin_token": "your-admin-token"
+}
+```
+
+The message is dispatched on `type`, and policy fields (`max_members`, `allowed_ports`, `description`) sit flat at the top level - not nested under a `policy` object. The `pilotctl extras network policy` CLI builds this message for you and sends the admin token from `PILOT_ADMIN_TOKEN`.
+
+Merge-on-update: only include the fields you want to change. Omitted fields are preserved.
+
+### Get a policy [#get-a-policy]
+
+```bash
+pilotctl extras network policy <network_id>
+```
+
+Protocol command: `get_network_policy`. Returns the current policy for the network.
+
+```bash
+# Example response
+{
+  "max_members": 50,
+  "allowed_ports": [80, 443],
+  "description": "Production fleet"
+}
+```
+
+### Audit trail [#audit-trail]
+
+Every policy change emits a `network.policy_changed` audit event. It records the network ID, the old and new `max_members` values, and the old and new `allowed_ports` *counts* (the number of whitelisted ports, not the port values). Description changes are not recorded in the event.
+
+## Programmable (expr) policies [#expr]
+
+Beyond the static caps above, an enterprise network can carry a **programmable expression policy** - a versioned document of rules (using the `expr-lang` expression language) that the policy runner evaluates on membership events to gate joins and to prune or fill trust links. This is a separate slot from the static `set_network_policy` record and is managed with its own RPCs.
+
+### Set an expr policy [#set-an-expr-policy]
+
+Protocol command: `set_expr_policy`. Requires owner/admin role (or admin token). The `expr_policy` field is required and may be a JSON string or object; it must declare `"version": 1` and at least one rule. Sending an empty string or `"null"` clears the policy.
+
+```json
+{
+  "type": "set_expr_policy",
+  "network_id": 1,
+  "expr_policy": {
+    "version": 1,
+    "rules": [ /* ... */ ]
+  },
+  "admin_token": "your-admin-token"
+}
+```
+
+The reply is `{"type": "set_expr_policy_ok", "network_id": 1}` (with `"cleared": true` when the policy was removed). Setting or clearing an expr policy emits a `network.expr_policy_set` / `network.expr_policy_cleared` audit event.
+
+### Get an expr policy [#get-an-expr-policy]
+
+Protocol command: `get_expr_policy`. Returns `{"type": "get_expr_policy_ok", "network_id": N, "expr_policy": {...}}`; the `expr_policy` field is omitted when the network has no programmable policy.
+
+### Go SDK [#go-sdk]
+
+The registry client exposes `SetExprPolicy(networkID uint16, policyJSON json.RawMessage, adminToken string)` and `GetExprPolicy(networkID uint16)`. Blueprints can provision the same document declaratively via the `expr_policy` field - see [Blueprints](/docs/enterprise-blueprints).
+
+## Member tags [#member-tags]
+
+Member tags are admin-assigned labels attached to a specific node *within a network* (distinct from the node's own capability tags). They are the inputs programmable (expr) policies match against - e.g. keeping only nodes tagged `gpu`, or evicting nodes without a required tag.
+
+### Set member tags [#set-member-tags]
+
+Protocol command: `set_member_tags`. Requires an admin token. Takes `network_id`, `target_node_id`, and a `tags` array (max 10, lowercase alphanumeric with hyphens; an empty array clears them).
+
+```json
+{
+  "type": "set_member_tags",
+  "network_id": 1,
+  "target_node_id": 42,
+  "tags": ["gpu", "us-east"],
+  "admin_token": "your-admin-token"
+}
+```
+
+Returns `{"type": "set_member_tags_ok", "network_id": N, "target_node_id": M, "tags": [...]}` and emits a `member_tags.changed` audit event.
+
+### Get member tags [#get-member-tags]
+
+Protocol command: `get_member_tags`. Pass `network_id` with a `target_node_id` for one node's tags, or `target_node_id: 0` to return the tags of every member.
+
+The Go SDK exposes `MemberTagsGet(networkID uint16, nodeID uint32)` and `MemberTagsSet(networkID uint16, nodeID uint32, tags []string)` for the same operations.
+
+## Persistence [#persistence]
+
+Policies are stored as part of the network record in the registry. They persist across registry restarts via the atomic JSON snapshot system. When the registry loads from a snapshot, all network policies are restored exactly as they were.
+
+Policy state is also included in HA replication snapshots, so standby registries (started via `rendezvous -standby <primary:port> -repl-token <token>`) have the same policies as the primary.
+
+**See also:** [RBAC & Access Control](/docs/enterprise-rbac) - who can set policies (owners and admins). [Blueprints](/docs/enterprise-blueprints) - set policies declaratively during network provisioning. [← Identity & SSO](/docs/enterprise-identity)[Audit Log & Export →](/docs/enterprise-audit)

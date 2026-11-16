@@ -1,0 +1,124 @@
+/* Shared by the security, self-hosting, compatibility and p2p pages. Names are prefixed `kit-`. */
+
+/* A dash riding a path with pathLength=100, from just before its start to just past its end. */
+@keyframes kit-ride {
+  to {
+    stroke-dashoffset: -101;
+  }
+}
+
+/* Packets crossing an HTML track of unknown width (one 8px square). */
+@keyframes kit-cross {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  8%,
+  92% {
+    opacity: 1;
+  }
+  100% {
+    left: calc(100% - 8px);
+    opacity: 0;
+  }
+}
+
+@keyframes kit-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes kit-pop {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+    filter: blur(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kit-motion {
+    animation: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* The sky site (NEXT_PUBLIC_SITE_VARIANT=sky)                         */
+/* ------------------------------------------------------------------ */
+
+/*
+ * The home page's sky tokens (src/components/v4/v4.css scopes them to `.v4-page`), made available to the
+ * product pages on the sky site. Same values; the home page's own declarations still win there.
+ */
+:root.site-sky {
+  --sky-900: #0a2a9c;
+  --sky-800: #0b2ca0;
+  --sky-600: #1f5bff;
+  --sky-400: #5aa9ff;
+  --sky-200: #b9dcff;
+  --sky-50: #eaf3ff;
+  --sky-accent: #0b2ca0;
+  --sky-fill: #1f5bff;
+  --sky-deep: #0b2ca0;
+  --sky-tint: rgb(31 91 255 / 0.08);
+  --sky-tile: rgb(26 26 26 / 0.05);
+}
+:root.site-sky.dark {
+  --sky-accent: #8ec1ff;
+  --sky-fill: #2f6bff;
+  --sky-deep: #1438b8;
+  --sky-tint: rgb(90 169 255 / 0.12);
+  --sky-tile: rgb(242 242 236 / 0.05);
+}
+/* Contrast bands on the sky site are deep sky blue in both themes (globals.css): pale sky accents inside them. */
+:root.site-sky .pp-invert {
+  --sky-accent: #8ec1ff;
+  --sky-tint: rgb(142 193 255 / 0.14);
+  --sky-tile: rgb(255 255 255 / 0.06);
+}
+
+/* PathPacket round: a dot riding the path, parked just past each end so its cap never shows. */
+@keyframes kit-ride-round {
+  to {
+    stroke-dashoffset: var(--kit-end);
+  }
+}
+
+/* Form errors on the sky site (the green site keeps lime-ink). */
+:root.site-sky {
+  --kit-error: #b3372a;
+}
+:root.site-sky.dark {
+  --kit-error: #ff9b8f;
+}
+
+/* Cards drawn inside SVG diagrams: the sky card shadow, as a filter (box-shadow doesn't reach SVG shapes). */
+.kit-svg-card {
+  filter: drop-shadow(0 1px 1px rgb(11 44 160 / 0.06)) drop-shadow(0 8px 14px rgb(11 44 160 / 0.09));
+}
+.dark .kit-svg-card {
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.3)) drop-shadow(0 8px 16px rgb(0 0 0 / 0.28));
+}
+
+/* A document drawn as a sheet of paper with its top right corner folded over (the documents a reviewer asks for). */
+.kit-sheet {
+  --sheet: #ffffff;
+  --sheet-fold: #e4e4de;
+  border-radius: 6px;
+  background: linear-gradient(225deg, transparent 12.7px, var(--sheet) 12.7px);
+  filter: drop-shadow(0 0 0.5px rgb(26 26 26 / 0.3)) drop-shadow(0 8px 10px rgb(10 42 156 / 0.12));
+}
+.dark .kit-sheet {
+  --sheet: #2a2a28;
+  --sheet-fold: #3d3d3a;
+  filter: drop-shadow(0 0 0.5px rgb(255 255 255 / 0.25)) drop-shadow(0 8px 10px rgb(0 0 0 / 0.4));
+}
+.kit-sheet-fold {
+  background: var(--sheet-fold);
+  clip-path: polygon(0 0, 0 100%, 100% 100%);
+  border-bottom-left-radius: 3px;
+}

@@ -1,0 +1,471 @@
+/* Four chores, built for people vs built for agents (Figma 210:13040).
+ * Base styles are each scene's finished state; animations run from the start state to it,
+ * so reduced motion simply shows the end of every scene. */
+
+/* ---------- Layout: plain tabs on phones, a pinned one-screen stage from 640px wide ---------- */
+
+.chores-pin {
+  padding: 48px 0 64px;
+}
+.chores-gap-tabs,
+.chores-gap-panel {
+  margin-top: 40px;
+}
+.chores-side {
+  padding: 40px 0;
+}
+.chores-gap-scene {
+  margin-top: 32px;
+}
+.chores-gap-figure {
+  margin-top: 24px;
+}
+.chores-big {
+  font-size: clamp(52px, 6.2vw, 80px);
+}
+.chores-unit {
+  font-size: clamp(22px, 2.5vw, 32px);
+}
+/* Two-line captions on narrow columns keep their room, so switching chores doesn't move what's below. */
+.chores-caption {
+  min-height: 43.5px;
+}
+.chores-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.chores-centre,
+.chores-vs-mid {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .chores-pin {
+    padding-top: 64px;
+  }
+  .chores-gap-tabs,
+  .chores-gap-panel {
+    margin-top: 48px;
+  }
+  .chores-gap-scene {
+    margin-top: 40px;
+  }
+  .chores-gap-figure {
+    margin-top: 32px;
+  }
+  .chores-caption {
+    max-width: none;
+  }
+}
+@media (min-width: 1024px) {
+  .chores-pin {
+    padding: 48px 0 88px;
+  }
+  .chores-side {
+    padding: 56px 0 90px;
+  }
+  .chores-caption {
+    min-height: 0;
+  }
+}
+/* Side by side, with the dashed centre line and Vs between them (on phones Vs sits on its own row). */
+@media (min-width: 1024px), (min-width: 640px) and (min-height: 560px) {
+  .chores-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .chores-centre,
+  .chores-vs-mid {
+    display: block;
+  }
+  .chores-vs-row {
+    display: none;
+  }
+}
+
+/* Pinned (the same query as PIN in chores.tsx): the section is the scroll track, 58vh per chore, and a
+ * one-screen stage (the screen under the 64px header, at most 880px) sticks centred there while you scroll it.
+ * It starts right at the section's top, so the gaps to the sections around it stay those of a normal section.
+ * Spacing follows the screen's height, and the component scales the stage down if a short screen can't fit it. */
+@media (min-width: 640px) and (min-height: 560px) {
+  .chores {
+    position: relative;
+    height: calc(min(100svh - 64px, 880px) + 4 * 58vh);
+  }
+  .chores-pin {
+    position: sticky;
+    top: max(64px, calc(50svh + 32px - 440px));
+    display: flex;
+    height: min(100svh - 64px, 880px);
+    flex-direction: column;
+    justify-content: center;
+    padding: 0;
+    overflow: hidden;
+  }
+  .chores-gap-tabs,
+  .chores-gap-panel {
+    margin-top: clamp(20px, 4.4vh, 44px);
+  }
+  .chores-side {
+    padding: clamp(18px, 4.2vh, 48px) 0 clamp(22px, 5.4vh, 56px);
+  }
+  .chores-gap-scene {
+    margin-top: clamp(16px, 3.6vh, 36px);
+  }
+  .chores-gap-figure {
+    margin-top: clamp(10px, 2.8vh, 28px);
+  }
+  .chores-big {
+    font-size: min(clamp(44px, 6.2vw, 80px), 8.6vh);
+  }
+  .chores-unit {
+    font-size: min(clamp(20px, 2.5vw, 32px), 3.4vh);
+  }
+}
+@media (min-width: 1024px) and (min-height: 560px) {
+  .chores-caption {
+    min-height: 0;
+  }
+}
+
+.chores {
+  --chores-line: var(--sky-card-line);
+  --chores-bar: var(--sky-400);
+  --chores-bar-track: rgb(255 255 255 / 0.14);
+  --chores-vs: rgb(179 179 171 / 0.32);
+  --chores-rule: 26 26 26;
+}
+.dark .chores {
+  --chores-bar: var(--sky-fill);
+  --chores-bar-track: rgb(20 20 19 / 0.1);
+  --chores-vs: rgb(155 155 147 / 0.28);
+  --chores-rule: 242 242 236;
+}
+
+/* ---------- Cards and tiles from the design ---------- */
+
+/* The kit's flat card (white, a hairline border, no shadow). Radius stays in the markup: this file is unlayered,
+ * so it would beat Tailwind's rounded-* utilities. */
+.chores-card {
+  background: var(--color-card);
+  border: 1px solid var(--chores-line);
+}
+.chores-line {
+  border-color: var(--chores-line);
+}
+
+/* ---------- Tabs (the kit's .sky-seg, plus the progress line) ---------- */
+
+.chores-tab {
+  transition:
+    color 200ms ease,
+    background-color 200ms ease,
+    transform 160ms var(--ease-out);
+}
+.chores-tab:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .chores-tab[data-on="false"]:hover .sky-seg-num {
+    color: var(--color-fg);
+  }
+}
+/* Phones: the four tabs sit two by two, each half the width, instead of scrolling sideways. */
+@media (max-width: 639.98px) {
+  .sky-seg.chores-seg {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .sky-seg.chores-seg .sky-seg-tab {
+    justify-content: center;
+    gap: 8px;
+    padding: 0 8px;
+    font-size: 14px;
+  }
+  .sky-seg.chores-seg .sky-seg-num {
+    font-size: 14px;
+  }
+}
+
+/* Pinned: a line along the chosen tab's bottom edge, for how far through this chore's stretch of the scroll you are. */
+.chores-track {
+  background: var(--chores-bar-track);
+}
+.chores-bar {
+  background: var(--chores-bar);
+  transform-origin: left;
+}
+
+/* ---------- The frame: the dashed centre line and Vs (the rules above and below are the kit's SkyRule) ---------- */
+
+/* Figma "Vector 239": 10px dashes every 20px, rising from nothing to 20% in the middle. */
+.chores-centre {
+  background: repeating-linear-gradient(to bottom, rgb(var(--chores-rule) / 0.2) 0 10px, transparent 10px 20px);
+  mask-image: linear-gradient(to bottom, transparent, #000 50%, transparent);
+}
+.chores-dash {
+  background: repeating-linear-gradient(to right, rgb(var(--chores-rule) / 0.2) 0 10px, transparent 10px 20px);
+}
+.chores-dash-l {
+  mask-image: linear-gradient(to right, transparent, #000);
+}
+.chores-dash-r {
+  mask-image: linear-gradient(to left, transparent, #000);
+}
+.chores-vs {
+  color: var(--chores-vs);
+}
+
+/* ---------- Scenes ---------- */
+
+.chores-stage {
+  --chores-step: 1.6s;
+}
+
+/* Things in a scene rise in, staggered by --i. */
+.chores-pop {
+  animation: chores-pop 600ms var(--ease-out) calc(var(--i, 0) * 60ms + 120ms) both;
+}
+@keyframes chores-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+    filter: blur(4px);
+  }
+}
+
+/* Figures under each side. */
+.chores-figure {
+  animation: chores-figure 600ms var(--ease-out) 180ms both;
+}
+@keyframes chores-figure {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(6px);
+  }
+}
+.chores-roll {
+  transform: translateY(var(--to));
+  animation: chores-roll 1300ms var(--ease-out) calc(var(--d, 0ms) + 200ms) both;
+}
+@keyframes chores-roll {
+  from {
+    transform: translateY(0);
+  }
+}
+
+/* 1 · the laptop's network rows take turns being current. */
+.chores-row {
+  opacity: 0.45;
+}
+.chores-row-bg {
+  opacity: 0;
+}
+.chores-row:first-child,
+.chores-row:first-child .chores-row-bg {
+  opacity: 1;
+}
+.chores-row,
+.chores-row .chores-row-bg {
+  animation: chores-row calc(var(--chores-step) * 3) var(--ease-out) calc(var(--i, 0) * var(--chores-step)) infinite;
+}
+@keyframes chores-row {
+  0%,
+  30% {
+    opacity: 1;
+  }
+  36%,
+  100% {
+    opacity: 0.45;
+  }
+}
+.chores-row .chores-row-bg {
+  animation-name: chores-row-bg;
+}
+@keyframes chores-row-bg {
+  0%,
+  30% {
+    opacity: 1;
+  }
+  36%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 1 · "Running on" swaps in step with the rows; the address doesn't move. */
+.chores-swap {
+  opacity: 0;
+  transform: translateY(4px);
+  filter: blur(2px);
+}
+.chores-swap:first-child {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+.chores-swap {
+  animation: chores-swap calc(var(--chores-step) * 3) var(--ease-out) calc(var(--i, 0) * var(--chores-step)) infinite;
+}
+@keyframes chores-swap {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+    filter: blur(2px);
+  }
+  6%,
+  30% {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  36%,
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+    filter: blur(2px);
+  }
+}
+.chores-pulse {
+  animation: chores-pulse var(--chores-step) var(--ease-out) infinite;
+}
+@keyframes chores-pulse {
+  0% {
+    transform: scale(0.94);
+  }
+  18%,
+  100% {
+    transform: none;
+  }
+}
+
+/* 2 · STUN probes reach up to the beacon, then the direct tunnel draws and locks; messages then cross it as
+ * beams (the shared Beam, driven from the component). */
+.chores-probe {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: chores-draw 700ms var(--ease-in-out) calc(var(--i, 0) * 120ms + 250ms) both;
+}
+@keyframes chores-fade {
+  from {
+    opacity: 0;
+  }
+}
+.chores-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: chores-draw 800ms var(--ease-in-out) 1100ms both;
+}
+@keyframes chores-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+.chores-lock {
+  animation: chores-lock 400ms var(--ease-out) 1900ms both;
+}
+@keyframes chores-lock {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+.chores-tl {
+  animation: chores-rise 500ms var(--ease-out) var(--d, 0ms) both;
+}
+@keyframes chores-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* 3 · requests arrive one at a time (--a), each waits for an answer, then the pick is pressed and the outcome
+ * shows (--r). The finished state, and reduced motion, is every outcome showing. */
+.chores-req {
+  animation: chores-pop 500ms var(--ease-out) var(--a, 0ms) both;
+}
+.chores-ask {
+  opacity: 0;
+  visibility: hidden;
+  animation: chores-ask 220ms ease var(--r, 0ms) both;
+}
+@keyframes chores-ask {
+  from {
+    opacity: 1;
+    visibility: visible;
+  }
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+.chores-ask [data-pick="true"] {
+  animation: chores-press 320ms var(--ease-out) calc(var(--r, 0ms) - 340ms) both;
+}
+.chores-yes[data-pick="true"] {
+  --chores-pressed: var(--sky-deep);
+}
+.chores-no[data-pick="true"] {
+  --chores-pressed: color-mix(in srgb, var(--color-fg) 16%, transparent);
+}
+@keyframes chores-press {
+  50% {
+    transform: scale(0.93);
+  }
+  50%,
+  100% {
+    background: var(--chores-pressed);
+    color: #ffffff;
+  }
+}
+.chores-no[data-pick="true"] {
+  animation-name: chores-press-no;
+}
+@keyframes chores-press-no {
+  50% {
+    transform: scale(0.93);
+  }
+  50%,
+  100% {
+    background: var(--chores-pressed);
+  }
+}
+.chores-done {
+  animation: chores-done 380ms var(--ease-out) var(--r, 0ms) both;
+}
+@keyframes chores-done {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+    filter: blur(2px);
+  }
+}
+
+/* 4 · the query goes out, then the reply lands. */
+.chores-reply {
+  animation: chores-pop 600ms var(--ease-out) 1300ms both;
+}
+
+/* Until the comparison is on screen the scenes wait on their first (empty) frame, so chore 1 plays when it's
+ * seen rather than at page load. The ambient loops also rest while the section is off screen. */
+[data-live="false"] :is(.chores-stage *, .chores-figure, .chores-roll),
+[data-offscreen="true"] :is(.chores-row, .chores-row-bg, .chores-swap, .chores-pulse) {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chores-stage *,
+  .chores-figure,
+  .chores-roll {
+    animation: none !important;
+  }
+  .chores-stage :is(.chores-pop, .chores-tl, .chores-reply, .chores-req, .chores-done),
+  .chores-figure {
+    animation: chores-fade 300ms ease both !important;
+  }
+  .chores-tab:active {
+    transform: none;
+  }
+}

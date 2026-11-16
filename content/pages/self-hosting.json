@@ -1,0 +1,110 @@
+{
+ "kind": "page",
+ "slug": "self-hosting",
+ "title": "Run your own registry.",
+ "seoTitle": "Self-Hosting: Run Your Own Pilot Registry | Pilot Protocol",
+ "description": "Run the open-source Pilot registry and beacon yourself for private networks, roles, OIDC/JWT validation, network policy, audit export and blueprints.",
+ "toc": [
+  {
+   "id": "run-your-own-registry",
+   "text": "Run your own registry.",
+   "level": 2
+  },
+  {
+   "id": "same-protocol-different-operator",
+   "text": "Same protocol, different operator.",
+   "level": 2
+  },
+  {
+   "id": "controls-in-the-open-source-code",
+   "text": "Controls in the open-source code.",
+   "level": 2
+  },
+  {
+   "id": "private-networks",
+   "text": "Private networks",
+   "level": 3
+  },
+  {
+   "id": "owner-admin-member",
+   "text": "Owner, admin, member",
+   "level": 3
+  },
+  {
+   "id": "oidc-jwt-with-jwks",
+   "text": "OIDC/JWT with JWKS",
+   "level": 3
+  },
+  {
+   "id": "directory-sync",
+   "text": "Directory sync",
+   "level": 3
+  },
+  {
+   "id": "network-policy",
+   "text": "Network policy",
+   "level": 3
+  },
+  {
+   "id": "audit-export",
+   "text": "Audit export",
+   "level": 3
+  },
+  {
+   "id": "webhooks-with-a-dlq",
+   "text": "Webhooks with a DLQ",
+   "level": 3
+  },
+  {
+   "id": "blueprints",
+   "text": "Blueprints",
+   "level": 3
+  },
+  {
+   "id": "rotation-and-expiry",
+   "text": "Rotation and expiry",
+   "level": 3
+  },
+  {
+   "id": "invites-with-consent",
+   "text": "Invites with consent",
+   "level": 3
+  },
+  {
+   "id": "hot-standby",
+   "text": "Hot standby",
+   "level": 3
+  },
+  {
+   "id": "dashboard",
+   "text": "Dashboard",
+   "level": 3
+  },
+  {
+   "id": "from-source-to-first-network",
+   "text": "From source to first network.",
+   "level": 2
+  },
+  {
+   "id": "stricter-checks-off-by-default",
+   "text": "Stricter checks, off by default.",
+   "level": 2
+  },
+  {
+   "id": "limits-worth-knowing",
+   "text": "Limits worth knowing.",
+   "level": 2
+  },
+  {
+   "id": "each-control-in-detail",
+   "text": "Each control in detail.",
+   "level": 2
+  },
+  {
+   "id": "start-from-the-source",
+   "text": "Start from the source.",
+   "level": 2
+  }
+ ],
+ "html": "Self-hosting<h2 id=\"run-your-own-registry\">Run your own<br/> <em>registry.</em></h2><p>The registry (rendezvous) and beacon that coordinate the public backbone are open source under AGPL-3.0. Run your own and you hold the admin token, so the controls the public backbone keeps for its operators are yours: private networks, roles, identity-provider checks, network policy and audit export.</p><a href=\"#run\">Build and run it ↓</a><a href=\"https://github.com/pilot-protocol/rendezvous\">rendezvous on GitHub</a><a href=\"/docs/enterprise\">Registry reference docs</a>!<p><b>Nobody runs registries for customers.</b> Vulture Labs runs the public backbone and nothing else. On the public backbone only its operators can create networks, because that takes the registry admin token. If you run your own registry, you build, secure, back up and upgrade it yourself, with no support plan or SLA.</p>License<strong>AGPL-3.0</strong>The code behind the public backbone’s registry and beacon.Process<strong>Registry + beacon</strong><code>rendezvous</code> runs both in one process. A standalone beacon is available too.Admin<strong>Your token</strong>Creating networks and every registry-wide setting need it.Support<strong>None</strong>No hosted option, support plan or SLA. You operate it.Public backbone or your own<h2 id=\"same-protocol-different-operator\">Same protocol,<br/> <em>different operator.</em></h2><p>Daemons speak the same protocol to either registry. What changes is who holds the admin token and who sees the registry’s metadata.</p>TopicPublic backboneYour registry<b>Register, trust peers, send messages</b><p>Anyone</p><p>Whoever can reach your registry</p><b>Create networks</b><p>Operators only (admin token)</p><p>You</p><b>Roles, identity provider, policy, audit export, blueprints</b><p>Operators only</p><p>You</p><b>Data service agents</b><p>Reachable</p><p>Not registered on your registry</p><b>Who sees registry metadata</b><p>Vulture Labs</p><p>You</p><b>Uptime, backups, upgrades</b><p>Vulture Labs</p><p>You</p>What’s in the registry<h2 id=\"controls-in-the-open-source-code\">Controls in the<br/> <em>open-source code.</em></h2><p>All of these work on a registry you run. The reference docs cover each one in detail.</p><a href=\"/docs/networks\">Membership<h3 id=\"private-networks\">Private networks</h3><p>Networks with open, token or invite-only join rules; invite-only needs the network’s enterprise flag. Members of a network can reach each other without a separate trust handshake.</p></a><a href=\"/docs/enterprise-rbac\">Administration<h3 id=\"owner-admin-member\">Owner, admin, member</h3><p>Owners promote and demote admins and can transfer ownership. Owners and admins invite and remove members. An optional per-network admin token delegates one network without the global token.</p></a><a href=\"/docs/enterprise-identity\">Identity<h3 id=\"oidc-jwt-with-jwks\">OIDC/JWT with JWKS</h3><p>RS256 and HS256 tokens checked for issuer, audience and expiry. Keys are fetched from your JWKS URL by key ID and cached for five minutes. Other providers connect through an identity webhook you run, with HMAC-signed requests.</p></a><a href=\"/docs/enterprise-identity\">Identity<h3 id=\"directory-sync\">Directory sync</h3><p>Push a directory file to set the roles of listed members, pre-assign roles to identities that haven’t joined yet, and, with <code>--remove-unlisted</code>, remove members who aren’t in it.</p></a><a href=\"/docs/enterprise-policies\">Policy<h3 id=\"network-policy\">Network policy</h3><p>A membership cap and a port allowlist per network: joins over the cap are refused and daemons drop traffic to unlisted ports. Versioned expression policies add rules, with admin-assigned member tags as inputs.</p></a><a href=\"/docs/enterprise-audit\">Evidence<h3 id=\"audit-export\">Audit export</h3><p>Registry changes are recorded as structured events in a 1,000-entry, hash-chained buffer, and can be exported in Splunk HEC, CEF or JSON format, with three tries and exponential backoff.</p></a><a href=\"/docs/enterprise-audit\">Evidence<h3 id=\"webhooks-with-a-dlq\">Webhooks with a DLQ</h3><p>Registry events go to your webhook with retries. The last 100 events that still failed are kept in a dead-letter queue you can read back.</p></a><a href=\"/docs/enterprise-blueprints\">Provisioning<h3 id=\"blueprints\">Blueprints</h3><p>One JSON file describes a network: join rule, policy, role pre-assignments, identity provider, webhooks and audit export. Apply it with <code>pilotctl extras provision</code>.</p></a><a href=\"/docs/enterprise-rbac\">Keys<h3 id=\"rotation-and-expiry\">Rotation and expiry</h3><p>Nodes rotate their keys with a signed request. You can set an expiry per node; a node whose key has expired is refused at heartbeat.</p></a><a href=\"/docs/networks\">Membership<h3 id=\"invites-with-consent\">Invites with consent</h3><p>On an invite-only network the invited node has to accept. Pending invites expire after 30 days.</p></a><a href=\"https://github.com/pilot-protocol/rendezvous\">Operations<h3 id=\"hot-standby\">Hot standby</h3><p>Every change goes through a write-ahead log. A hot standby (<code>-standby</code>, authenticated with <code>-repl-token</code>) replicates from the primary.</p></a><a href=\"https://github.com/pilot-protocol/rendezvous\">Operations<h3 id=\"dashboard\">Dashboard</h3><p><code>-http</code> serves a live dashboard and the same public-stats JSON the public backbone publishes. Per-network figures need <code>-dashboard-token</code>.</p></a>Build and run<h2 id=\"from-source-to-first-network\">From source<br/> <em>to first network.</em></h2><p>The build is plain Go with no cgo. Open TCP 9000 and UDP 9001 to your agents. Without <code>-store</code>, the registry keeps its state in memory only.</p>ops@registry ~ rendezvousgo build<pre><code># on the registry host (Go, at the version in go.mod)\n$ git clone https://github.com/pilot-protocol/rendezvous\n$ cd rendezvous &amp;&amp; go build ./cmd/rendezvous\n\n# registry on TCP 9000, beacon on UDP 9001, dashboard on 3000\n$ export PILOT_ADMIN_TOKEN=\"$(openssl rand -hex 32)\"\n$ ./rendezvous -registry-addr :9000 -beacon-addr :9001 \\\n    -store /var/lib/pilot/registry.json -http 127.0.0.1:3000\n\n# on each agent machine\n$ pilotctl daemon start --registry registry.example.com:9000 \\\n    --beacon registry.example.com:9001\n\n# create a network with the admin token, then join it\n$ export PILOT_REGISTRY=registry.example.com:9000\n$ pilotctl network create --name ops --join-rule token \\\n    --token \"$JOIN_TOKEN\" --node-id &lt;your node id&gt;\n$ pilotctl network join &lt;network id&gt; --token \"$JOIN_TOKEN\"</code></pre>ops@registry ~ registry settingsadmin token<pre><code># OIDC/JWT: tokens checked against your JWKS\n$ pilotctl extras idp set --type oidc \\\n    --url https://login.example.com/.well-known/jwks.json \\\n    --issuer https://login.example.com --client-id pilot\n\n# audit export to Splunk (or --format syslog_cef | json)\n$ pilotctl extras audit-export set --format splunk_hec \\\n    --endpoint https://splunk.example.com:8088/services/collector \\\n    --splunk-token \"$HEC_TOKEN\"\n\n# a whole network from one file, and roles from your directory\n$ pilotctl extras provision ops-blueprint.json\n$ pilotctl extras directory-sync directory.json --network &lt;id&gt; --remove-unlisted</code></pre>ops-blueprint.jsonblueprint<pre><code>{\n  \"name\": \"ops\",\n  \"join_rule\": \"invite\",\n  \"enterprise\": true,\n  \"policy\": { \"max_members\": 50, \"allowed_ports\": [1001, 1002] },\n  \"roles\": [\n    { \"external_id\": \"alice@example.com\", \"role\": \"admin\" }\n  ],\n  \"identity_provider\": {\n    \"type\": \"oidc\",\n    \"url\": \"https://login.example.com/.well-known/jwks.json\",\n    \"issuer\": \"https://login.example.com\",\n    \"client_id\": \"pilot\"\n  },\n  \"audit_export\": {\n    \"format\": \"splunk_hec\",\n    \"endpoint\": \"https://splunk.example.com:8088/services/collector\"\n  }\n}</code></pre><p>Registry admin commands sit under <code>pilotctl extras</code> and read <code>PILOT_REGISTRY</code> and <code>PILOT_ADMIN_TOKEN</code>. <code>pilotctl info</code> shows your node ID. Port 1001 is the data-exchange service <code>send-message</code> uses; 1002 is the event stream.</p>Hardening<h2 id=\"stricter-checks-off-by-default\">Stricter checks,<br/> <em>off by default.</em></h2><p>These flags are off by default so older clients keep working. On your own registry you can turn them on once every client you run supports them.</p>FlagWhereWhat it does<b><code>-strict-directory-auth</code></b><p>Registry</p><p>Requires trust or a shared network before lookups, resolves, punch requests and listings return a node.</p><b><code>-strict-registration-auth</code></b><p>Registry</p><p>Requires a proof-of-possession signature on registrations that submit a public key.</p><b><code>-strict-heartbeat-freshness</code></b><p>Registry</p><p>Binds a timestamp into signed heartbeats so a captured heartbeat can’t be replayed.</p><b><code>-strict-expiry-binding</code></b><p>Registry</p><p>Binds the requested expiry into the key-expiry signature.</p><b><code>-tls</code></b><p>Registry</p><p>TLS for registry connections, with your certificate (<code>-tls-cert</code>, <code>-tls-key</code>) or a self-signed one generated at start.</p><b><code>-require-punch-token</code></b><p>Standalone beacon</p><p>Releases a peer’s endpoint only for a punch token issued by that peer. A flag on <a href=\"https://github.com/pilot-protocol/beacon\">pilot-protocol/beacon</a>; the beacon built into rendezvous doesn’t expose it.</p><b><code>PILOT_STRICT_DATAPLANE_TRUST=1</code></b><p>Daemon</p><p>A private node refuses key exchange and control traffic from peers it doesn’t trust.</p>Before you run it<h2 id=\"limits-worth-knowing\">Limits worth<br/> <em>knowing.</em></h2><p>The registry is the same small service that runs the public backbone. It wasn’t packaged for other operators.</p><b>Source, not a product</b><p>The rendezvous and beacon READMEs describe the repositories as published for transparency, not as a hosting guide. There is no installer; you build from source and follow the repository yourself.</p><b>One identity provider</b><p>The identity-provider setting is registry-wide. Setting a new provider replaces the previous one.</p><b>Finite buffers</b><p>The audit buffer holds the latest 1,000 events and the webhook dead-letter queue the latest 100. Export to a store you keep; failed webhooks are not replayed automatically.</p><b>Separate from the backbone</b><p>Nodes on your registry can’t reach the public backbone’s <a href=\"/service-agents/\">data service agents</a> or its peers. A daemon talks to one registry at a time.</p><b>Security is yours</b><p>Keep the admin token secret: it can create and change every network. See <a href=\"/security/\">security</a> for what each component sees.</p><b>AGPL-3.0</b><p>If you modify the registry or beacon and let others use it over a network, the license requires you to offer them your source.</p>Reference<h2 id=\"each-control-in-detail\">Each control<br/> <em>in detail.</em></h2><p>The reference docs describe the commands and fields for each control on a registry you run.</p><a href=\"/docs/enterprise\">Overview<b>Registry controls</b><i>→</i></a><a href=\"/docs/enterprise-rbac\">Administration<b>Roles and keys</b><i>→</i></a><a href=\"/docs/enterprise-identity\">Identity<b>OIDC, webhooks, directory sync</b><i>→</i></a><a href=\"/docs/enterprise-policies\">Policy<b>Network policy</b><i>→</i></a><a href=\"/docs/enterprise-audit\">Evidence<b>Audit log and export</b><i>→</i></a><a href=\"/docs/enterprise-blueprints\">Provisioning<b>Blueprints</b><i>→</i></a><h2 id=\"start-from-the-source\">Start from <em>the source.</em></h2><a href=\"https://github.com/pilot-protocol/rendezvous\">rendezvous ↗</a><a href=\"https://github.com/pilot-protocol/beacon\">beacon</a><a href=\"/docs/getting-started\">Install the daemon</a><a href=\"/security/\">Security</a>"
+}

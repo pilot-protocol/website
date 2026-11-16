@@ -1,0 +1,83 @@
+---
+title: "Error Codes"
+description: "Reference for Pilot Protocol error codes: protocol, registry, transport, IPC, network, trust, and CLI errors with resolution steps."
+---
+
+Reference for protocol, registry, IPC, and transport errors.
+
+## Protocol errors [#protocol]
+
+| Error | Description | Resolution |
+| --- | --- | --- |
+| `checksum mismatch` | Packet CRC32 does not match. Data corrupted in transit. | Usually transient. If persistent, check for MTU issues or middlebox interference. |
+| `packet too short` | Received data is smaller than the 34-byte header. | Likely a truncated packet. Check network path for fragmentation. |
+| `(silently dropped)` | A tunnel frame with an unrecognized magic prefix (not PILT/PILS/PILK/PILA/PILP) is silently discarded — no error is emitted. | Non-Pilot traffic on the tunnel port. Check firewall rules. |
+| `encrypted packet but no key` | Received an encrypted packet from a peer with no established key. | Keys may have desynchronized after restarts. Restart both peers or re-establish trust. |
+
+## Registry errors [#registry]
+
+| Error | Description | Resolution |
+| --- | --- | --- |
+| `network creation is disabled` | Registry has network creation turned off. | Enable network creation in registry configuration. |
+| `network name required` | Empty name passed to create-network. | Provide a network name. |
+| `network name too long` | Name exceeds 63 characters. | Shorten the network name to 63 characters or fewer. |
+| `network name must be lowercase alphanumeric with hyphens` | Name contains invalid characters. | Use only lowercase letters, digits, and hyphens. Must start and end with alphanumeric. |
+| `network name is reserved` | Attempted to use a reserved name (e.g., `backbone`). | Choose a different network name. |
+| `network already exists` | A network with this name already exists. | Use a unique name or join the existing network. |
+| `network ID space exhausted` | All 65,535 network IDs are allocated. | Delete unused networks to free IDs. |
+| `network not found` | The specified network ID does not exist. | Verify the network ID with `pilotctl network list`. |
+| `registration requires public_key` | Registration was attempted without a public key (or the registry is full: `registry full`). | Ensure the daemon has an identity at `~/.pilot/identity.json`. |
+| `invalid email` | The `--email` flag (or `email` config key) is malformed. | Use a valid `local@domain` address, or omit the flag and let the daemon synthesise `<fingerprint>@nodes.pilotprotocol.network`. |
+| `invalid admin token` | The admin token does not match the registry’s configured token. | Check the admin token in your configuration. |
+| `hostname already in use` | Another node has already registered this hostname. | Choose a different hostname. |
+
+## Transport errors [#transport]
+
+| Error | Description | Resolution |
+| --- | --- | --- |
+| `connection refused` | Target node rejected the connection (untrusted and not in a shared network). | Establish trust with `pilotctl handshake` or add both agents to the same network. |
+| `dial timeout` (CLI code `timeout`) | No response from the target within the timeout period. | Check that the target is online, reachable, and has a tunnel to this node. Try `pilotctl ping`. |
+| `idle timeout` | Connection closed after 120 seconds of inactivity. | Send data or keepalive probes to keep the connection alive. |
+| `send buffer full` | Flow control window is zero; the receiver is not consuming data. | Wait for the receiver to process pending data, or check for a stuck receiver. |
+
+## IPC errors [#ipc]
+
+| Error | Description | Resolution |
+| --- | --- | --- |
+| `daemon is not running` | Cannot connect to the IPC socket at `/tmp/pilot.sock`. | Start the daemon: `pilotctl daemon start` |
+| `network: missing sub-command` | The network IPC command had no sub-command byte. | Use a valid subcommand: list, join, leave, members, invite. |
+| `network join: missing network_id` | Join command did not include a network ID. | Provide a valid 16-bit network ID. |
+| `topic too long` | Pub/sub topic name exceeds the maximum length. | Shorten the topic name. |
+| `payload too large` | Event stream payload exceeds the maximum size. | Reduce the payload size or split into multiple messages. |
+| `frame too large` | Data exchange frame exceeds the maximum size. | Reduce the frame size. |
+
+## Network errors [#network]
+
+| Error | Description | Resolution |
+| --- | --- | --- |
+| `invalid token for network` | The join token does not match the network’s configured token. | Verify the token with the network admin. |
+| `invite-only networks require invite flow` | Tried to join an invite-only network with a token. | Ask the admin to run `pilotctl network invite`, then accept with `pilotctl network accept`. |
+| `node already in network` | The agent is already a member. | No action needed - the agent is already joined. |
+| `cannot leave the backbone network` | Attempted to leave network 0 (the backbone). | The backbone cannot be left. Use `pilotctl deregister` to fully unregister. |
+| `node is not a member of network` | Tried to remove a node that is not in the network. | Verify network membership with `pilotctl network members`. |
+| `cannot delete the backbone network` | Attempted to delete network 0. | The backbone is permanent and cannot be deleted. |
+| `network membership limit reached` | The network reached its configured member cap (`Policy.MaxMembers`). | Raise the network policy's member limit, or remove an existing member first. |
+
+## Trust errors [#trust]
+
+| Error | Description | Resolution |
+| --- | --- | --- |
+| `handshake already pending` | A handshake request to this peer is already in progress. | Wait for the peer to approve or reject, or check with `pilotctl pending`. |
+| `already trusted` | Mutual trust already exists with this peer. | No action needed. |
+| `cannot resolve hostname` | The hostname does not resolve to any registered agent. | Verify the hostname is correct and the target agent is registered. |
+
+## CLI errors [#cli]
+
+| Code | Meaning | Resolution |
+| --- | --- | --- |
+| `not_running` | Daemon is not running or socket is unreachable. | Start the daemon: `pilotctl daemon start` |
+| `connection_failed` | Cannot reach the registry or a peer. | Check network connectivity and registry address. Try `PILOT_REGISTRY=host:port`. |
+| `invalid_argument` | A CLI argument is missing or malformed. | Check command syntax with `pilotctl` (no args) for usage. |
+| `not_found` | The requested resource (peer, hostname, connection) was not found. | Verify the identifier exists and is reachable. |
+
+**Need help?** See [Troubleshooting](/docs/troubleshooting) for step-by-step diagnostic procedures, or check [Diagnostics](/docs/diagnostics) for built-in debugging tools. [← Integration](/docs/integration)[Troubleshooting →](/docs/troubleshooting)

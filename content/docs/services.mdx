@@ -1,0 +1,115 @@
+---
+title: "Built-in Services"
+description: "Echo, data exchange, and event stream - built-in services running out of the box. Read configuration and operating guidance."
+---
+
+Three services run automatically when the daemon starts - no extra binaries needed.
+
+## Choosing the right service [#choosing]
+
+Each built-in service handles a different communication pattern. Pick the one that matches your need:
+
+| Need | Service | Port |
+| --- | --- | --- |
+| Liveness check / latency measurement | [Echo](#echo) | 7 |
+| Send a message to someone's inbox or transfer a file | [Data Exchange](#dataexchange) | 1001 |
+| Real-time event streaming with topic filtering | [Event Stream](#eventstream) | 1002 |
+
+For interactive request-response (send a message, get a reply), use [`connect`](/docs/messaging#connect) or [`send`](/docs/messaging#send-recv) on port 1000 (stdio) instead - those are stream connections, not a built-in service.
+
+## Echo (port 7) [#echo]
+
+The echo service reflects back any data sent to it. Used for liveness probes, latency measurement, and throughput benchmarks.
+
+```bash
+# Ping (uses echo port internally)
+pilotctl ping other-agent
+
+# Throughput benchmark (sends data through echo)
+pilotctl bench other-agent 10   # 10 MB
+```
+
+The echo service is zero-config - it accepts connections and echoes data back. No application logic.
+
+## Data Exchange (port 1001) [#dataexchange]
+
+A typed frame protocol that handles structured data transfer. Messages arrive in the recipient's `~/.pilot/inbox/`, files in `~/.pilot/received/`. Both persist until the recipient reads or clears them - delivery survives disconnections.
+
+### Frame types [#frame-types]
+
+| Type | ID | Description |
+| --- | --- | --- |
+| **Text** | 1 | Plain text messages |
+| **Binary** | 2 | Raw binary data |
+| **JSON** | 3 | Structured JSON payloads |
+| **File** | 4 | File transfer with metadata (filename embedded in payload) |
+
+### Wire format [#wire-format]
+
+Each frame is: `[4-byte type][4-byte length][payload]`. For file frames, the payload contains an additional header: `[2-byte name length][name bytes][file data]`. The default frame cap is 1 GiB (env-overridable via `PILOT_DATAEXCHANGE_MAX_FRAME`); the default send-file path is chunked with no fixed per-frame cap.
+
+### Messages [#messages]
+
+```bash
+pilotctl send-message other-agent --data "task complete"
+pilotctl send-message other-agent --data '{"result":42}' --type json
+```
+
+### Files [#files]
+
+```bash
+pilotctl send-file other-agent ./report.pdf
+```
+
+### Inspecting the mailbox [#inspecting-the-mailbox]
+
+```bash
+pilotctl inbox       # List messages
+pilotctl received    # List files
+```
+
+See [Messaging](/docs/messaging#send-message) for full details on message types, inbox format, and file transfer.
+
+## Event Stream (port 1002) [#eventstream]
+
+A pub/sub broker with topic filtering and wildcards. Each daemon runs its own independent broker - there is no central message server. Subscribers connect to the publisher's daemon, and the broker distributes events to all active subscribers on that node.
+
+```bash
+# Subscribe to status events
+pilotctl subscribe other-agent status --count 5
+
+# Publish a status event
+pilotctl publish other-agent status --data "processing complete"
+```
+
+Delivery is at-most-once - events go only to currently connected subscribers. No persistence, no replay. See the [Pub/Sub](/docs/pubsub) page for architecture details, delivery guarantees, topic conventions, and wildcard syntax.
+
+## Custom services [#custom]
+
+The three services above are just the built-in ones. You can listen on **any port** using the Go or Python SDK to build custom services. The daemon routes incoming connections to your handler based on the destination port number.
+
+```bash
+# Example: listen on port 3000 using the Go SDK
+listener, _ := d.Listen(3000)
+conn, _ := listener.Accept()
+```
+
+See the [Go SDK](/docs/go-sdk) and [Python SDK](/docs/python-sdk) for details on building custom services.
+
+## Disabling services [#disabling]
+
+Each built-in service can be disabled when running the standalone daemon binary:
+
+```bash
+pilot-daemon -no-echo          # Disable echo (port 7)
+pilot-daemon -no-dataexchange   # Disable data exchange (port 1001)
+pilot-daemon -no-eventstream    # Disable event stream (port 1002)
+```
+
+These flags live on the `pilot-daemon` binary (see [Daemon flags](/docs/configuration#daemon-flags)). They are **not** forwarded by `pilotctl daemon start`, so to disable a built-in service you need to invoke `pilot-daemon` directly (e.g. via a systemd unit or container entrypoint).
+
+Disabling a service means the daemon will not accept connections on that port. Other nodes trying to connect to a disabled service will get a connection error.
+
+Data exchange also accepts an optional `-dataexchange-b64` flag, which replaces the `data` field in inbox messages with a lossless `data_b64` field for binary payloads. Off by default — see [Inbox file format](/docs/messaging#inbox-file-format).
+
+**Further reading:** [Running HTTP Services Over an Encrypted Agent Overlay](/blog/http-services-over-encrypted-overlay) [← Networks](/docs/networks)[Pub/Sub →](/docs/pubsub)

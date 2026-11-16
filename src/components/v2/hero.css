@@ -1,0 +1,78 @@
+/* Variant B hero: the agent pass in 3D. */
+.pass-scene {
+  perspective: 1400px;
+}
+.pass {
+  --rx: 0deg;
+  --ry: 0deg;
+  --gx: 50%;
+  --gy: 30%;
+  transform-style: preserve-3d;
+  animation: pass-float 7s ease-in-out infinite;
+}
+.pass-card {
+  transform: rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(-2deg);
+  transition: transform 500ms var(--ease-out);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.7) inset,
+    0 2px 4px rgb(11 11 10 / 0.08),
+    0 30px 60px -22px rgb(11 11 10 / 0.38),
+    0 60px 90px -50px rgb(11 11 10 / 0.3);
+}
+.pass-sheen {
+  background: radial-gradient(420px circle at var(--gx) var(--gy), rgb(255 255 255 / 0.55), transparent 55%);
+  mix-blend-mode: soft-light;
+  opacity: 0.9;
+}
+@keyframes pass-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -8px;
+  }
+}
+
+.pass-stamp {
+  opacity: 0;
+  transform: rotate(-14deg) scale(1.6);
+  filter: blur(3px);
+  transition:
+    opacity 260ms var(--ease-out),
+    transform 420ms cubic-bezier(0.2, 1.4, 0.4, 1),
+    filter 260ms var(--ease-out);
+}
+.pass-stamp[data-on="true"] {
+  opacity: 0.9;
+  transform: rotate(-14deg) scale(1);
+  filter: blur(0);
+}
+
+.pass-packet {
+  animation: pass-packet 2.4s var(--ease-in-out) infinite;
+}
+@keyframes pass-packet {
+  0% {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+  20%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pass,
+  .pass-packet {
+    animation: none;
+  }
+  .pass-card {
+    transition: none;
+  }
+}

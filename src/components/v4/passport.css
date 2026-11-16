@@ -1,0 +1,690 @@
+/*
+ * Passport section (Figma 220:22867). The booklet rests on the section's hatched panel (the kit's HatchPanel); it
+ * opens on scroll-in and stamps land one by one. Keyframes are prefixed `pp-`. Colours come from the theme and the
+ * sky tokens.
+ */
+
+.pp {
+  --pp-paper: color-mix(in srgb, var(--color-card) 93%, var(--sky-200));
+  --pp-line: color-mix(in srgb, var(--sky-fill) 24%, transparent);
+  --pp-line-soft: color-mix(in srgb, var(--sky-fill) 10%, transparent);
+  --pp-ink-blue: var(--sky-fill);
+  --pp-ink-dark: color-mix(in srgb, var(--color-fg) 86%, var(--sky-900));
+  --pp-board: var(--sky-deep);
+  --pp-shade: rgb(10 24 70 / 0.14);
+  --pp-rule: color-mix(in srgb, var(--color-fg) 9%, transparent);
+  --pp-mrz: color-mix(in srgb, var(--color-fg) 62%, transparent);
+  --pp-band: linear-gradient(100deg, color-mix(in srgb, var(--sky-200) 70%, transparent) 0%, color-mix(in srgb, var(--sky-50) 80%, transparent) 55%, rgb(250 226 210 / 0.75) 100%);
+  --pp-ease: cubic-bezier(0.62, 0.02, 0.2, 1);
+  --pp-open-ms: 1300ms;
+  /* One cover: the same margin around the pages on every side, the same radius on every outer corner. */
+  --pp-m: 8px;
+  --pp-r: 16px;
+  --pp-ri: calc(var(--pp-r) - var(--pp-m));
+}
+.dark .pp {
+  --pp-paper: color-mix(in srgb, var(--color-card) 86%, var(--sky-900));
+  --pp-line: color-mix(in srgb, var(--sky-accent) 19%, transparent);
+  --pp-line-soft: color-mix(in srgb, var(--sky-accent) 8%, transparent);
+  --pp-ink-blue: var(--sky-accent);
+  --pp-ink-dark: color-mix(in srgb, var(--color-fg) 92%, var(--sky-200));
+  --pp-shade: rgb(0 0 0 / 0.38);
+  --pp-mrz: color-mix(in srgb, var(--color-fg) 58%, transparent);
+  --pp-band: linear-gradient(100deg, rgb(47 107 255 / 0.22) 0%, rgb(90 169 255 / 0.1) 55%, rgb(214 150 140 / 0.16) 100%);
+}
+
+/* ---------- Stage, spread and boards ---------- */
+
+.pp-stage {
+  container: pp-stage / inline-size;
+  margin: 0;
+}
+
+/* Phones: the spine runs across, the data page sits above the trust page. */
+.pp-spread {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  perspective: 1700px;
+  transform: translateY(-25%);
+  transition: transform var(--pp-open-ms) var(--pp-ease);
+}
+.pp-spread[data-open="true"] {
+  transform: none;
+}
+
+/* The booklet's shadow belongs to its boards: the back board under the pages, and the inside of the cover,
+   which carries its shadow with it as it turns. The outside of the cover casts none, so closed it's one shadow. */
+.pp-board {
+  position: relative;
+  background: var(--pp-board);
+  box-shadow: var(--shadow-float);
+}
+/* Phones: the spine runs across, so the square corners meet along it. */
+.pp-board-back {
+  grid-row: 2;
+  padding: 0 var(--pp-m) var(--pp-m);
+  border-radius: 0 0 var(--pp-r) var(--pp-r);
+}
+.pp-board-front {
+  height: 100%;
+  padding: var(--pp-m) var(--pp-m) 0;
+  border-radius: var(--pp-r) var(--pp-r) 0 0;
+}
+/* Under the spine, the back board reaches 1px under the cover so no background shows through the fold. */
+.pp-board-back::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--pp-board) var(--pp-m),
+    var(--pp-paper) var(--pp-m) calc(100% - var(--pp-m)),
+    var(--pp-board) calc(100% - var(--pp-m))
+  );
+}
+.pp-spread:not([data-open="true"]) .pp-board-back::before {
+  opacity: 0;
+}
+/* The fold itself: one quiet crease across the open booklet. */
+.pp-spread::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  translate: 0 -0.5px;
+  background: rgb(6 14 44 / 0.16);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease;
+}
+.dark .pp-spread::after {
+  background: rgb(0 0 0 / 0.32);
+}
+.pp-spread[data-open="true"]::after {
+  opacity: 1;
+  transition-delay: calc(var(--pp-open-ms) - 200ms);
+}
+/* The inside of the cover closes the passport. */
+.pp-closer {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pp-closer:focus-visible {
+  outline: 2px solid var(--sky-400);
+  outline-offset: 4px;
+}
+.pp-page-box {
+  position: relative;
+  aspect-ratio: 1.1;
+}
+.pp-board-front .pp-page-box {
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+.pp-page {
+  isolation: isolate;
+  background: var(--pp-paper);
+  color: var(--color-fg);
+}
+.pp-page-data {
+  border-radius: var(--pp-ri) var(--pp-ri) 0 0;
+}
+.pp-page-trust {
+  border-radius: 0 0 var(--pp-ri) var(--pp-ri);
+}
+
+/* The fold: pages darken a little toward the spine. */
+.pp-spine-shade {
+  position: absolute;
+  pointer-events: none;
+}
+.pp-spine-shade-data {
+  inset: auto 0 0;
+  height: 12%;
+  background: linear-gradient(to top, var(--pp-shade), transparent);
+}
+.pp-spine-shade-trust {
+  inset: 0 0 auto;
+  height: 12%;
+  background: linear-gradient(to bottom, var(--pp-shade), transparent);
+}
+
+/* ---------- The cover ---------- */
+
+.pp-cover {
+  position: absolute;
+  inset: 50% 0 0;
+  z-index: 2;
+  transform-style: preserve-3d;
+  transform-origin: 50% 0;
+  transition: transform var(--pp-open-ms) var(--pp-ease);
+}
+.pp-cover[data-open="true"] {
+  transform: rotateX(180deg);
+}
+@media (hover: hover) {
+  .pp-cover:not([data-open="true"]):hover {
+    transform: rotateX(9deg);
+    transition-duration: 500ms;
+  }
+}
+
+.pp-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.pp-face-back {
+  transform: rotateX(180deg);
+}
+/* The data page comes out of the cover's shadow as it lands. */
+.pp-face-back::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--pp-r) var(--pp-r) 0 0;
+  background: rgb(6 14 44 / 0.5);
+  opacity: 0;
+  pointer-events: none;
+}
+.pp-cover[data-open="true"] .pp-face-back::after {
+  animation: pp-light var(--pp-open-ms) var(--pp-ease) backwards;
+}
+.pp-spread[data-closing="true"] .pp-face-back::after {
+  animation: pp-dim var(--pp-open-ms) var(--pp-ease) both;
+}
+@keyframes pp-dim {
+  0% {
+    opacity: 0;
+  }
+  55%,
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes pp-light {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.pp-cover-face {
+  overflow: hidden;
+  border-radius: 0 0 var(--pp-r) var(--pp-r);
+  background:
+    radial-gradient(120% 100% at 22% 12%, rgb(255 255 255 / 0.13), transparent 55%),
+    radial-gradient(140% 120% at 82% 110%, rgb(0 0 0 / 0.32), transparent 62%),
+    var(--pp-board);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pp-cover-face:disabled {
+  cursor: default;
+}
+.pp-cover-face:focus-visible {
+  outline: 2px solid var(--sky-400);
+  outline-offset: 4px;
+}
+.pp-cover-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.09;
+  mix-blend-mode: overlay;
+}
+.pp-cover-frame {
+  position: absolute;
+  inset: clamp(10px, 3cqw, 18px);
+  border-radius: 10px;
+  border: 1px solid rgb(0 0 0 / 0.2);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.12);
+}
+.pp-foil {
+  background: linear-gradient(100deg, var(--sky-200) 0%, #ffffff 38%, var(--sky-200) 60%, var(--sky-400) 100%);
+  background-size: 220% 100%;
+  background-position: 30% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 -1px 0 rgb(0 0 0 / 0.35)) drop-shadow(0 1px 0 rgb(255 255 255 / 0.1));
+  transition: background-position 900ms var(--ease-out);
+}
+.pp-cover:hover .pp-foil {
+  background-position: 80% 0;
+}
+/* Pressed into the board: darker than the cover, lit along its lower edge. */
+.pp-deboss {
+  color: color-mix(in srgb, var(--pp-board) 66%, black);
+  filter: drop-shadow(0 1px 0 rgb(255 255 255 / 0.24)) drop-shadow(0 -1px 0 rgb(0 0 0 / 0.4));
+}
+
+/* ---------- Wide stages: the spine runs down the middle ---------- */
+
+@container pp-stage (min-width: 720px) {
+  .pp-spread {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: none;
+    transform: translateX(-25%);
+  }
+  .pp-board-back {
+    grid-row: auto;
+    padding: var(--pp-m) var(--pp-m) var(--pp-m) 0;
+    border-radius: 0 var(--pp-r) var(--pp-r) 0;
+  }
+  .pp-board-back::before {
+    top: 0;
+    bottom: 0;
+    left: -1px;
+    right: auto;
+    width: 2px;
+    height: auto;
+    background: linear-gradient(
+      180deg,
+      var(--pp-board) var(--pp-m),
+      var(--pp-paper) var(--pp-m) calc(100% - var(--pp-m)),
+      var(--pp-board) calc(100% - var(--pp-m))
+    );
+  }
+  .pp-spread::after {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    right: auto;
+    width: 1px;
+    height: auto;
+    translate: -0.5px 0;
+  }
+  .pp-board-front {
+    padding: var(--pp-m) 0 var(--pp-m) var(--pp-m);
+    border-radius: var(--pp-r) 0 0 var(--pp-r);
+  }
+  .pp-page-data {
+    border-radius: var(--pp-ri) 0 0 var(--pp-ri);
+  }
+  .pp-page-trust {
+    border-radius: 0 var(--pp-ri) var(--pp-ri) 0;
+  }
+  .pp-spine-shade-data {
+    inset: 0 0 0 auto;
+    width: 12%;
+    height: auto;
+    background: linear-gradient(to left, var(--pp-shade), transparent);
+  }
+  .pp-spine-shade-trust {
+    inset: 0 auto 0 0;
+    width: 12%;
+    height: auto;
+    background: linear-gradient(to right, var(--pp-shade), transparent);
+  }
+  .pp-cover {
+    inset: 0 0 0 50%;
+    transform-origin: 0 50%;
+  }
+  .pp-cover[data-open="true"] {
+    transform: rotateY(-180deg);
+  }
+  @media (hover: hover) {
+    .pp-cover:not([data-open="true"]):hover {
+      transform: rotateY(-9deg);
+    }
+  }
+  .pp-face-back {
+    transform: rotateY(180deg);
+  }
+  .pp-face-back::after {
+    border-radius: var(--pp-r) 0 0 var(--pp-r);
+  }
+  .pp-cover-face {
+    border-radius: 0 var(--pp-r) var(--pp-r) 0;
+  }
+}
+
+/* Landscape pages once a page is wide enough for the long layout. */
+@container pp-stage (min-width: 480px) and (max-width: 719.98px) {
+  .pp-board-back .pp-page-box {
+    aspect-ratio: 1.6;
+  }
+}
+@container pp-stage (min-width: 720px) and (max-width: 953.98px) {
+  .pp-board-back .pp-page-box {
+    aspect-ratio: 1.12;
+  }
+}
+@container pp-stage (min-width: 954px) {
+  .pp-board-back .pp-page-box {
+    aspect-ratio: 1.42;
+  }
+}
+
+/* The cover's shadow sweeping off the trust page as it lifts. */
+.pp-turn-shadow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgb(6 14 44 / 0.4), rgb(6 14 44 / 0.12) 60%, transparent);
+  opacity: 0;
+}
+@container pp-stage (min-width: 720px) {
+  .pp-turn-shadow {
+    background: linear-gradient(to right, rgb(6 14 44 / 0.4), rgb(6 14 44 / 0.12) 60%, transparent);
+  }
+}
+.pp-spread[data-open="true"] .pp-turn-shadow {
+  animation: pp-turn var(--pp-open-ms) var(--pp-ease) backwards;
+}
+.pp-spread[data-closing="true"] .pp-turn-shadow {
+  animation: pp-turn-back var(--pp-open-ms) var(--pp-ease) both;
+}
+@keyframes pp-turn-back {
+  0%,
+  30% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes pp-turn {
+  0% {
+    opacity: 1;
+  }
+  70%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---------- Data page details ---------- */
+
+/* The fine lines fade out before they reach the page's edges. */
+.pp-band-lines {
+  -webkit-mask: linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%);
+  mask: linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%);
+}
+.pp-band {
+  background: var(--pp-band);
+  -webkit-mask: linear-gradient(to bottom, #000 55%, transparent);
+  mask: linear-gradient(to bottom, #000 55%, transparent);
+}
+/* The fingerprint sits on a quiet tile, like a photo on the page. */
+.pp-photo {
+  background: color-mix(in srgb, var(--sky-200) 20%, var(--color-card));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sky-900) 10%, transparent);
+}
+.dark .pp-photo {
+  background: color-mix(in srgb, var(--sky-900) 34%, var(--color-card));
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.07);
+}
+.pp-fp-0 {
+  fill: color-mix(in srgb, var(--sky-accent) 15%, transparent);
+}
+.pp-fp-1 {
+  fill: var(--sky-400);
+}
+.pp-fp-2 {
+  fill: var(--sky-fill);
+}
+.pp-fp-3,
+.pp-fp-end {
+  fill: var(--sky-accent);
+}
+.pp-fp-mark {
+  stroke: var(--sky-accent);
+}
+.dark .pp-fp-1 {
+  fill: var(--sky-fill);
+}
+.dark .pp-fp-2 {
+  fill: var(--sky-400);
+}
+
+/* Hologram: a pattern of P marks in the laminate, lit where the light (the pointer) falls. */
+.pp-holo,
+.pp-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.pp-holo {
+  background:
+    radial-gradient(circle at var(--hx, 30%) var(--hy, 35%), color-mix(in srgb, var(--sky-400) 90%, transparent) 0%, color-mix(in srgb, var(--sky-200) 50%, transparent) 12%, transparent 28%),
+    linear-gradient(
+      118deg,
+      transparent calc(var(--hx, 30%) - 18%),
+      color-mix(in srgb, var(--sky-200) 30%, transparent) var(--hx, 30%),
+      transparent calc(var(--hx, 30%) + 18%)
+    );
+  -webkit-mask: url("/v4/passport-holo.svg") 0 0 / 40px 40px repeat;
+  mask: url("/v4/passport-holo.svg") 0 0 / 40px 40px repeat;
+  mix-blend-mode: multiply;
+  opacity: 0.42;
+}
+.dark .pp-holo {
+  mix-blend-mode: screen;
+  opacity: 0.3;
+}
+.pp-sheen {
+  background: linear-gradient(
+    118deg,
+    transparent calc(var(--hx, 30%) - 34%),
+    rgb(255 255 255 / 0.5) var(--hx, 30%),
+    transparent calc(var(--hx, 30%) + 34%)
+  );
+  mix-blend-mode: soft-light;
+  opacity: 0.7;
+}
+.dark .pp-sheen {
+  background: linear-gradient(
+    118deg,
+    transparent calc(var(--hx, 30%) - 34%),
+    rgb(185 220 255 / 0.12) var(--hx, 30%),
+    transparent calc(var(--hx, 30%) + 34%)
+  );
+  mix-blend-mode: screen;
+  opacity: 1;
+}
+
+/* ---------- Trust page ---------- */
+
+.pp-watermark {
+  color: var(--pp-line-soft);
+  opacity: 0.8;
+}
+.pp-hint {
+  transition: opacity 200ms ease;
+}
+.pp-hint[data-hidden="true"] {
+  opacity: 0;
+}
+
+.pp-stamp {
+  left: var(--nx);
+  top: var(--ny);
+  width: var(--nw);
+  transform: rotate(var(--r));
+  opacity: 0;
+  border-radius: 14px;
+  mix-blend-mode: multiply;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 220ms var(--ease-out),
+    outline-color 200ms ease;
+  outline: 1.5px dashed transparent;
+  outline-offset: 5px;
+}
+.dark .pp-stamp {
+  mix-blend-mode: screen;
+}
+@container (min-width: 470px) {
+  .pp-stamp {
+    left: var(--x);
+    top: var(--y);
+    width: var(--w);
+  }
+}
+/* Lay the stamp text out at its own size, whatever scale the landing animation is at. */
+.pp-stamp svg {
+  text-rendering: geometricPrecision;
+}
+.pp-stamp[data-on="true"] {
+  opacity: 0.92;
+  animation: pp-stamp-land 560ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+@media (hover: hover) {
+  .pp-stamp[data-on="true"]:hover {
+    transform: rotate(var(--r)) scale(1.035);
+  }
+}
+.pp-stamp[data-active="true"],
+.pp-stamp:focus-visible {
+  transform: rotate(var(--r)) scale(1.04);
+  outline-color: var(--sky-accent);
+}
+.pp-stamp:active {
+  transform: rotate(var(--r)) scale(0.98);
+}
+@keyframes pp-stamp-land {
+  0% {
+    opacity: 0;
+    transform: rotate(calc(var(--r) - 6deg)) translateY(-10px) scale(1.5);
+    filter: blur(3px);
+  }
+  50% {
+    opacity: 0.92;
+    transform: rotate(var(--r)) scale(0.96);
+    filter: blur(0);
+  }
+  72% {
+    transform: rotate(var(--r)) scale(1.015);
+  }
+  100% {
+    opacity: 0.92;
+    transform: rotate(var(--r)) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* The cancelled trust is already on the page; only the Revoked stamp lands. */
+.pp-stamp[data-kind="revoked"] {
+  opacity: 0.92;
+  animation: none;
+}
+.pp-revoked {
+  translate: -50% -50%;
+  rotate: -15deg;
+  opacity: 0;
+}
+.pp-stamp[data-on="true"] .pp-revoked {
+  opacity: 1;
+  animation: pp-revoke-land 620ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+@keyframes pp-revoke-land {
+  0% {
+    opacity: 0;
+    rotate: -22deg;
+    scale: 1.6;
+    filter: blur(3px);
+  }
+  50% {
+    opacity: 1;
+    rotate: -15deg;
+    scale: 0.95;
+    filter: blur(0);
+  }
+  72% {
+    scale: 1.02;
+  }
+  100% {
+    opacity: 1;
+    rotate: -15deg;
+    scale: 1;
+    filter: blur(0);
+  }
+}
+
+.pp-note {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px) scale(0.98);
+  filter: blur(4px);
+  pointer-events: none;
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 260ms var(--ease-out),
+    filter 200ms var(--ease-out),
+    visibility 0s linear 260ms;
+}
+.pp-note[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  filter: blur(0);
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+/* ---------- Open / close ---------- */
+
+/*
+ * Open, the inside of the cover is how you close it. It moves as it closes, so the pointer can't be its hit target
+ * (hovering would tilt it out from under the cursor and back, a flicker). The open cover lets the pointer through to
+ * the slot it lies on, which never moves: hovering the slot lifts the page a few degrees, a click closes it.
+ * Keyboard focus stays on the page itself (.pp-closer).
+ */
+.pp-spread[data-open="true"] .pp-cover {
+  pointer-events: none;
+}
+.pp-spread[data-open="true"] .pp-slot {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) and (pointer: fine) {
+  .pp-spread[data-open="true"]:has(.pp-slot:hover) .pp-cover {
+    transform: rotateX(174deg);
+    transition-duration: 450ms;
+  }
+}
+.pp-spread[data-open="true"]:has(.pp-closer:focus-visible) .pp-cover {
+  transform: rotateX(174deg);
+  transition-duration: 450ms;
+}
+@container pp-stage (min-width: 720px) {
+  @media (hover: hover) and (pointer: fine) {
+    .pp-spread[data-open="true"]:has(.pp-slot:hover) .pp-cover {
+      transform: rotateY(-174deg);
+    }
+  }
+  .pp-spread[data-open="true"]:has(.pp-closer:focus-visible) .pp-cover {
+    transform: rotateY(-174deg);
+  }
+}
+
+/* ---------- Reduced motion: the open passport, stamps in place ---------- */
+
+.pp-spread[data-reduced="true"],
+.pp-spread[data-reduced="true"] * {
+  transition: none !important;
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pp-spread,
+  .pp-spread * {
+    transition-duration: 0.01ms !important;
+    animation: none !important;
+  }
+}

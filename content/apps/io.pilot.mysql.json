@@ -1,0 +1,104 @@
+{
+ "kind": "app",
+ "slug": "io.pilot.mysql",
+ "name": "MySQL",
+ "seoTitle": "MySQL: Agent App Methods & Install | Pilot Protocol",
+ "description": "Run a real MySQL server from an agent — full client/server SQL, no cloud account, no provisioning. See setup and usage details.",
+ "headText": [
+  "MySQL",
+  "Pilot Protocol",
+  "·",
+  "io.pilot.mysql",
+  "Run a real MySQL server from an agent — full client/server SQL, no cloud account, no provisioning.",
+  "Data & Storage",
+  "Live on catalogue",
+  "Install",
+  "Copy",
+  "pilotctl appstore install",
+  "io.pilot.mysql"
+ ],
+ "metrics": {
+  "version": "v9.7.1",
+  "methods": "14",
+  "size": "9.2 MB",
+  "permissions": "None declared",
+  "platforms": "macOS · Linux"
+ },
+ "icon": "",
+ "related": [
+  "io.pilot.postgres",
+  "io.pilot.duckdb",
+  "io.pilot.sqlite",
+  "io.pilot.redis",
+  "io.pilot.sixtyfour",
+  "io.pilot.orthogonal"
+ ],
+ "toc": [
+  {
+   "id": "about-mysql",
+   "text": "About MySQL",
+   "level": 2
+  },
+  {
+   "id": "why-an-agent-wants-this",
+   "text": "Why an agent wants this",
+   "level": 3
+  },
+  {
+   "id": "methods",
+   "text": "Methods",
+   "level": 3
+  },
+  {
+   "id": "how-to-use-it-typical-flow",
+   "text": "How to use it (typical flow)",
+   "level": 3
+  },
+  {
+   "id": "configuration-connection",
+   "text": "Configuration & connection",
+   "level": 3
+  },
+  {
+   "id": "good-to-know",
+   "text": "Good to know",
+   "level": 3
+  },
+  {
+   "id": "methods-14",
+   "text": "Methods · 14",
+   "level": 2
+  },
+  {
+   "id": "full-usage-demo",
+   "text": "Full usage demo",
+   "level": 2
+  },
+  {
+   "id": "worked-examples",
+   "text": "Worked examples",
+   "level": 3
+  },
+  {
+   "id": "good-to-know-1",
+   "text": "Good to know",
+   "level": 3
+  },
+  {
+   "id": "next",
+   "text": "Next",
+   "level": 3
+  },
+  {
+   "id": "whats-new",
+   "text": "What’s New",
+   "level": 2
+  },
+  {
+   "id": "platform-compatibility",
+   "text": "Platform Compatibility",
+   "level": 2
+  }
+ ],
+ "html": "<h2 id=\"about-mysql\">About MySQL</h2><p>This app installs the official <b>MySQL 9.7.1</b> server (<code>mysqld</code>) <b>and</b> client tools (<code>mysql</code>, <code>mysqladmin</code>, <code>mysqldump</code>, <code>mysqlshow</code>) on the host and fronts them as typed methods. The bundle is the upstream MySQL suite (sha-pinned per OS/arch, fetched from the Pilot artifact registry at install) plus a tiny <code>mysqlctl</code> dispatcher that makes the server relocatable — it finds its plugins and error messages wherever the bundle is staged.</p><p>MySQL is a <b>real client/server RDBMS</b> — the database behind a huge share of the web. Unlike a hosted MySQL, there is <b>no cloud account, no credentials to provision, and no network egress</b>: the agent runs <code>mysql.initialize</code> once to lay down a data directory, <code>mysql.start</code> to bring up a server on <code>127.0.0.1:&lt;port&gt;</code>, and then creates databases and runs SQL — all locally, in its own sandbox. It is the transactional, server-grade complement to the embedded <code>io.pilot.sqlite</code> and the analytics-focused <code>io.pilot.duckdb</code>, and a sibling to <code>io.pilot.postgres</code>.</p><h3 id=\"why-an-agent-wants-this\">Why an agent wants this</h3><p>- <b>A full local MySQL, zero provisioning.</b> No RDS, no <code>docker run</code>, no credentials. <code>initialize</code> →   <code>start</code> → <code>createdb</code> → <code>query</code>, all on <code>127.0.0.1</code>. - <b>Real server semantics.</b> Transactions, InnoDB, foreign keys, triggers, stored routines, JSON columns,   window functions, full-text indexes — the actual MySQL engine, not an emulation. - <b>The MySQL dialect + wire protocol.</b> Test and run exactly what your production MySQL will see: same SQL,   same <code>mysqldump</code> format, same client tools. - <b>Durable + portable.</b> The data directory is a real MySQL instance the agent can stop, restart, back up   with <code>mysql.dump</code>, or hand off. - <b>Agent-friendly output.</b> <code>mysql.query</code> returns an aligned table; <code>mysql.query_tsv</code> returns tab-separated   values for clean parsing.</p><h3 id=\"methods\">Methods</h3><p>- <code>mysql.initialize</code> — create a new data directory (system tables + insecure <code>root</code>). Run once. - <code>mysql.start</code> / <code>mysql.stop</code> — bring a server on <code>127.0.0.1:&lt;port&gt;</code> up (detached) / down (clean shutdown). - <code>mysql.ping</code> — is the server accepting connections? - <code>mysql.createdb</code> — create a database. - <code>mysql.query</code> — run SQL, get an aligned table. <code>mysql.query_tsv</code> — same, as TSV. - <code>mysql.databases</code> / <code>mysql.tables</code> — list databases / tables. - <code>mysql.dump</code> — mysqldump a database to portable SQL. - <code>mysql.exec</code> — run any bundled tool with a verbatim argv (+ optional stdin) for anything the curated   methods don't cover (<code>--vertical</code>, <code>mysqlshow</code>, <code>SOURCE script.sql</code>, a different output mode, …). - <code>mysql.mysql_help</code> — the full <code>mysql</code> client help. <code>mysql.version</code> — the delivered version.   <code>mysql.help</code> — the self-describing method list.</p><h3 id=\"how-to-use-it-typical-flow\">How to use it (typical flow)</h3><p>1. <b>Initialize once:</b> <code>mysql.initialize</code> <code>{ \"datadir\": \"/work/mysql-data\" }</code>. 2. <b>Start the server:</b> <code>mysql.start</code> <code>{ \"datadir\": \"/work/mysql-data\", \"port\": \"13306\" }</code> (then <code>mysql.ping</code>). 3. <b>Create a database:</b> <code>mysql.createdb</code> <code>{ \"port\": \"13306\", \"dbname\": \"app\" }</code>. 4. <b>Run SQL:</b> <code>mysql.query</code> <code>{ \"port\": \"13306\", \"database\": \"app\", \"sql\": \"CREATE TABLE t(id INT PRIMARY KEY, v TEXT); INSERT INTO t VALUES (1,'hi'); SELECT * FROM t;\" }</code>. 5. <b>Back up / stop:</b> <code>mysql.dump</code> <code>{ \"port\": \"13306\", \"database\": \"app\" }</code>, then <code>mysql.stop</code> <code>{ \"port\": \"13306\" }</code>.</p><h3 id=\"configuration-connection\">Configuration &amp; connection</h3><p>- <b>Connection</b> is always local: <code>127.0.0.1:&lt;port&gt;</code>, user <code>root</code>. After <code>initialize</code> the root password is   empty; set one with <code>mysql.exec</code> (<code>ALTER USER 'root'@'localhost' IDENTIFIED BY '…'</code>) and pass it to later   calls via the <b><code>MYSQL_PWD</code></b> environment variable (opted into <code>env_passthrough</code>). - <b>Data directory</b> — each <code>datadir</code> is an independent MySQL instance; run several on different ports. - <b>X protocol</b> is disabled (<code>--mysqlx=OFF</code>) for a lean local footprint; the classic protocol is on. - <b>Anything else</b> — <code>mysql.exec</code> gives you the raw tools: <code>--vertical</code>/<code>--html</code>/<code>--xml</code> output, <code>mysqlshow</code>,   <code>SOURCE</code> a script over stdin, or <code>mysqld</code>/<code>mysqladmin</code> flags the curated methods don't expose.</p><h3 id=\"good-to-know\">Good to know</h3><p>- On a non-zero exit (SQL error) the reply is <code>{stdout, stderr, exit}</code> so the caller sees everything the   tool produced. - Runs on <b>macOS and Linux</b> (arm64 + amd64); binaries come from the Pilot artifact registry, sha-pinned on   install. The server must not run as OS root — the Pilot daemon runs unprivileged, which is exactly right. - MySQL Community Server is <b>GPL-2.0</b> licensed. <code>mysql.help</code> lists every method with its latency class.</p><p>## MySQL client help (<code>mysql.mysql_help</code>) ``` /tmp/mysql-reloc/mysql-9.7.1-darwin-arm64/bin/mysql  Ver 9.7.1 for macos15.7 on arm64 (conda-forge) Copyright (c) 2000, 2026, Oracle and/or its affiliates.</p><p>Oracle is a registered trademark of Oracle Corporation and/or its affiliates. Other names may be trademarks of their respective owners.</p><p>Usage: /tmp/mysql-reloc/mysql-9.7.1-darwin-arm64/bin/mysql [OPTIONS] [database]   -?, --help          Display this help and exit.   -I, --help          Synonym for -?   --auto-rehash       Enable automatic rehashing. One doesn't need to use                       'rehash' to get table and field completion, but startup                       and reconnecting may take a longer time. Disable with                       --disable-auto-rehash.                       (Defaults to on; use --skip-auto-rehash to disable.)   -A, --no-auto-rehash                        No automatic rehashing. One has to use 'rehash' to get                       table and field completion. This gives a quicker start of                       mysql and disables rehashing on reconnect.   --auto-vertical-output                        Automatically switch to vertical output mode if the                       result is wider than the terminal width.   -B, --batch         Don't use history file. Disable interactive behavior.                       (Enables --silent.)   --bind-address=name IP address to bind to.   --binary-as-hex     Print binary data as hex. Enabled by default for                       interactive terminals.   --character-sets-dir=name                        Directory for character set files.   --column-type-info  Display column type information.   --commands          Enable or disable processing of local mysql commands.   -c, --comments      Preserve comments. Send comments to the server. The                       default is --comments (keep comments), disable with                       --skip-comments.                       (Defaults to on; use --skip-comments to disable.)   -C, --compress      Use compression in server/client protocol.   -#, --debug[=#]     This is a non-debug version. Catch this and exit.   --debug-check       This is a non-debug version. Catch this and exit.   -T, --debug-info    This is a non-debug version. Catch this and exit.   -D, --database=name Database to use.   --default-character-set=name                        Set the default character set.   --delimiter=name    Delimiter to be used.   --enable-cleartext-plugin                        Enable/disable the clear text authentication plugin.   -e, --execute=name  Execute command and quit. (Disables --force and history                       file.)   -E, --vertical      Print the output of a query (rows) vertically.   -f, --force         Continue even if we get an SQL error.   --histignore=name   A colon-separated list of patterns to keep statements                       from getting logged into syslog and mysql history.   -G, --named-commands                        Enable named commands. Named commands mean this program's                       internal commands; see mysql&gt; help . When enabled, the                       named commands can be used from any line of the query,                       otherwise only from the first line, before an enter.                       Disable with --disable-named-commands. This option is                       disabled by default.   -i, --ignore-spaces Ignore space after function names.   --init-command=name Single SQL Command to execute when connecting to MySQL ```</p><h2 id=\"methods-14\">Methods · 14</h2><code>mysql.initialize</code>Initialize a new MySQL data directory (system tables + an insecure `root@localhost` with an empty password) — the one-time setup before the first start. This is `mysqld --initialize-insecure --datadir=<datadir>`. The bundle's basedir/plugin-dir/error-messages are wired in automatically.<code>mysql.start</code>Start a local MySQL server from a data directory, listening on 127.0.0.1:<port>. Runs detached (`--daemonize`) and returns once the server is accepting connections. This is `mysqld --daemonize --datadir=<datadir> --socket=<datadir>/mysql.sock --port=<port> --bind-address=127.0.0.1 --mysqlx=OFF --pid-file=<datadir>/mysqld.pid --log-error=<datadir>/mysqld.err`.<code>mysql.stop</code>Stop the local server listening on <port> (a clean shutdown). This is `mysqladmin -h 127.0.0.1 -P <port> -u root shutdown`.<code>mysql.ping</code>Check whether the server on <port> is up and accepting connections (liveness probe). This is `mysqladmin -h 127.0.0.1 -P <port> -u root ping`.<code>mysql.createdb</code>Create a database on the running server (no-op if it already exists). This is `mysql -h 127.0.0.1 -P <port> -u root -e \"CREATE DATABASE IF NOT EXISTS <dbname>\"`.<code>mysql.query</code>Run SQL against a database and return an aligned ASCII table — the default, human-readable shape. May contain multiple `;`-separated statements. This is `mysql -h 127.0.0.1 -P <port> -u root -D <database> --table -e <sql>`.<code>mysql.query_tsv</code>Same as mysql.query but returns tab-separated values (header + rows) via `--batch` — the machine-parseable shape. This is `mysql -h 127.0.0.1 -P <port> -u root -D <database> --batch -e <sql>`.<code>mysql.databases</code>List the databases on the server (`SHOW DATABASES`). This is `mysql -h 127.0.0.1 -P <port> -u root --table -e \"SHOW DATABASES\"`.<code>mysql.tables</code>List the tables in a database (`SHOW TABLES`). This is `mysql -h 127.0.0.1 -P <port> -u root -D <database> --table -e \"SHOW TABLES\"`.<code>mysql.dump</code>Dump a database as SQL (schema + data) with mysqldump — a portable logical backup the agent can save or replay. This is `mysqldump -h 127.0.0.1 -P <port> -u root --no-tablespaces <database>`.<code>mysql.exec</code>Run any bundled MySQL tool with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[tool, ...]} where tool is one of `mysql`, `mysqld`, `mysqladmin`, `mysqldump`, `mysqlshow`, plus optional {\"stdin\":\"...\"} piped to the process. Examples: {\"args\":[\"mysql\",\"--protocol=TCP\",\"-h\",\"127.0.0.1\",\"-P\",\"13306\",\"-u\",\"root\",\"-D\",\"app\",\"--vertical\",\"-e\",\"SELECT * FROM t\\\\G\"]}; {\"args\":[\"mysqlshow\",\"--protocol=TCP\",\"-h\",\"127.0.0.1\",\"-P\",\"13306\",\"-u\",\"root\",\"app\"]}; {\"args\":[\"mysql\",\"--protocol=TCP\",\"-h\",\"127.0.0.1\",\"-P\",\"13306\",\"-u\",\"root\",\"-D\",\"app\"],\"stdin\":\"SOURCE /work/schema.sql;\"}.<code>mysql.mysql_help</code>Return the full `mysql` client help — every command-line option — captured from the delivered binary. The reference for what mysql.query / mysql.exec accept.<code>mysql.version</code>Print the delivered MySQL version, e.g. \"mysql  Ver 9.7.1 for … (conda-forge)\". This is `mysql --version`.<code>mysql.help</code>Discovery: every method with its params, kind, and latency class — the self-describing contract.<h2 id=\"full-usage-demo\">Full usage demo</h2><p>When you need a full MySQL server RDBMS — multiple databases, concurrent clients, a wire protocol on a TCP port — rather than an in-process file db; requires a one-time initialize + start.</p>Run this first — Confirm the binaries work (no server needed)Call<pre><code>pilotctl appstore call io.pilot.mysql mysql.version '{}'</code></pre>→<code>the delivered version, e.g. \"mysql  Ver 9.7.1 for ... (conda-forge)\"</code><h3 id=\"worked-examples\">Worked examples</h3>Initialize a data directoryCall<pre><code>pilotctl appstore call io.pilot.mysql mysql.initialize '{\"datadir\":\"/work/mysql-data\"}'</code></pre>→<code>an initialized datadir at /work/mysql-data</code>Start the serverCall<pre><code>pilotctl appstore call io.pilot.mysql mysql.start '{\"datadir\":\"/work/mysql-data\",\"port\":\"13306\"}'</code></pre>→<code>server listening on 127.0.0.1:13306</code>Create a databaseCall<pre><code>pilotctl appstore call io.pilot.mysql mysql.createdb '{\"port\":\"13306\",\"dbname\":\"shop\"}'</code></pre>→<code>database `shop` created (no-op if it exists)</code>Create a table, insert, and selectCall<pre><code>pilotctl appstore call io.pilot.mysql mysql.query '{\"port\":\"13306\",\"database\":\"shop\",\"sql\":\"CREATE TABLE items(id INT PRIMARY KEY, name VARCHAR(32)); INSERT INTO items VALUES (1,'pen'); SELECT * FROM items\"}'</code></pre>→<code>an aligned ASCII table with one row: 1 | pen</code>List tablesCall<pre><code>pilotctl appstore call io.pilot.mysql mysql.tables '{\"port\":\"13306\",\"database\":\"shop\"}'</code></pre>→<code>SHOW TABLES output listing `items`</code><h3 id=\"good-to-know-1\">Good to know</h3><ul><li>Order matters: mysql.initialize the datadir once, then mysql.start before any query.</li><li>The initial account is an insecure root@localhost with no password; 127.0.0.1 connections only.</li><li>port is a string (\"13306\"); mysql.query needs a `database` that already exists (create it with mysql.createdb).</li><li>Data directories and dumps resolve inside the app sandbox, not your shell CWD.</li></ul><h3 id=\"next\">Next</h3><ul><li><code>io.pilot.mysql mysql.help '{}'</code></li></ul><h2 id=\"whats-new\">What’s New</h2>v9.7.1Latest—<ul><li>Released v9.7.1</li></ul><h2 id=\"platform-compatibility\">Platform Compatibility</h2>macOSApple Silicon5.2 MBSupportedmacOSIntel5.2 MBSupportedLinuxarm645.0 MBSupportedLinuxamd645.0 MBSupported"
+}

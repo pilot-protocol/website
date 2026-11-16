@@ -1,0 +1,81 @@
+/* Pilot Cloud page. Everything here is prefixed `cl-`. */
+
+/* A packet hopping from one agent to another; endpoints come in as custom properties. */
+@keyframes cl-hop {
+  0% {
+    transform: translate(var(--x1), var(--y1));
+    opacity: 0;
+  }
+  14%,
+  86% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--x2), var(--y2));
+    opacity: 0;
+  }
+}
+.cl-hop {
+  animation-name: cl-hop;
+  animation-timing-function: cubic-bezier(0.77, 0, 0.175, 1);
+  animation-fill-mode: both;
+}
+
+/* Circles: packets leave your agent for each ring; the inner ones more often. */
+@keyframes cl-out {
+  0% {
+    transform: rotate(var(--a)) translateX(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(var(--a)) translateX(var(--r));
+    opacity: 0;
+  }
+}
+.cl-out {
+  animation: cl-out var(--t, 2s) cubic-bezier(0.23, 1, 0.32, 1) var(--d, 0s) infinite both;
+}
+.cl-paused .cl-out {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-out {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* ---------- Sky ---------- */
+
+/* The hand-off: the message chip beside its wire, the working spinner, your message arriving. */
+@keyframes cl-chip {
+  from {
+    opacity: 0;
+    scale: 0.92;
+    filter: blur(2px);
+  }
+}
+.cl-chip {
+  animation: cl-chip 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+@keyframes cl-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+.cl-spin {
+  animation: cl-spin 0.9s linear infinite;
+}
+@keyframes cl-rise {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}

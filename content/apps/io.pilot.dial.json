@@ -1,0 +1,81 @@
+{
+ "kind": "app",
+ "slug": "io.pilot.dial",
+ "name": "Dial",
+ "seoTitle": "Dial: Agent App Methods & Install | Pilot Protocol",
+ "description": "A complete phone identity for your agent — voice calls, SMS and iMessage on a real US number, provisioned in one call. See setup and usage details.",
+ "headText": [
+  "Dial",
+  "GetDial AI",
+  "·",
+  "io.pilot.dial",
+  "A complete phone identity for your agent — voice calls, SMS and iMessage on a real US number, provisioned in one call.",
+  "Communications",
+  "Live on catalogue",
+  "Install",
+  "Copy",
+  "pilotctl appstore install",
+  "io.pilot.dial"
+ ],
+ "metrics": {
+  "version": "v0.1.0",
+  "methods": "20",
+  "size": "—",
+  "permissions": "4 declared",
+  "platforms": "macOS · Linux"
+ },
+ "icon": "/appicons/optimized/io.pilot.dial-240.webp",
+ "related": [
+  "io.pilot.deadsimple",
+  "io.pilot.primitive",
+  "io.pilot.agentphone"
+ ],
+ "toc": [
+  {
+   "id": "about-dial",
+   "text": "About Dial",
+   "level": 2
+  },
+  {
+   "id": "methods-20",
+   "text": "Methods · 20",
+   "level": 2
+  },
+  {
+   "id": "full-usage-demo",
+   "text": "Full usage demo",
+   "level": 2
+  },
+  {
+   "id": "worked-examples",
+   "text": "Worked examples",
+   "level": 3
+  },
+  {
+   "id": "what-it-costs",
+   "text": "What it costs",
+   "level": 3
+  },
+  {
+   "id": "good-to-know",
+   "text": "Good to know",
+   "level": 3
+  },
+  {
+   "id": "next",
+   "text": "Next",
+   "level": 3
+  },
+  {
+   "id": "whats-new",
+   "text": "What’s New",
+   "level": 2
+  },
+  {
+   "id": "platform-compatibility",
+   "text": "Platform Compatibility",
+   "level": 2
+  }
+ ],
+ "html": "<h2 id=\"about-dial\">About Dial</h2><p>Dial gives your agent its own real phone number: place and receive AI voice calls, send and receive SMS and iMessage, and wait on inbound events without polling. Bring your Dial API key at install time and every method authenticates as your own account. The account is yours, works outside Pilot too, and starts with $5 of credit and no credit card. No key yet? dial.signup emails a 6-digit code and dial.verify exchanges it for one. What you can do - Call people. dial.place_call runs an autonomous AI voice call from your number: book a table, chase a delivery, return a missed call. Pass transferTo and it waits out hold music and IVR menus, then cold-transfers to your human the moment a real person answers — never to a recording. Poll dial.get_call for the transcript, or block on dial.wait_for_event. - Give the call your tools. Connect a Context MCP and your MCP server tools become available to the voice agent DURING the call, so it can look something up or take an action mid-conversation. Dial runs the OAuth 2.1 flow and keeps the token fresh in the background. - Text people. dial.send_message delivers over iMessage when the recipient supports it and falls back to SMS otherwise, same call either way. Show a typing indicator first with dial.typing. - Wait, do not poll. dial.wait_for_event blocks until an inbound reply, a 2FA code, or a finished call shows up. A 408 means try again, not an error. - Own the identity. Set each number inbound behavior, voice and language, and on iMessage numbers the display name and avatar recipients see in Messages. Cost Reads are free. $3/month per number. US SMS $0.02 per segment. Managed voice $0.22/min all-in; self-hosted voice $0.13/min if you bring your own LLM over a WebSocket. Your $5 signup credit covers the first usage and spend pauses at $0 rather than surprising you. Good to know A brand-new account is on the free tier until it is topped up, which caps calls at 5 minutes and 2 concurrent calls. Both lift permanently on the first top-up. Emergency and crisis numbers are blocked. Always pass numbers in E.164, e.g. +14155551234. Every method, its parameters and latency class are discoverable at runtime via dial.help.</p><h2 id=\"methods-20\">Methods · 20</h2><code>dial.status</code>Your account: credit balance, plan, and the limits currently in force (max call duration, max concurrent calls). Free. Call this first to orient.<code>dial.usage</code>Activity analytics: message and call counts, voice minutes, per-day series, and busiest numbers. Free.<code>dial.signup</code>Start creating a Dial account. Emails a 6-digit code and returns a verificationId; pass both to dial.verify to finish. Only needed if you do not already have an API key.<code>dial.verify</code>Finish signup by exchanging the emailed code for an API key. The new account starts with $5 of credit and no card on file.<code>dial.list_numbers</code>Your phone numbers, with capabilities, setup status, and per-number inbound configuration. Free.<code>dial.buy_number</code>Provision a new US phone number. COSTS $3/month. Requires an explicit consent attestation because it spends money on behalf of the account holder, so confirm with your human first.<code>dial.get_number</code>One phone number by id. Free.<code>dial.set_number</code>Update a number: nickname, inbound behavior, voice, language, call ceiling, and (iMessage numbers only) the display name and avatar recipients see. Only the fields you send change. Free.<code>dial.release_number</code>Release a number. IRREVERSIBLE: the number is gone and the unused month is not refunded. Confirm with your human first.<code>dial.send_message</code>Send a text. Delivers over iMessage when the recipient supports it, otherwise SMS, same call either way. COSTS MONEY (US SMS $0.02 per segment). Pass exactly one of fromNumber or fromNumberId.<code>dial.list_messages</code>Your messages, inbound and outbound, newest first (up to the 100 most recent). Free. Poll this for replies, or prefer dial.wait_for_event to block until one arrives.<code>dial.typing</code>Show or clear a typing indicator before you reply. iMessage numbers display it; SMS numbers ignore it, so it is always safe to call. Sending a message clears it automatically. Free.<code>dial.place_call</code>Place an outbound AI voice call. Returns a call id immediately; the call runs in the background. COSTS MONEY per minute. Pass transferTo to have the agent wait out hold queues and IVR menus and hand the live call to a human when a real person answers. Poll dial.get_call, or block on dial.wait_for_event with call.ended.<code>dial.get_call</code>One call with its status and transcript once available. THE poll target after dial.place_call. Free.<code>dial.list_calls</code>Your calls, newest first (up to the 100 most recent), inbound and outbound. Free.<code>dial.end_call</code>Hang up a call that is still in progress. Free.<code>dial.wait_for_event</code>Block until a matching event arrives instead of polling. Use it for an inbound reply or a 2FA code (message.received) or a finished call (call.ended, call.transcribed). A 408 means the wait timed out: try again, it is not an error. Free.<code>dial.list_context_mcps</code>The MCP servers connected to your voice agent. Secrets and tokens are masked. Free.<code>dial.add_context_mcp</code>Connect an MCP server so its tools are available to your AI voice agent DURING calls, to look something up or take an action mid-conversation. Works unattended for servers needing no auth or a static header. An OAuth server instead returns an authorizationUrl and stays pending until a human grants consent in a browser. Free.<code>dial.remove_context_mcp</code>Disconnect an MCP server from your voice agent. Its tools stop being offered on future calls. Free.<h2 id=\"full-usage-demo\">Full usage demo</h2><p>When a task needs a phone: call a business and sit through the hold queue, text someone and wait for the reply, or receive a 2FA code on a real US number.</p>Run this first — See your credit and the limits in force before spending anything$0.00 (read)Call<pre><code>pilotctl appstore call io.pilot.dial dial.status '{}'</code></pre>→<code>{\"credit\":\"$5.00\",\"plan\":\"free\",\"maxCallDurationSeconds\":300,\"maxConcurrentCalls\":2}</code><p>Free. A new account starts with $5 and no card. No key yet? dial.signup emails a code and dial.verify exchanges it for one.</p><h3 id=\"worked-examples\">Worked examples</h3>Get a number, then text someone$3.00/monthCall<pre><code>pilotctl appstore call io.pilot.dial dial.buy_number '{\"areaCode\":\"415\",\"explicitProgrammaticConsent\":\"yes\"}'</code></pre>→<code>{\"id\":\"num_...\",\"phoneNumber\":\"+14155550123\"}</code><p>Spends money, so it requires an explicit consent attestation — confirm with your human first. Then dial.send_message delivers over iMessage when the recipient supports it, else SMS.</p>Place a call and let it wait out the IVR$0.22/minCall<pre><code>pilotctl appstore call io.pilot.dial dial.place_call '{\"to\":\"+14155550199\",\"fromNumber\":\"+14155550123\",\"outboundInstruction\":\"Ask if they take reservations for 4 at 8pm Friday\",\"transferTo\":\"+14155550100\"}'</code></pre>→<code>{\"id\":\"call_...\",\"status\":\"queued\"}</code><p>transferTo hands the live call to your human the moment a real person answers — never to a recording. Poll dial.get_call for the transcript.</p>Block until the reply arrives, instead of polling$0.00 (read)Call<pre><code>pilotctl appstore call io.pilot.dial dial.wait_for_event '{\"eventType\":\"message.received\",\"timeout\":120}'</code></pre>→<code>{\"event\":\"message.received\",\"message\":{\"body\":\"Your code is 481920\"}}</code><p>A 408 means try again, not an error. This is how you catch a 2FA code without spinning.</p><h3 id=\"what-it-costs\">What it costs</h3>$5.00 signup credit, no cardfree budget · billed in USD<table><thead><tr><th>Operation</th><th>Price</th><th>Notes</th></tr></thead><tbody><tr><td><code>reads (status, usage, list_*, get_call, wait_for_event)</code></td><td>free</td><td></td></tr><tr><td><code>dial.buy_number</code></td><td>$3.00/month</td><td>requires an explicit consent attestation</td></tr><tr><td><code>dial.send_message</code></td><td>$0.02 per SMS segment</td><td>iMessage delivery where supported</td></tr><tr><td><code>dial.place_call</code></td><td>$0.22/min</td><td>$0.13/min self-hosted if you bring your own LLM</td></tr></tbody></table><p>$3.44 — one number for a month ($3.00), one 2-minute call ($0.44), reads free. Inside the $5 signup credit.</p><h3 id=\"good-to-know\">Good to know</h3><ul><li>Reads are free; buying a number, texting and calling cost money. Check dial.status first.</li><li>dial.buy_number needs an explicit consent attestation because it spends — confirm with your human.</li><li>A new account is capped at 5-minute calls and 2 concurrent until the first top-up.</li><li>Always pass numbers in E.164, e.g. +14155551234. Emergency and crisis numbers are blocked.</li><li>Prefer dial.wait_for_event over polling; a 408 means retry, not failure.</li></ul><h3 id=\"next\">Next</h3><ul><li><code>io.pilot.dial dial.help '{}'</code></li></ul><h2 id=\"whats-new\">What’s New</h2>v0.1.0Latest—<ul><li>First release on the Pilot app store.</li></ul><h2 id=\"platform-compatibility\">Platform Compatibility</h2>macOSApple SiliconSupportedmacOSIntelSupportedLinuxarm64SupportedLinuxamd64Supported"
+}

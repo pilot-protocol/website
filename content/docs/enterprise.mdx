@@ -1,0 +1,83 @@
+---
+title: "Self-hosting the registry"
+description: "Run your own Pilot Protocol registry to use private networks, roles, OIDC/JWT identity, network policies, audit export and blueprint provisioning."
+---
+
+Private networks, roles, identity, policies, audit export and blueprints in the open-source registry, for anyone who runs their own.
+
+**Who can use these features.** Every operation in this section needs the registry admin token (some network operations also accept that network’s own admin token or an owner/admin role). On the public backbone run by Vulture Labs only the operators hold the admin token, so you can’t create or administer networks there. To use these features, run your own rendezvous and point your daemons at it.
+
+## Overview [#overview]
+
+The rendezvous server ([github.com/pilot-protocol/rendezvous](https://github.com/pilot-protocol/rendezvous), AGPL-3.0) is the registry and beacon that daemons connect to. Besides addresses and trust, it can run [networks](/docs/networks) with the controls a private deployment needs: role-based access control, identity provider integration, membership policies, structured audit logging, and declarative provisioning through blueprints.
+
+Plain networks treat membership as a binary boundary - you are either in or out. Networks in enterprise mode add layers on top: **who can do what** (RBAC), **who is allowed in** (identity & directory sync), **what traffic is permitted** (port policies), **what happened** (audit), and **how to set it all up at once** (blueprints).
+
+## Run your own registry [#run]
+
+One `rendezvous` process serves the registry (TCP) and the beacon (UDP). Set an admin token when you start it; with no token, network creation is disabled.
+
+```ts
+# Build and start the registry + beacon
+git clone https://github.com/pilot-protocol/rendezvous
+cd rendezvous && go build ./cmd/rendezvous
+./rendezvous -registry-addr :9000 -beacon-addr :9001 \
+  -store ./registry.json -admin-token "$PILOT_ADMIN_TOKEN"
+
+# Point a daemon at it
+pilotctl daemon start --registry registry.example.com:9000 --beacon registry.example.com:9001
+
+# Admin commands read the registry address and token from the environment
+export PILOT_REGISTRY=registry.example.com:9000
+export PILOT_ADMIN_TOKEN=your-admin-token
+```
+
+`pilotctl` also reads the token from `admin_token` in `~/.pilot/config.json`. The registry admin commands sit under `pilotctl extras`; run it with no arguments for the list. See [Self-hosting](/self-hosting/) for running the registry in production.
+
+## Enable enterprise mode [#enable]
+
+Enterprise mode is set per network. Enable it at creation time:
+
+```bash
+pilotctl network create --name prod-fleet --enterprise --join-rule invite
+```
+
+`network create` needs the registry admin token. `--join-rule` is `open` (the default), `token` (with `--token`), or `invite`, which requires `--enterprise`. The creator node (`--node-id`) becomes the network’s **owner**; enterprise mode is what makes the roles enforceable.
+
+## Feature summary [#features]
+
+| Feature | What it does | Documentation |
+| --- | --- | --- |
+| **RBAC** | Three-tier roles (owner, admin, member) with distinct permissions. Promote, demote, kick, transfer ownership. | [RBAC & Access Control](/docs/enterprise-rbac) |
+| **Invites** | Invite agents to invite-only networks; the invited node accepts or rejects. 30-day TTL, inbox cap of 100. | [Invite Flow](/docs/enterprise-rbac#invites) |
+| **Identity & SSO** | OIDC/JWT validation (RS256/HS256 against a JWKS) and a webhook for your own verification endpoint. | [Identity & SSO](/docs/enterprise-identity) |
+| **Directory sync** | Map external directory entries and roles to existing agents. Sync does not create agents or add network members. | [Directory Sync](/docs/enterprise-identity#directory-sync) |
+| **Network policies** | Enforce membership caps, port allowlists, and network descriptions. | [Network Policies](/docs/enterprise-policies) |
+| **Audit** | Structured audit events (slog JSON), in-memory ring buffer, export to Splunk HEC, CEF/Syslog, or JSON endpoints. | [Audit Log & Export](/docs/enterprise-audit) |
+| **Webhooks** | Event-driven notifications with retry, dead-letter queue, and Prometheus metrics. | [Webhooks & DLQ](/docs/enterprise-audit#webhooks) |
+| **Blueprints** | Declarative JSON documents that provision an entire network: name, policies, identity, webhooks, audit export, roles. | [Blueprints](/docs/enterprise-blueprints) |
+| **Key lifecycle** | Rotate agent keys, set expiry dates, and block expired agents from heartbeating. | [Authorization Chain](/docs/enterprise-rbac#authorization-chain) |
+
+## Enterprise gating [#gating]
+
+Some features require enterprise mode on the network. Others work for all networks.
+
+| Requires enterprise | Available to all networks |
+| --- | --- |
+| RBAC roles (promote, demote, kick)  Ownership transfer  Invite flow  Directory sync  Port policies | Network create / join / leave / delete  Membership listing  Audit log query (global)  Key rotation  Hostname & visibility changes  Tags  Trust & handshakes  Per-network admin tokens  Blueprint provisioning |
+
+Attempting an enterprise operation on a non-enterprise network returns an error. The flag is toggled by the registry’s `set_network_enterprise` RPC (also reachable via the Go SDK’s `client.Client.SetNetworkEnterprise`); membership is preserved across the toggle.
+
+Note: network creation and deletion, per-network admin tokens and blueprint provisioning are gated by the **admin token**, not by enterprise mode — they work on any network. Blueprint provisioning only *enables* enterprise when the blueprint explicitly requests it.
+
+## What’s next [#next]
+
+Start with the feature most relevant to your deployment:
+
+- [**RBAC & Access Control**](/docs/enterprise-rbac) - roles, permissions, invites, and the authorization chain
+- [**Identity & SSO**](/docs/enterprise-identity) - validate OIDC/JWT natively; bridge other identity systems; sync directories
+- [**Network Policies**](/docs/enterprise-policies) - membership caps, port allowlists, and metadata
+- [**Audit Log & Export**](/docs/enterprise-audit) - structured logging, export to SIEMs, webhooks
+- [**Blueprints**](/docs/enterprise-blueprints) - provision entire networks from a single JSON document
+
+**See also:** [Networks](/docs/networks) - the foundation these features build on. [CLI Reference](/docs/cli-reference) - full command listing, including the registry admin commands. [← Security](/docs/security)[RBAC & Access Control →](/docs/enterprise-rbac)

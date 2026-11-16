@@ -1,0 +1,178 @@
+/* Live data (Figma 227:2155): "ask anything live". .lived-sky, .lived-bubble and lived-dot are also used by other sky pages. */
+
+/* The section panel: one flat, slightly sunken surface (v4.css sets the same for every sky panel). */
+.lived-sky {
+  background: var(--color-bg-deep);
+}
+
+/* Message bubbles that sit on the panel: solid white by day, a solid card a step above it at night. */
+.lived-bubble {
+  background: #ffffff;
+}
+.dark .lived-bubble {
+  background: var(--color-card);
+  box-shadow: 0 0 0 1px var(--color-edge);
+}
+.lived-bubble {
+  box-shadow: var(--shadow-tile);
+}
+
+/* The question tabs share the track's width equally, set as in the design (14px, the unchosen ones in mute). */
+.lived-seg {
+  display: flex;
+  width: 100%;
+}
+.lived-seg > .sky-seg-tab {
+  flex: 1 1 0;
+  min-width: max-content;
+  justify-content: center;
+  font-size: 14px;
+}
+.lived-seg > .sky-seg-tab:not([data-on="true"]) {
+  color: var(--color-mute);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lived-seg > .sky-seg-tab:not([data-on="true"]):hover {
+    color: var(--color-fg);
+  }
+}
+/* Until all four fit on one line, two by two (phones get the shorter labels), so no tab is ever cut off. */
+@media (max-width: 819px) {
+  .lived-seg {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .lived-seg > .sky-seg-tab {
+    min-width: 0;
+  }
+}
+
+/*
+ * The trace above the answer (who planned it, the call it makes): a flat card like the ask bar, with a hairline
+ * between the plan and its call.
+ */
+.lived-plan {
+  background: var(--color-card);
+  border: 1px solid var(--sky-card-line);
+}
+.lived-plan-rule {
+  border-top: 1px dashed var(--sky-card-line);
+}
+
+/*
+ * The answer card: one flat deep blue (the brand's answer surface). The picture sits in a slightly sunken well
+ * and the details in tiles a step lighter, so the card has structure without any gloss.
+ */
+.lived-card {
+  --lived-well: color-mix(in srgb, #020b3d 26%, var(--sky-deep));
+  background: var(--sky-deep);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.1),
+    var(--shadow-float);
+}
+.lived-well {
+  border-radius: 14px;
+  background: var(--lived-well);
+  box-shadow:
+    inset 0 1px 2px rgb(2 8 40 / 0.18),
+    inset 0 0 0 1px rgb(255 255 255 / 0.05);
+}
+.lived-tile {
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.08);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+/* Chart markers: a ring in the well's colour lifts them off the line. */
+.lived-pin {
+  box-shadow: 0 0 0 3px var(--lived-well);
+}
+/* The high and low guides on the price chart. */
+.lived-guide {
+  height: 1px;
+  background-image: linear-gradient(90deg, rgb(255 255 255 / 0.28) 50%, transparent 0);
+  background-size: 6px 1px;
+}
+/* The 24-hour change: green or red type on a quiet chip (a tinted chip would turn purple on the blue). */
+.lived-change {
+  background: rgb(255 255 255 / 0.12);
+}
+.lived-change[data-dir="up"] {
+  color: #8ff0b4;
+}
+.lived-change[data-dir="down"] {
+  color: #ffb3b3;
+}
+/* The big glyphs get a soft shadow so the filled shapes sit on the card. */
+.lived-glyph {
+  filter: drop-shadow(0 2px 3px rgb(2 8 40 / 0.22));
+}
+
+/* Live markers on the maps: a soft ring breathing out from the point. */
+.lived-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: lived-ring 2.4s var(--ease-out) infinite;
+}
+@keyframes lived-ring {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.6);
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lived-ring {
+    animation: none;
+    opacity: 0.35;
+  }
+}
+
+/* The forecast card while Open-Meteo answers: placeholders breathing gently (opacity only). */
+.lived-shimmer {
+  background: rgb(255 255 255 / 0.12);
+  animation: lived-breathe 1.6s var(--ease-in-out) infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lived-shimmer {
+    animation: none;
+  }
+}
+@keyframes lived-breathe {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* pilot-mom "typing": three dots lifting in turn. */
+@keyframes lived-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+/*
+ * The forecast curve draws itself once the reply lands. The path uses pathLength=1 with a non-scaling stroke,
+ * so the dash is 2 long: enough to cover the line even when the widget is wider than the viewBox.
+ */
+@keyframes lived-draw {
+  from {
+    stroke-dashoffset: 2;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}

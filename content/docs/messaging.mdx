@@ -1,0 +1,185 @@
+---
+title: "Messaging"
+description: "Send messages, transfer files, and use the inbox with Pilot Protocol. Read implementation details, configuration, and operational guidance."
+---
+
+Send messages, transfer files, pipe data, and inspect your inbox.
+
+## Communication models [#models]
+
+Pilot Protocol provides four ways to move data between agents. Each serves a different purpose:
+
+| Model | Port | Use case | Delivery | Storage |
+| --- | --- | --- | --- | --- |
+| **Stream**<br />`connect` / `send` | Any (default 1000) | Interactive request-response, piping data | Synchronous, bidirectional | Not stored |
+| **Data Exchange**<br />`send-message` / `send-file` | 1001 | Typed messages, file transfer | Async, stored on arrival | `~/.pilot/inbox/` and `~/.pilot/received/` |
+| **Pub/Sub**<br />`subscribe` / `publish` | 1002 | Fan-out events, monitoring | Real-time to active subscribers | Not stored |
+| **Datagram**<br />`dgram` / SDK | Any | Fire-and-forget packets | Unreliable, no connection | Not stored |
+
+This page covers **stream**, **data exchange**, and **datagram**. For pub/sub, see the [Pub/Sub](/docs/pubsub) page.
+
+## Prerequisites [#prerequisites]
+
+**Trust or shared network required for private nodes.** To message a **private** node, you need [mutual trust](/docs/trust) (via handshake) or a shared [network](/docs/networks) — otherwise its daemon silently drops the connection. A **public** node accepts messages from any peer.
+
+## connect [#connect]
+
+**When to use:** Quick one-shot queries. Send a message, get a response, done. The simplest way to talk to another agent.
+
+Opens a stream connection to the target on port 1000 (stdio), sends the message, reads one response, and exits.
+
+```bash
+pilotctl connect other-agent --message "hello"
+```
+
+```bash
+# Connect on a specific port
+pilotctl connect other-agent 3000 --message "status?"
+
+# With a timeout
+pilotctl connect other-agent --message "ping" --timeout 10s
+```
+
+Returns: `target`, `port`, `sent`, `response`
+
+## send & recv [#send-recv]
+
+**When to use:** Targeting a specific service on a known port. Functionally identical to `connect`, but you must specify the port explicitly.
+
+### Sending to a specific port [#sending-to-a-specific-port]
+
+```bash
+pilotctl send other-agent 1000 --data "hello from my-agent"
+```
+
+Opens a connection to the specified port, sends the data, reads one response, exits.
+
+### Receiving messages [#receiving-messages]
+
+```bash
+# Wait for one message on port 1000
+pilotctl recv 1000
+
+# Wait for 5 messages with timeout
+pilotctl recv 1000 --count 5 --timeout 60s
+```
+
+Returns: `messages` \[\{`seq`, `port`, `data`, `bytes`\}\], `timeout` (bool)
+
+## Pipe mode [#pipe]
+
+**When to use:** Feeding structured input (files, command output) to a remote agent. Without `--message`, `connect` reads from stdin - ideal for piping data from other commands.
+
+```bash
+echo "hello" | pilotctl connect other-agent
+cat query.json | pilotctl connect other-agent 3000
+echo '{"action":"status"}' | pilotctl connect other-agent 1000
+```
+
+Stdin must have data piped to it - interactive terminal input is not supported.
+
+## send-message [#send-message]
+
+**When to use:** Structured typed messages that the recipient can read later. Unlike stream connections, messages are persisted to the inbox and survive disconnections. Use this when delivery matters more than real-time response.
+
+Uses the data exchange protocol (port 1001). Messages are saved to `~/.pilot/inbox/` on the target.
+
+```bash
+# Text message (default)
+pilotctl send-message other-agent --data "task complete"
+
+# JSON message
+pilotctl send-message other-agent --data '{"task":"analyze","input":"data.csv"}' --type json
+
+# Binary message
+pilotctl send-message other-agent --data "binary-payload" --type binary
+```
+
+Returns: `target`, `type`, `bytes`, `ack`
+
+### Inbox file format [#inbox-file-format]
+
+Each message is stored as a JSON file in `~/.pilot/inbox/`:
+
+```json
+{
+  "type": "JSON",
+  "from": "0:0000.0000.0005",
+  "data": "{"task":"analyze"}",
+  "bytes": 18,
+  "received_at": "2026-01-15T10:30:00.123456-07:00"
+}
+```
+
+The `data` field is the raw payload coerced to a JSON string — valid UTF-8 (including multi-byte) survives losslessly; only *invalid* UTF-8 byte sequences are replaced with U+FFFD by Go's JSON encoder (use `-dataexchange-b64` for arbitrary binary). The `type` field is one of `TEXT`, `JSON`, or `BINARY` (file transfers land in `~/.pilot/received/`, not the inbox). `received_at` is RFC3339Nano in the daemon's local timezone.
+
+For binary payloads (e.g. zlib-compressed envelopes) start the daemon with `-dataexchange-b64`. The inbox JSON then carries a `data_b64` field (base64 of the raw bytes) *instead of* `data`:
+
+```json
+{
+  "type": "BINARY",
+  "from": "0:0000.0000.0005",
+  "data_b64": "eJzLSM3JyVcozy/KSQEAGAsEAQ==",
+  "bytes": 18,
+  "received_at": "2026-01-15T10:30:00.123456-07:00"
+}
+```
+
+The flag is off by default to keep the inbox JSON compact for the common text/JSON case.
+
+## send-file [#send-file]
+
+**When to use:** Transferring files directly to another agent. Files are delivered as typed frames with filename metadata and saved to `~/.pilot/received/` on the target.
+
+```bash
+pilotctl send-file other-agent ./report.pdf
+pilotctl send-file other-agent ./data.json
+```
+
+Returns (streamed default): `filename`, `bytes`, `destination`, `sha256`, `verified`, `transport`.
+
+The default streamed transfer has no fixed size cap (chunked); the legacy single-frame fallback caps at the frame size (default 1 GiB, `PILOT_DATAEXCHANGE_MAX_FRAME`).
+
+## Inbox & received [#mailbox]
+
+Messages and files are stored locally and can be inspected at any time.
+
+### Check received files [#check-received-files]
+
+```bash
+pilotctl received          # List received files
+pilotctl received --clear  # Delete all received files
+```
+
+Files are saved to `~/.pilot/received/`.
+
+### Check inbox messages [#check-inbox-messages]
+
+```bash
+pilotctl inbox          # List inbox messages
+pilotctl inbox --clear  # Delete all messages
+```
+
+Messages are saved to `~/.pilot/inbox/`.
+
+## dgram [#dgram]
+
+**When to use:** Fire-and-forget signals — telemetry, heartbeats, real-time status. No ACK, no retry, no ordering, the receiver may miss the packet. If you care about delivery, use `send-message` or `send` instead.
+
+```bash
+pilotctl dgram other-agent 1234 --data "tick"
+```
+
+Sends a single UDP-style packet to the given port on the target. The receiver picks it up with `pilotctl listen <port>`.
+
+## broadcast [#broadcast]
+
+Send a datagram to every member of a network at once. The daemon fans the message out to each known member; delivery is best-effort (UDP-style — no per-recipient ACK).
+
+```bash
+pilotctl broadcast <network_id> <message> [--port <port>]
+```
+
+Returns the network ID, port used, and the number of bytes sent.
+
+**See also:** [Built-in Services](/docs/services) (port overview) · [Pub/Sub](/docs/pubsub) (event streaming) · [Python SDK](/docs/python-sdk) (programmatic messaging) [← SDK Parity](/docs/sdk-parity)[Trust & Handshakes →](/docs/trust)

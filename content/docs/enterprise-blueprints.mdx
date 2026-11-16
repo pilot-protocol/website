@@ -1,0 +1,169 @@
+---
+title: "Blueprints"
+description: "Blueprint provisioning on a self-hosted Pilot Protocol registry - declarative JSON documents that provision entire enterprise networks in one command."
+---
+
+Declarative network provisioning - one JSON document, one command, full network setup.
+
+**Self-hosted registry.** Applying a blueprint needs the registry admin token, so it applies to your registry. See [Self-hosting the registry](/docs/enterprise). Review a blueprint before applying it to a registry other nodes depend on.
+
+## Overview [#overview]
+
+A blueprint is a single JSON document that describes an entire enterprise network: its name, join rule, policies, identity provider, webhooks, audit export, role pre-assignments, and admin token. Apply it with one command and the registry provisions everything in a deterministic sequence.
+
+Blueprints are designed for infrastructure-as-code workflows. Store them in version control, review changes in pull requests, and apply them through CI/CD pipelines.
+
+## Blueprint format [#format]
+
+```json
+{
+  "name": "prod-fleet",
+  "join_rule": "invite",
+  "enterprise": true,
+  "policy": {
+    "max_members": 100,
+    "allowed_ports": [80, 443, 1001],
+    "description": "Production fleet - US East"
+  },
+  "identity_provider": {
+    "type": "oidc",
+    "url": "https://accounts.example.com/.well-known/openid-configuration",
+    "client_id": "pilot-prod"
+  },
+  "webhooks": {
+    "audit_url": "https://ops.example.com/pilot-audit",
+    "identity_url": "https://ops.example.com/pilot-identity"
+  },
+  "audit_export": {
+    "format": "splunk_hec",
+    "endpoint": "https://splunk.example.com:8088/services/collector",
+    "token": "hec-token-here"
+  },
+  "roles": [
+    {"external_id": "alice@example.com", "role": "admin"},
+    {"external_id": "bob@example.com", "role": "member"}
+  ],
+  "network_admin_token": "network-specific-secret"
+}
+```
+
+## Fields reference [#fields]
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | Yes | Network name. Lowercase alphanumeric with hyphens. Used for idempotent lookup. |
+| `join_rule` | string | No | One of `open`, `token`, or `invite`. Defaults to `open`. |
+| `enterprise` | bool | No | Enable enterprise features. Defaults to `false`. |
+| `policy` | object | No | Network policy: `max_members`, `allowed_ports`, `description`. See [Network Policies](/docs/enterprise-policies). |
+| `expr_policy` | object | No | Programmable expression policy applied to the network (versioned rules evaluated by the policy runner). Same document as the `set_expr_policy` RPC. See [Programmable policies](/docs/enterprise-policies#expr). |
+| `identity_provider` | object | No | IDP configuration: `type`, `url`, `client_id`. See [Identity & SSO](/docs/enterprise-identity). |
+| `webhooks` | object | No | Webhook endpoints: `audit_url` and `identity_url`. |
+| `audit_export` | object | No | Export config: `format`, `endpoint`, `token`. See [Audit Export](/docs/enterprise-audit#export). |
+| `roles` | array | No | RBAC pre-assignments by external identity: `[{external_id, role}]` where role is `owner`, `admin`, or `member`. Applied when a matching node joins. |
+| `network_admin_token` | string | No | Per-network admin token for delegated administration. |
+
+## Apply sequence [#sequence]
+
+When a blueprint is applied, the registry executes these steps in order:
+
+1. **Find or create** - look up the network by name. If it exists, use it. If not, create it with the specified join rule.
+2. **Enable enterprise** - if `enterprise: true` and the network is not yet enterprise, enable it.
+3. **Set policies** - apply the `policy` object using merge-on-update semantics.
+4. **Apply expr policy** - if `expr_policy` is present, install the programmable policy document on the network.
+5. **Configure IDP** - set the identity provider configuration if specified.
+6. **Configure webhooks** - register the `audit_url` / `identity_url` endpoints if specified.
+7. **Configure audit export** - set the audit export endpoint and format if specified.
+8. **Pre-assign roles** - store each `{external_id, role}` as a pre-assignment; the role is applied when a node with that external identity later joins. Membership is not required at apply time.
+
+Each step is independent - if a later step fails, earlier steps are not rolled back, and the call returns an error immediately. The result's `actions` list names only the steps that succeeded; failures are surfaced as the returned error, not itemized in the result.
+
+## Idempotency [#idempotency]
+
+Blueprints are idempotent. Applying the same blueprint twice produces the same result. The registry looks up the network by `name`:
+
+- If a network with that name exists, it is updated (not duplicated)
+- If no network with that name exists, a new one is created
+
+This makes blueprints safe to apply repeatedly in CI/CD pipelines. Re-applying after a partial failure completes the remaining steps without duplicating already-completed ones.
+
+## Validation [#validation]
+
+The registry validates the blueprint before applying any changes:
+
+- **`name`** is required and must match the network name rules (lowercase alphanumeric with hyphens)
+- **`join_rule`** must be one of `open`, `token`, or `invite`
+- **`identity_provider.type`** must be a valid provider type (`oidc`, `saml`, `entra_id`, `ldap`, `webhook`)
+- **`roles`** values must be `owner`, `admin`, or `member`
+
+If validation fails, no changes are made and the error is returned immediately. (Policy fields like `max_members` and `allowed_ports` are not range-checked on the blueprint path — those limits apply to the separate `set_network_policy` RPC.)
+
+## Protocol command [#command]
+
+### Apply a blueprint [#apply-a-blueprint]
+
+From the CLI, `pilotctl extras provision <blueprint.json>` sends the file with the admin token from `PILOT_ADMIN_TOKEN`. `pilotctl extras provision-status` and `pilotctl extras deprovision <network-name>` cover the rest. The protocol command:
+
+```json
+{
+  "type": "provision_network",
+  "blueprint": {
+    "name": "prod-fleet",
+    "enterprise": true,
+    "policy": { "max_members": 100 }
+  },
+  "admin_token": "your-admin-token"
+}
+```
+
+The blueprint is the only payload field besides `admin_token`. The admin token is a global registry token; no network owner is assigned by the blueprint path, and there is no explicit `node_id` on the RPC.
+
+### Result format [#result-format]
+
+```json
+{
+  "network_id": 5,
+  "name": "prod-fleet",
+  "created": true,
+  "type": "provision_network_ok",
+  "actions": [
+    "created network 5 (prod-fleet)",
+    "enabled enterprise features",
+    "applied network policy",
+    "configured splunk_hec audit export to https://splunk.example.com:8088/..."
+  ]
+}
+```
+
+The `created` field indicates whether a new network was created (`true`) or an existing one was updated (`false`).
+
+### File-based blueprints [#file-based-blueprints]
+
+For programmatic use, load a blueprint from a JSON file with the typed loader in the `common/registry/wire` package, then pass it to the client:
+
+```go
+// Go SDK — the typed loader lives in common/registry/wire
+import "github.com/pilot-protocol/common/registry/wire"
+import "github.com/pilot-protocol/common/registry/client"
+
+bp, err := wire.LoadBlueprint("network.json")   // *wire.NetworkBlueprint
+// ProvisionNetwork takes a map[string]interface{} blueprint + admin token.
+// Marshal the blueprint JSON into a map, or build the map directly.
+result, err := c.ProvisionNetwork(blueprintMap, adminToken)
+```
+
+`wire.LoadBlueprint` reads and validates the JSON file, returning a typed struct. `client.Client.ProvisionNetwork(blueprint, adminToken)` takes the blueprint as a `map[string]interface{}` and the admin token. There is no explicit `nodeID` argument, and the blueprint path assigns no network owner.
+
+## Status query [#status]
+
+Inspect the provisioning state of a network:
+
+```json
+{
+  "type": "get_provision_status",
+  "admin_token": "your-admin-token"
+}
+```
+
+Takes no `network_id` — it returns a registry-wide summary of all networks. Per network you get enterprise status, policy, `idp_type`, an `audit` format string, a `webhook_enabled` flag, and an `rbac_pre_assignments` count (a summary, not full configs or endpoints). Use it to verify a blueprint was applied.
+
+**See also:** [Enterprise Overview](/docs/enterprise) - the full enterprise feature set. [Network Policies](/docs/enterprise-policies) - policy fields that blueprints configure. [Audit Export](/docs/enterprise-audit#export) - export formats and delivery guarantees. [← Audit Log & Export](/docs/enterprise-audit)[Firewalls & Compat Mode →](/docs/firewalls)

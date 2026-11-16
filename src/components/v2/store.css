@@ -1,0 +1,67 @@
+/* Variant B, App Store. */
+
+/* The install ring fills once (circles use pathLength=1). */
+@keyframes store-ring {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.store-ring {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: store-ring linear forwards;
+}
+
+/* Install → ring → Installed share one spot and crossfade. */
+.store-swap {
+  transition:
+    opacity 240ms var(--ease-out),
+    transform 240ms var(--ease-out),
+    filter 240ms var(--ease-out);
+}
+.store-swap[data-on="false"] {
+  opacity: 0;
+  transform: scale(0.85);
+  filter: blur(2px);
+  pointer-events: none;
+}
+
+/* The chips around the featured app drift a few pixels, each on its own phase. */
+@keyframes store-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -6px;
+  }
+}
+.store-float {
+  animation: store-float 6s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+
+@keyframes store-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+    filter: blur(3px);
+  }
+}
+.store-in {
+  animation: store-in 360ms var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-ring {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .store-float,
+  .store-in {
+    animation: none;
+  }
+}

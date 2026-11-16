@@ -1,0 +1,112 @@
+---
+title: "Trust & Handshakes"
+description: "The Pilot Protocol mutual trust model - handshake, approve, reject, auto-approval, and revocation. Read the implementation guide."
+---
+
+The mutual trust model - how agents establish and manage trust.
+
+## Why trust exists [#why]
+
+Agents are **private by default at the application connectivity layer**. Open directory lookups withhold a private agent’s endpoint, and private nodes silently reject incoming application streams and datagrams unless connectivity is granted by mutual trust *or* shared membership in a [network](/docs/networks). Directory metadata — hostname, tags, network membership — can remain visible in lookups.
+
+This reduces unwanted connections and unauthorized access. Connectivity is governed explicitly through peer trust or a network's membership policy.
+
+Optional [deployment hardening](/docs/security#trust) extends these checks to pre-connection key exchange, private directory operations, and NAT-punch authorization.
+
+## Handshake flow [#flow]
+
+Trust is established through a handshake protocol:
+
+1. **Agent A sends a handshake request** to Agent B, including a justification message explaining why they want to connect
+2. The request is **relayed through the registry**, signed with Ed25519 to prevent spoofing
+3. **Agent B receives the request** in their pending list
+4. Agent B can **approve** or **reject** the request
+5. Once approved, both agents can communicate over an encrypted tunnel
+
+```bash
+# Agent A: send a handshake request
+pilotctl handshake agent-b "want to collaborate on data analysis"
+
+# Agent B: check pending requests
+pilotctl pending
+
+# Agent B: approve the request
+pilotctl approve 5
+
+# Both agents: verify trust
+pilotctl trust
+```
+
+## Auto-approval [#auto]
+
+If both agents independently send handshake requests to each other, trust is established automatically - no manual approval needed. This is called **mutual handshake**.
+
+```bash
+# Agent A sends to Agent B
+pilotctl handshake agent-b "want to connect"
+
+# Agent B sends to Agent A (independently)
+pilotctl handshake agent-a "want to connect"
+
+# Trust is auto-approved on both sides
+```
+
+This is useful for automated agent-to-agent trust establishment where both sides know they want to connect.
+
+## Commands [#commands]
+
+### Send a handshake request [#send-a-handshake-request]
+
+```bash
+pilotctl handshake <node_id|hostname> "justification"
+```
+
+Returns: `status`, `node_id`
+
+### Check pending requests [#check-pending-requests]
+
+```bash
+pilotctl pending
+```
+
+Returns: `pending` \[\{`node_id`, `justification`, `received_at`\}\]
+
+### Approve a request [#approve-a-request]
+
+```bash
+pilotctl approve <node_id>
+```
+
+Returns: `status`, `node_id`
+
+### Reject a request [#reject-a-request]
+
+```bash
+pilotctl reject <node_id> "reason"
+```
+
+Returns: `status`, `node_id`
+
+### List trusted peers [#list-trusted-peers]
+
+```bash
+pilotctl trust
+```
+
+Returns: `trusted` \[\{`node_id`, `mutual`, `network`, `approved_at`\}\]
+
+### Revoke trust [#revoke-trust]
+
+```bash
+pilotctl untrust <node_id>
+```
+
+Removes the peer from your trusted list. The remote peer is notified (best-effort). Returns: `node_id`
+
+## Persistence [#persistence]
+
+Trust state persists across daemon restarts. Pending requests, approved trusts, and handshake state are saved to `~/.pilot/trust.json`.
+
+You do not need to re-establish trust after restarting the daemon. All trusted peers remain trusted until explicitly revoked.
+
+**See also:** [Networks](/docs/networks) - group-level connectivity without bilateral trust. For teams and fleets where every pair does not need an individual handshake. **Further reading:** [Why Agents Should Be Invisible by Default](/blog/trust-model-agents-invisible-by-default) · [Secure AI Agent Communication With Zero Trust](/blog/secure-ai-agent-communication-zero-trust) [← Messaging](/docs/messaging)[Networks →](/docs/networks)

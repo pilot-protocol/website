@@ -1,0 +1,40 @@
+{
+ "kind": "page",
+ "slug": "for/p2p",
+ "title": "Direct peer-to-peer for AI agents.",
+ "seoTitle": "Direct Peer-to-Peer for AI Agents - Pilot Protocol",
+ "description": "Direct encrypted data paths for AI agents, with an explicit discovery registry and end-to-end encrypted relay fallback when NAT prevents a peer-to-peer tunnel.",
+ "toc": [
+  {
+   "id": "direct-peer-to-peer-for-ai-agents",
+   "text": "Direct peer-to-peer for AI agents.",
+   "level": 2
+  },
+  {
+   "id": "hub-and-spoke-is-a-bottleneck",
+   "text": "Hub-and-spoke is a bottleneck.",
+   "level": 2
+  },
+  {
+   "id": "no-middleman-no-middleman-overhead",
+   "text": "No middleman, no middleman overhead.",
+   "level": 2
+  },
+  {
+   "id": "three-tiers-of-traversal",
+   "text": "Three tiers of traversal.",
+   "level": 2
+  },
+  {
+   "id": "four-steps-about-a-minute",
+   "text": "Four steps. About a minute.",
+   "level": 2
+  },
+  {
+   "id": "go-direct-peer-to-peer-by-default",
+   "text": "Go direct. Peer-to-peer by default.",
+   "level": 2
+  }
+ ],
+ "html": "For · P2P<h2 id=\"direct-peer-to-peer-for-ai-agents\">Direct peer-to-peer for <em>AI agents.</em></h2><p>Direct peer-to-peer data path. No API gateway. No message broker. A thin registry handles discovery — then agents connect <b>directly</b>, encrypted, NAT-traversing, zero config.</p><a href=\"/docs/getting-started\">Install in one line →</a><a href=\"/docs/concepts\">Read the architecture</a>Why direct<h2 id=\"hub-and-spoke-is-a-bottleneck\">Hub-and-spoke is a <em>bottleneck.</em></h2>LatencyZero-hop data pathOn a direct path, packets travel the exact network RTT between the two machines — no gateway, no broker queue sitting in between adding tens of milliseconds. Symmetric-NAT peers that cannot hole-punch fall back to an encrypted relay, which adds a hop.SecurityEnd-to-end encryptedX25519 key exchange, AES-256-GCM authenticated encryption, on by default (disable with <code>--no-encrypt</code> if you must). Nothing in the middle can read your data.OpsHosted coordination by defaultNo message broker or gateway fleet to run when using the public network. The daemon runs on each agent machine; discovery and NAT traversal use the Pilot-operated registry and beacon. Those endpoints are configurable.ScaleLinear by constructionEach new peer adds one tunnel to whoever it talks to. The payload plane has no central fan-in limit; registry capacity remains a coordination-plane concern.The numbers<h2 id=\"no-middleman-no-middleman-overhead\">No middleman, <em>no middleman overhead.</em></h2>Latency≈ RTTA direct tunnel adds little over the raw network round-trip between the two peers.LANLowSame-subnet agents talk at LAN latency — Pilot stays out of the way.LossLowThe userspace reliability layer recovers lost UDP packets; measure your own path with <code>pilotctl bench</code>.Header34 bytesPer-packet header (flow-control window + CRC32). Encryption adds a small separate envelope (nonce + GCM tag).Any NAT<h2 id=\"three-tiers-of-traversal\">Three tiers of <em>traversal.</em></h2>01Full-cone NATSTUN discovers your public endpoint. The peer dials it directly. No punch needed. Works across most consumer and cloud NAT.02Restricted cone NATThe rendezvous coordinates a simultaneous hole-punch on both sides. The first outbound packet opens the return path, typically establishing quickly.03Symmetric NATHole-punching impossible. Pilot auto-falls-back to an encrypted relay. The relay forwards opaque packets - it cannot read your data.Up and running<h2 id=\"four-steps-about-a-minute\">Four steps.<br/><em>About a minute.</em></h2>agent@node ~ direct p2p0.8s# agent A - install and start$ curl -fsSL https://pilotprotocol.network/install.sh | sh$ pilotctl daemon start --hostname agent-aDaemon running (pid 24817)  Address:  0:0000.A91F.7C2E  Hostname: agent-a # agent B - handshake then dial agent A directly$ pilotctl handshake agent-a$ pilotctl connect agent-a --message \"hello, peer\"✓ direct-path example · 34ms · relay not neededNo Docker. No Kubernetes. No YAML. Just a <em>binary</em> and a <em>hostname</em>.<ul><li>01InstallOne command. Static binaries (daemon + CLI), no dependencies.</li><li>02Start the daemonGets a permanent address. Joins the network. NAT traversal is automatic.</li><li>03TrustMutual handshake before any connection. You decide who can reach you.</li><li>04DialConnect by hostname. Direct tunnel, encrypted end-to-end.</li></ul><h2 id=\"go-direct-peer-to-peer-by-default\">Go direct. <em>Peer-to-peer by default.</em></h2><a href=\"/docs/getting-started\">Install now →</a><a href=\"/blog/peer-to-peer-agent-communication-no-server\">Read the deep dive</a>"
+}

@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in contributing to `website` — Pilot Protocol website + docs — Astro static site at pilotprotocol.network.
+Thanks for your interest in contributing to `website` — Pilot Protocol website + docs — Next.js site at pilotprotocol.network.
 
 ## Quick start
 
@@ -10,6 +10,8 @@ cd website
 npm ci && npm run build
 ```
 
+`README.md` covers local development with Payload's local database, the two site variants and deploys.
+
 ## Pull requests
 
 1. Open an issue first for non-trivial changes so design can be discussed.
@@ -18,14 +20,14 @@ npm ci && npm run build
 4. Coverage should not regress (Codecov reports per-PR delta).
 5. Conventional commit style is preferred (`feat:`, `fix:`, `docs:`, `chore:`, …) but not enforced.
 
-## Machine UI parity
+## Docs pages and posts
 
-Every page also ships a plain-text "machine UI" twin under `src/pages/plain/`
-for AI agents and screen readers. CI runs `npm run check:plain`, which fails if
-a human page is missing its `/plain/` twin or a plain page is left orphaned. If
-you add or remove a `docs/*` page (or one of the curated marketing pages), add
-or remove its plain twin in the same PR. Run `npm run check:plain` locally to
-verify before pushing.
+A docs page is an MDX file in `content/docs` plus its entry in
+`content/docs/meta.json`; agents get the same page as Markdown at
+`/docs/<page>.mdx`, so there is no separate plain-text copy to keep in step.
+Blog, learning center and newsroom posts are written in the Payload admin at
+`/admin`, not committed to this repo. Before pushing, run `npm run lint` and
+`npm run build` (the build runs the type check).
 
 ## Code of conduct
 

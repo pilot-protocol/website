@@ -1,0 +1,196 @@
+/*
+ * Object tiles and wires for the security, self-hosting and peer-to-peer diagrams (infra.tsx). Names are prefixed
+ * `infra-`. The tile is the home hero's white tile, lighter: a hairline edge and a short soft lift, never a dark drop.
+ */
+
+.infra-tile {
+  --ob-accent: #1f5bff;
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: #ffffff;
+  color: #1a1a1a;
+  box-shadow:
+    0 0 0 1px rgb(26 26 26 / 0.07),
+    0 1px 2px rgb(10 42 156 / 0.07),
+    0 8px 18px -10px rgb(10 42 156 / 0.3);
+  transition:
+    box-shadow 400ms var(--ease-out),
+    opacity 400ms var(--ease-out),
+    filter 400ms var(--ease-out);
+}
+.dark .infra-tile {
+  --ob-accent: #5aa9ff;
+  background: #2a2a28;
+  color: #f2f2ec;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    0 0 0 1px rgb(255 255 255 / 0.07),
+    0 1px 2px rgb(0 0 0 / 0.3),
+    0 10px 22px -12px rgb(0 0 0 / 0.6);
+}
+.infra-tile[data-lit="true"] {
+  box-shadow:
+    0 0 0 1.5px var(--sky-fill),
+    0 0 0 5px rgb(31 91 255 / 0.12),
+    0 8px 18px -10px rgb(10 42 156 / 0.3);
+}
+.dark .infra-tile[data-lit="true"] {
+  box-shadow:
+    0 0 0 1.5px #5aa9ff,
+    0 0 0 5px rgb(90 169 255 / 0.16),
+    0 10px 22px -12px rgb(0 0 0 / 0.6);
+}
+.infra-tile[data-dim="true"] {
+  --ob-accent: #a3a39b;
+  color: #8a8a83;
+}
+.dark .infra-tile[data-dim="true"] {
+  --ob-accent: #6b6b65;
+  color: #8a8a83;
+}
+
+.infra-obj .ob2 {
+  color: var(--ob-accent, #1f5bff);
+  transition: color 400ms var(--ease-out);
+}
+
+/* A small round badge on a tile's lower right corner: a brand mark, a lock, a check. */
+.infra-badge {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1a1a1a;
+  box-shadow:
+    0 0 0 1px rgb(26 26 26 / 0.08),
+    0 2px 6px -2px rgb(10 42 156 / 0.3);
+}
+.dark .infra-badge {
+  background: #2a2a28;
+  color: #f2f2ec;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.1),
+    0 2px 6px -2px rgb(0 0 0 / 0.6);
+}
+
+/* Wires: 1.5px, soft, theme-following. */
+.infra-wire {
+  fill: none;
+  stroke: rgb(26 26 26 / 0.16);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition:
+    stroke 400ms var(--ease-out),
+    opacity 400ms var(--ease-out);
+}
+.dark .infra-wire {
+  stroke: rgb(255 255 255 / 0.16);
+}
+.infra-wire[data-lit="true"] {
+  stroke: rgb(31 91 255 / 0.55);
+}
+.dark .infra-wire[data-lit="true"] {
+  stroke: rgb(90 169 255 / 0.6);
+}
+.infra-wire[data-dim="true"] {
+  opacity: 0.35;
+}
+
+/* A small pill that sits on a wire (a port, a cipher, a state). Solid so the wire doesn't show through. */
+.infra-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--color-card);
+  box-shadow: 0 0 0 1px var(--sky-card-line);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--color-fg);
+  transition:
+    background-color 400ms var(--ease-out),
+    color 400ms var(--ease-out),
+    box-shadow 400ms var(--ease-out),
+    opacity 400ms var(--ease-out);
+}
+.infra-chip[data-tone="sky"] {
+  background: color-mix(in srgb, var(--sky-fill) 9%, var(--color-card));
+  color: var(--sky-accent);
+  box-shadow: 0 0 0 1px rgb(31 91 255 / 0.18);
+}
+.dark .infra-chip[data-tone="sky"] {
+  background: color-mix(in srgb, #5aa9ff 14%, var(--color-card));
+  box-shadow: 0 0 0 1px rgb(90 169 255 / 0.25);
+}
+.infra-chip[data-tone="ink"] {
+  background: #1a1a1a;
+  color: #ffffff;
+  box-shadow: none;
+}
+.dark .infra-chip[data-tone="ink"] {
+  background: #f2f2ec;
+  color: #141413;
+}
+.infra-chip[data-tone="off"] {
+  color: var(--color-dim);
+}
+
+/* Pop in: a state that appears (a check, a cross, a lock). */
+@keyframes infra-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+.infra-pop {
+  animation: infra-pop 320ms var(--ease-out) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .infra-pop {
+    animation: none;
+  }
+}
+
+/* On the deep-blue contrast bands: light tiles (as the home hero's), pale wires. */
+.pp-invert .infra-tile,
+.dark .pp-invert .infra-tile {
+  --ob-accent: #1f5bff;
+  background: #ffffff;
+  color: #1a1a1a;
+  box-shadow:
+    0 1px 2px rgb(4 18 80 / 0.25),
+    0 10px 24px -12px rgb(4 18 80 / 0.6);
+}
+.pp-invert .infra-tile[data-lit="true"],
+.dark .pp-invert .infra-tile[data-lit="true"] {
+  box-shadow:
+    0 0 0 2px #8ec1ff,
+    0 0 0 6px rgb(142 193 255 / 0.22),
+    0 10px 24px -12px rgb(4 18 80 / 0.6);
+}
+.pp-invert .infra-tile[data-dim="true"],
+.dark .pp-invert .infra-tile[data-dim="true"] {
+  --ob-accent: #9aa6c8;
+  color: #6b7390;
+  opacity: 0.85;
+}
+.pp-invert .infra-wire,
+.dark .pp-invert .infra-wire {
+  stroke: rgb(255 255 255 / 0.22);
+}
+.pp-invert .infra-wire[data-lit="true"],
+.dark .pp-invert .infra-wire[data-lit="true"] {
+  stroke: rgb(142 193 255 / 0.85);
+}
