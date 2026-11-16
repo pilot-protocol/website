@@ -1,0 +1,128 @@
+---
+title: "Gateway"
+description: "Bridge IP traffic to the Pilot Protocol overlay network - use curl, browsers, and any TCP tool. Read the implementation guide."
+---
+
+Reach a service on a remote pilot node using curl, a browser, or any TCP client. Ports are not translated - the port you connect to locally must match the port the remote service is listening on.
+
+**Separate binary:** `pilot-gateway` does not ship with the standard install (release tarballs contain `pilot-daemon`, `pilotctl`, and `pilot-updater` only). [pilot-protocol/gateway](https://github.com/pilot-protocol/gateway) is currently published as a Go *library* (`import "github.com/pilot-protocol/gateway"`) that you embed to bridge pilot streams to local loopback IPs; a standalone `pilot-gateway` binary is not published from it today. When a `pilot-gateway` binary is present, `pilotctl extras gateway …` locates it in this order: `$PILOT_GATEWAY_BIN` first, then a sibling next to `pilotctl`, then `$PATH`.
+
+## How it works [#how]
+
+The gateway lets you connect to a TCP service running on a remote pilot node using normal tools - curl, a browser, netcat, anything.
+
+When you start the gateway with a pilot address, it:
+
+1. Picks a local IP from a private subnet (default `10.4.0.0/16`) and adds it as a **loopback alias** on your network interface
+2. Starts **TCP listeners** on that IP for every port you specify
+3. When a connection comes in, tunnels it through the **encrypted pilot overlay** to the remote machine
+
+On the remote side, the incoming pilot connection arrives at the same port number. So if you start the gateway on port 8080, the remote machine needs a service **actually listening on port 8080** - the gateway does not translate ports.
+
+**sudo is always required.** Adding the loopback alias requires root on both macOS and Linux, regardless of which port you use.
+
+## Access a remote server [#access]
+
+This is the most common use case: a peer is running a server and you want to reach it.
+
+**Example:** reach a peer running a web server on port 80:
+
+```bash
+# 1. Trust the peer first (required)
+pilotctl handshake agent-alpha
+
+# 2. Start the gateway - maps 0:0000.0000.037D to 10.4.0.1
+sudo pilotctl extras gateway start --ports 80 0:0000.0000.037D
+
+# 3. Connect using any TCP tool
+curl http://10.4.0.1/
+# or open http://10.4.0.1/ in a browser
+
+# 4. Stop when done
+# pilotctl no longer tracks the gateway; stop it directly:
+sudo pkill -TERM pilot-gateway
+```
+
+The first pilot address you map gets `10.4.0.1`, the second gets `10.4.0.2`, and so on.
+
+### Multiple peers at once [#multiple-peers-at-once]
+
+```bash
+sudo pilotctl extras gateway start --ports 80,8080 0:0000.0000.037D 0:0000.0000.0002
+# First peer  → http://10.4.0.1/  and  http://10.4.0.1:8080/
+# Second peer → http://10.4.0.2/  and  http://10.4.0.2:8080/
+```
+
+## Expose your own server on pilotprotocol network [#host]
+
+For a peer to reach a plain TCP service on your machine, the pilot stream must be bridged to your local port on *your* side — a plain OS listener (e.g. `python3 -m http.server`) does not register a pilot listener, so the daemon has nothing to hand the inbound stream to. Run the gateway (or a pilot port-forward) on the server side to bridge the pilot port to your local TCP service; the peer then runs their gateway to dial you.
+
+### Your machine (the server) [#your-machine-the-server]
+
+```bash
+# Start your server on whatever port you want
+python3 -m http.server 8080
+# nginx, caddy, your app - anything that listens on a TCP port
+
+# Find your pilot address to share with the peer
+pilotctl info
+# Address: 0:0000.0000.xxxx  ← share this
+```
+
+When the peer sends a handshake, approve it:
+
+```bash
+pilotctl pending            # see incoming requests
+pilotctl approve <node_id>
+```
+
+### Peer's machine (the client) [#peer-s-machine-the-client]
+
+```bash
+# --ports 8080 must match the port your server is actually on
+pilotctl handshake 0:0000.0000.xxxx
+sudo pilotctl extras gateway start --ports 8080 0:0000.0000.xxxx
+curl http://10.4.0.1:8080/
+```
+
+No port forwarding, no VPN, no firewall changes needed on your side. The pilot overlay handles the traversal.
+
+## Manage mappings [#manage]
+
+### List current mappings [#list-current-mappings]
+
+```bash
+pilotctl extras gateway list
+```
+
+*Note:* this prints "no mappings" — live mappings are held inside the `pilot-gateway` process, not pilotctl.
+
+### Mappings [#mappings]
+
+`pilot-gateway` owns its in-memory mapping table for its lifetime; there is no IPC to mutate a running gateway. `pilotctl extras gateway map` execs a transient `pilot-gateway` that registers a mapping and exits. To change the mapping set, restart `pilot-gateway` with the mappings you want.
+
+```bash
+pilotctl extras gateway map 0:0000.0000.0007           # transient: register + exit
+```
+
+### Remove a mapping [#remove-a-mapping]
+
+`pilotctl extras gateway unmap` is not supported — unmapping is owned by the `pilot-gateway` process (there is no remote control path). Stop the process to release its mappings.
+
+### Stop the gateway [#stop-the-gateway]
+
+```bash
+# pilotctl no longer tracks the gateway; stop it directly:
+sudo pkill -TERM pilot-gateway
+```
+
+## Notes & limits [#notes]
+
+- **Ports are not translated** - the port you specify in `--ports` is the port the remote machine must be listening on. The gateway forwards traffic to the same port number on the other side.
+- **sudo required** - loopback alias creation requires root on macOS and Linux, regardless of port number.
+- **TCP only** - the gateway does not support UDP.
+- **Trust required** - you must have mutual trust with the remote node. Run `pilotctl handshake` first.
+- **Default ports** - if you omit `--ports`, the gateway listens on: `7, 80, 443, 1000, 1001, 1002, 8080, 8443`.
+- **Cleanup** - the gateway removes its loopback aliases when the `pilot-gateway` process stops (SIGTERM).
+
+**Further reading:** [Connect AI Agents Behind NAT Without a VPN](/blog/connect-ai-agents-behind-nat-without-vpn) · [Service Agents](/docs/service-agents) (for HTTP-style query/response without gateway plumbing) [← Webhooks](/docs/webhooks)[Tags →](/docs/tags)

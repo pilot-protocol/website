@@ -1,0 +1,332 @@
+---
+title: "App Store"
+description: "Install and build agent apps for Pilot Protocol - typed IPC capabilities, one command to install, guided submission to publish."
+---
+
+Apps an agent installs with one command and calls over local IPC - JSON in, JSON out, started by the daemon on install. Discover, install, call.
+
+## Overview [#overview]
+
+Where `list-agents` is the phonebook for live *data* on the overlay, the App Store is for installable *capability apps*. An app is a small binary plus a signed `manifest.json`. `pilotctl` fetches the bundle from the catalogue, sha-checks and extracts it, and validates its signed manifest; the daemon then supervises it — spawning the binary, handing it a unix socket, and brokering IPC calls. Each app method is a typed call - JSON in, JSON out.
+
+Apps are made by their publishers (Cosift, Plainweb, Smol, AgentPhone, Orthogonal, the Wallet app and others) and reviewed before they are listed; Pilot runs the catalogue and the install path. The catalogue lists 30 apps today: databases, sandboxes, email and phone, search, the wallet and more. Run `pilotctl appstore catalogue` for the current list.
+
+Apps are:
+
+- **Local** - they run on your own daemon, one process per host. The heavy lifting (an index, a chain, an LLM) lives wherever the app's backend is; the installed binary is a thin, stateless adapter.
+- **Typed** - every method maps to a JSON request/response. No browser, no REST plumbing.
+- **Signature-verified** - the manifest pins the binary's sha256 and carries an ed25519 signature. The daemon verifies the signature when it scans installed apps, and re-checks the binary's sha256 immediately before every spawn.
+- **Grant-scoped** - the manifest declares what the app may do (network, file I/O, calls to other apps), and the review checks it. The daemon's broker enforces the grants on everything that passes through it, such as calls between apps and hooks. Installing an app accepts its declared grants. There is no OS-level sandbox yet (see [Security model](#security)).
+- **Auto-spawned** - once installed, the daemon's supervisor keeps the app running. No manual start.
+
+The whole loop an agent runs is: **discover → install → call**.
+
+## Using apps [#using]
+
+Discovery and install go through the catalogue - a signed list the daemon fetches. Install verifies the bundle and the daemon auto-spawns it; `call` is then the workhorse.
+
+```bash
+# 1. Discover what's installable
+pilotctl appstore catalogue
+
+# 2. Inspect before committing - description, vendor, changelog, size, source, methods, permissions
+pilotctl appstore view io.pilot.cosift [--all-changelog]
+
+# 3. Install by id - fetch + verify sha + install; the daemon auto-spawns it
+pilotctl appstore install io.pilot.cosift
+
+# 4. Confirm it's ready (lists installed apps + the methods each exposes)
+pilotctl appstore list
+pilotctl appstore status io.pilot.cosift
+
+# 5. Call a method - JSON in, JSON out on stdout
+pilotctl appstore call io.pilot.cosift cosift.search '{"q":"raft consensus","k":"5"}'
+```
+
+`view <id>` is the app's detail page — it works whether or not the app is installed, so you can vet description, vendor, latest changelog (`--all-changelog` for full history), download/installed size, source URL, license, exposed methods, and the permissions it requests before installing.
+
+**No config step.** A well-built app ships with sane defaults, so `install` then `call` is all an agent needs. Apps may read an optional `config.json` next to their manifest for overrides (e.g. a self-hosted backend).
+
+## Discovery & the help convention [#discovery]
+
+`pilotctl appstore list` and `status` surface a flat list of method *names* - enough to know what exists, not how to call it. The convention for richer discovery is a **`<app>.help`** method: a single local call (no backend round-trip) that returns every method with its parameters, a `kind` (utility / status / meta), and an expected-latency class.
+
+```bash
+pilotctl appstore call io.pilot.cosift cosift.help '{}'
+```
+
+The latency class lets an agent pick the cheapest method for its need before spending a slow one:
+
+- **fast** - under \~1s: status or cheap retrieval.
+- **med** - \~1-5s: an LLM rerank or a single-pass synthesis.
+- **slow** - \~5-30s: multi-step work (e.g. research that plans, retrieves, and synthesizes).
+
+Each method entry also carries a warm round-trip estimate the app publishes, so an agent can budget a call end-to-end (agent → daemon → app → backend → back).
+
+## Metered apps [#metered]
+
+Most apps run locally and are free. A few call a paid partner API through Pilot's broker, which holds the partner key and meters each user's calls - for example Orthogonal, AgentPhone and Smol's cloud machines. Each Pilot user gets a budget of USD 5 for each metered app; only successful paid calls draw on it, and reads are free.
+
+- The usage demo printed at install, and the app's page in the store, list what each paid call costs.
+- A metered app has a free `<app>.balance` method that returns what is left, for example `pilotctl appstore call io.pilot.orthogonal orthogonal.balance '{}'`.
+- When the budget is spent, paid calls return `402`; reads keep working.
+
+## Dynamic context on every call [#dynamic-context]
+
+Two surfaces put the right next command in front of an agent at the two moments it is most likely to stall — right after install, and after every call. Both are authored once by the publisher and need no runtime code (see [Authoring dynamic context](#authoring-context)).
+
+### Product demo at install [#product-demo]
+
+When `pilotctl appstore install io.pilot.<app>` finishes, its last step is a compact, example-first **“Full usage demo”**: when to reach for the app, the one call to run first, and a handful of worked examples (with per-call cost for metered apps). It turns a bare install into a correct first call. The same demo renders as the **Full usage demo** section on the app's store page.
+
+### Next-steps after every call [#next-steps]
+
+After every `pilotctl appstore call`, `pilotctl` prints a short **next-steps** block to **stderr** — the recommended commands for where the agent now stands, on success *and* on failure. **stdout stays pure JSON**, so an agent can still pipe the result into `jq`; the hints never touch it.
+
+A missing param renders a corrected, runnable call; a needs-signup state names the signup command; a `402` points at the balance check. For example, a `sqlite.query` with no `database`:
+
+```bash
+# stdout is the pure JSON result (here an error envelope) — the hints go to stderr:
+pilotctl appstore call io.pilot.sqlite sqlite.query '{"sql":"SELECT 42"}'
+error: ipc: server error: backend: missing required param(s): database
+next:  sqlite needs an explicit database — there is no default
+  1. pilotctl appstore call io.pilot.sqlite sqlite.query '{"database":":memory:","sql":"SELECT 42 AS a"}'
+     why: pass database (:memory: for a scratch db) — fixes the error above
+```
+
+Turn it off with `PILOT_NEXT_STEPS=off`. With `--json`, the hint arrives as a structured `next_steps` object instead of prose. A hint is never load-bearing: an absent, malformed, or unmatched graph prints nothing and leaves the call itself unchanged — no hint bug can ever turn a working call into a failed one.
+
+### Hints reach installed apps automatically [#graph-refresh]
+
+The hints are driven by a small graph the app ships in the catalogue. Agents do **not** reinstall to get them: `pilotctl` lazily refreshes each app's cached graph from the catalogue in the background — a bounded check, at most about every 12 hours per app. So an app installed before its graph shipped starts showing hints on its next call, and a republished graph propagates within the day. No user action.
+
+## Lifecycle [#lifecycle]
+
+```bash
+pilotctl appstore restart io.pilot.cosift    # respawn (e.g. after writing a config.json)
+pilotctl appstore caps io.pilot.cosift       # spend caps + current rolling-window usage
+pilotctl appstore audit io.pilot.cosift      # supervisor log: spawn / exit / verify-fail
+pilotctl appstore actions                    # pilotctl-side install/uninstall log (survives removal)
+pilotctl appstore upgrade io.pilot.cosift      # move to the catalogue's current version (state kept)
+pilotctl appstore install io.pilot.cosift --force  # reinstall the same version in place (state kept)
+pilotctl appstore uninstall io.pilot.cosift --yes
+```
+
+`caps` reports the manifest's spend caps and how much of each rolling window the app has consumed; `audit` tails the supervisor lifecycle log for one app; `actions` is the pilotctl-side install/uninstall log, which persists even after an app is removed. Both `audit` and `actions` accept `--tail <n>` and `--event <name>` (and `audit` takes `--since <dur>`). `install --force` keeps the app's state (keys, `data.db`, secrets, cap state, audit log); add `--reset-state` only when you want the app to start empty.
+
+**Upgrades key on the version.** The supervisor respawns an app when its `app_version` changes. Bump the version for every new build, or a re-release of the same version won't roll running nodes onto the new binary.
+
+## Keeping apps current [#updating]
+
+Apps are versioned in the catalogue. Two commands find and apply new versions:
+
+```bash
+pilotctl appstore outdated                    # installed apps with a newer — or rebuilt — catalogue version
+pilotctl appstore upgrade io.pilot.cosift      # re-install one app: verified, then respawned
+pilotctl appstore upgrade --all               # bring every installed app up to date
+```
+
+`upgrade` re-runs the same verified install (catalogue signature → tarball sha256 → manifest signature → publisher trust anchor), then the supervisor applies the version change and restarts the app, refusing any downgrade. `outdated` flags an app not only on a version bump but also as **rebuilt** when a same-version bundle was republished — so a fix shipped without a version change is still surfaced.
+
+**Auto-update.** `pilotctl`'s own updater — `pilotctl update status|enable|disable` — keeps the CLI and daemon current (automatic updates are off by default). With auto-update enabled, the updater also keeps installed app adapters current automatically, so you won't need to run `upgrade` by hand. To keep apps pinned instead, see [Opting out of app auto-updates](#app-update-opt-out) below.
+
+## Opting out of app auto-updates [#app-update-opt-out]
+
+The updater service itself is off by default. Once you explicitly enable `pilotctl update`, app-adapter updates are included by default: `pilot-updater` periodically runs `appstore upgrade --all`. To keep adapters pinned on an updater-enabled host, set `PILOT_APP_UPDATE_OPT_OUT=true`.
+
+Set it in the updater's service environment, then restart the updater so it takes effect:
+
+```bash
+# Linux (systemd): set the env var on the pilot-updater service
+sudo systemctl edit pilot-updater
+#   [Service]
+#   Environment=PILOT_APP_UPDATE_OPT_OUT=true
+sudo systemctl restart pilot-updater
+
+# macOS (launchd): add PILOT_APP_UPDATE_OPT_OUT to the plist's EnvironmentVariables, then reload
+launchctl unload ~/Library/LaunchAgents/network.pilotprotocol.pilot-updater.plist
+launchctl load   ~/Library/LaunchAgents/network.pilotprotocol.pilot-updater.plist
+```
+
+With `PILOT_APP_UPDATE_OPT_OUT=true` the updater no longer checks for or installs app updates — your installed apps stay exactly where they are. Pilot's own daemon and CLI binaries keep updating as normal; this switch only affects app-store apps.
+
+### Switching app updates back on [#app-update-opt-in]
+
+Opting back in is the reverse: remove `PILOT_APP_UPDATE_OPT_OUT` from the updater's environment (or set it to `false`, the default) and restart the updater. The next cycle resumes `appstore upgrade --all` and brings your apps current. You can always upgrade by hand with `pilotctl appstore upgrade <id>` or `upgrade --all`, regardless of the setting.
+
+**Truthy values.** `PILOT_APP_UPDATE_OPT_OUT` reads `1`, `true`, `yes`, or `on` (case-insensitive) as opted-out; anything else — including unset — means opted-in. The value is read when the updater starts, so restart it after a change. (The legacy `PILOT_UPDATER_NO_APP_UPGRADE` variable still works as an alias.)
+
+## Building an app [#building]
+
+An app is a binary that listens on the socket the daemon hands it and speaks the app-store IPC protocol. The manifest declares its identity, the methods it exposes, the pinned binary, and the grants it needs.
+
+You don't write the adapter by hand: `pilot-app`, from [pilot-protocol/app-template](https://github.com/pilot-protocol/app-template), generates it from a short `pilot.app.yaml` that points at your HTTP API or CLI (see [Publishing](#publishing)). For reference, this is what it generates:
+
+```json
+{
+  "id": "io.pilot.cosift",
+  "app_version": "0.1.2",
+  "manifest_version": 1,
+  "binary": { "runtime": "go", "path": "bin/cosift-app", "sha256": "<pinned>" },
+  "exposes": ["cosift.search", "cosift.answer", "cosift.research",
+              "cosift.stats", "cosift.health", "cosift.help"],
+  "grants": [
+    { "cap": "net.dial", "target": "cosift.pilotprotocol.network",
+      "if": { "kind": "rate", "params": { "per": "min", "limit": 120 } } },
+    { "cap": "fs.read",  "target": "$APP/config.json" },
+    { "cap": "audit.log", "target": "*" }
+  ],
+  "protection": "shareable",
+  "store": { "publisher": "ed25519:...", "signature": "..." }
+}
+```
+
+The binary registers one handler per method and serves them over the socket. In Go, that's the `app-store/pkg/ipc` contract:
+
+```bash
+d := ipc.NewDispatcher()
+d.Register("cosift.search", func(ctx, req) (json.RawMessage, error) { ... })
+// ... one Register per exposed method ...
+ipc.Serve(ctx, conn, d)   // on the --socket the daemon supplies
+```
+
+The daemon spawns the binary with a fixed set of lifecycle flags (`--socket`, `--manifest`, `--addr`, `--db`, `--identity`, `--cap-state`). An app must accept all of them (even if it ignores most) or it will fail to start. Method names in the code **must** match the manifest's `exposes` list, or the daemon won't broker them.
+
+## Publishing an app [#publishing]
+
+Apps are published through one repository, [pilot-protocol/app-template](https://github.com/pilot-protocol/app-template): describe your API in a spec, let `pilot-app` build and sign the bundle, and open a pull request.
+
+```bash
+# 1. Install the scaffolder and describe your API
+go install github.com/pilot-protocol/app-template/cmd/pilot-app@latest
+pilot-app example > pilot.app.yaml      # starter spec, fully annotated
+pilot-app validate
+
+# 2. Generate the adapter, then build, pin, sign and package it
+pilot-app init -o ./my-app
+cd my-app
+make gen-key                            # one-time ed25519 publisher key (keep it safe)
+make package                            # build -> pin sha256 -> sign -> tarball
+pilot-app verify io.pilot.<id>-<ver>.tar.gz   # optional: run the review gate locally
+
+# 3. Prepare the submission in your fork of app-template
+pilot-app submit -C . --prepare /path/to/app-template-fork
+```
+
+Commit `submissions/<id>/` in your fork and open a pull request to `pilot-protocol/app-template`. CI verifies the bundle and a maintainer reviews it. On merge, automation releases the bundle and opens its catalogue entry; once that entry is in the signed catalogue, `pilotctl appstore install <id>` resolves it everywhere. The form at [/publish](/publish) runs the same pipeline on Pilot's server instead of your machine. The app-template README and `docs/PUBLISHING.md` cover every field.
+
+Three integrity layers protect every install: the *catalogue* carries a detached ed25519 signature (a substituted app list fails), the catalogue pins each *tarball* sha256 (a swapped CDN byte fails), and the manifest pins the *binary* sha256 under an ed25519 signature (verified at scan time). The binary sha256 is re-checked immediately before every spawn.
+
+### Authoring dynamic context [#authoring-context]
+
+The two runtime surfaces from [Dynamic context on every call](#dynamic-context) are authored once in your app's `submission.json` and validated at submit time — no runtime code, and both are carried verbatim into the catalogue.
+
+**Product demo.** A `product_demo` block is the example-first usage guide that renders both at install and as the store page's *Full usage demo*: a one-sentence `when_to_use`, a `quickstart` call, 2–6 worked `examples`, and — for metered apps — a cost table. It is what turns an install into a first successful call.
+
+**Next-steps graph.** A `next_steps` graph is a flat list of edges. Each edge answers one question — *the agent just ran `from` and it went `on`; what now?* — and names 1–3 **recommended** commands:
+
+```json
+{
+  "schema": 1,
+  "app": "io.pilot.example",
+  "edges": [
+    {
+      "from": "*",
+      "on": "err",
+      "code": 402,
+      "why": "budget exhausted",
+      "then": [
+        { "cmd": "pilotctl appstore call io.pilot.example example.balance '{}'",
+          "why": "check what's left before spending again",
+          "kind": "recovery" }
+      ]
+    }
+  ]
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `from` | the method just called, or `"*"` for any |
+| `on` | `"ok"` (exit 0) or `"err"` (exit 1) |
+| `match` | regex over the outcome payload — the error text on `err`, the JSON result body on `ok` |
+| `code` | exact backend HTTP status; `err` edges only |
+| `why` | one line of framing, printed above the steps |
+| `then` | 1–3 steps, each a full `pilotctl` command with its own `why` and an optional `kind` (`gateway` / `flow` / `recovery`) |
+
+The most important case is often *not* an error: an app with a mandatory signup soft-fails with exit 0 and a `"needs_signup": true` body, so its gateway edge matches on `on:"ok"`. The best-matching edge wins on specificity, not file order, and there is no session state — a recommendation is a pure function of `(method, outcome, payload)`, so the app's own response is the only signal.
+
+The authoring rules keep a graph small and trustworthy:
+
+- **Recommended, not exhaustive.** A graph is not `<app>.help` — name the few commands that move an agent toward value, not every method.
+- **Every step needs a `why`** — it is what turns a bare command into a decision.
+- **Cover the failures that end sessions** — needs-signup, `402` budget, `429` quota, missing/invalid param, server-not-started — each with a corrected, runnable command.
+- **Commands must actually run.** Every `cmd` is copy-pasteable and complete; a recovery step that still fails is worse than silence.
+- If your app has a mandatory first method, a `from:"*"` edge must route a cold agent to it.
+
+Because the graph lives in the catalogue metadata rather than the bundle, rewording or extending it is a metadata republish — no app rebuild — and existing installs pick it up automatically (see [above](#graph-refresh)).
+
+## Catalogue vs sideload [#install-models]
+
+There are two install paths, with different trust:
+
+- **Catalogue** (`install <id>`) - the reviewed path. The bundle is signature-verified and installs with the grants its manifest declares, including `net.dial`. This is how any app that needs the network is distributed.
+- **Sideload** (`install <dir> --local`) - for local development. The manifest may declare only `fs.read`/`fs.write` under `$APP` and `audit.log`. **No `net.dial`**, no signing key, no hooks. A net-using app must go through the catalogue. This is a check on the manifest, not an OS sandbox, so only sideload code you trust.
+
+To stage a release locally before publishing, point `$PILOT_APPSTORE_CATALOG_URL` at a `file://` catalogue and install by id - the same code path as production, with your own tarball.
+
+To check a bundle without installing it, `pilotctl appstore verify <bundle-dir>` validates the manifest and sha256-checks the manifest-pinned binary against it, reporting any mismatch — a tampered or wrongly-built bundle fails here before it ever reaches the install root.
+
+## Security model & hardening [#security]
+
+Trust flows from a signed catalogue, through a signed and reviewed manifest, to a supervised, resource-limited child process. The daemon's broker gates every call that passes through it. OS-level sandboxing (landlock, seccomp) is not wired yet, so an app's binary is not walled off at the syscall level; the review is what stands behind its declared grants.
+
+### Signed catalogue (fail-closed) [#signed-catalogue-fail-closed]
+
+The catalogue is signed with a dedicated ed25519 key whose public half is compiled into `pilotctl` and the daemon. `pilotctl` fetches both `catalogue.json` and a detached `catalogue.json.sig` and verifies the signature **before trusting any entry**. An unsigned, missing-signature, or tampered catalogue is refused - a compromised host or CDN cannot point installs at hostile bundle URLs without forging the signature. The signing key can be rotated at build time:
+
+```bash
+go build -ldflags   "-X .../internal/catalogtrust.publicKeyB64=<new-b64-pubkey>"   ./cmd/pilotctl ./cmd/daemon
+```
+
+### Broker authorization (exposes + grants) [#broker-authorization-exposes-grants]
+
+Apps never dial each other's sockets directly - every call goes through the daemon's broker, which enforces two gates before any dispatch:
+
+- **Exposes gate** - a method is dispatchable only if the target app lists it in its manifest `exposes` set. That list is the app's entire callable surface; anything else is refused, even for the daemon itself.
+- **Grant gate** - when one app calls another, the caller must declare a matching `ipc.call` grant targeting `<app>.<method>` (exact, `<app>.*`, or `*`). No grant, no call.
+
+### Supervisor hardening [#supervisor-hardening]
+
+The supervisor that spawns and watches each app applies defence-in-depth:
+
+- **Launch-time re-verification (TOCTOU)** - immediately before `exec`, the binary is re-checked: rejected if it became a symlink, and its sha256 must still match the pinned hash. A binary swapped between install-scan and launch is caught before it runs.
+- **Exponential backoff** - a binary that fails verification is retried with capped exponential backoff (not a fixed interval), and a crash-looping app is suspended after too many failures in a window until an operator restarts it.
+- **Resource limits** - on Linux each app is spawned with `RLIMIT_NOFILE` and an `RLIMIT_AS` address-space cap, bounding fd and memory abuse.
+- **Audit log rotation** - every lifecycle event (spawn, exit, verify-fail, suspend, resume) is written to a per-app JSONL audit log that rotates across a bounded number of generations, so a crash-looping app can't fill the disk while recent forensics are retained.
+
+### Extension hooks [#extension-hooks]
+
+Apps may register hooks on daemon primitives (declared in the manifest), but the hook surface is bounded: per-app rate limiting caps how often the daemon will dispatch into an app's hooks, and the number of dynamic hook registrations per app is capped - so a hostile hook can't become a DoS amplifier.
+
+## Worked example: io.pilot.cosift [#example]
+
+The cosift app is a stateless adapter to Cosift's search / answer / research API over a web corpus. It exposes several utility methods (search, answer, research, and more) plus status/discovery ones:
+
+```bash
+# Discover the surface + latencies
+pilotctl appstore call io.pilot.cosift cosift.help '{}'
+
+# search (fast) - ranked URLs + excerpts
+pilotctl appstore call io.pilot.cosift cosift.search '{"q":"raft leader election","retriever":"hybrid","rerank":"true","k":"5"}'
+
+# answer / chat (med) - grounded synthesis with citations
+pilotctl appstore call io.pilot.cosift cosift.answer '{"q":"What is HNSW?"}'
+
+# research (slow) - plan -> multi-retrieval -> report
+pilotctl appstore call io.pilot.cosift cosift.research '{"q":"compare raft and paxos"}'
+```
+
+The cosift backend is open source ([pilot-protocol/cosift](https://github.com/pilot-protocol/cosift)); the app is the hand-written reference that `pilot-app` generates the equivalent of.
+
+[← Service Agents](/docs/service-agents)[Pilot Cloud →](/docs/mcp)

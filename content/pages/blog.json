@@ -1,0 +1,755 @@
+{
+ "kind": "page",
+ "slug": "blog",
+ "title": "AI agent networking, explained .",
+ "seoTitle": "AI Agent Networking Guides and Analysis | Pilot Protocol",
+ "description": "Learn how to connect AI agents over a P2P overlay network: NAT traversal, encrypted tunnels, trust models, and the app store. Real commands, working code.",
+ "toc": [
+  {
+   "id": "ai-agent-networking-explained",
+   "text": "AI agent networking, explained .",
+   "level": 2
+  },
+  {
+   "id": "verify-an-install-script-before-running-it-what-the-shell-online",
+   "text": "Verify an Install Script Before Running It: What the shell.online Installer Checks, and What It Can't, After Tensorlake 0.5.144",
+   "level": 3
+  },
+  {
+   "id": "terminal-sharing-security-when-infostealers-go-after-coding-agen",
+   "text": "Terminal Sharing Security When Infostealers Go After Coding Agents: What shell.online Leaves on Disk, and What to Revoke",
+   "level": 3
+  },
+  {
+   "id": "keep-a-terminal-session-alive-after-a-disconnect-what-a-long-age",
+   "text": "Keep a Terminal Session Alive After a Disconnect: What a Long Agent Run on shell.online Survives",
+   "level": 3
+  },
+  {
+   "id": "share-a-dev-server-s-terminal-with-a-teammate-not-its-port-resta",
+   "text": "Share a Dev Server's Terminal With a Teammate, Not Its Port: Restarting on Go 1.26.9 After Two net/http Fixes",
+   "level": 3
+  },
+  {
+   "id": "a-persistent-terminal-sharing-link-that-survives-a-reboot-shell-",
+   "text": "A Persistent Terminal Sharing Link That Survives a Reboot: shell.online --persistent After Ubuntu's October Kernel Update",
+   "level": 3
+  },
+  {
+   "id": "two-people-one-collaborative-terminal-session-in-the-browser-how",
+   "text": "Two People, One Collaborative Terminal Session in the Browser: How shell.online Decides Who Types During a GhostAction Cleanup",
+   "level": 3
+  },
+  {
+   "id": "a-remote-router-shell-without-port-forwarding-or-an-exposed-ssh-",
+   "text": "A Remote Router Shell Without Port Forwarding or an Exposed SSH Port, After MikroTrick",
+   "level": 3
+  },
+  {
+   "id": "a-terminal-sharing-link-that-expires-at-a-set-time-what-shell-on",
+   "text": "A Terminal Sharing Link That Expires at a Set Time: What shell.online --auto-close Actually Stops",
+   "level": 3
+  },
+  {
+   "id": "share-a-windows-terminal-session-in-the-browser-codex-on-conpty-",
+   "text": "Share a Windows Terminal Session in the Browser: Codex on ConPTY, Without OpenSSH or WSL",
+   "level": 3
+  },
+  {
+   "id": "a-browser-terminal-for-a-docker-container-that-keeps-one-link-ac",
+   "text": "A Browser Terminal for a Docker Container That Keeps One Link Across Restarts, After the Unsloth Studio RCE",
+   "level": 3
+  },
+  {
+   "id": "see-what-a-coding-agent-is-doing-without-opening-its-terminal-ow",
+   "text": "See What a Coding Agent Is Doing Without Opening Its Terminal: Owner-Only Session Summaries in shell.online, After PixelLeak",
+   "level": 3
+  },
+  {
+   "id": "end-to-end-encrypted-terminal-sharing-has-a-second-secret-on-the",
+   "text": "End-to-End Encrypted Terminal Sharing Has a Second Secret on the Host: shell.online v0.24.1 Takes the Session Password Out of Process Environments",
+   "level": 3
+  },
+  {
+   "id": "let-a-coding-agent-share-its-own-terminal-session-in-the-browser",
+   "text": "Let a Coding Agent Share Its Own Terminal Session in the Browser: the shell.online Skill and shell --json",
+   "level": 3
+  },
+  {
+   "id": "watch-a-coding-agent-remotely-without-shrinking-its-terminal-she",
+   "text": "Watch a Coding Agent Remotely Without Shrinking Its Terminal: shell.online v0.23.2 Gives the Host Its Grid and Each Viewer Its Own Layout",
+   "level": 3
+  },
+  {
+   "id": "self-hosted-terminal-sharing-run-the-shell-online-relay-on-one-d",
+   "text": "Self-Hosted Terminal Sharing: Run the shell.online Relay on One Docker Host Instead of Cloudflare",
+   "level": 3
+  },
+  {
+   "id": "start-a-terminal-session-from-the-browser-on-a-mac-that-sat-idle",
+   "text": "Start a Terminal Session From the Browser on a Mac That Sat Idle for Days: the launchd Priority Fix in shell.online v0.23.3",
+   "level": 3
+  },
+  {
+   "id": "when-the-egress-proxy-rotates-its-credentials",
+   "text": "When the Egress Proxy Rotates Its Credentials",
+   "level": 3
+  },
+  {
+   "id": "watch-claude-code-from-your-phone-as-a-conversation-not-an-80-co",
+   "text": "Watch Claude Code From Your Phone as a Conversation, Not an 80-Column Grid",
+   "level": 3
+  },
+  {
+   "id": "getting-a-pilot-node-online-from-a-locked-down-agent-vm",
+   "text": "Getting a Pilot Node Online From a Locked-Down Agent VM",
+   "level": 3
+  },
+  {
+   "id": "share-a-terminal-session-password-with-a-teammate-without-the-se",
+   "text": "Share a Terminal Session Password With a Teammate Without the Service Seeing It: shell.online v0.23.1 Password Requests",
+   "level": 3
+  },
+  {
+   "id": "which-agent-session-needs-you-shell-online-v0-22-adds-a-passive-",
+   "text": "Which Agent Session Needs You? shell.online v0.22 Adds a Passive Pulse to Monitor a Coding Agent in the Browser",
+   "level": 3
+  },
+  {
+   "id": "mcp-terminal-access-for-an-ai-agent-scoped-grants-that-expire-an",
+   "text": "MCP Terminal Access for an AI Agent: Scoped Grants That Expire and Revoke",
+   "level": 3
+  },
+  {
+   "id": "a-read-only-terminal-link-for-your-coding-agent-after-plugin4she",
+   "text": "A Read-Only Terminal Link for Your Coding Agent, After Plugin4Shell",
+   "level": 3
+  },
+  {
+   "id": "how-to-revoke-a-shared-terminal-link-without-killing-the-process",
+   "text": "How to Revoke a Shared Terminal Link Without Killing the Process Behind It",
+   "level": 3
+  },
+  {
+   "id": "cosift-a-collaborative-index-agents-build-as-they-work",
+   "text": "Cosift: A Collaborative Index Agents Build As They Work",
+   "level": 3
+  },
+  {
+   "id": "end-to-end-encrypted-terminal-sharing-what-the-relay-sees-and-wh",
+   "text": "End-to-End Encrypted Terminal Sharing: What the Relay Sees, and What It Can No Longer Replay",
+   "level": 3
+  },
+  {
+   "id": "end-to-end-encrypted-terminal-sharing-what-the-relay-can-still-d",
+   "text": "End-to-End Encrypted Terminal Sharing: What the Relay Can Still Do After shell.online v0.16.1",
+   "level": 3
+  },
+  {
+   "id": "track-terminal-sessions-across-machines-by-name-shell-online-v0-",
+   "text": "Track Terminal Sessions Across Machines by Name: shell.online v0.16 Adds --name and shell ls",
+   "level": 3
+  },
+  {
+   "id": "a-browser-terminal-on-a-ros-2-robot-without-a-vpn-and-why-it-sho",
+   "text": "A Browser Terminal on a ROS 2 Robot Without a VPN, and Why It Should Be Read-Only by Default",
+   "level": 3
+  },
+  {
+   "id": "connect-an-ai-agent-to-a-live-terminal-without-giving-it-the-mac",
+   "text": "Connect an AI Agent to a Live Terminal Without Giving It the Machine: shell.online v0.15 Agent Handoffs",
+   "level": 3
+  },
+  {
+   "id": "share-a-terminal-session-in-the-browser-without-handing-over-the",
+   "text": "Share a Terminal Session in the Browser Without Handing Over the Filesystem: shell.online v0.14 File Access",
+   "level": 3
+  },
+  {
+   "id": "self-hosted-terminal-sharing-on-one-docker-box-the-shell-online-",
+   "text": "Self-Hosted Terminal Sharing on One Docker Box: the shell.online Relay Without a Cloudflare Account",
+   "level": 3
+  },
+  {
+   "id": "a-read-only-terminal-link-for-a-training-run-you-check-from-your",
+   "text": "A Read-Only Terminal Link for a Training Run You Check From Your Phone",
+   "level": 3
+  },
+  {
+   "id": "vs-code-1-137-runs-agent-sessions-in-their-own-process-terminal-",
+   "text": "VS Code 1.137 Runs Agent Sessions in Their Own Process. Terminal Sharing Without SSH or VPN Does That for a Failing Build",
+   "level": 3
+  },
+  {
+   "id": "team-terminal-sharing-sealed-so-the-service-can-t-open-it",
+   "text": "Team Terminal Sharing, Sealed So the Service Can't Open It",
+   "level": 3
+  },
+  {
+   "id": "how-to-watch-a-coding-agent-remotely-after-you-turn-off-its-perm",
+   "text": "How to Watch a Coding Agent Remotely After You Turn Off Its Permission Prompts",
+   "level": 3
+  },
+  {
+   "id": "connect-claude-code-to-pilot-protocol-with-mcp-tools",
+   "text": "Connect Claude Code to Pilot Protocol with MCP Tools",
+   "level": 3
+  },
+  {
+   "id": "connect-cursor-to-pilot-protocol-with-mcp",
+   "text": "Connect Cursor to Pilot Protocol with MCP",
+   "level": 3
+  },
+  {
+   "id": "connect-cline-to-pilot-protocol-with-mcp",
+   "text": "Connect Cline to Pilot Protocol with MCP",
+   "level": 3
+  },
+  {
+   "id": "connect-hermes-to-pilot-protocol-with-mcp",
+   "text": "Connect Hermes to Pilot Protocol with MCP",
+   "level": 3
+  },
+  {
+   "id": "connect-picoclaw-to-pilot-protocol-with-mcp",
+   "text": "Connect PicoClaw to Pilot Protocol with MCP",
+   "level": 3
+  },
+  {
+   "id": "connect-openhands-to-pilot-protocol-with-mcp",
+   "text": "Connect OpenHands to Pilot Protocol with MCP",
+   "level": 3
+  },
+  {
+   "id": "connect-codex-cli-to-pilot-protocol-with-mcp",
+   "text": "Connect Codex CLI to Pilot Protocol with MCP",
+   "level": 3
+  },
+  {
+   "id": "connect-gemini-cli-to-pilot-protocol-with-mcp",
+   "text": "Connect Gemini CLI to Pilot Protocol with MCP",
+   "level": 3
+  },
+  {
+   "id": "connect-jetbrains-junie-to-pilot-protocol-with-mcp",
+   "text": "Connect JetBrains Junie to Pilot Protocol with MCP",
+   "level": 3
+  },
+  {
+   "id": "connect-github-copilot-to-pilot-protocol-with-mcp-tools",
+   "text": "Connect GitHub Copilot to Pilot Protocol with MCP Tools",
+   "level": 3
+  },
+  {
+   "id": "shell-online-a-live-browser-link-for-any-terminal",
+   "text": "shell.online: A Live Browser Link for Any Terminal",
+   "level": 3
+  },
+  {
+   "id": "persistent-addresses-for-distributed-ai-agents",
+   "text": "Persistent Addresses for Distributed AI Agents",
+   "level": 3
+  },
+  {
+   "id": "ai-networking-best-practices-for-secure-scalable-systems",
+   "text": "AI networking best practices for secure, scalable systems",
+   "level": 3
+  },
+  {
+   "id": "secure-ai-agent-networking-workflow-step-by-step-guide",
+   "text": "Secure AI agent networking workflow: step-by-step guide",
+   "level": 3
+  },
+  {
+   "id": "understanding-autonomous-agent-networking-for-distributed-ai",
+   "text": "Understanding autonomous agent networking for distributed AI",
+   "level": 3
+  },
+  {
+   "id": "network-tunnels-in-ai-secure-comms-for-autonomous-agents",
+   "text": "Network tunnels in AI: Secure comms for autonomous agents",
+   "level": 3
+  },
+  {
+   "id": "secure-communication-protocols-for-distributed-ai-systems",
+   "text": "Secure communication protocols for distributed AI systems",
+   "level": 3
+  },
+  {
+   "id": "overlay-networking-for-automation-secure-ai-agent-solutions",
+   "text": "Overlay networking for automation: Secure AI agent solutions",
+   "level": 3
+  },
+  {
+   "id": "top-encrypted-tunnel-advantages-for-p2p-ai-networks",
+   "text": "Top encrypted tunnel advantages for P2P AI networks",
+   "level": 3
+  },
+  {
+   "id": "protocol-wrapping-for-secure-peer-to-peer-ai-systems",
+   "text": "Protocol wrapping for secure peer-to-peer AI systems",
+   "level": 3
+  },
+  {
+   "id": "decentralized-networking-p2p-solutions-for-ai-architectures",
+   "text": "Decentralized networking: P2P solutions for AI architectures",
+   "level": 3
+  },
+  {
+   "id": "what-is-protocol-overlay-fundamentals-and-practical-insights",
+   "text": "What is protocol overlay? Fundamentals and practical insights",
+   "level": 3
+  },
+  {
+   "id": "secure-network-infrastructure-for-ai-agents-a-practical-guide",
+   "text": "Secure network infrastructure for AI agents: A practical guide",
+   "level": 3
+  },
+  {
+   "id": "top-ai-networking-challenges-for-decentralized-systems",
+   "text": "Top AI networking challenges for decentralized systems",
+   "level": 3
+  },
+  {
+   "id": "advanced-network-automation-7-tips-for-secure-ai-systems",
+   "text": "Advanced network automation: 7 tips for secure AI systems",
+   "level": 3
+  },
+  {
+   "id": "decentralized-communication-protocols-for-ai-developers",
+   "text": "Decentralized communication protocols for AI developers",
+   "level": 3
+  },
+  {
+   "id": "peer-to-peer-agent-communication-without-an-application-broker",
+   "text": "Peer-to-Peer Agent Communication Without an Application Broker",
+   "level": 3
+  },
+  {
+   "id": "connecting-mcp-servers-to-agents-across-any-network",
+   "text": "Connecting MCP Servers to Agents Across Any Network",
+   "level": 3
+  },
+  {
+   "id": "multi-agent-system-networking-guide-for-ai-developers",
+   "text": "Multi-agent system networking guide for AI developers",
+   "level": 3
+  },
+  {
+   "id": "build-an-openclaw-agent-that-self-organizes-into-a-pilot-network",
+   "text": "Build an OpenClaw Agent That Self-Organizes Into a Pilot Network",
+   "level": 3
+  },
+  {
+   "id": "why-a-few-ai-agents-get-80-of-the-work-and-how-to-stop-it",
+   "text": "Why a Few AI Agents Get 80% of the Work (And How to Stop It)",
+   "level": 3
+  },
+  {
+   "id": "building-claude-code-agent-teams-over-pilot-protocol",
+   "text": "Building Claude Code Agent Teams Over Pilot Protocol",
+   "level": 3
+  },
+  {
+   "id": "how-hundreds-of-agents-autonomously-adopted-pilot",
+   "text": "How Hundreds of Agents Autonomously Adopted Pilot",
+   "level": 3
+  },
+  {
+   "id": "build-an-ai-agent-marketplace-on-pilot-discovery-trust-and-reput",
+   "text": "Build an AI Agent Marketplace on Pilot: Discovery, Trust and Reputation",
+   "level": 3
+  },
+  {
+   "id": "replace-webhooks-with-persistent-agent-tunnels",
+   "text": "Replace Webhooks With Persistent Agent Tunnels",
+   "level": 3
+  },
+  {
+   "id": "beyond-rest-persistent-connections-for-ai-agents",
+   "text": "Beyond REST: Persistent Connections for AI Agents",
+   "level": 3
+  },
+  {
+   "id": "how-to-build-an-agent-app-turn-your-api-into-an-agent-native-too",
+   "text": "How to Build an Agent App: Turn Your API Into an Agent-Native Tool",
+   "level": 3
+  },
+  {
+   "id": "web-search-api-for-ai-agents-grounded-research-with-cosift",
+   "text": "Web Search API for AI Agents: Grounded Research with cosift",
+   "level": 3
+  },
+  {
+   "id": "overlay-network-for-ai-agents-architecture-and-trust-model",
+   "text": "Overlay Network for AI Agents: Architecture and Trust Model",
+   "level": 3
+  },
+  {
+   "id": "ai-agent-communication-protocols-pilot-vs-mcp-vs-a2a-vs-acp-vs-a",
+   "text": "AI agent communication protocols: Pilot vs MCP vs A2A vs ACP vs ANP",
+   "level": 3
+  },
+  {
+   "id": "the-ai-agent-app-store-install-tools-with-one-command",
+   "text": "The AI Agent App Store: Install Tools With One Command",
+   "level": 3
+  },
+  {
+   "id": "aegis-a-runtime-firewall-for-ai-agents-against-prompt-injection",
+   "text": "AEGIS: A Runtime Firewall for AI Agents Against Prompt Injection",
+   "level": 3
+  },
+  {
+   "id": "pilot-vs-tailscale-vs-nebula-vs-zerotier-for-ai-agents",
+   "text": "Pilot vs Tailscale vs Nebula vs ZeroTier for AI Agents",
+   "level": 3
+  },
+  {
+   "id": "lightweight-swarm-communication-for-drones-and-robots",
+   "text": "Lightweight Swarm Communication for Drones and Robots",
+   "level": 3
+  },
+  {
+   "id": "smart-home-without-cloud-local-first-device-communication",
+   "text": "Smart Home Without Cloud: Local-First Device Communication",
+   "level": 3
+  },
+  {
+   "id": "distributed-monitoring-without-prometheus-or-grafana",
+   "text": "Distributed Monitoring Without Prometheus or Grafana",
+   "level": 3
+  },
+  {
+   "id": "chain-ai-models-across-machines-with-persistent-tunnels",
+   "text": "Chain AI Models Across Machines With Persistent Tunnels",
+   "level": 3
+  },
+  {
+   "id": "distributed-rag-without-a-central-knowledge-base",
+   "text": "Distributed RAG Without a Central Knowledge Base",
+   "level": 3
+  },
+  {
+   "id": "p2p-communication-for-federated-learning-nodes",
+   "text": "P2P Communication for Federated Learning Nodes",
+   "level": 3
+  },
+  {
+   "id": "secure-research-collaboration-share-models-not-data",
+   "text": "Secure Research Collaboration: Share Models, Not Data",
+   "level": 3
+  },
+  {
+   "id": "technical-controls-for-healthcare-ai-agent-communication",
+   "text": "Technical Controls for Healthcare AI Agent Communication",
+   "level": 3
+  },
+  {
+   "id": "how-to-secure-ai-agent-communication-with-zero-trust",
+   "text": "How to Secure AI Agent Communication With Zero Trust",
+   "level": 3
+  },
+  {
+   "id": "cross-company-agent-collaboration-without-a-shared-app-broker",
+   "text": "Cross-Company Agent Collaboration Without a Shared App Broker",
+   "level": 3
+  },
+  {
+   "id": "connect-ai-agents-across-aws-gcp-azure-without-a-vpn",
+   "text": "Connect AI Agents Across AWS, GCP & Azure Without a VPN",
+   "level": 3
+  },
+  {
+   "id": "run-your-agent-network-without-cloud-dependency",
+   "text": "Run Your Agent Network Without Cloud Dependency",
+   "level": 3
+  },
+  {
+   "id": "connect-ai-agents-behind-nat-without-a-vpn",
+   "text": "Connect AI Agents Behind NAT Without a VPN",
+   "level": 3
+  },
+  {
+   "id": "how-ai-agents-discover-each-other-on-a-live-network",
+   "text": "How AI Agents Discover Each Other on a Live Network",
+   "level": 3
+  },
+  {
+   "id": "build-a-self-organizing-agent-swarm-no-central-scheduler",
+   "text": "Build a Self-Organizing Agent Swarm: No Central Scheduler",
+   "level": 3
+  },
+  {
+   "id": "how-pilot-protocol-works",
+   "text": "How Pilot Protocol Works",
+   "level": 3
+  },
+  {
+   "id": "secure-data-exchange-for-multi-cloud-ai-systems",
+   "text": "Secure data exchange for multi-cloud AI systems",
+   "level": 3
+  },
+  {
+   "id": "encrypted-data-exchange-for-decentralized-ai",
+   "text": "Encrypted Data Exchange for Decentralized AI",
+   "level": 3
+  },
+  {
+   "id": "legacy-protocol-integration-for-secure-distributed-ai",
+   "text": "Legacy protocol integration for secure distributed AI",
+   "level": 3
+  },
+  {
+   "id": "agent-communication-security-best-practices-for-ai-developers",
+   "text": "Agent communication security: best practices for AI developers",
+   "level": 3
+  },
+  {
+   "id": "how-mutual-trust-secures-decentralized-ai-agent-networks",
+   "text": "How mutual trust secures decentralized AI agent networks",
+   "level": 3
+  },
+  {
+   "id": "encryption-protocols-for-secure-ai-systems-a-practical-guide",
+   "text": "Encryption protocols for secure AI systems: A practical guide",
+   "level": 3
+  },
+  {
+   "id": "why-direct-p2p-connections-power-secure-ai-networking",
+   "text": "Why Direct P2P Connections Power Secure AI Networking",
+   "level": 3
+  },
+  {
+   "id": "network-security-for-multi-agent-systems-key-strategies",
+   "text": "Network security for multi-agent systems: Key strategies",
+   "level": 3
+  },
+  {
+   "id": "virtual-network-addresses-for-secure-decentralized-ai",
+   "text": "Virtual network addresses for secure decentralized AI",
+   "level": 3
+  },
+  {
+   "id": "trustless-protocols-that-secure-decentralized-ai-systems",
+   "text": "Trustless protocols that secure decentralized AI systems",
+   "level": 3
+  },
+  {
+   "id": "persistent-address-strategies-for-distributed-ai-systems",
+   "text": "Persistent address strategies for distributed AI systems",
+   "level": 3
+  },
+  {
+   "id": "overlay-networking-explained-for-distributed-ai-systems",
+   "text": "Overlay Networking Explained for Distributed AI Systems",
+   "level": 3
+  },
+  {
+   "id": "ai-agent-discovery-master-p2p-networks-in-2026",
+   "text": "AI agent discovery: master P2P networks in 2026",
+   "level": 3
+  },
+  {
+   "id": "top-ai-agent-network-examples-for-secure-scalable-connectivity",
+   "text": "Top AI agent network examples for secure, scalable connectivity",
+   "level": 3
+  },
+  {
+   "id": "persistent-network-addressing-for-secure-ai-systems",
+   "text": "Persistent network addressing for secure AI systems",
+   "level": 3
+  },
+  {
+   "id": "building-a-userspace-tcp-over-udp-stack-in-pure-go",
+   "text": "Building a Userspace TCP-over-UDP Stack in Pure Go",
+   "level": 3
+  },
+  {
+   "id": "cloud-networking-secure-peer-to-peer-for-distributed-ai",
+   "text": "Cloud networking: Secure peer-to-peer for distributed AI",
+   "level": 3
+  },
+  {
+   "id": "mastering-multi-cloud-networking-for-decentralized-ai-systems",
+   "text": "Mastering multi-cloud networking for decentralized AI systems",
+   "level": 3
+  },
+  {
+   "id": "peer-to-peer-networking-examples-every-ai-engineer-should-know",
+   "text": "Peer-to-peer networking examples every AI engineer should know",
+   "level": 3
+  },
+  {
+   "id": "securing-ai-agent-networks-in-multi-cloud-environments",
+   "text": "Securing AI agent networks in multi-cloud environments",
+   "level": 3
+  },
+  {
+   "id": "trust-in-network-protocols-for-decentralized-systems",
+   "text": "Trust in network protocols for decentralized systems",
+   "level": 3
+  },
+  {
+   "id": "ai-networking-glossary-a2a-mcp-and-anp-terms",
+   "text": "AI Networking Glossary: A2A, MCP, and ANP Terms",
+   "level": 3
+  },
+  {
+   "id": "identity-directory-sync-and-audit-export-in-the-open-source-rend",
+   "text": "Identity, Directory Sync and Audit Export in the Open-Source Rendezvous",
+   "level": 3
+  },
+  {
+   "id": "rbac-policies-and-audit-trail-in-the-open-source-rendezvous",
+   "text": "RBAC, Policies and Audit Trail in the Open-Source Rendezvous",
+   "level": 3
+  },
+  {
+   "id": "announcing-the-pilot-protocol-python-sdk",
+   "text": "Announcing the Pilot Protocol Python SDK",
+   "level": 3
+  },
+  {
+   "id": "openclaw-agents-behind-nat-zero-config-peer-connectivity",
+   "text": "OpenClaw Agents Behind NAT: Zero-Config Peer Connectivity",
+   "level": 3
+  },
+  {
+   "id": "scaling-openclaw-fleets-running-thousands-of-autonomous-agents",
+   "text": "Scaling OpenClaw Fleets: Running Thousands of Autonomous Agents",
+   "level": 3
+  },
+  {
+   "id": "from-clawhub-to-live-network-how-openclaw-agents-discover-peers",
+   "text": "From ClawHub to Live Network: How OpenClaw Agents Discover Peers",
+   "level": 3
+  },
+  {
+   "id": "multi-agent-pipelines-chaining-openclaw-agents-over-encrypted-tu",
+   "text": "Multi-Agent Pipelines: Chaining OpenClaw Agents Over Encrypted Tunnels",
+   "level": 3
+  },
+  {
+   "id": "the-sociology-of-machines-hundreds-of-agents",
+   "text": "The Sociology of Machines: Hundreds of Agents",
+   "level": 3
+  },
+  {
+   "id": "building-custom-pilot-skills-with-openclaw",
+   "text": "Building Custom Pilot Skills with OpenClaw",
+   "level": 3
+  },
+  {
+   "id": "emergent-trust-networks-when-agents-choose-their-peers",
+   "text": "Emergent Trust Networks: When Agents Choose Their Peers",
+   "level": 3
+  },
+  {
+   "id": "why-autonomous-agents-need-private-by-default-discovery",
+   "text": "Why Autonomous Agents Need Private-by-Default Discovery",
+   "level": 3
+  },
+  {
+   "id": "connect-openclaw-to-pilot-protocol-with-mcp",
+   "text": "Connect OpenClaw to Pilot Protocol with MCP",
+   "level": 3
+  },
+  {
+   "id": "build-a-multi-agent-network-in-5-minutes",
+   "text": "Build a Multi-Agent Network in 5 Minutes",
+   "level": 3
+  },
+  {
+   "id": "http-vs-udp-overlay-an-agent-benchmarking-method",
+   "text": "HTTP vs UDP Overlay: An Agent Benchmarking Method",
+   "level": 3
+  },
+  {
+   "id": "agent-pub-sub-in-twelve-lines-of-go-with-the-broker-built-in",
+   "text": "Agent Pub/Sub in Twelve Lines of Go, With the Broker Built In",
+   "level": 3
+  },
+  {
+   "id": "run-http-services-over-an-encrypted-agent-overlay",
+   "text": "Run HTTP Services Over an Encrypted Agent Overlay",
+   "level": 3
+  },
+  {
+   "id": "peer-to-peer-file-transfer-between-ai-agents-no-s3-required",
+   "text": "Peer-to-Peer File Transfer Between AI Agents (No S3 Required)",
+   "level": 3
+  },
+  {
+   "id": "contributing-to-pilot-protocol-a-tour-of-the-codebase",
+   "text": "Contributing to Pilot Protocol: A Tour of the Codebase",
+   "level": 3
+  },
+  {
+   "id": "building-a2a-agent-cards-over-pilot-protocol-tunnels",
+   "text": "Building A2A Agent Cards Over Pilot Protocol Tunnels",
+   "level": 3
+  },
+  {
+   "id": "mcp-pilot-tools-and-a-network-for-ai-agents",
+   "text": "MCP + Pilot: Tools and a Network for AI Agents",
+   "level": 3
+  },
+  {
+   "id": "building-a-private-agent-network-for-your-company",
+   "text": "Building a Private Agent Network for Your Company",
+   "level": 3
+  },
+  {
+   "id": "the-pilot-protocol-trust-model-why-agents-should-be-invisible-by",
+   "text": "The Pilot Protocol Trust Model: Why Agents Should Be Invisible by Default",
+   "level": 3
+  },
+  {
+   "id": "aes-256-gcm-encryption-zero-dependency-go-implementation-guide",
+   "text": "AES-256-GCM Encryption: Zero-Dependency Go Implementation Guide",
+   "level": 3
+  },
+  {
+   "id": "nat-traversal-for-ai-agents-a-deep-dive",
+   "text": "NAT Traversal for AI Agents: A Deep Dive",
+   "level": 3
+  },
+  {
+   "id": "where-pilot-fits-with-tcp-grpc-and-nats",
+   "text": "Where Pilot Fits with TCP, gRPC, and NATS",
+   "level": 3
+  },
+  {
+   "id": "agent-connectivity-best-practices-why-ai-agents-need-a-network-s",
+   "text": "Agent Connectivity Best Practices: Why AI Agents Need a Network Stack",
+   "level": 3
+  },
+  {
+   "id": "frequently-asked-questions-about-agent-overlay-networking",
+   "text": "Frequently asked questions about agent overlay networking",
+   "level": 2
+  },
+  {
+   "id": "what-is-an-overlay-network-for-ai-agents",
+   "text": "What is an overlay network for AI agents?",
+   "level": 3
+  },
+  {
+   "id": "how-does-p2p-agent-networking-differ-from-vpns",
+   "text": "How does P2P agent networking differ from VPNs?",
+   "level": 3
+  },
+  {
+   "id": "why-do-ai-agents-need-nat-traversal",
+   "text": "Why do AI agents need NAT traversal?",
+   "level": 3
+  },
+  {
+   "id": "can-ai-agents-communicate-securely-over-an-overlay-network",
+   "text": "Can AI agents communicate securely over an overlay network?",
+   "level": 3
+  }
+ ],
+ "html": "Journal<h2 id=\"ai-agent-networking-explained\">AI agent networking, <em>explained</em>.</h2><p>Guides and field notes on connecting AI agents over a real network: direct peer-to-peer communication, NAT traversal without a VPN, encrypted tunnels, per-peer trust models, and the Pilot Protocol app store — with working <code>pilotctl</code> commands in many posts.</p><p>Start with <a href=\"/blog/ai-agent-discovery-process-p2p-networks\">agent discovery over P2P networks</a>, <a href=\"/blog/peer-to-peer-agent-communication-no-server\">peer-to-peer agent communication without a server</a>, <a href=\"/blog/how-pilot-protocol-works\">how Pilot Protocol works under the hood</a>, or an <a href=\"/blog/ai-agent-app-store\">introduction to the app store</a>.</p><a href=\"/blog/feed.xml\">RSS</a>Copied<a href=\"/blog/verify-an-install-script-before-running-it-what-the-shell-online-installer-check\"><img alt=\"Verify an Install Script Before Running It: What the shell.online Installer Checks, and What It Can't, After Tensorlake 0.5.144\" src=\"/blog/banners/verify-an-install-script-before-running-it-what-the-shell-online-installer-check.svg\"/><h3 id=\"verify-an-install-script-before-running-it-what-the-shell-online\">Verify an Install Script Before Running It: What the shell.online Installer Checks, and What It Can't, After Tensorlake 0.5.144</h3><p>How to verify an install script before running it, using the shell.online installer after the Tensorlake npm compromise: what the checksum proves and doesn't.</p>Oct 16, 2026Securityshell-onlinesupply-chain-securitychecksums</a><a href=\"/blog/terminal-sharing-security-when-infostealers-go-after-coding-agents-what-shell-on\"><img alt=\"Terminal Sharing Security When Infostealers Go After Coding Agents: What shell.online Leaves on Disk, and What to Revoke\" src=\"/blog/banners/terminal-sharing-security-when-infostealers-go-after-coding-agents-what-shell-on.svg\"/><h3 id=\"terminal-sharing-security-when-infostealers-go-after-coding-agen\">Terminal Sharing Security When Infostealers Go After Coding Agents: What shell.online Leaves on Disk, and What to Revoke</h3><p>Terminal sharing security after Gen Digital's infostealer report: the two files shell.online keeps on a host, what each unlocks, and the cleanup order.</p>Oct 15, 2026Securityshell-onlinesecurityinfostealers</a><a href=\"/blog/keep-a-terminal-session-alive-after-a-disconnect-what-a-long-agent-run-on-shell\"><img alt=\"Keep a Terminal Session Alive After a Disconnect: What a Long Agent Run on shell.online Survives\" src=\"/blog/banners/keep-a-terminal-session-alive-after-a-disconnect-what-a-long-agent-run-on-shell.svg\"/><h3 id=\"keep-a-terminal-session-alive-after-a-disconnect-what-a-long-age\">Keep a Terminal Session Alive After a Disconnect: What a Long Agent Run on shell.online Survives</h3><p>How to keep a terminal session alive after a disconnect: what shell.online does when the phone, the network or the host drops during a long agent run.</p>Oct 11, 2026Operationsshell-onlineterminalai-agents</a><a href=\"/blog/share-a-dev-servers-terminal-with-a-teammate-not-its-port-restarting-on-go-1-26\"><img alt=\"Share a Dev Server's Terminal With a Teammate, Not Its Port: Restarting on Go 1.26.9 After Two net/http Fixes\" src=\"/blog/banners/share-a-dev-servers-terminal-with-a-teammate-not-its-port-restarting-on-go-1-26.svg\"/><h3 id=\"share-a-dev-server-s-terminal-with-a-teammate-not-its-port-resta\">Share a Dev Server's Terminal With a Teammate, Not Its Port: Restarting on Go 1.26.9 After Two net/http Fixes</h3><p>Go 1.26.9 patches two net/http bugs. Share the dev server's terminal with a teammate in the browser while the server itself stays on localhost.</p>Oct 10, 2026Guideshell-onlinegolangterminal-sharing</a><a href=\"/blog/a-persistent-terminal-sharing-link-that-survives-a-reboot-shell-online-persisten\"><img alt=\"A Persistent Terminal Sharing Link That Survives a Reboot: shell.online --persistent After Ubuntu's October Kernel Update\" src=\"/blog/banners/a-persistent-terminal-sharing-link-that-survives-a-reboot-shell-online-persisten.svg\"/><h3 id=\"a-persistent-terminal-sharing-link-that-survives-a-reboot-shell-\">A Persistent Terminal Sharing Link That Survives a Reboot: shell.online --persistent After Ubuntu's October Kernel Update</h3><p>Keep a persistent terminal sharing link through a reboot: what shell.online --persistent restores, what it does not, and how to guard the state file.</p>Oct 9, 2026Operationsshell-onlineterminal-sharinglinux</a><a href=\"/blog/two-people-one-collaborative-terminal-session-in-the-browser-how-shell-online-de\"><img alt=\"Two People, One Collaborative Terminal Session in the Browser: How shell.online Decides Who Types During a GhostAction Cleanup\" src=\"/blog/banners/two-people-one-collaborative-terminal-session-in-the-browser-how-shell-online-de.svg\"/><h3 id=\"two-people-one-collaborative-terminal-session-in-the-browser-how\">Two People, One Collaborative Terminal Session in the Browser: How shell.online Decides Who Types During a GhostAction Cleanup</h3><p>How a collaborative terminal session in the browser decides who types: shell.online's 1.8-second input lease, read-only links and rotation.</p>Oct 8, 2026Securityshell-onlineincident-responsegithub-actions</a><a href=\"/blog/a-remote-router-shell-without-port-forwarding-or-an-exposed-ssh-port-after-mikro\"><img alt=\"A Remote Router Shell Without Port Forwarding or an Exposed SSH Port, After MikroTrick\" src=\"/blog/banners/a-remote-router-shell-without-port-forwarding-or-an-exposed-ssh-port-after-mikro.svg\"/><h3 id=\"a-remote-router-shell-without-port-forwarding-or-an-exposed-ssh-\">A Remote Router Shell Without Port Forwarding or an Exposed SSH Port, After MikroTrick</h3><p>A remote router shell without port forwarding: shell.online connects out from the device, so no SSH port waits on the WAN for the next MikroTrick.</p>Oct 7, 2026Securityshell-onlineroutersssh</a><a href=\"/blog/a-terminal-sharing-link-that-expires-at-a-set-time-what-shell-online-auto-close\"><img alt=\"A Terminal Sharing Link That Expires at a Set Time: What shell.online --auto-close Actually Stops\" src=\"/blog/banners/a-terminal-sharing-link-that-expires-at-a-set-time-what-shell-online-auto-close.svg\"/><h3 id=\"a-terminal-sharing-link-that-expires-at-a-set-time-what-shell-on\">A Terminal Sharing Link That Expires at a Set Time: What shell.online --auto-close Actually Stops</h3><p>A terminal sharing link that expires on a deadline: how shell.online --auto-close stops an unattended agent, and what it does not cover.</p>Oct 6, 2026Securityshell-onlineterminal-sharingai-agents</a><a href=\"/blog/share-a-windows-terminal-session-in-the-browser-codex-on-conpty-without-openssh\"><img alt=\"Share a Windows Terminal Session in the Browser: Codex on ConPTY, Without OpenSSH or WSL\" src=\"/blog/banners/share-a-windows-terminal-session-in-the-browser-codex-on-conpty-without-openssh.svg\"/><h3 id=\"share-a-windows-terminal-session-in-the-browser-codex-on-conpty-\">Share a Windows Terminal Session in the Browser: Codex on ConPTY, Without OpenSSH or WSL</h3><p>Share a Windows terminal session in the browser with shell.online: Codex on native ConPTY, no OpenSSH server or WSL, and the Windows-only limits.</p>Oct 5, 2026Guideshell-onlinewindowsconpty</a><a href=\"/blog/a-browser-terminal-for-a-docker-container-that-keeps-one-link-across-restarts-af\"><img alt=\"A Browser Terminal for a Docker Container That Keeps One Link Across Restarts, After the Unsloth Studio RCE\" src=\"/blog/banners/a-browser-terminal-for-a-docker-container-that-keeps-one-link-across-restarts-af.svg\"/><h3 id=\"a-browser-terminal-for-a-docker-container-that-keeps-one-link-ac\">A Browser Terminal for a Docker Container That Keeps One Link Across Restarts, After the Unsloth Studio RCE</h3><p>A browser terminal for a Docker container with shell.online: one encrypted link across restarts, no SSH keys inside, and why the Unsloth RCE makes that matter.</p>Oct 2, 2026Guideshell-onlinedockerterminal-sharing</a><a href=\"/blog/see-what-a-coding-agent-is-doing-without-opening-its-terminal-owner-only-session\"><img alt=\"See What a Coding Agent Is Doing Without Opening Its Terminal: Owner-Only Session Summaries in shell.online, After PixelLeak\" src=\"/blog/banners/see-what-a-coding-agent-is-doing-without-opening-its-terminal-owner-only-session.svg\"/><h3 id=\"see-what-a-coding-agent-is-doing-without-opening-its-terminal-ow\">See What a Coding Agent Is Doing Without Opening Its Terminal: Owner-Only Session Summaries in shell.online, After PixelLeak</h3><p>See what a coding agent is doing from the session list: new shell.online summaries are sealed to the owner and unreadable by the service.</p>Oct 1, 2026Securityshell-onlinecoding-agentsconfidential-computing</a><a href=\"/blog/end-to-end-encrypted-terminal-sharing-has-a-second-secret-on-the-host-shell-onli\"><img alt=\"End-to-End Encrypted Terminal Sharing Has a Second Secret on the Host: shell.online v0.24.1 Takes the Session Password Out of Process Environments\" src=\"/blog/banners/end-to-end-encrypted-terminal-sharing-has-a-second-secret-on-the-host-shell-onli.svg\"/><h3 id=\"end-to-end-encrypted-terminal-sharing-has-a-second-secret-on-the\">End-to-End Encrypted Terminal Sharing Has a Second Secret on the Host: shell.online v0.24.1 Takes the Session Password Out of Process Environments</h3><p>What end-to-end encrypted terminal sharing hides from the relay, and why shell.online v0.24.1 moved the session password out of process environments.</p>Sep 30, 2026Securityshell-onlinesecurityend-to-end-encryption</a><a href=\"/blog/let-a-coding-agent-share-its-own-terminal-session-in-the-browser-the-shell-onlin\"><img alt=\"Let a Coding Agent Share Its Own Terminal Session in the Browser: the shell.online Skill and shell --json\" src=\"/blog/banners/let-a-coding-agent-share-its-own-terminal-session-in-the-browser-the-shell-onlin.svg\"/><h3 id=\"let-a-coding-agent-share-its-own-terminal-session-in-the-browser\">Let a Coding Agent Share Its Own Terminal Session in the Browser: the shell.online Skill and shell --json</h3><p>How the shell.online agent skill tells Claude Code or Codex to share a terminal session in the browser and hand you the link, read-only when it should be.</p>Sep 29, 2026Guideshell-onlineagent-skillscoding-agents</a><a href=\"/blog/watch-a-coding-agent-remotely-without-shrinking-its-terminal-shell-online-v0-23\"><img alt=\"Watch a Coding Agent Remotely Without Shrinking Its Terminal: shell.online v0.23.2 Gives the Host Its Grid and Each Viewer Its Own Layout\" src=\"/blog/banners/watch-a-coding-agent-remotely-without-shrinking-its-terminal-shell-online-v0-23.svg\"/><h3 id=\"watch-a-coding-agent-remotely-without-shrinking-its-terminal-she\">Watch a Coding Agent Remotely Without Shrinking Its Terminal: shell.online v0.23.2 Gives the Host Its Grid and Each Viewer Its Own Layout</h3><p>How to watch a coding agent remotely from a phone now that shell.online v0.23.2 lets the host own its terminal grid and each browser viewer reflow its own view.</p>Sep 27, 2026Engineeringshell-onlineterminal-sharingclaude-code</a><a href=\"/blog/self-hosted-terminal-sharing-run-the-shell-online-relay-on-one-docker-host-inste\"><img alt=\"Self-Hosted Terminal Sharing: Run the shell.online Relay on One Docker Host Instead of Cloudflare\" src=\"/blog/banners/self-hosted-terminal-sharing-run-the-shell-online-relay-on-one-docker-host-inste.svg\"/><h3 id=\"self-hosted-terminal-sharing-run-the-shell-online-relay-on-one-d\">Self-Hosted Terminal Sharing: Run the shell.online Relay on One Docker Host Instead of Cloudflare</h3><p>Cloudflare had a Durable Objects incident on 25 September. Here is self-hosted terminal sharing with the standalone shell.online relay, step by step.</p>Sep 26, 2026Operationsshell-onlineself-hostingdocker</a><a href=\"/blog/start-a-terminal-session-from-the-browser-on-a-mac-that-sat-idle-for-days-the-la\"><img alt=\"Start a Terminal Session From the Browser on a Mac That Sat Idle for Days: the launchd Priority Fix in shell.online v0.23.3\" src=\"/blog/banners/start-a-terminal-session-from-the-browser-on-a-mac-that-sat-idle-for-days-the-la.svg\"/><h3 id=\"start-a-terminal-session-from-the-browser-on-a-mac-that-sat-idle\">Start a Terminal Session From the Browser on a Mac That Sat Idle for Days: the launchd Priority Fix in shell.online v0.23.3</h3><p>Why browser-started sessions on an idle Mac lagged for seconds, and what v0.23.3 changes when you start a terminal session from the browser.</p>Sep 25, 2026Engineeringshell-onlinemacoslaunchd</a><a href=\"/blog/rotating-egress-proxy-credentials\"><img alt=\"When the Egress Proxy Rotates Its Credentials\" src=\"/blog/banners/rotating-egress-proxy-credentials.svg\"/><h3 id=\"when-the-egress-proxy-rotates-its-credentials\">When the Egress Proxy Rotates Its Credentials</h3><p>Inside Meta Muse the proxy credentials rotate every few minutes: long-lived processes start getting 407s while their old tunnels stay up. How to detect it, and a relay that fixes it.</p>Sep 24, 2026Engineeringmeta-musesandboxegress-proxy</a><a href=\"/blog/watch-claude-code-from-your-phone-as-a-conversation-not-an-80-column-grid\"><img alt=\"Watch Claude Code From Your Phone as a Conversation, Not an 80-Column Grid\" src=\"/blog/banners/watch-claude-code-from-your-phone-as-a-conversation-not-an-80-column-grid.svg\"/><h3 id=\"watch-claude-code-from-your-phone-as-a-conversation-not-an-80-co\">Watch Claude Code From Your Phone as a Conversation, Not an 80-Column Grid</h3><p>How to watch Claude Code from your phone with the shell.online chat renderer, what it reads from the screen, and where the transcript is kept.</p>Sep 24, 2026Engineeringshell-onlineclaude-codecoding-agents</a><a href=\"/blog/pilot-protocol-from-a-locked-down-agent-sandbox\"><img alt=\"Getting a Pilot Node Online From a Locked-Down Agent VM\" src=\"/blog/banners/pilot-protocol-from-a-locked-down-agent-sandbox.svg\"/><h3 id=\"getting-a-pilot-node-online-from-a-locked-down-agent-vm\">Getting a Pilot Node Online From a Locked-Down Agent VM</h3><p>How a Pilot Protocol node registered from inside Meta Muse's sandbox: no UDP, poisoned DNS, proxy-only egress, six dead ends, and the SNI router that worked.</p>Sep 23, 2026Engineeringcompat-modemeta-musesandbox</a><a href=\"/blog/share-a-terminal-session-password-with-a-teammate-without-the-service-seeing-it\"><img alt=\"Share a Terminal Session Password With a Teammate Without the Service Seeing It: shell.online v0.23.1 Password Requests\" src=\"/blog/banners/share-a-terminal-session-password-with-a-teammate-without-the-service-seeing-it.svg\"/><h3 id=\"share-a-terminal-session-password-with-a-teammate-without-the-se\">Share a Terminal Session Password With a Teammate Without the Service Seeing It: shell.online v0.23.1 Password Requests</h3><p>shell.online v0.23.1 lets a teammate ask a session owner for its password; the copy is sealed in the owner's browser and the service never holds it.</p>Sep 23, 2026Securityshell-onlineterminal-sharingend-to-end-encryption</a><a href=\"/blog/which-agent-session-needs-you-shell-online-v0-22-adds-a-passive-pulse-to-monitor\"><img alt=\"Which Agent Session Needs You? shell.online v0.22 Adds a Passive Pulse to Monitor a Coding Agent in the Browser\" src=\"/blog/banners/which-agent-session-needs-you-shell-online-v0-22-adds-a-passive-pulse-to-monitor.svg\"/><h3 id=\"which-agent-session-needs-you-shell-online-v0-22-adds-a-passive-\">Which Agent Session Needs You? shell.online v0.22 Adds a Passive Pulse to Monitor a Coding Agent in the Browser</h3><p>shell.online v0.22.0 adds a passive session pulse to monitor a coding agent in the browser across tabs, with no model calls, prompts, or extra connections.</p>Sep 22, 2026Engineeringshell-onlinecoding-agentsterminal-sharing</a><a href=\"/blog/mcp-terminal-access-for-an-ai-agent-scoped-grants-that-expire-and-revoke\"><img alt=\"MCP Terminal Access for an AI Agent: Scoped Grants That Expire and Revoke\" src=\"/blog/banners/mcp-terminal-access-for-an-ai-agent-scoped-grants-that-expire-and-revoke.svg\"/><h3 id=\"mcp-terminal-access-for-an-ai-agent-scoped-grants-that-expire-an\">MCP Terminal Access for an AI Agent: Scoped Grants That Expire and Revoke</h3><p>How shell.online v0.21 gives an AI agent MCP terminal access through scoped, expiring, revocable grants, and what that costs you in end-to-end encryption.</p>Sep 21, 2026Securityshell-onlinemcpai-agents</a><a href=\"/blog/a-read-only-terminal-link-for-your-coding-agent-after-plugin4shell\"><img alt=\"A Read-Only Terminal Link for Your Coding Agent, After Plugin4Shell\" src=\"/blog/banners/a-read-only-terminal-link-for-your-coding-agent-after-plugin4shell.svg\"/><h3 id=\"a-read-only-terminal-link-for-your-coding-agent-after-plugin4she\">A Read-Only Terminal Link for Your Coding Agent, After Plugin4Shell</h3><p>Plugin4Shell showed how much a coding agent can reach. A read-only terminal link lets a reviewer watch that agent without holding a credential that types.</p>Sep 20, 2026Securityshell-onlineread-only-terminalcoding-agents</a><a href=\"/blog/how-to-revoke-a-shared-terminal-link-without-killing-the-process-behind-it\"><img alt=\"How to Revoke a Shared Terminal Link Without Killing the Process Behind It\" src=\"/blog/banners/how-to-revoke-a-shared-terminal-link-without-killing-the-process-behind-it.svg\"/><h3 id=\"how-to-revoke-a-shared-terminal-link-without-killing-the-process\">How to Revoke a Shared Terminal Link Without Killing the Process Behind It</h3><p>Revoke a shared terminal link with one command: shell password rotate swaps the key, drops viewers, and leaves the process running.</p>Sep 19, 2026Securityshell-onlineterminal-sharingcredential-rotation</a><a href=\"/blog/cosift-a-collaborative-index-agents-build-as-they-work\"><img alt=\"Cosift: A Collaborative Index Agents Build As They Work\" src=\"/blog/banners/cosift-a-collaborative-index-agents-build-as-they-work.svg\"/><h3 id=\"cosift-a-collaborative-index-agents-build-as-they-work\">Cosift: A Collaborative Index Agents Build As They Work</h3><p>Cosift is a free, open-source index agents fill in as they browse. Fetch a page once, index it, and every other agent retrieves it instead of refetching.</p>Sep 18, 2026Blogcosiftagentscollaborative-index</a><a href=\"/blog/end-to-end-encrypted-terminal-sharing-what-the-relay-sees-and-what-it-can-no-lon\"><img alt=\"End-to-End Encrypted Terminal Sharing: What the Relay Sees, and What It Can No Longer Replay\" src=\"/blog/banners/end-to-end-encrypted-terminal-sharing-what-the-relay-sees-and-what-it-can-no-lon.svg\"/><h3 id=\"end-to-end-encrypted-terminal-sharing-what-the-relay-sees-and-wh\">End-to-End Encrypted Terminal Sharing: What the Relay Sees, and What It Can No Longer Replay</h3><p>What end-to-end encrypted terminal sharing in shell.online hides from the relay, what it leaks, and how envelope v2 stops replayed keystrokes.</p>Sep 18, 2026Securityshell-onlineend-to-end-encryptionterminal-sharing</a><a href=\"/blog/end-to-end-encrypted-terminal-sharing-what-the-relay-can-still-do-after-shell-on\"><img alt=\"End-to-End Encrypted Terminal Sharing: What the Relay Can Still Do After shell.online v0.16.1\" src=\"/blog/banners/end-to-end-encrypted-terminal-sharing-what-the-relay-can-still-do-after-shell-on.svg\"/><h3 id=\"end-to-end-encrypted-terminal-sharing-what-the-relay-can-still-d\">End-to-End Encrypted Terminal Sharing: What the Relay Can Still Do After shell.online v0.16.1</h3><p>What end-to-end encrypted terminal sharing hides from a relay, what it never hid, and how shell.online v0.16.1 stops replayed keystrokes.</p>Sep 17, 2026Securityshell-onlineend-to-end-encryptionterminal-sharing</a><a href=\"/blog/track-terminal-sessions-across-machines-by-name-shell-online-v0-16-adds-name-and\"><img alt=\"Track Terminal Sessions Across Machines by Name: shell.online v0.16 Adds --name and shell ls\" src=\"/blog/banners/track-terminal-sessions-across-machines-by-name-shell-online-v0-16-adds-name-and.svg\"/><h3 id=\"track-terminal-sessions-across-machines-by-name-shell-online-v0-\">Track Terminal Sessions Across Machines by Name: shell.online v0.16 Adds --name and shell ls</h3><p>shell.online v0.16.0 lets you name a session at start and list terminal sessions across machines with shell ls, as agents move into remote sandboxes.</p>Sep 16, 2026Engineeringshell-onlineterminal-sharingcoding-agents</a><a href=\"/blog/a-browser-terminal-on-a-ros-2-robot-without-a-vpn-and-why-it-should-be-read-only\"><img alt=\"A Browser Terminal on a ROS 2 Robot Without a VPN, and Why It Should Be Read-Only by Default\" src=\"/blog/banners/a-browser-terminal-on-a-ros-2-robot-without-a-vpn-and-why-it-should-be-read-only.svg\"/><h3 id=\"a-browser-terminal-on-a-ros-2-robot-without-a-vpn-and-why-it-sho\">A Browser Terminal on a ROS 2 Robot Without a VPN, and Why It Should Be Read-Only by Default</h3><p>How to get a browser terminal on a ROS 2 robot with shell.online: one command, no VPN, read-only links, reconnects, and persistent URLs across reboots.</p>Sep 15, 2026Guideshell-onlineros2robotics</a><a href=\"/blog/connect-an-ai-agent-to-a-live-terminal-without-giving-it-the-machine-shell-onlin\"><img alt=\"Connect an AI Agent to a Live Terminal Without Giving It the Machine: shell.online v0.15 Agent Handoffs\" src=\"/blog/banners/connect-an-ai-agent-to-a-live-terminal-without-giving-it-the-machine-shell-onlin.svg\"/><h3 id=\"connect-an-ai-agent-to-a-live-terminal-without-giving-it-the-mac\">Connect an AI Agent to a Live Terminal Without Giving It the Machine: shell.online v0.15 Agent Handoffs</h3><p>How to connect an AI agent to a live terminal with shell.online v0.15: a revocable invitation, explicit completion evidence, and a process that stays yours.</p>Sep 14, 2026Engineeringshell-onlineai-agentsterminal</a><a href=\"/blog/share-a-terminal-session-in-the-browser-without-handing-over-the-filesystem-shel\"><img alt=\"Share a Terminal Session in the Browser Without Handing Over the Filesystem: shell.online v0.14 File Access\" src=\"/blog/banners/share-a-terminal-session-in-the-browser-without-handing-over-the-filesystem-shel.svg\"/><h3 id=\"share-a-terminal-session-in-the-browser-without-handing-over-the\">Share a Terminal Session in the Browser Without Handing Over the Filesystem: shell.online v0.14 File Access</h3><p>shell.online v0.14 adds opt-in, rooted file access, so you can share a terminal session in the browser and open only the files you chose.</p>Sep 13, 2026Securityshell-onlineterminal-sharingcoding-agents</a><a href=\"/blog/self-hosted-terminal-sharing-on-one-docker-box-the-shell-online-relay-without-a\"><img alt=\"Self-Hosted Terminal Sharing on One Docker Box: the shell.online Relay Without a Cloudflare Account\" src=\"/blog/banners/self-hosted-terminal-sharing-on-one-docker-box-the-shell-online-relay-without-a.svg\"/><h3 id=\"self-hosted-terminal-sharing-on-one-docker-box-the-shell-online-\">Self-Hosted Terminal Sharing on One Docker Box: the shell.online Relay Without a Cloudflare Account</h3><p>shell.online v0.12.2 adds self-hosted terminal sharing: a standalone relay on any Docker host, Caddy TLS, no Cloudflare account, same E2EE.</p>Sep 12, 2026Operationsshell-onlineself-hostingdocker</a><a href=\"/blog/a-read-only-terminal-link-for-a-training-run-you-check-from-your-phone\"><img alt=\"A Read-Only Terminal Link for a Training Run You Check From Your Phone\" src=\"/blog/banners/a-read-only-terminal-link-for-a-training-run-you-check-from-your-phone.svg\"/><h3 id=\"a-read-only-terminal-link-for-a-training-run-you-check-from-your\">A Read-Only Terminal Link for a Training Run You Check From Your Phone</h3><p>Share a training run with a read-only terminal link: one command, a phone-sized grid, relay-enforced no-input, E2EE, and what happens when the network drops.</p>Sep 11, 2026Guideshell-onlineread-only-terminaltraining-runs</a><a href=\"/blog/vs-code-1-137-runs-agent-sessions-in-their-own-process-terminal-sharing-without\"><img alt=\"VS Code 1.137 Runs Agent Sessions in Their Own Process. Terminal Sharing Without SSH or VPN Does That for a Failing Build\" src=\"/blog/banners/vs-code-1-137-runs-agent-sessions-in-their-own-process-terminal-sharing-without.svg\"/><h3 id=\"vs-code-1-137-runs-agent-sessions-in-their-own-process-terminal-\">VS Code 1.137 Runs Agent Sessions in Their Own Process. Terminal Sharing Without SSH or VPN Does That for a Failing Build</h3><p>How to pair-debug a failing build with terminal sharing without SSH or VPN, and how that compares to the Agent Host in VS Code 1.137.</p>Sep 10, 2026Guideshell-onlineterminal-sharingvscode</a><a href=\"/blog/team-terminal-sharing-sealed-so-the-service-cant-open-it\"><img alt=\"Team Terminal Sharing, Sealed So the Service Can't Open It\" src=\"/blog/banners/team-terminal-sharing-sealed-so-the-service-cant-open-it.svg\"/><h3 id=\"team-terminal-sharing-sealed-so-the-service-can-t-open-it\">Team Terminal Sharing, Sealed So the Service Can't Open It</h3><p>Share terminal sessions with your team on shell.online: organizations, handoffs, remote start, and session passwords the accounts service cannot read.</p>Sep 9, 2026Securityshell-onlineterminal-sharingend-to-end-encryption</a><a href=\"/blog/how-to-watch-a-coding-agent-remotely-after-you-turn-off-its-permission-prompts\"><img alt=\"How to Watch a Coding Agent Remotely After You Turn Off Its Permission Prompts\" src=\"/blog/banners/how-to-watch-a-coding-agent-remotely-after-you-turn-off-its-permission-prompts.svg\"/><h3 id=\"how-to-watch-a-coding-agent-remotely-after-you-turn-off-its-perm\">How to Watch a Coding Agent Remotely After You Turn Off Its Permission Prompts</h3><p>Claude Code 2.1.259 runs headless with no prompts. Here is how to watch a coding agent remotely from a phone with a read-only, end-to-end encrypted link.</p>Sep 8, 2026Guideshell-onlineclaude-codecoding-agents</a><a href=\"/blog/connect-claude-code-to-pilot-protocol\"><img alt=\"Connect Claude Code to Pilot Protocol with MCP Tools\" src=\"/blog/banners/pilot-harness-integrations.svg\"/><h3 id=\"connect-claude-code-to-pilot-protocol-with-mcp-tools\">Connect Claude Code to Pilot Protocol with MCP Tools</h3><p>Add the hosted Pilot MCP server to Claude Code with one command: agent messaging, live data and the app store, with nothing to install.</p>Sep 5, 2026Integrationclaude-codemcpintegration</a><a href=\"/blog/connect-cursor-to-pilot-protocol\"><img alt=\"Connect Cursor to Pilot Protocol with MCP\" src=\"/blog/banners/pilot-harness-integrations.svg\"/><h3 id=\"connect-cursor-to-pilot-protocol-with-mcp\">Connect Cursor to Pilot Protocol with MCP</h3><p>Add the hosted Pilot MCP server to Cursor with one URL: agent messaging, live data and the app store, with nothing to install.</p>Sep 5, 2026Integrationcursormcpintegration</a><a href=\"/blog/connect-cline-to-pilot-protocol\"><img alt=\"Connect Cline to Pilot Protocol with MCP\" src=\"/blog/banners/pilot-harness-integrations.svg\"/><h3 id=\"connect-cline-to-pilot-protocol-with-mcp\">Connect Cline to Pilot Protocol with MCP</h3><p>Add the hosted Pilot MCP server to Cline: agent messaging, live data and the app store, with nothing to install.</p>Sep 5, 2026Integrationclinemcpintegration</a><a href=\"/blog/connect-hermes-to-pilot-protocol\"><img alt=\"Connect Hermes to Pilot Protocol with MCP\" src=\"/blog/banners/pilot-harness-integrations.svg\"/><h3 id=\"connect-hermes-to-pilot-protocol-with-mcp\">Connect Hermes to Pilot Protocol with MCP</h3><p>Add the hosted Pilot MCP server to Hermes Agent with one command: agent messaging, live data and the app store, with nothing to install.</p>Sep 5, 2026Integrationhermesmcpintegration</a><a href=\"/blog/connect-picoclaw-to-pilot-protocol\"><img alt=\"Connect PicoClaw to Pilot Protocol with MCP\" src=\"/blog/banners/pilot-harness-integrations.svg\"/><h3 id=\"connect-picoclaw-to-pilot-protocol-with-mcp\">Connect PicoClaw to Pilot Protocol with MCP</h3><p>Add the hosted Pilot MCP server to PicoClaw with one command, so agents on small devices get messaging, live data and apps without running a node.</p>Sep 5, 2026Integrationpicoclawmcpintegration</a><a href=\"/blog/connect-openhands-to-pilot-protocol\"><img alt=\"Connect OpenHands to Pilot Protocol with MCP\" src=\"/blog/banners/pilot-harness-integrations.svg\"/><h3 id=\"connect-openhands-to-pilot-protocol-with-mcp\">Connect OpenHands to Pilot Protocol with MCP</h3><p>Add the hosted Pilot MCP server to the OpenHands CLI with one command: agent messaging, live data and the app store, with nothing to install.</p>Sep 5, 2026Integrationopenhandsmcpintegration</a><a href=\"/blog/connect-codex-cli-to-pilot-protocol\"><img alt=\"Connect Codex CLI to Pilot Protocol with MCP\" src=\"/blog/banners/pilot-harness-integrations.svg\"/><h3 id=\"connect-codex-cli-to-pilot-protocol-with-mcp\">Connect Codex CLI to Pilot Protocol with MCP</h3><p>Add the hosted Pilot MCP server to Codex CLI with two commands: agent messaging, live data and the app store, with nothing to install.</p>Sep 5, 2026Integrationcodex-climcpintegration</a><a href=\"/blog/connect-gemini-cli-to-pilot-protocol\"><img alt=\"Connect Gemini CLI to Pilot Protocol with MCP\" src=\"/blog/banners/pilot-harness-integrations.svg\"/><h3 id=\"connect-gemini-cli-to-pilot-protocol-with-mcp\">Connect Gemini CLI to Pilot Protocol with MCP</h3><p>Add the hosted Pilot MCP server to Gemini CLI with one command: agent messaging, live data and the app store, with nothing to install.</p>Sep 5, 2026Integrationgemini-climcpintegration</a><a href=\"/blog/connect-junie-to-pilot-protocol\"><img alt=\"Connect JetBrains Junie to Pilot Protocol with MCP\" src=\"/blog/banners/pilot-harness-integrations.svg\"/><h3 id=\"connect-jetbrains-junie-to-pilot-protocol-with-mcp\">Connect JetBrains Junie to Pilot Protocol with MCP</h3><p>Add the hosted Pilot MCP server to JetBrains Junie: agent messaging, live data and the app store, with nothing to install.</p>Sep 5, 2026Integrationjuniemcpintegration</a><a href=\"/blog/connect-github-copilot-to-pilot-protocol\"><img alt=\"Connect GitHub Copilot to Pilot Protocol with MCP Tools\" src=\"/blog/banners/pilot-harness-integrations.svg\"/><h3 id=\"connect-github-copilot-to-pilot-protocol-with-mcp-tools\">Connect GitHub Copilot to Pilot Protocol with MCP Tools</h3><p>Add the hosted Pilot MCP server to GitHub Copilot CLI with one command: agent messaging, live data and the app store, with nothing to install.</p>Sep 5, 2026Integrationgithub-copilotmcpintegration</a><a href=\"/blog/shell-online-live-terminal-browser-link\"><img alt=\"shell.online: A Live Browser Link for Any Terminal\" src=\"/blog/banners/shell-online-live-terminal-browser-link.svg\"/><h3 id=\"shell-online-a-live-browser-link-for-any-terminal\">shell.online: A Live Browser Link for Any Terminal</h3><p>shell.online turns a running terminal command into a browser link you can watch or type into from any device. Open source, built by Vulture Labs, the team behind Pilot.</p>Sep 2, 2026Blogshell-onlineterminalsagents</a><a href=\"/blog/persistent-addresses-distributed-autonomous-systems\"><img alt=\"Persistent Addresses for Distributed AI Agents\" src=\"/blog/banners/optimized/persistent-addresses-distributed-autonomous-systems-1200.webp\"/><h3 id=\"persistent-addresses-for-distributed-ai-agents\">Persistent Addresses for Distributed AI Agents</h3><p>Learn how persistent addresses solve unstable endpoint problems in distributed and autonomous agent systems across multi-cloud environments with secure P2P solutions.</p>Aug 27, 2026Blogblog</a><a href=\"/blog/ai-networking-best-practices-secure-scalable-systems\"><img alt=\"AI networking best practices for secure, scalable systems\" src=\"/blog/banners/optimized/ai-networking-best-practices-secure-scalable-systems-1200.webp\"/><h3 id=\"ai-networking-best-practices-for-secure-scalable-systems\">AI networking best practices for secure, scalable systems</h3><p>Learn proven AI networking best practices for secure, scalable agent systems using P2P architectures, encryption, and zero-trust security across multi-cloud environments.</p>Aug 25, 2026Blogblog</a><a href=\"/blog/secure-ai-agent-networking-workflow-step-by-step\"><img alt=\"Secure AI agent networking workflow: step-by-step guide\" src=\"/blog/banners/optimized/secure-ai-agent-networking-workflow-step-by-step-1200.webp\"/><h3 id=\"secure-ai-agent-networking-workflow-step-by-step-guide\">Secure AI agent networking workflow: step-by-step guide</h3><p>Learn how to design a secure networking workflow for AI agents in multi-cloud environments, covering authentication, encrypted transport, NAT traversal, and hybrid protocol strategies.</p>Aug 23, 2026Blogblog</a><a href=\"/blog/autonomous-agent-networking-distributed-ai\"><img alt=\"Understanding autonomous agent networking for distributed AI\" src=\"/blog/banners/optimized/autonomous-agent-networking-distributed-ai-1200.webp\"/><h3 id=\"understanding-autonomous-agent-networking-for-distributed-ai\">Understanding autonomous agent networking for distributed AI</h3><p>Learn how autonomous agent networking works, where architectures fail at scale, and which methodologies help AI developers build resilient decentralized agent systems.</p>Aug 21, 2026Blogblog</a><a href=\"/blog/network-tunnels-ai-secure-communication-autonomous-agents\"><img alt=\"Network tunnels in AI: Secure comms for autonomous agents\" src=\"/blog/banners/optimized/network-tunnels-ai-secure-communication-autonomous-agents-1200.webp\"/><h3 id=\"network-tunnels-in-ai-secure-comms-for-autonomous-agents\">Network tunnels in AI: Secure comms for autonomous agents</h3><p>Learn how network tunnels in AI enable secure MCP server access for autonomous agents, covering protocols, security risks, Zero Trust practices, and implementation steps.</p>Aug 19, 2026Blogblog</a><a href=\"/blog/secure-communication-protocols-distributed-ai-systems\"><img alt=\"Secure communication protocols for distributed AI systems\" src=\"/blog/banners/optimized/secure-communication-protocols-distributed-ai-systems-1200.webp\"/><h3 id=\"secure-communication-protocols-for-distributed-ai-systems\">Secure communication protocols for distributed AI systems</h3><p>Learn how to evaluate and implement secure communication protocols for distributed AI systems and autonomous agent networks, covering TLS 1.3, mTLS, WireGuard, and zero-trust architectures.</p>Aug 17, 2026Blogblog</a><a href=\"/blog/overlay-networking-automation-secure-ai-agent-solutions\"><img alt=\"Overlay networking for automation: Secure AI agent solutions\" src=\"/blog/banners/optimized/overlay-networking-automation-secure-ai-agent-solutions-1200.webp\"/><h3 id=\"overlay-networking-for-automation-secure-ai-agent-solutions\">Overlay networking for automation: Secure AI agent solutions</h3><p>Learn how overlay networking for AI agent automation works, compare top tools like Cilium and Istio, and build secure zero-trust multi-cloud agent networks.</p>Aug 15, 2026Blogblog</a><a href=\"/blog/encrypted-tunnel-advantages-peer-to-peer-ai-networks\"><img alt=\"Top encrypted tunnel advantages for P2P AI networks\" src=\"/blog/banners/optimized/encrypted-tunnel-advantages-peer-to-peer-ai-networks-1200.webp\"/><h3 id=\"top-encrypted-tunnel-advantages-for-p2p-ai-networks\">Top encrypted tunnel advantages for P2P AI networks</h3><p>Discover the top encrypted tunnel advantages for securing peer-to-peer AI agent networks across multi-cloud and NAT environments, with practical implementation guidance.</p>Aug 13, 2026Blogblog</a><a href=\"/blog/protocol-wrapping-secure-peer-to-peer-ai-systems\"><img alt=\"Protocol wrapping for secure peer-to-peer AI systems\" src=\"/blog/banners/optimized/protocol-wrapping-secure-peer-to-peer-ai-systems-1200.webp\"/><h3 id=\"protocol-wrapping-for-secure-peer-to-peer-ai-systems\">Protocol wrapping for secure peer-to-peer AI systems</h3><p>How encapsulation, metadata, encryption, direct paths, and relay fallback shape protocol-wrapping choices for distributed AI systems.</p>Aug 11, 2026Blogblog</a><a href=\"/blog/decentralized-networking-p2p-solutions-ai-architectures\"><img alt=\"Decentralized networking: P2P solutions for AI architectures\" src=\"/blog/banners/optimized/decentralized-networking-p2p-solutions-ai-architectures-1200.webp\"/><h3 id=\"decentralized-networking-p2p-solutions-for-ai-architectures\">Decentralized networking: P2P solutions for AI architectures</h3><p>Learn how decentralized P2P networking protocols, NAT traversal, and mesh architectures enable secure, scalable communication for distributed AI systems and multi-cloud deployments.</p>Aug 9, 2026Blogblog</a><a href=\"/blog/what-is-protocol-overlay-fundamentals-practical\"><img alt=\"What is protocol overlay? Fundamentals and practical insights\" src=\"/blog/banners/optimized/what-is-protocol-overlay-fundamentals-practical-1200.webp\"/><h3 id=\"what-is-protocol-overlay-fundamentals-and-practical-insights\">What is protocol overlay? Fundamentals and practical insights</h3><p>Learn what a protocol overlay is and how structured, unstructured, and hierarchical overlays improve peer-to-peer communication for distributed AI agent networks.</p>Aug 7, 2026Blogblog</a><a href=\"/blog/secure-network-infrastructure-ai-agents-practical-guide\"><img alt=\"Secure network infrastructure for AI agents: A practical guide\" src=\"/blog/banners/optimized/secure-network-infrastructure-ai-agents-practical-guide-1200.webp\"/><h3 id=\"secure-network-infrastructure-for-ai-agents-a-practical-guide\">Secure network infrastructure for AI agents: A practical guide</h3><p>Learn how to build secure, decentralized network infrastructure for AI agents. Covers A2A protocol, mesh topologies, multi-cloud orchestration, and practical frameworks for enterprise deployments.</p>Aug 5, 2026Blogblog</a><a href=\"/blog/ai-networking-challenges-decentralized-systems\"><img alt=\"Top AI networking challenges for decentralized systems\" src=\"/blog/banners/optimized/ai-networking-challenges-decentralized-systems-1200.webp\"/><h3 id=\"top-ai-networking-challenges-for-decentralized-systems\">Top AI networking challenges for decentralized systems</h3><p>Discover the 7 biggest AI networking challenges for decentralized and multi-cloud agent systems, with solution comparisons and practical guidance for engineers.</p>Aug 3, 2026Blogblog</a><a href=\"/blog/advanced-network-automation-tips-secure-ai-systems\"><img alt=\"Advanced network automation: 7 tips for secure AI systems\" src=\"/blog/banners/optimized/advanced-network-automation-tips-secure-ai-systems-1200.webp\"/><h3 id=\"advanced-network-automation-7-tips-for-secure-ai-systems\">Advanced network automation: 7 tips for secure AI systems</h3><p>Discover 7 expert network automation strategies for secure, scalable multi-agent AI systems, covering scripting, APIs, NSoT, NETCONF, ML remediation, and IBN.</p>Aug 1, 2026Blogblog</a><a href=\"/blog/decentralized-communication-protocols-ai-developers\"><img alt=\"Decentralized communication protocols for AI developers\" src=\"/blog/banners/optimized/decentralized-communication-protocols-ai-developers-1200.webp\"/><h3 id=\"decentralized-communication-protocols-for-ai-developers\">Decentralized communication protocols for AI developers</h3><p>Learn how to choose decentralized communication protocols for AI agent networks, covering NAT traversal, Kademlia DHT, E2EE, and practical stack selection.</p>Jul 29, 2026Blogblog</a><a href=\"/blog/peer-to-peer-agent-communication-no-server\"><img alt=\"Peer-to-Peer Agent Communication Without an Application Broker\" src=\"/blog/banners/optimized/peer-to-peer-agent-communication-no-server-1200.webp\"/><h3 id=\"peer-to-peer-agent-communication-without-an-application-broker\">Peer-to-Peer Agent Communication Without an Application Broker</h3><p>Why hub-and-spoke can bottleneck agents. Walk through Pilot Protocol's direct-preferred paths, STUN, hole-punching, encrypted relay fallback, and trust controls.</p>Jul 25, 2026Architecturep2parchitecturenetworking</a><a href=\"/blog/connecting-mcp-servers-across-agents\"><img alt=\"Connecting MCP Servers to Agents Across Any Network\" src=\"/blog/banners/optimized/connecting-mcp-servers-across-agents-1200.webp\"/><h3 id=\"connecting-mcp-servers-to-agents-across-any-network\">Connecting MCP Servers to Agents Across Any Network</h3><p>How to connect MCP-equipped agents across NATs, firewalls, and clouds. One command install, zero networking config. Go and Python examples.</p>Jul 23, 2026Integrationmcpintegrationnetworking</a><a href=\"/blog/multi-agent-system-networking-guide-ai-developers\"><img alt=\"Multi-agent system networking guide for AI developers\" src=\"/blog/banners/optimized/multi-agent-system-networking-guide-ai-developers-1200.webp\"/><h3 id=\"multi-agent-system-networking-guide-for-ai-developers\">Multi-agent system networking guide for AI developers</h3><p>Learn how to build secure, scalable multi-agent system networks. Covers architecture, protocols, benchmarking, and the communication failures behind high MAS failure rates.</p>Jul 21, 2026Blogblog</a><a href=\"/blog/build-openclaw-agent-self-organizes-pilot\"><img alt=\"Build an OpenClaw Agent That Self-Organizes Into a Pilot Network\" src=\"/blog/banners/optimized/build-openclaw-agent-self-organizes-pilot-1200.webp\"/><h3 id=\"build-an-openclaw-agent-that-self-organizes-into-a-pilot-network\">Build an OpenClaw Agent That Self-Organizes Into a Pilot Network</h3><p>Step-by-step tutorial: build a Python agent that autonomously joins the Pilot network, establishes trust with its peers, and serves their requests.</p>Jul 19, 2026Tutorialopenclawautonomous</a><a href=\"/blog/preferential-attachment-ai-networks-trust-graph\"><img alt=\"Why a Few AI Agents Get 80% of the Work (And How to Stop It)\" src=\"/blog/banners/optimized/preferential-attachment-ai-networks-trust-graph-1200.webp\"/><h3 id=\"why-a-few-ai-agents-get-80-of-the-work-and-how-to-stop-it\">Why a Few AI Agents Get 80% of the Work (And How to Stop It)</h3><p>Autonomous agent networks follow the same winner-take-all dynamics as social networks. Here's the power-law data and how to design against hub collapse.</p>Jul 17, 2026AI/MLopenclawgraph-theory</a><a href=\"/blog/claude-agent-teams-over-pilot\"><img alt=\"Building Claude Code Agent Teams Over Pilot Protocol\" src=\"/blog/banners/optimized/claude-agent-teams-over-pilot-1200.webp\"/><h3 id=\"building-claude-code-agent-teams-over-pilot-protocol\">Building Claude Code Agent Teams Over Pilot Protocol</h3><p>Distributed specialist agents across machines and networks. Manager submits tasks via Pilot, workers execute and return results, trust relationships enable coordination.</p>Jul 15, 2026Integrationclaudeagent-teams</a><a href=\"/blog/how-626-agents-autonomously-adopted-pilot\"><img alt=\"How Hundreds of Agents Autonomously Adopted Pilot\" src=\"/blog/banners/optimized/how-626-agents-autonomously-adopted-pilot-1200.webp\"/><h3 id=\"how-hundreds-of-agents-autonomously-adopted-pilot\">How Hundreds of Agents Autonomously Adopted Pilot</h3><p>The story of how OpenClaw agents independently discovered, installed, and formed a trust network on Pilot Protocol -- without any human direction.</p>Jul 13, 2026AI/MLopenclawresearch</a><a href=\"/blog/build-ai-agent-marketplace-discovery-reputation\"><img alt=\"Build an AI Agent Marketplace on Pilot: Discovery, Trust and Reputation\" src=\"/blog/banners/optimized/build-ai-agent-marketplace-discovery-reputation-1200.webp\"/><h3 id=\"build-an-ai-agent-marketplace-on-pilot-discovery-trust-and-reput\">Build an AI Agent Marketplace on Pilot: Discovery, Trust and Reputation</h3><p>What Pilot gives an agent marketplace (identity, signed trust handshakes, messaging, Wallet app payments) and what you build yourself: discovery and reputation.</p>Jul 11, 2026Architecturemarketplacediscovery</a><a href=\"/blog/replace-webhooks-with-persistent-agent-tunnels\"><img alt=\"Replace Webhooks With Persistent Agent Tunnels\" src=\"/blog/banners/optimized/replace-webhooks-with-persistent-agent-tunnels-1200.webp\"/><h3 id=\"replace-webhooks-with-persistent-agent-tunnels\">Replace Webhooks With Persistent Agent Tunnels</h3><p>Webhooks fail silently, require public URLs, and create distributed systems problems. Persistent agent tunnels eliminate webhook infrastructure with encrypted event streams.</p>Jul 9, 2026Architecturewebhooksevent-stream</a><a href=\"/blog/move-beyond-rest-persistent-connections-for-agents\"><img alt=\"Beyond REST: Persistent Connections for AI Agents\" src=\"/blog/banners/optimized/move-beyond-rest-persistent-connections-for-agents-1200.webp\"/><h3 id=\"beyond-rest-persistent-connections-for-ai-agents\">Beyond REST: Persistent Connections for AI Agents</h3><p>Compare REST polling, WebSockets, gRPC and persistent encrypted tunnels for real-time agent communication, with code examples and a migration path.</p>Jul 7, 2026ArchitectureRESTreal-time</a><a href=\"/blog/build-agent-app-turn-api-into-tool\"><img alt=\"How to Build an Agent App: Turn Your API Into an Agent-Native Tool\" src=\"/blog/banners/build-agent-app-turn-api-into-tool.svg\"/><h3 id=\"how-to-build-an-agent-app-turn-your-api-into-an-agent-native-too\">How to Build an Agent App: Turn Your API Into an Agent-Native Tool</h3><p>Turn an existing API into an installable agent app on Pilot Protocol — the discover, install, call loop, what to prepare, and how to publish.</p>Jul 5, 2026Blogapp-storeagentspublish</a><a href=\"/blog/web-search-api-for-ai-agents-grounded-research\"><img alt=\"Web Search API for AI Agents: Grounded Research with cosift\" src=\"/blog/banners/web-search-api-for-ai-agents-grounded-research.svg\"/><h3 id=\"web-search-api-for-ai-agents-grounded-research-with-cosift\">Web Search API for AI Agents: Grounded Research with cosift</h3><p>Why raw search APIs aren't enough for AI agents, what grounded research means, and how to install and call cosift's search, answer, and research methods.</p>Jul 3, 2026Blogapp-storesearchagents</a><a href=\"/blog/overlay-network-ai-agents\"><img alt=\"Overlay Network for AI Agents: Architecture and Trust Model\" src=\"/blog/banners/overlay-network-ai-agents.svg\"/><h3 id=\"overlay-network-for-ai-agents-architecture-and-trust-model\">Overlay Network for AI Agents: Architecture and Trust Model</h3><p>What an overlay network for AI agents needs — persistent addressing, NAT traversal, encrypted transport, and per-peer trust — and how Pilot Protocol implements it.</p>Jul 1, 2026Blogoverlay-networknetworkingai-agents</a><a href=\"/blog/direct-communication-protocols-ai-agents-guide\"><img alt=\"AI agent communication protocols: Pilot vs MCP vs A2A vs ACP vs ANP\" src=\"/blog/banners/direct-communication-protocols-ai-agents-guide.svg\"/><h3 id=\"ai-agent-communication-protocols-pilot-vs-mcp-vs-a2a-vs-acp-vs-a\">AI agent communication protocols: Pilot vs MCP vs A2A vs ACP vs ANP</h3><p>Compare five agent protocols across transport, discovery, trust, reachability, and application semantics to choose a complementary stack.</p>Jun 29, 2026Blogcomparisonmcpa2a</a><a href=\"/blog/ai-agent-app-store\"><img alt=\"The AI Agent App Store: Install Tools With One Command\" src=\"/blog/banners/ai-agent-app-store.svg\"/><h3 id=\"the-ai-agent-app-store-install-tools-with-one-command\">The AI Agent App Store: Install Tools With One Command</h3><p>How agents discover, install, and call tools on Pilot — the discover→install→call loop, signed local apps, and publishing your own to the agent app store.</p>Jun 27, 2026Blogapp-storeagentstooling</a><a href=\"/blog/aegis-agent-firewall-prompt-injection\"><img alt=\"AEGIS: A Runtime Firewall for AI Agents Against Prompt Injection\" src=\"/blog/banners/aegis-agent-firewall-prompt-injection.svg\"/><h3 id=\"aegis-a-runtime-firewall-for-ai-agents-against-prompt-injection\">AEGIS: A Runtime Firewall for AI Agents Against Prompt Injection</h3><p>AEGIS is an offline agent firewall on the Pilot app store. Block prompt injection and jailbreaks before they reach your model — install in one command.</p>Jun 25, 2026Blogsecurityapp-storeprompt-injection</a><a href=\"/blog/pilot-vs-tailscale-nebula-zerotier-ai-agents\"><img alt=\"Pilot vs Tailscale vs Nebula vs ZeroTier for AI Agents\" src=\"/blog/banners/pilot-vs-tailscale-nebula-zerotier-ai-agents.svg\"/><h3 id=\"pilot-vs-tailscale-vs-nebula-vs-zerotier-for-ai-agents\">Pilot vs Tailscale vs Nebula vs ZeroTier for AI Agents</h3><p>Tailscale, Nebula, and ZeroTier are great machine VPNs — but agents need addressing, discovery, and per-peer trust. An honest architecture comparison and decision guide.</p>Jun 23, 2026Blogcomparisonoverlay-networkvpn</a><a href=\"/blog/lightweight-swarm-communication-drones-robots\"><img alt=\"Lightweight Swarm Communication for Drones and Robots\" src=\"/blog/banners/optimized/lightweight-swarm-communication-drones-robots-1200.webp\"/><h3 id=\"lightweight-swarm-communication-for-drones-and-robots\">Lightweight Swarm Communication for Drones and Robots</h3><p>ROS2/DDS multicast storms kill WiFi. MAVLink has no encryption. Pilot's static binaries give robot swarms encrypted pub/sub, NAT traversal, and registry-based discovery.</p>Jun 21, 2026Guidedronesswarm</a><a href=\"/blog/smart-home-without-cloud-local-device-communication\"><img alt=\"Smart Home Without Cloud: Local-First Device Communication\" src=\"/blog/banners/optimized/smart-home-without-cloud-local-device-communication-1200.webp\"/><h3 id=\"smart-home-without-cloud-local-first-device-communication\">Smart Home Without Cloud: Local-First Device Communication</h3><p>Insteon died overnight, Wemo cloud ended in 2026, Google IoT Core shut down. Build a cloud-free smart home with permanent virtual addresses, encrypted local communication, and zero accounts or subscriptions.</p>Jun 19, 2026Guidesmart-homelocal-first</a><a href=\"/blog/distributed-monitoring-without-prometheus\"><img alt=\"Distributed Monitoring Without Prometheus or Grafana\" src=\"/blog/banners/optimized/distributed-monitoring-without-prometheus-1200.webp\"/><h3 id=\"distributed-monitoring-without-prometheus-or-grafana\">Distributed Monitoring Without Prometheus or Grafana</h3><p>The Pilot daemon on each node, shell scripts for metrics, encrypted pub/sub for delivery. Monitor servers across NATs without VPNs, exporters, or a 6-component monitoring stack.</p>Jun 17, 2026Operationsmonitoringevent-stream</a><a href=\"/blog/chain-ai-models-across-machines\"><img alt=\"Chain AI Models Across Machines With Persistent Tunnels\" src=\"/blog/banners/optimized/chain-ai-models-across-machines-1200.webp\"/><h3 id=\"chain-ai-models-across-machines-with-persistent-tunnels\">Chain AI Models Across Machines With Persistent Tunnels</h3><p>Multi-model pipelines pay HTTP connection setup at every hop. Persistent tunnels connect once, stream continuously, and skip per-request connection setup.</p>Jun 15, 2026AI/MLmodel-chainingpipelines</a><a href=\"/blog/distributed-rag-without-central-knowledge-base\"><img alt=\"Distributed RAG Without a Central Knowledge Base\" src=\"/blog/banners/optimized/distributed-rag-without-central-knowledge-base-1200.webp\"/><h3 id=\"distributed-rag-without-a-central-knowledge-base\">Distributed RAG Without a Central Knowledge Base</h3><p>Centralizing all documents in one vector database violates data ownership. Build RAG pipelines where each agent owns its corpus and responds to trust-gated queries.</p>Jun 13, 2026AI/MLRAGprivacy</a><a href=\"/blog/federated-learning-p2p-communication\"><img alt=\"P2P Communication for Federated Learning Nodes\" src=\"/blog/banners/optimized/federated-learning-p2p-communication-1200.webp\"/><h3 id=\"p2p-communication-for-federated-learning-nodes\">P2P Communication for Federated Learning Nodes</h3><p>Communication often dominates federated learning time. Replace the parameter server with direct peer-to-peer gradient exchange over encrypted tunnels.</p>Jun 11, 2026AI/MLfederated-learningP2P</a><a href=\"/blog/secure-research-collaboration-share-models-not-data\"><img alt=\"Secure Research Collaboration: Share Models, Not Data\" src=\"/blog/banners/optimized/secure-research-collaboration-share-models-not-data-1200.webp\"/><h3 id=\"secure-research-collaboration-share-models-not-data\">Secure Research Collaboration: Share Models, Not Data</h3><p>Cross-institutional ML collaboration without centralizing raw data. Encrypted model-weight exchange, scoped connectivity, and operational controls for regulated environments.</p>Jun 9, 2026AI/MLprivacyfederated-learning</a><a href=\"/blog/agent-communication-for-healthcare-data\"><img alt=\"Technical Controls for Healthcare AI Agent Communication\" src=\"/blog/banners/optimized/agent-communication-for-healthcare-data-1200.webp\"/><h3 id=\"technical-controls-for-healthcare-ai-agent-communication\">Technical Controls for Healthcare AI Agent Communication</h3><p>How encrypted tunnels, peer trust, and network audit events can support a healthcare AI security architecture, with clear boundaries for operator responsibilities.</p>Jun 7, 2026SecurityHIPAAhealthcare</a><a href=\"/blog/secure-ai-agent-communication-zero-trust\"><img alt=\"How to Secure AI Agent Communication With Zero Trust\" src=\"/blog/banners/optimized/secure-ai-agent-communication-zero-trust-1200.webp\"/><h3 id=\"how-to-secure-ai-agent-communication-with-zero-trust\">How to Secure AI Agent Communication With Zero Trust</h3><p>A practical zero-trust model for AI agent communication: authenticated peers, encrypted tunnels, revocable trust, clear boundaries, and application controls.</p>Jun 5, 2026Securityzero-trustidentity</a><a href=\"/blog/cross-company-agent-collaboration-without-shared-infrastructure\"><img alt=\"Cross-Company Agent Collaboration Without a Shared App Broker\" src=\"/blog/banners/optimized/cross-company-agent-collaboration-without-shared-infrastructure-1200.webp\"/><h3 id=\"cross-company-agent-collaboration-without-a-shared-app-broker\">Cross-Company Agent Collaboration Without a Shared App Broker</h3><p>Enable B2B agent collaboration with scoped trust handshakes and encrypted tunnels without provisioning a workflow-specific broker. How Pilot complements A2A and MCP as the transport layer.</p>Jun 3, 2026ArchitectureB2Binteroperability</a><a href=\"/blog/connect-agents-across-aws-gcp-azure-without-vpn\"><img alt=\"Connect AI Agents Across AWS, GCP &amp; Azure Without a VPN\" src=\"/blog/banners/optimized/connect-agents-across-aws-gcp-azure-without-vpn-1200.webp\"/><h3 id=\"connect-ai-agents-across-aws-gcp-azure-without-a-vpn\">Connect AI Agents Across AWS, GCP &amp; Azure Without a VPN</h3><p>Deploy agents across any cloud with two commands. No VPN tunnels, no cloud interconnect, no per-cloud networking configuration. Virtual addresses that work everywhere.</p>Jun 1, 2026Guidemulti-clouddeployment</a><a href=\"/blog/run-agent-network-without-cloud-dependency\"><img alt=\"Run Your Agent Network Without Cloud Dependency\" src=\"/blog/banners/optimized/run-agent-network-without-cloud-dependency-1200.webp\"/><h3 id=\"run-your-agent-network-without-cloud-dependency\">Run Your Agent Network Without Cloud Dependency</h3><p>Insteon, Wemo, Google IoT Core -- cloud services shut down and devices become paperweights. Own your agent network with open-source binaries, no cloud accounts, and a coordination layer you can self-host.</p>May 29, 2026GuideindependenceIoT</a><a href=\"/blog/connect-ai-agents-behind-nat-without-vpn\"><img alt=\"Connect AI Agents Behind NAT Without a VPN\" src=\"/blog/banners/optimized/connect-ai-agents-behind-nat-without-vpn-1200.webp\"/><h3 id=\"connect-ai-agents-behind-nat-without-a-vpn\">Connect AI Agents Behind NAT Without a VPN</h3><p>Most networks involve NAT. Pilot's three-tier traversal -- STUN, hole-punching, relay -- connects agents behind NAT automatically. No VPN, no port forwarding, no ngrok.</p>May 27, 2026GuideNATP2P</a><a href=\"/blog/how-ai-agents-discover-each-other\"><img alt=\"How AI Agents Discover Each Other on a Live Network\" src=\"/blog/banners/optimized/how-ai-agents-discover-each-other-1200.webp\"/><h3 id=\"how-ai-agents-discover-each-other-on-a-live-network\">How AI Agents Discover Each Other on a Live Network</h3><p>Agent discovery without manual config files. Registry-based hostname lookup, descriptive tags, a directory of service agents, and runtime self-discovery.</p>May 25, 2026Guidediscoveryregistry</a><a href=\"/blog/build-agent-swarm-self-organizes\"><img alt=\"Build a Self-Organizing Agent Swarm: No Central Scheduler\" src=\"/blog/banners/optimized/build-agent-swarm-self-organizes-1200.webp\"/><h3 id=\"build-a-self-organizing-agent-swarm-no-central-scheduler\">Build a Self-Organizing Agent Swarm: No Central Scheduler</h3><p>Agents announce roles on a pub/sub topic, form trust in pairs, and send work straight to the fastest peer with the right role. A Python tutorial on Pilot.</p>May 23, 2026Tutorialswarm</a><a href=\"/blog/how-pilot-protocol-works\"><img alt=\"How Pilot Protocol Works\" src=\"/blog/banners/optimized/how-pilot-protocol-works-1200.webp\"/><h3 id=\"how-pilot-protocol-works\">How Pilot Protocol Works</h3><p>How Pilot separates agent identity and coordination from encrypted payload paths, including discovery, traversal, direct connections, and relay fallback.</p>May 21, 2026Architecturedeep-divenetworking</a><a href=\"/blog/secure-data-exchange-for-multi-cloud-ai-systems\"><img alt=\"Secure data exchange for multi-cloud AI systems\" src=\"/blog/banners/optimized/secure-data-exchange-for-multi-cloud-ai-systems-1200.webp\"/><h3 id=\"secure-data-exchange-for-multi-cloud-ai-systems\">Secure data exchange for multi-cloud AI systems</h3><p>Discover essential strategies for explaining secure data exchange in multi-cloud AI systems. Learn to protect sensitive data effectively!</p>May 19, 2026Blogblog</a><a href=\"/blog/encrypted-data-exchange-for-decentralized-ai-systems\"><img alt=\"Encrypted Data Exchange for Decentralized AI\" src=\"/blog/banners/optimized/encrypted-data-exchange-for-decentralized-ai-systems-1200.webp\"/><h3 id=\"encrypted-data-exchange-for-decentralized-ai\">Encrypted Data Exchange for Decentralized AI</h3><p>Unlock essential strategies with our guide to encrypted data exchange for decentralized AI systems, safeguarding sensitive data across networks.</p>May 17, 2026Blogblog</a><a href=\"/blog/legacy-protocol-integration-for-secure-distributed-ai\"><img alt=\"Legacy protocol integration for secure distributed AI\" src=\"/blog/banners/optimized/legacy-protocol-integration-for-secure-distributed-ai-1200.webp\"/><h3 id=\"legacy-protocol-integration-for-secure-distributed-ai\">Legacy protocol integration for secure distributed AI</h3><p>Unlock seamless connections with distributed AI by explaining legacy protocol integration. Discover modern strategies that simplify integration now!</p>May 15, 2026Blogblog</a><a href=\"/blog/agent-communication-security-best-practices\"><img alt=\"Agent communication security: best practices for AI developers\" src=\"/blog/banners/optimized/agent-communication-security-best-practices-1200.webp\"/><h3 id=\"agent-communication-security-best-practices-for-ai-developers\">Agent communication security: best practices for AI developers</h3><p>Unlock essential agent communication security tips for AI developers. Safeguard your systems against active threats with actionable strategies!</p>May 13, 2026Blogblog</a><a href=\"/blog/how-mutual-trust-secures-decentralized-ai-agent-networks\"><img alt=\"How mutual trust secures decentralized AI agent networks\" src=\"/blog/banners/optimized/how-mutual-trust-secures-decentralized-ai-agent-networks-1200.webp\"/><h3 id=\"how-mutual-trust-secures-decentralized-ai-agent-networks\">How mutual trust secures decentralized AI agent networks</h3><p>Discover the crucial role of mutual trust in networks. Learn how to ensure security and resilience in decentralized AI agent systems today!</p>May 11, 2026Blogblog</a><a href=\"/blog/encryption-protocols-for-secure-ai-systems-a-practical-guide\"><img alt=\"Encryption protocols for secure AI systems: A practical guide\" src=\"/blog/banners/optimized/encryption-protocols-for-secure-ai-systems-a-practical-guide-1200.webp\"/><h3 id=\"encryption-protocols-for-secure-ai-systems-a-practical-guide\">Encryption protocols for secure AI systems: A practical guide</h3><p>Discover essential encryption protocols in AI systems to secure your decentralized projects. Learn how to implement them effectively today!</p>May 9, 2026Blogblog</a><a href=\"/blog/why-direct-p2p-connections-power-secure-ai-networking\"><img alt=\"Why Direct P2P Connections Power Secure AI Networking\" src=\"/blog/banners/optimized/why-direct-p2p-connections-power-secure-ai-networking-1200.webp\"/><h3 id=\"why-direct-p2p-connections-power-secure-ai-networking\">Why Direct P2P Connections Power Secure AI Networking</h3><p>Discover why direct peer-to-peer connections are vital for secure AI networking. Learn how to enhance your agents' performance today!</p>May 7, 2026Blogblog</a><a href=\"/blog/network-security-for-multi-agent-systems-key-strategies\"><img alt=\"Network security for multi-agent systems: Key strategies\" src=\"/blog/banners/optimized/network-security-for-multi-agent-systems-key-strategies-1200.webp\"/><h3 id=\"network-security-for-multi-agent-systems-key-strategies\">Network security for multi-agent systems: Key strategies</h3><p>Discover essential strategies for network security for multi-agent systems. Protect your AI systems with robust defense frameworks and protocols.</p>May 5, 2026Blogblog</a><a href=\"/blog/virtual-network-addresses-for-secure-decentralized-ai\"><img alt=\"Virtual network addresses for secure decentralized AI\" src=\"/blog/banners/optimized/virtual-network-addresses-for-secure-decentralized-ai-1200.webp\"/><h3 id=\"virtual-network-addresses-for-secure-decentralized-ai\">Virtual network addresses for secure decentralized AI</h3><p>Discover the importance of virtual network addresses in AI. This article explains virtual network addresses and their role in avoiding costly errors.</p>May 3, 2026Blogblog</a><a href=\"/blog/trustless-protocols-that-secure-decentralized-ai-systems\"><img alt=\"Trustless protocols that secure decentralized AI systems\" src=\"/blog/banners/optimized/trustless-protocols-that-secure-decentralized-ai-systems-1200.webp\"/><h3 id=\"trustless-protocols-that-secure-decentralized-ai-systems\">Trustless protocols that secure decentralized AI systems</h3><p>Discover the crucial role of trustless protocols in securing decentralized AI systems, enhancing reliability and scalability for developers.</p>May 1, 2026Blogblog</a><a href=\"/blog/persistent-address-strategies-for-distributed-ai-systems\"><img alt=\"Persistent address strategies for distributed AI systems\" src=\"/blog/banners/optimized/persistent-address-strategies-for-distributed-ai-systems-1200.webp\"/><h3 id=\"persistent-address-strategies-for-distributed-ai-systems\">Persistent address strategies for distributed AI systems</h3><p>Unlock the power of distributed AI with effective persistent address strategies. Discover how to optimize peer discovery and reduce operational debt.</p>Apr 29, 2026Blogblog</a><a href=\"/blog/overlay-networking-secure-ai-agent-communication-explained\"><img alt=\"Overlay Networking Explained for Distributed AI Systems\" src=\"/blog/banners/optimized/overlay-networking-secure-ai-agent-communication-explained-1200.webp\"/><h3 id=\"overlay-networking-explained-for-distributed-ai-systems\">Overlay Networking Explained for Distributed AI Systems</h3><p>A vendor-neutral primer on overlay and underlay networks, encapsulation, topology, MTU, control and data planes, identity, routing, and operational tradeoffs.</p>Apr 27, 2026Blogblog</a><a href=\"/blog/ai-agent-discovery-process-p2p-networks\"><img alt=\"AI agent discovery: master P2P networks in 2026\" src=\"/blog/banners/optimized/ai-agent-discovery-process-p2p-networks-1200.webp\"/><h3 id=\"ai-agent-discovery-master-p2p-networks-in-2026\">AI agent discovery: master P2P networks in 2026</h3><p>Learn how to implement the AI agent discovery process step by step, from capability announcement to trust verification, for secure and scalable peer-to-peer networks.</p>Apr 21, 2026Blogblog</a><a href=\"/blog/ai-agent-network-examples-secure-scalable-connectivity\"><img alt=\"Top AI agent network examples for secure, scalable connectivity\" src=\"/blog/banners/optimized/ai-agent-network-examples-secure-scalable-connectivity-1200.webp\"/><h3 id=\"top-ai-agent-network-examples-for-secure-scalable-connectivity\">Top AI agent network examples for secure, scalable connectivity</h3><p>Explore top AI agent network examples including AgentNet, Google A2A, and ICP DeAI agents. Compare frameworks for secure, scalable, multi-cloud deployments.</p>Apr 19, 2026Blogblog</a><a href=\"/blog/persistent-network-addressing-secure-ai-systems\"><img alt=\"Persistent network addressing for secure AI systems\" src=\"/blog/banners/optimized/persistent-network-addressing-secure-ai-systems-1200.webp\"/><h3 id=\"persistent-network-addressing-for-secure-ai-systems\">Persistent network addressing for secure AI systems</h3><p>Learn how persistent network addressing works, where cloud environments fall short, and how to implement stable, secure addressing for decentralized AI systems.</p>Apr 17, 2026Blogblog</a><a href=\"/blog/userspace-tcp-over-udp-stack-pure-go\"><img alt=\"Building a Userspace TCP-over-UDP Stack in Pure Go\" src=\"/blog/banners/optimized/why-ai-agents-need-network-stack-1200.webp\"/><h3 id=\"building-a-userspace-tcp-over-udp-stack-in-pure-go\">Building a Userspace TCP-over-UDP Stack in Pure Go</h3><p>Sliding windows, Nagle's algorithm, RTO, and AES-GCM all in userspace, built on Go's standard library. How Pilot Protocol's transport layer works.</p>Apr 15, 2026Engineeringgonetworkingtransport</a><a href=\"/blog/cloud-networking-secure-peer-to-peer-distributed-ai\"><img alt=\"Cloud networking: Secure peer-to-peer for distributed AI\" src=\"/blog/banners/optimized/cloud-networking-secure-peer-to-peer-distributed-ai-1200.webp\"/><h3 id=\"cloud-networking-secure-peer-to-peer-for-distributed-ai\">Cloud networking: Secure peer-to-peer for distributed AI</h3><p>Learn how cloud VPC and P2P protocols like libp2p and IPFS differ, why 87.33% of IPFS data is centralized, and how to build secure hybrid architectures for distributed AI systems.</p>Apr 13, 2026Blogblog</a><a href=\"/blog/multi-cloud-networking-decentralized-ai-systems\"><img alt=\"Mastering multi-cloud networking for decentralized AI systems\" src=\"/blog/banners/optimized/multi-cloud-networking-decentralized-ai-systems-1200.webp\"/><h3 id=\"mastering-multi-cloud-networking-for-decentralized-ai-systems\">Mastering multi-cloud networking for decentralized AI systems</h3><p>Learn how to build secure multi-cloud networking for autonomous AI agents using overlays, SD-WAN, and zero-trust enclaves. Compare VPN, private interconnects, and agent-centric solutions.</p>Apr 11, 2026Blogblog</a><a href=\"/blog/peer-to-peer-networking-examples-ai-engineers\"><img alt=\"Peer-to-peer networking examples every AI engineer should know\" src=\"/blog/banners/optimized/peer-to-peer-networking-examples-ai-engineers-1200.webp\"/><h3 id=\"peer-to-peer-networking-examples-every-ai-engineer-should-know\">Peer-to-peer networking examples every AI engineer should know</h3><p>Explore real-world peer-to-peer networking examples including BitTorrent, libp2p, and IPFS, with practical guidance for AI engineers building secure distributed agent systems.</p>Apr 9, 2026Blogblog</a><a href=\"/blog/securing-ai-agent-networks-multi-cloud-environments\"><img alt=\"Securing AI agent networks in multi-cloud environments\" src=\"/blog/banners/optimized/securing-ai-agent-networks-multi-cloud-environments-1200.webp\"/><h3 id=\"securing-ai-agent-networks-in-multi-cloud-environments\">Securing AI agent networks in multi-cloud environments</h3><p>Learn how to secure AI agent communications in multi-cloud environments using DIDs, Zero Trust, and blockchain-anchored frameworks like BlockA2A.</p>Apr 7, 2026Blogblog</a><a href=\"/blog/trust-network-protocols-secure-decentralized-systems\"><img alt=\"Trust in network protocols for decentralized systems\" src=\"/blog/banners/optimized/trust-network-protocols-secure-decentralized-systems-1200.webp\"/><h3 id=\"trust-in-network-protocols-for-decentralized-systems\">Trust in network protocols for decentralized systems</h3><p>Learn how trust works in decentralized P2P and AI networks, covering EigenTrust, blockchain trust models, zero-trust principles, and dynamic trust evaluation for distributed systems.</p>Apr 5, 2026Blogblog</a><a href=\"/blog/ai-networking-terminology-a2a-mcp-anp-protocols\"><img alt=\"AI Networking Glossary: A2A, MCP, and ANP Terms\" src=\"/blog/banners/optimized/ai-networking-terminology-a2a-mcp-anp-protocols-1200.webp\"/><h3 id=\"ai-networking-glossary-a2a-mcp-and-anp-terms\">AI Networking Glossary: A2A, MCP, and ANP Terms</h3><p>A definition-first glossary for A2A, MCP, ANP, Agent Cards, tools, resources, discovery, transport, identity, and trust in an agent system.</p>Apr 1, 2026Blogblog</a><a href=\"/blog/self-hosted-registry-identity-directory-sync-audit-export\"><img alt=\"Identity, Directory Sync and Audit Export in the Open-Source Rendezvous\" src=\"/blog/banners/optimized/enterprise-production-complete-identity-directory-audit-export-1200.webp\"/><h3 id=\"identity-directory-sync-and-audit-export-in-the-open-source-rend\">Identity, Directory Sync and Audit Export in the Open-Source Rendezvous</h3><p>OIDC/JWT validation, identity bridges, directory sync, blueprint provisioning and Splunk, CEF or JSON audit export in the Pilot rendezvous you run yourself.</p>Mar 29, 2026Operationsself-hostingidentityaudit</a><a href=\"/blog/enterprise-phase-3-rbac-policies-audit-fleet\"><img alt=\"RBAC, Policies and Audit Trail in the Open-Source Rendezvous\" src=\"/blog/banners/optimized/enterprise-phase-3-rbac-policies-audit-fleet-1200.webp\"/><h3 id=\"rbac-policies-and-audit-trail-in-the-open-source-rendezvous\">RBAC, Policies and Audit Trail in the Open-Source Rendezvous</h3><p>Roles, network policies, consent-based invites, an audit trail, fleet enrollment, signed webhooks and key expiry in the open-source Pilot rendezvous.</p>Mar 27, 2026Operationsself-hostingsecurityrbac</a><a href=\"/blog/python-sdk-pilot-protocol\"><img alt=\"Announcing the Pilot Protocol Python SDK\" src=\"/blog/banners/optimized/python-sdk-pilot-protocol-1200.webp\"/><h3 id=\"announcing-the-pilot-protocol-python-sdk\">Announcing the Pilot Protocol Python SDK</h3><p>Native Python bindings for Pilot Protocol. pip install, context managers, type hints, and the same Go crypto under the hood.</p>Mar 19, 2026Integrationpythonsdk</a><a href=\"/blog/openclaw-agents-behind-nat-zero-config\"><img alt=\"OpenClaw Agents Behind NAT: Zero-Config Peer Connectivity\" src=\"/blog/banners/optimized/openclaw-agents-behind-nat-zero-config-1200.webp\"/><h3 id=\"openclaw-agents-behind-nat-zero-config-peer-connectivity\">OpenClaw Agents Behind NAT: Zero-Config Peer Connectivity</h3><p>How OpenClaw agents can attempt direct traversal and use encrypted relay fallback across home, enterprise, cloud, and mobile environments.</p>Mar 17, 2026GuideopenclawNAT</a><a href=\"/blog/scaling-openclaw-fleets-thousands-agents\"><img alt=\"Scaling OpenClaw Fleets: Running Thousands of Autonomous Agents\" src=\"/blog/banners/optimized/scaling-openclaw-fleets-thousands-agents-1200.webp\"/><h3 id=\"scaling-openclaw-fleets-running-thousands-of-autonomous-agents\">Scaling OpenClaw Fleets: Running Thousands of Autonomous Agents</h3><p>Operational guide to running large OpenClaw fleets on Pilot Protocol: registry capacity, daemon resources, systemd deployment, monitoring, and bottlenecks at scale.</p>Mar 15, 2026Operationsopenclawscale</a><a href=\"/blog/clawhub-to-live-network-openclaw-discovery\"><img alt=\"From ClawHub to Live Network: How OpenClaw Agents Discover Peers\" src=\"/blog/banners/optimized/clawhub-to-live-network-openclaw-discovery-1200.webp\"/><h3 id=\"from-clawhub-to-live-network-how-openclaw-agents-discover-peers\">From ClawHub to Live Network: How OpenClaw Agents Discover Peers</h3><p>The complete journey from clawhub install to live network participation: STUN discovery, registration, finding peers, and trust negotiation.</p>Mar 13, 2026Guideopenclawdiscovery</a><a href=\"/blog/multi-agent-pipelines-openclaw-encrypted-tunnels\"><img alt=\"Multi-Agent Pipelines: Chaining OpenClaw Agents Over Encrypted Tunnels\" src=\"/blog/banners/optimized/multi-agent-pipelines-openclaw-encrypted-tunnels-1200.webp\"/><h3 id=\"multi-agent-pipelines-chaining-openclaw-agents-over-encrypted-tu\">Multi-Agent Pipelines: Chaining OpenClaw Agents Over Encrypted Tunnels</h3><p>Build multi-agent pipelines with OpenClaw and Pilot Protocol: two-agent chains, fan-out parallelism, event-driven stages, conditional routing, and dynamic discovery.</p>Mar 11, 2026Architectureopenclawpipelines</a><a href=\"/blog/sociology-of-machines-626-agents\"><img alt=\"The Sociology of Machines: Hundreds of Agents\" src=\"/blog/banners/optimized/sociology-of-machines-626-agents-1200.webp\"/><h3 id=\"the-sociology-of-machines-hundreds-of-agents\">The Sociology of Machines: Hundreds of Agents</h3><p>Autonomous AI agents form social structures identical to human networks: preferential attachment, triadic closure, Dunbar scaling. A new domain of machine sociology.</p>Mar 9, 2026AI/MLopenclawsociology</a><a href=\"/blog/building-custom-pilot-skills-openclaw\"><img alt=\"Building Custom Pilot Skills with OpenClaw\" src=\"/blog/banners/optimized/building-custom-pilot-skills-openclaw-1200.webp\"/><h3 id=\"building-custom-pilot-skills-with-openclaw\">Building Custom Pilot Skills with OpenClaw</h3><p>Write a SKILL.md that teaches an OpenClaw agent a workflow over Pilot Protocol, require pilotctl in its frontmatter, test it locally and publish it on ClawHub.</p>Mar 7, 2026Tutorialopenclawskills</a><a href=\"/blog/emergent-trust-networks-agents-choose-peers\"><img alt=\"Emergent Trust Networks: When Agents Choose Their Peers\" src=\"/blog/banners/optimized/emergent-trust-networks-agents-choose-peers-1200.webp\"/><h3 id=\"emergent-trust-networks-when-agents-choose-their-peers\">Emergent Trust Networks: When Agents Choose Their Peers</h3><p>Agents made thousands of independent trust decisions. The resulting network has preferential attachment, 47x clustering, and Dunbar-layer scaling -- all without design.</p>Mar 5, 2026AI/MLopenclawtrust</a><a href=\"/blog/why-autonomous-agents-need-private-discovery\"><img alt=\"Why Autonomous Agents Need Private-by-Default Discovery\" src=\"/blog/banners/optimized/why-autonomous-agents-need-private-discovery-1200.webp\"/><h3 id=\"why-autonomous-agents-need-private-by-default-discovery\">Why Autonomous Agents Need Private-by-Default Discovery</h3><p>Public discovery is dangerous for unsupervised AI agents. How Pilot Protocol's private-by-default model enabled safe autonomous adoption by OpenClaw agents.</p>Mar 3, 2026Securityopenclawprivacy</a><a href=\"/blog/openclaw-meets-pilot-agent-networking-one-command\"><img alt=\"Connect OpenClaw to Pilot Protocol with MCP\" src=\"/blog/banners/pilot-harness-integrations.svg\"/><h3 id=\"connect-openclaw-to-pilot-protocol-with-mcp\">Connect OpenClaw to Pilot Protocol with MCP</h3><p>Add the hosted Pilot MCP server to OpenClaw with one command: agent messaging, live data and the app store, with nothing to install.</p>Mar 1, 2026Integrationopenclawmcpintegration</a><a href=\"/blog/build-multi-agent-network-five-minutes\"><img alt=\"Build a Multi-Agent Network in 5 Minutes\" src=\"/blog/banners/optimized/build-multi-agent-network-five-minutes-1200.webp\"/><h3 id=\"build-a-multi-agent-network-in-5-minutes\">Build a Multi-Agent Network in 5 Minutes</h3><p>From install to working demo. Start two agents, establish trust, send messages, transfer files, and use pub/sub in about 5 minutes.</p>Feb 28, 2026Tutorialquickstartgetting-started</a><a href=\"/blog/benchmarking-http-vs-udp-overlay\"><img alt=\"HTTP vs UDP Overlay: An Agent Benchmarking Method\" src=\"/blog/banners/optimized/benchmarking-http-vs-udp-overlay-1200.webp\"/><h3 id=\"http-vs-udp-overlay-an-agent-benchmarking-method\">HTTP vs UDP Overlay: An Agent Benchmarking Method</h3><p>A reproducible method for comparing cold and warm connections, direct and relayed paths, latency, throughput, resource use, and recovery.</p>Feb 26, 2026Architectureperformancedata</a><a href=\"/blog/replace-message-broker-twelve-lines-go\"><img alt=\"Agent Pub/Sub in Twelve Lines of Go, With the Broker Built In\" src=\"/blog/banners/optimized/replace-message-broker-twelve-lines-go-1200.webp\"/><h3 id=\"agent-pub-sub-in-twelve-lines-of-go-with-the-broker-built-in\">Agent Pub/Sub in Twelve Lines of Go, With the Broker Built In</h3><p>Every Pilot daemon runs a small pub/sub broker on port 1002. Subscribe and publish from Go with the eventstream package, or from the shell with pilotctl.</p>Feb 24, 2026Tutorialpub-subgo</a><a href=\"/blog/http-services-over-encrypted-overlay\"><img alt=\"Run HTTP Services Over an Encrypted Agent Overlay\" src=\"/blog/banners/optimized/http-services-over-encrypted-overlay-1200.webp\"/><h3 id=\"run-http-services-over-an-encrypted-agent-overlay\">Run HTTP Services Over an Encrypted Agent Overlay</h3><p>Standard Go HTTP servers running on Pilot ports, an optional gateway that maps them to local IPs, and a REST API mesh with automatic encryption and zero TLS configuration.</p>Feb 22, 2026Tutorialhttpgateway</a><a href=\"/blog/peer-to-peer-file-transfer-agents\"><img alt=\"Peer-to-Peer File Transfer Between AI Agents (No S3 Required)\" src=\"/blog/banners/optimized/peer-to-peer-file-transfer-agents-1200.webp\"/><h3 id=\"peer-to-peer-file-transfer-between-ai-agents-no-s3-required\">Peer-to-Peer File Transfer Between AI Agents (No S3 Required)</h3><p>Direct agent-to-agent file transfer over encrypted tunnels. Send model weights, datasets, and reports without cloud storage intermediaries.</p>Feb 20, 2026Tutorialfile-transferp2p</a><a href=\"/blog/contributing-codebase-tour\"><img alt=\"Contributing to Pilot Protocol: A Tour of the Codebase\" src=\"/blog/banners/optimized/contributing-codebase-tour-1200.webp\"/><h3 id=\"contributing-to-pilot-protocol-a-tour-of-the-codebase\">Contributing to Pilot Protocol: A Tour of the Codebase</h3><p>Repository map, test environment, how to add a new service, layering rules, and where to start for new contributors.</p>Feb 18, 2026Guidecontributingopen-source</a><a href=\"/blog/a2a-agent-cards-over-pilot-tunnels\"><img alt=\"Building A2A Agent Cards Over Pilot Protocol Tunnels\" src=\"/blog/banners/optimized/a2a-agent-cards-over-pilot-tunnels-1200.webp\"/><h3 id=\"building-a2a-agent-cards-over-pilot-protocol-tunnels\">Building A2A Agent Cards Over Pilot Protocol Tunnels</h3><p>Run Google's A2A protocol over Pilot's encrypted tunnels. NAT traversal for A2A agents, trust-gated Agent Cards, and the \"A2A for semantics, Pilot for transport\" pattern.</p>Feb 16, 2026Integrationa2agoogle</a><a href=\"/blog/mcp-plus-pilot-tools-and-network\"><img alt=\"MCP + Pilot: Tools and a Network for AI Agents\" src=\"/blog/banners/optimized/mcp-plus-pilot-tools-and-network-1200.webp\"/><h3 id=\"mcp-pilot-tools-and-a-network-for-ai-agents\">MCP + Pilot: Tools and a Network for AI Agents</h3><p>MCP handles tool access. Pilot handles peer communication. Together: agents that gather data, share results, and delegate work without a platform in the middle.</p>Feb 14, 2026Integrationmcpanthropic</a><a href=\"/blog/private-agent-network-company\"><img alt=\"Building a Private Agent Network for Your Company\" src=\"/blog/banners/optimized/private-agent-network-company-1200.webp\"/><h3 id=\"building-a-private-agent-network-for-your-company\">Building a Private Agent Network for Your Company</h3><p>Self-host the rendezvous server, create a private Pilot network, enroll agents, set trust and port policy, bridge legacy systems via the gateway, and ship logs to your SIEM.</p>Feb 12, 2026Guideself-hostingdeployment</a><a href=\"/blog/trust-model-agents-invisible-by-default\"><img alt=\"The Pilot Protocol Trust Model: Why Agents Should Be Invisible by Default\" src=\"/blog/banners/optimized/trust-model-agents-invisible-by-default-1200.webp\"/><h3 id=\"the-pilot-protocol-trust-model-why-agents-should-be-invisible-by\">The Pilot Protocol Trust Model: Why Agents Should Be Invisible by Default</h3><p>Private-by-default agent discovery, Ed25519 mutual handshakes, instant revocation, and why this is the opposite of A2A Agent Cards.</p>Feb 10, 2026Securitytrustprivacy</a><a href=\"/blog/zero-dependency-encryption-x25519-aes-gcm\"><img alt=\"AES-256-GCM Encryption: Zero-Dependency Go Implementation Guide\" src=\"/blog/banners/optimized/zero-dependency-encryption-x25519-aes-gcm-1200.webp\"/><h3 id=\"aes-256-gcm-encryption-zero-dependency-go-implementation-guide\">AES-256-GCM Encryption: Zero-Dependency Go Implementation Guide</h3><p>AES-256-GCM encryption explained with code: X25519 key exchange, GCM authenticated encryption, nonce handling, and wire format in zero-dependency Go.</p>Feb 8, 2026Securitysecuritygo</a><a href=\"/blog/nat-traversal-ai-agents-deep-dive\"><img alt=\"NAT Traversal for AI Agents: A Deep Dive\" src=\"/blog/banners/optimized/nat-traversal-ai-agents-deep-dive-1200.webp\"/><h3 id=\"nat-traversal-for-ai-agents-a-deep-dive\">NAT Traversal for AI Agents: A Deep Dive</h3><p>STUN discovery, UDP hole-punching, relay fallback, and beacon gossip: how Pilot gets agents talking behind NAT, from direct paths to relay.</p>Feb 6, 2026Guidenatnetworking</a><a href=\"/blog/pilot-vs-tcp-grpc-nats-comparison\"><img alt=\"Where Pilot Fits with TCP, gRPC, and NATS\" src=\"/blog/banners/optimized/pilot-vs-tcp-grpc-nats-comparison-1200.webp\"/><h3 id=\"where-pilot-fits-with-tcp-grpc-and-nats\">Where Pilot Fits with TCP, gRPC, and NATS</h3><p>A responsibility-first comparison of transport, typed RPC, brokered messaging, agent identity, and cross-network reachability.</p>Feb 4, 2026Architecturegrpcnats</a><a href=\"/blog/why-ai-agents-need-network-stack\"><img alt=\"Agent Connectivity Best Practices: Why AI Agents Need a Network Stack\" src=\"/blog/banners/optimized/why-ai-agents-need-network-stack-1200.webp\"/><h3 id=\"agent-connectivity-best-practices-why-ai-agents-need-a-network-s\">Agent Connectivity Best Practices: Why AI Agents Need a Network Stack</h3><p>Agent connectivity best practices for reliable multi-agent systems: durable addresses, NAT traversal, encrypted tunnels, and per-peer trust.</p>Feb 2, 2026Architectureopinionai-agentsnetworking</a>No posts match your search.<h2 id=\"frequently-asked-questions-about-agent-overlay-networking\">Frequently asked questions about agent overlay networking</h2><h3 id=\"what-is-an-overlay-network-for-ai-agents\">What is an overlay network for AI agents?</h3><p>An overlay network for AI agents is a virtual network layer built on top of the internet that gives each agent a permanent virtual address reachable via NAT traversal and encrypted tunnels. Unlike VPNs, agent overlay networks decouple membership from trust — agents discover and communicate with each other through per-peer approval rather than blanket network access.</p><h3 id=\"how-does-p2p-agent-networking-differ-from-vpns\">How does P2P agent networking differ from VPNs?</h3><p>VPNs commonly grant access at a device or network boundary, often refined with ACLs and segmentation. P2P agent overlays add per-peer trust at the agent connection itself, giving operators a different level of identity and access granularity.</p><h3 id=\"why-do-ai-agents-need-nat-traversal\">Why do AI agents need NAT traversal?</h3><p>NAT (Network Address Translation) prevents machines behind a router from accepting incoming connections. AI agents running on laptops, edge devices, or cloud VMs behind NAT cannot be reached directly. NAT traversal techniques like STUN, hole-punching, and relay fallback let agents connect directly without public IPs or firewall configuration.</p><h3 id=\"can-ai-agents-communicate-securely-over-an-overlay-network\">Can AI agents communicate securely over an overlay network?</h3><p>Yes. Pilot uses X25519-derived tunnel secrets and AES-256-GCM so tunnel packets are encrypted and authenticated. Bilateral trust is checked at the agent connection, complementing rather than categorically replacing network-level VPN controls.</p>"
+}

@@ -1,0 +1,189 @@
+---
+title: "Configuration"
+description: "Config files, environment variables, directory structure, and daemon flags for Pilot Protocol. Read the implementation guide."
+---
+
+Config files, environment variables, directory structure, and daemon flags.
+
+## Config file [#config-file]
+
+Configuration is stored in `~/.pilot/config.json`:
+
+```json
+{
+  "registry": "34.71.57.205:9000",
+  "beacon": "34.71.57.205:9001",
+  "hostname": "my-agent",
+  "email": "user@example.com",
+  "socket": "$XDG_RUNTIME_DIR/pilot.sock (Linux, when set), else /tmp/pilot.sock",
+  "webhook": "http://localhost:8080/events",
+  "transport": "compat",
+  "proxy": "auto"
+}
+```
+
+CLI flags take highest precedence. For `pilotctl daemon start`, the config file is consulted before environment variables (a value in `~/.pilot/config.json` beats the matching `PILOT_*` env var). The exceptions are `transport` and `proxy`, where `$PILOT_TRANSPORT` and `$PILOT_PROXY` beat config.json; some direct paths also read env first. The config file is created by `pilotctl init` and can be updated with `pilotctl config --set`.
+
+## Config commands [#commands]
+
+### Initialize [#initialize]
+
+```bash
+pilotctl init --hostname my-agent
+```
+
+Creates `~/.pilot/config.json` with the specified settings.
+
+### View config [#view-config]
+
+```bash
+pilotctl config
+```
+
+### Set a value [#set-a-value]
+
+```bash
+pilotctl config --set registry=host:9000
+pilotctl config --set hostname=new-name
+pilotctl config --set transport=compat     # udp, compat or auto; see Running behind a firewall
+```
+
+## Automatic updates [#auto-updates]
+
+Pilot ships a `pilot-updater` sidecar that can keep your binaries on the latest stable release. **Automatic updates are OFF by default** — nothing is ever installed without your say-so. You control them entirely from `pilotctl`:
+
+### Check the status [#check-the-status]
+
+```bash
+pilotctl update status
+```
+
+Shows whether automatic updates are enabled and your current version.
+
+### Enable / disable [#enable-disable]
+
+```bash
+pilotctl update enable
+pilotctl update disable
+```
+
+The setting is stored in `~/.pilot/auto-update.json` and re-read by the updater on its next check, so it takes effect without restarting anything. When enabled, the updater installs new stable releases on its periodic check after verifying release checksums.
+
+### Update once, manually [#update-once-manually]
+
+```bash
+pilotctl update
+```
+
+Runs a single check-and-install right now. This always works, regardless of the automatic-update setting — so you can stay on manual control and update on your own schedule. Pin to a specific release with `--pin <version>`.
+
+## Environment variables [#env]
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| PILOT\_SOCKET | `$XDG_RUNTIME_DIR/pilot.sock` on Linux when set, else `/tmp/pilot.sock` | Path to the daemon IPC socket (macOS always defaults to `/tmp/pilot.sock`) |
+| PILOT\_REGISTRY | 34.71.57.205:9000 | Registry server address |
+| PILOT\_BEACON | 34.71.57.205:9001 | Beacon server address (used for STUN, NAT punch, and relay) |
+| PILOT\_DAEMON\_BIN | (auto-discovered) | Override path to the `pilot-daemon` binary (otherwise pilotctl looks next to itself, then in `$PATH`) |
+| PILOT\_GATEWAY\_BIN | (auto-discovered) | Override path to the `pilot-gateway` binary |
+| PILOT\_HOSTNAME | (none) | Hostname to set during install. If unset, the node has no hostname and is reachable by address only |
+| PILOT\_ADMIN\_TOKEN | (none) | Registry admin token: needed to create networks and for the registry admin commands under `pilotctl extras`. On the public backbone only the operators hold it; set it when you run your own registry. |
+| PILOT\_TRANSPORT | (none) | Daemon transport: `udp`, `compat` or `auto`. Beats config.json `transport`; the `--transport` flag beats both |
+| PILOT\_PROXY | (none) | Daemon outbound proxy: `auto`, `off`, or `http(s)://[user:pass@]host:port`. Unset: config.json `proxy`, else `auto` |
+| PILOT\_PROXY\_CMD | (none) | Command whose output is the current proxy URL, for proxies that rotate their credentials |
+| PILOT\_HOME | \~/.pilot | Directory where pilot stores identity, config, and received files |
+| PILOT\_EMAIL | (none) | Email address used for first-time daemon registration (same as `--email` flag) |
+| PILOT\_RC | (unset) | Set to `1` to install the latest pre-release (RC build) |
+
+## Directory structure [#directory]
+
+```bash
+~/.pilot/
+  bin/                # Installed binaries (pilot-daemon, pilotctl, pilot-updater; pilot-gateway if installed separately)
+  bin/.pilot-version  # Current version (used by auto-updater)
+  config.json         # Configuration file
+  account.json        # Account identity (email supplied via --email / PILOT_EMAIL)
+  auto-update.json    # Automatic-update opt-in state (pilotctl update enable/disable)
+  identity.json       # Ed25519 keypair (persistent identity)
+  trust.json          # Trust state (trusted peers, pending requests)
+  received/           # Files received via data exchange
+  inbox/              # Messages received via data exchange
+  pilot.pid           # Daemon PID file
+  pilot-<pid>.log     # Per-run daemon log files (one per daemon start)
+  pilot.log           # Symlink to the current run's log file
+  updater.log         # Auto-updater log file
+```
+
+## Daemon flags [#daemon-flags]
+
+These flags forward from `pilotctl daemon start` to the underlying `pilot-daemon` binary.
+
+| Flag | Description |
+| --- | --- |
+| --registry \<addr\> | Registry server address |
+| --beacon \<addr\> | Beacon server address (STUN) |
+| --listen \<addr\> | Local UDP listen address (default: :0) |
+| --endpoint \<addr\> | Fixed public endpoint for cloud VMs (skips STUN) |
+| --identity \<path\> | Path to identity key file |
+| --email \<addr\> | Email address for account identification and key recovery |
+| --hostname \<name\> | Register with this hostname |
+| --public | Start as a public node |
+| --no-encrypt | Disable tunnel encryption |
+| --foreground | Run in the current process (don't fork) |
+| --trust-auto-approve | Auto-approve every incoming trust handshake |
+| --log-level \<level\> | Log level: debug, info, warn, error |
+| --log-format \<fmt\> | Log format: text or json |
+| --socket \<path\> | IPC socket path (default: `$XDG_RUNTIME_DIR/pilot.sock` on Linux when set, else `/tmp/pilot.sock`; macOS always uses `/tmp/pilot.sock`) |
+| --config \<path\> | Config file path |
+| --webhook \<url\> | Webhook URL for event notifications |
+| --admin-token \<token\> | Registry admin token, for network creation and registry admin operations on a registry you run (passed to the daemon via its environment) |
+| --networks \<ids\> | Comma-separated network IDs to auto-join on startup |
+| --wait \<dur\> | How long to wait for the daemon to become ready (default 15s; 30s with `--transport compat` or `auto`) |
+| --transport \<mode\> | Tunnel transport: `udp`, `compat` (TCP 443 only, for UDP-blocked or proxy-only hosts) or `auto`. With nothing configured, `pilotctl` asks for `auto`. See [Running pilot behind a firewall](/docs/firewalls). |
+| --proxy \<auto\|off\|URL\> | Outbound proxy (default `auto`: with compat, `$HTTPS_PROXY`/`$ALL_PROXY`, honoring `$NO_PROXY`) |
+| --proxy-cmd \<command\> | Command that prints the current proxy URL, for proxies that rotate their credentials (config.json `proxy_cmd`) |
+| --compat-beacon \<url\> | WSS endpoint used in compat mode (default `wss://beacon.pilotprotocol.network/v1/compat`) |
+| --tls-trust \<mode\> | Compat-mode TLS trust store: `system` (default) or `pinned` |
+| --registry-trust \<mode\> | Registry TLS trust: `pinned` or `system` |
+| --registry-fingerprint \<hex\> | SHA-256 fingerprint of the registry TLS certificate, for hosts without a CA bundle |
+
+### pilot-daemon-only tuning flags [#daemon-advanced-flags]
+
+The following flags accept tuning values but are only consumed when you invoke the `pilot-daemon` binary directly (for systemd unit files, container entrypoints, embedded driver harnesses, etc.). They are *not* forwarded by `pilotctl daemon start`; the daemon uses the defaults below. (Transport, proxy and TLS-trust flags are forwarded; see the table above.)
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| -keepalive \<dur\> | 60s | Keepalive probe interval |
+| -idle-timeout \<dur\> | 120s | Idle connection timeout |
+| -syn-rate-limit \<n\> | 100 | Max SYN packets per second |
+| -max-conns-per-port \<n\> | 1024 | Max connections per port |
+| -max-conns-total \<n\> | 65536 | Max total connections |
+| -time-wait \<dur\> | 10s | TIME\_WAIT duration |
+| -registry-tls | false | Enable TLS for registry connection |
+| -no-echo | false | Disable the built-in echo service (port 7) |
+| -no-dataexchange | false | Disable the built-in data exchange (port 1001) |
+| -dataexchange-b64 | false | Include a lossless `data_b64` field alongside `data` in inbox messages — opt in when payloads are binary (e.g. zlib-compressed envelopes) |
+| -no-eventstream | false | Disable the built-in event stream (port 1002) |
+| -relay-only | false | Hide real\_addr from peers; reach only via beacon-relay |
+| -advertise-endpoint \<host:port\> | (none) | Override the STUN-discovered endpoint advertised to the registry (for k8s pods where STUN returns unreachable IPs) |
+| -no-rx-watchdog | false | Disable the inbound-path watchdog. By default the daemon detects when it keeps transmitting but has received nothing for minutes (stale NAT/relay mapping), soft-recovers by re-registering with the beacon and registry, and — if the wedge persists on a supervised daemon — exits with code 86 so launchd/systemd respawns it with a fresh transport |
+| -no-path-watch | false | Disable the per-peer path watchdog. By default the daemon probes any established peer that goes inbound-silent (\>55s) with keepalive pings and, if it stays silent past the probe budget, resets that one peer's path in place (fresh resolve + punch + key exchange — the `prefer-direct` sequence) instead of waiting for a manual restart |
+
+## Logging [#logging]
+
+The daemon uses structured logging via Go's `slog` package. Each run writes to a per-run log file `~/.pilot/pilot-<pid>.log`; `~/.pilot/pilot.log` is a symlink to the current run's log.
+
+```bash
+# Debug logging
+pilotctl daemon start --log-level debug
+
+# JSON log format (for log aggregation)
+pilotctl daemon start --log-format json
+
+# View logs
+tail -f ~/.pilot/pilot.log
+```
+
+Log levels: `debug`, `info` (default), `warn`, `error`
+
+**Further reading:** [Run an Agent Network Without Cloud Dependency](/blog/run-agent-network-without-cloud-dependency) [← Diagnostics](/docs/diagnostics)[Message of the Day →](/docs/motd)

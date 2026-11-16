@@ -1,0 +1,83 @@
+{
+ "kind": "app",
+ "slug": "io.pilot.smol",
+ "name": "Smol Machines",
+ "seoTitle": "Smol Machines: Agent App Methods & Install | Pilot Protocol",
+ "description": "Fast, hardware-isolated microVMs — local and cloud. Review its methods, setup, runtime requirements, and typed agent interface.",
+ "headText": [
+  "Smol Machines",
+  "smol machines",
+  "·",
+  "io.pilot.smol",
+  "Fast, hardware-isolated microVMs — local and cloud.",
+  "Infrastructure",
+  "Live on catalogue",
+  "Install",
+  "Copy",
+  "pilotctl appstore install",
+  "io.pilot.smol"
+ ],
+ "metrics": {
+  "version": "v1.2.0",
+  "methods": "9",
+  "size": "9.3 MB",
+  "permissions": "10 declared",
+  "platforms": "macOS · Linux"
+ },
+ "icon": "/appicons/optimized/io.pilot.smol-240.webp",
+ "related": [
+  "io.pilot.upfile",
+  "io.pilot.miren",
+  "io.pilot.docker",
+  "io.pilot.tldr",
+  "io.pilot.insforge"
+ ],
+ "toc": [
+  {
+   "id": "about-smol-machines",
+   "text": "About Smol Machines",
+   "level": 2
+  },
+  {
+   "id": "methods-9",
+   "text": "Methods · 9",
+   "level": 2
+  },
+  {
+   "id": "full-usage-demo",
+   "text": "Full usage demo",
+   "level": 2
+  },
+  {
+   "id": "worked-examples",
+   "text": "Worked examples",
+   "level": 3
+  },
+  {
+   "id": "what-it-costs",
+   "text": "What it costs",
+   "level": 3
+  },
+  {
+   "id": "good-to-know",
+   "text": "Good to know",
+   "level": 3
+  },
+  {
+   "id": "next",
+   "text": "Next",
+   "level": 3
+  },
+  {
+   "id": "whats-new",
+   "text": "What’s New",
+   "level": 2
+  },
+  {
+   "id": "platform-compatibility",
+   "text": "Platform Compatibility",
+   "level": 2
+  }
+ ],
+ "html": "<h2 id=\"about-smol-machines\">About Smol Machines</h2><p>Smol Machines — fast, hardware-isolated Linux microVMs for agents, now local AND cloud. Spin up sub-second, real-hypervisor-isolated Linux microVMs locally with the smolvm CLI, then push a VM to the smol cloud with a single method.</p><p>Local (free, offline): run untrusted or AI-generated code safely (networking off by default), a real Linux shell, ephemeral or persistent VMs, portable .smolmachine artifacts, GPU/Vulkan.</p><p>Cloud (per-user, metered): smol.push sends a local VM (or an OCI image) to the smol cloud; Pilot provisions your own cloud key automatically on install — no account, no API key. Your cloud machines are isolated per user and metered against your free credit. The master key never leaves Pilot's broker.</p><h2 id=\"methods-9\">Methods · 9</h2><code>smol.exec</code>Run ANY smolvm subcommand in a fast, hardware-isolated Linux microVM LOCALLY. Payload is {\"args\":[...]} (verbatim smolvm argv) with optional {\"stdin\":\"...\"}. This one method exposes the whole smolvm CLI — for the complete agent reference call smol.exec {\"args\":[\"--help\"]}, and for any subcommand call smol.exec {\"args\":[\"<group>\",\"--help\"]}.\n\nCOMMAND SURFACE:\n• machine run — create an EPHEMERAL VM, run one command, tear down (nothing persists). e.g. [\"machine\",\"run\",\"--net\",\"--image\",\"alpine\",\"--\",\"sh\",\"-c\",\"echo hi\"].\n• machine create | start | stop | delete — lifecycle of a PERSISTENT named VM (--name, default \"default\").\n• machine exec — run a command in a persistent VM; FILESYSTEM CHANGES PERSIST across sessions (package installs stick). e.g. [\"machine\",\"exec\",\"--name\",\"myvm\",\"--\",\"apk\",\"add\",\"python3\"].\n• machine status | ls | images | monitor — read-only introspection (do NOT stop a running VM).\n• machine cp — copy files host↔VM (HOST:GUEST). machine update — change mounts/ports/env/cpu/memory on a STOPPED VM. machine prune — reclaim layers (prune --all needs the VM stopped).\n• pack create -o <out> — build a portable, self-contained .smolmachine executable; pack run — run one. machine create --from <artifact>.smolmachine for fast start.\n• serve start --listen <addr> — HTTP API server (POST/GET /api/v1/machines…); serve openapi — the spec.\n• config — manage registries + defaults.\n\nKEY FLAGS: --net (networking is OFF by default), --image <oci ref | ./archive.tar | ./rootfs/ | ->, -v HOST:GUEST[:ro] (mount; -v host:/workspace replaces the default workspace), -p HOST:GUEST (port), --gpu, --ssh-agent (forward host SSH agent; keys never enter the VM), --secret-env GUEST=HOST / --secret-file GUEST=/abs / -s Smolfile (inject secrets by reference), --from <artifact>, --cpus, --memory.\n\nDEFAULTS: network off; cpus 4; memory 8192 MiB; storage 20 GiB; name \"default\". Elastic memory/CPU via virtio balloon.\n\nNOT SUPPORTED OVER IPC: interactive sessions (-it / machine shell) and long-running serve (no attached TTY).<code>smol.version</code>Report the local smolvm engine version. This is `smolvm --version`.<code>smol.provision</code>Provision (or fetch) this Pilot user's proprietary smol cloud key and free credit balance. Runs automatically on install and on smol.help — you rarely call it directly. The key is bound to your Pilot identity, stored only in your app's private secrets, and used to push and isolate your cloud VMs. Returns {key, credits}.<code>smol.balance</code>Report your remaining smol cloud credit balance. Returns {credits}.<code>smol.push</code>Push a VM to the smol cloud as YOU (your provisioned key) and START it running. Provide either a local packed artifact (base64 of a `smolvm pack` output) OR an OCI `image` reference the cloud pulls; pass {\"net\":true} for outbound networking (off by default). BILLING: you must have credit to start (402 if empty); the running VM then drains your credit by REAL usage (CPU + memory + disk per the rate card in smol.help) and the broker STOPS it when your credit runs out. The machine is tagged as owned by you, so no other user can see or touch it. Returns the created machine.<code>smol.list</code>List YOUR smol cloud machines (only yours — the broker filters by owner). Free (no credit). Returns an array of machines.<code>smol.key</code>Get your current smol cloud key (the per-user credential bound to your Pilot identity). Idempotent — safe to call anytime. The key is also cached in your app's private secrets. Returns {key, credits}.<code>smol.rotate</code>Rotate your smol cloud key if it leaked. Your OLD key stops working immediately and a NEW key is issued — your credit and cloud machines are NOT affected (only the key changes). Returns {key, credits, rotated}.<code>smol.help</code>Discovery: every method with params, kind, and latency class.<h2 id=\"full-usage-demo\">Full usage demo</h2><p>When you need to run untrusted or AI-generated code in a throwaway, hardware-isolated Linux microVM — locally for free, or pushed to the cloud when it needs to keep running.</p>Run this first — Confirm the local engine works (free, on your machine)$0.00 (local)Call<pre><code>pilotctl appstore call io.pilot.smol smol.version '{}'</code></pre>→<code>{\"version\":\"1.2.0\"}</code><h3 id=\"worked-examples\">Worked examples</h3>Run code in an ephemeral local microVM (free)$0.00 (local)Call<pre><code>pilotctl appstore call io.pilot.smol smol.exec '{\"args\":[\"machine\",\"run\",\"--image\",\"alpine\",\"--\",\"sh\",\"-c\",\"echo hi\"]}'</code></pre>→<code>{\"stdout\":\"hi\\n\",\"exit_code\":0}</code>Check your cloud credit (free)$0.00 (free)Call<pre><code>pilotctl appstore call io.pilot.smol smol.balance '{}'</code></pre>→<code>{\"credits\":5000000}</code>Push a VM to the smol cloud and start it≈$0.01 for a 30s 1-vCPU runCall<pre><code>pilotctl appstore call io.pilot.smol smol.push '{\"image\":\"alpine:3.20\",\"net\":true}'</code></pre>→<code>{\"machine\":{\"id\":\"m_...\",\"status\":\"running\",\"name\":\"...\"}}</code><p>Compute is time-based: billed per second from the rate card until you stop it or credit runs out.</p>List only your cloud machines (free)$0.00 (free)Call<pre><code>pilotctl appstore call io.pilot.smol smol.list '{}'</code></pre>→<code>[{\"id\":\"m_...\",\"status\":\"running\"}]</code><h3 id=\"what-it-costs\">What it costs</h3>$5.00 of cloud credit per Pilot userfree budget · billed in micro-USD (1000000 = $1.00), billed by real cloud compute time<table><thead><tr><th>Operation</th><th>Price</th><th>Notes</th></tr></thead><tbody><tr><td><code>smol.exec / smol.version / smol.help</code></td><td>$0.00</td><td>local methods run on your machine — free</td></tr><tr><td><code>smol.provision / key / rotate / balance / list</code></td><td>$0.00</td><td>cloud account reads — free</td></tr><tr><td><code>smol.push (CPU)</code></td><td>$0.0432/cpu-hour</td><td>needs positive credit to start (402 if empty)</td></tr><tr><td><code>smol.push (memory)</code></td><td>$0.0162/gb-hour</td><td>drains by the second while the VM runs</td></tr><tr><td><code>smol.push (disk)</code></td><td>$0.0001/gb-hour</td><td>storage while the VM exists</td></tr><tr><td><code>smol.push (egress)</code></td><td>$0.05/gb</td><td>outbound network transfer</td></tr></tbody></table><p>Local runs are free; the one cloud push here is ≈$0.01 for a short 1-vCPU run — well under your $5.00. The broker stops your VMs when credit runs out.</p>Check balance<pre><code>pilotctl appstore call io.pilot.smol smol.balance '{}'</code></pre><h3 id=\"good-to-know\">Good to know</h3><ul><li>Local methods (smol.exec/version/help) are always free; only cloud smol.push spends credit.</li><li>Networking is OFF by default — pass {\"net\":true} for outbound internet, locally and in the cloud.</li><li>smol.push needs positive credit to start (402 if empty); a running VM drains credit by the second.</li><li>When your credit runs out the broker STOPS your running cloud VMs — check smol.balance.</li><li>Interactive sessions (-it / machine shell) and long-running serve are NOT supported over IPC.</li><li>Cloud machines are isolated per user — smol.list shows only yours.</li></ul><h3 id=\"next\">Next</h3><ul><li><code>io.pilot.smol smol.help '{}'</code></li></ul><h2 id=\"whats-new\">What’s New</h2>v1.2.0Latest—<ul><li>Released v1.2.0</li></ul><h2 id=\"platform-compatibility\">Platform Compatibility</h2>macOSApple Silicon4.6 MBSupportedmacOSIntel4.6 MBSupportedLinuxarm645.3 MBSupportedLinuxamd645.5 MBSupported"
+}

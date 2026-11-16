@@ -1,0 +1,305 @@
+/* Variant B · built for people vs built for agents.
+ * Base styles are each scene's finished state; the animations run from the start state to it,
+ * so reduced motion simply shows the end of every scene. */
+
+.cmp-stage {
+  --cmp-step: 1.6s;
+}
+
+/* Things in a scene rise in, staggered by --i. */
+.cmp-pop {
+  animation: cmp-pop 600ms var(--ease-out) calc(var(--i, 0) * 90ms + 120ms) both;
+}
+@keyframes cmp-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+    filter: blur(4px);
+  }
+}
+
+/* Figures under each side. */
+.cmp-figure {
+  animation: cmp-figure 600ms var(--ease-out) 180ms both;
+}
+@keyframes cmp-figure {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(6px);
+  }
+}
+.cmp-roll {
+  transform: translateY(var(--to));
+  animation: cmp-roll 1300ms var(--ease-out) calc(var(--d, 0ms) + 200ms) both;
+}
+@keyframes cmp-roll {
+  from {
+    transform: translateY(0);
+  }
+}
+
+/* The progress bar in the active tab; finishing it moves to the next tab. */
+.cmp-bar {
+  transform: scaleX(0);
+  opacity: 0;
+}
+.cmp-bar[data-run="true"] {
+  opacity: 1;
+  animation: cmp-bar var(--dur) linear both;
+}
+@keyframes cmp-bar {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* 1 · the laptop's network rows take turns being current. */
+.cmp-row {
+  opacity: 0.45;
+}
+.cmp-row-bg {
+  opacity: 0;
+}
+.cmp-row:first-child,
+.cmp-row:first-child .cmp-row-bg {
+  opacity: 1;
+}
+.cmp-row,
+.cmp-row .cmp-row-bg {
+  animation: cmp-row calc(var(--cmp-step) * 3) var(--ease-out) calc(var(--i, 0) * var(--cmp-step)) infinite;
+}
+@keyframes cmp-row {
+  0%,
+  30% {
+    opacity: 1;
+  }
+  36%,
+  100% {
+    opacity: 0.45;
+  }
+}
+.cmp-row .cmp-row-bg {
+  animation-name: cmp-row-bg;
+}
+@keyframes cmp-row-bg {
+  0%,
+  30% {
+    opacity: 1;
+  }
+  36%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 1 · "Running on" swaps in step with the rows; the address doesn't move. */
+.cmp-swap {
+  opacity: 0;
+  transform: translateY(4px);
+  filter: blur(2px);
+}
+.cmp-swap:first-child {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+.cmp-swap {
+  animation: cmp-swap calc(var(--cmp-step) * 3) var(--ease-out) calc(var(--i, 0) * var(--cmp-step)) infinite;
+}
+@keyframes cmp-swap {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+    filter: blur(2px);
+  }
+  6%,
+  30% {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  36%,
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+    filter: blur(2px);
+  }
+}
+.cmp-pulse {
+  animation: cmp-pulse var(--cmp-step) var(--ease-out) infinite;
+}
+@keyframes cmp-pulse {
+  0% {
+    transform: scale(0.94);
+  }
+  18%,
+  100% {
+    transform: none;
+  }
+}
+
+/* 2 · STUN probes, then the direct tunnel draws and locks. */
+.cmp-probe {
+  animation: cmp-fade 500ms var(--ease-out) calc(var(--i, 0) * 120ms + 250ms) both;
+}
+@keyframes cmp-fade {
+  from {
+    opacity: 0;
+  }
+}
+.cmp-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: cmp-draw 800ms var(--ease-in-out) 1100ms both;
+}
+@keyframes cmp-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+.cmp-lock {
+  animation: cmp-lock 450ms var(--ease-out) 1900ms both;
+}
+@keyframes cmp-lock {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+.cmp-packet {
+  opacity: 0;
+  animation: cmp-packet 1600ms var(--ease-in-out) 2300ms infinite;
+}
+@keyframes cmp-packet {
+  0% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(62px);
+  }
+}
+.cmp-step {
+  background: color-mix(in srgb, var(--color-fg) 5%, transparent);
+  color: var(--color-dim);
+}
+.cmp-step[data-last="true"] {
+  background: var(--color-lime);
+  color: var(--color-ink);
+}
+.cmp-step {
+  animation: cmp-step 2600ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 700ms + 200ms);
+}
+.cmp-step[data-last="true"] {
+  animation-name: cmp-step-last;
+}
+@keyframes cmp-step {
+  0% {
+    opacity: 0;
+  }
+  10%,
+  35% {
+    opacity: 1;
+    background: var(--color-lime);
+    color: var(--color-ink);
+  }
+  50%,
+  100% {
+    opacity: 1;
+    background: color-mix(in srgb, var(--color-fg) 5%, transparent);
+    color: var(--color-dim);
+  }
+}
+@keyframes cmp-step-last {
+  0% {
+    opacity: 0;
+    background: color-mix(in srgb, var(--color-fg) 5%, transparent);
+    color: var(--color-dim);
+  }
+  10% {
+    opacity: 1;
+    background: var(--color-lime);
+    color: var(--color-ink);
+  }
+}
+
+/* 3 · the request shows, Approve is pressed, and it turns into the trusted pair. */
+.cmp-request {
+  opacity: 0;
+  visibility: hidden;
+  animation: cmp-request 2700ms var(--ease-out) 150ms both;
+}
+@keyframes cmp-request {
+  0% {
+    opacity: 0;
+    visibility: visible;
+    transform: translateY(10px) scale(0.97);
+    filter: blur(4px);
+  }
+  14%,
+  84% {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    filter: none;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px) scale(0.98);
+    filter: blur(3px);
+  }
+}
+.cmp-approve {
+  animation: cmp-approve 2700ms var(--ease-out) 150ms both;
+}
+@keyframes cmp-approve {
+  0%,
+  58% {
+    transform: none;
+    background: var(--color-fg);
+    color: var(--color-bg);
+  }
+  64% {
+    transform: scale(0.94);
+    background: var(--color-lime);
+    color: var(--color-ink);
+  }
+  72%,
+  100% {
+    transform: none;
+    background: var(--color-lime);
+    color: var(--color-ink);
+  }
+}
+.cmp-trusted {
+  animation: cmp-pop 600ms var(--ease-out) 2700ms both;
+}
+
+/* 4 · the query goes out, then the reply lands. */
+.cmp-reply {
+  animation: cmp-pop 600ms var(--ease-out) 1300ms both;
+}
+
+[data-paused="true"] .cmp-stage *,
+[data-paused="true"] .cmp-bar {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cmp-stage *,
+  .cmp-figure,
+  .cmp-roll {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,75 @@
+{
+ "kind": "app",
+ "slug": "io.pilot.otto",
+ "name": "Otto",
+ "seoTitle": "Otto: Agent App Methods & Install | Pilot Protocol",
+ "description": "Drive real Chrome tabs from an agent — extract, automate, screenshot, no headless farm. Review setup, usage, and operating details.",
+ "headText": [
+  "Otto",
+  "Telepat",
+  "·",
+  "io.pilot.otto",
+  "Drive real Chrome tabs from an agent — extract, automate, screenshot, no headless farm.",
+  "Web & Automation",
+  "Live on catalogue",
+  "Install",
+  "Copy",
+  "pilotctl appstore install",
+  "io.pilot.otto"
+ ],
+ "metrics": {
+  "version": "v0.20.0",
+  "methods": "15",
+  "size": "9.2 MB",
+  "permissions": "None declared",
+  "platforms": "macOS · Linux"
+ },
+ "icon": "/appicons/optimized/io.pilot.otto-240.webp",
+ "related": [
+  "io.pilot.plainweb",
+  "io.pilot.bowmark"
+ ],
+ "toc": [
+  {
+   "id": "about-otto",
+   "text": "About Otto",
+   "level": 2
+  },
+  {
+   "id": "methods-15",
+   "text": "Methods · 15",
+   "level": 2
+  },
+  {
+   "id": "full-usage-demo",
+   "text": "Full usage demo",
+   "level": 2
+  },
+  {
+   "id": "worked-examples",
+   "text": "Worked examples",
+   "level": 3
+  },
+  {
+   "id": "good-to-know",
+   "text": "Good to know",
+   "level": 3
+  },
+  {
+   "id": "next",
+   "text": "Next",
+   "level": 3
+  },
+  {
+   "id": "whats-new",
+   "text": "What’s New",
+   "level": 2
+  },
+  {
+   "id": "platform-compatibility",
+   "text": "Platform Compatibility",
+   "level": 2
+  }
+ ],
+ "html": "<h2 id=\"about-otto\">About Otto</h2><p>Otto is secure remote browser automation. A controller CLI sends commands over an authenticated WebSocket to a relay daemon, which routes them to a Chrome extension running on live tabs. Code drives the browser deterministically; the agent decides what to do, not how to click.</p><p>What an agent gets: - <b>Content extraction</b> — <code>otto.extract</code> / <code>otto.extract.format</code> turn a URL into clean markdown, distilled/clean/raw HTML, or text through a real tab. - <b>Site commands</b> — <code>otto.test</code> runs registered actions on real sessions (Reddit/LinkedIn <code>getPosts</code>, Hacker News <code>getFrontPage</code>, Google <code>getSearchResults</code>, …); <code>otto.commands</code> lists what a node exposes. - <b>Page &amp; tab control</b> — <code>otto.screenshot</code> (viewport or full page) and <code>otto.cmd</code> for low-level primitives (tab open/navigate/query, DOM extract). - <b>Status &amp; diagnostics</b> — <code>otto.status</code> (relay + connected nodes), <code>otto.client.status</code>, <code>otto.authcode</code>, <code>otto.extension.info</code>, <code>otto.logs</code>/<code>otto.logs.status</code>, <code>otto.agent.status</code> — all JSON. - <b>Full CLI surface</b> — <code>otto.exec</code> runs any verbatim otto argv.</p><p>Good to know: - Returns JSON wherever the CLI offers it; discover the live surface at runtime with <code>otto.help</code> — every method, its parameters, and its latency class (fast / med / slow). - Real browser tabs, not a headless farm — no Docker, Puppeteer farm, or cloud-browser rental. - Prerequisite stack on the host: a running relay (<code>otto start</code>), Chrome with the Otto extension loaded and paired as a node, and a logged-in controller. Until that is up, page commands return a structured error (<code>{stdout,stderr,exit}</code>); <code>otto.status</code> is the right preflight. - Runs on macOS and Linux (arm64 + amd64); the otto CLI is staged as a self-contained binary and sha-pinned on install. Free and open source (MIT) — no payment, no per-call limit.</p><h2 id=\"methods-15\">Methods · 15</h2><code>otto.exec</code>Run any otto subcommand. Payload is {\"args\":[...]} — the verbatim otto argv. Use this for the full CLI surface beyond the curated methods (config, client register/login/remove, pair, listener unsubscribe, extension update, agent install, site-filtered `commands list --site`, filtered `logs list`, etc.). Add \"--json\" where the command supports it. Example args: [\"commands\",\"list\",\"--site\",\"reddit.com\",\"--json\"]. Note: interactive/streaming subcommands (setup, settings, logs follow, listener subscribe-network, test with stream/wait flags, mcp serve, start --attached) are not suitable over one-shot IPC.<code>otto.status</code>Relay daemon status as JSON: running pid, port, uptime, log path, and the list of currently connected browser node IDs. The right preflight before any page command — an empty node list means no Chrome extension node is paired/online.<code>otto.commands</code>List the automation commands the connected node(s) expose, as JSON. Use to learn which site commands are available before calling otto.test. For a single site, use otto.exec with [\"commands\",\"list\",\"--site\",\"<domain>\",\"--json\"].<code>otto.extract</code>Extract the readable content of a web page through a live paired browser tab, as JSON markdown. Opens a temporary tab on the node, extracts, and closes it. Requires a running relay and a paired Chrome node.<code>otto.extract.format</code>Extract page content in a chosen format: markdown, distilled_html, clean_html, raw_html, or text. Returns JSON. Like otto.extract but lets you pick the output representation.<code>otto.screenshot</code>Capture a screenshot of a page through a live browser tab; returns JSON (base64 PNG in the envelope, no local Preview window). Requires a running relay and a paired Chrome node.<code>otto.test</code>Run a registered site command on a browser node (opens a tab, runs the command, returns JSON). Provide site (e.g. reddit.com), command id (e.g. getPosts), and a JSON payload string (use {} for none, e.g. {\"limit\":10}). One-shot; requires relay + paired node.<code>otto.cmd</code>Send a single raw action to the target browser node and return the full JSON envelope. Provide the action name and a JSON payload string (use {} for none). Use for low-level primitives (e.g. primitive.tab.open) not covered by a curated method.<code>otto.logs</code>Read recent relay logs as JSON. For filtered queries (level/source/since/request-id) use otto.exec with [\"logs\",\"list\",...,\"--json\"].<code>otto.logs.status</code>Relay log storage status as JSON (retention, counts, sizes). Check whether logging is healthy and how much history is available.<code>otto.client.status</code>Local controller client identity state and where its secret resolves from (env vs keychain), as JSON. Verify the controller is registered and logged in before running page commands.<code>otto.authcode</code>List pending pairing codes from the relay as JSON. See codes awaiting approval when bringing a new Chrome extension node online (approve with `otto pair <code>` via otto.exec).<code>otto.extension.info</code>Installed Chrome extension artifact metadata (version, unpacked path, checksum) and configured relay URLs, as JSON. Confirm which extension build the host has staged for the Load-unpacked handoff.<code>otto.agent.status</code>Which agent frameworks (claude, codex, cursor, vscode, …) currently have the Otto MCP server registered, as JSON.<code>otto.help</code>Discovery: every method with params, kind, and latency class.<h2 id=\"full-usage-demo\">Full usage demo</h2><p>When you need to drive a real Chrome tab from an agent — extract a page as markdown/HTML, run site commands (Reddit/LinkedIn/HN/Google), or screenshot — via a paired browser extension, not a headless farm.</p>Run this first — Preflight — check the relay and connected browser nodesCall<pre><code>pilotctl appstore call io.pilot.otto otto.status '{}'</code></pre>→<code>{\"stdout\":\"{\\\"pid\\\":...,\\\"nodes\\\":[\\\"node-1\\\"]}\",\"exit\":0}</code><p>An empty nodes list means no Chrome extension node is paired/online — page commands will fail until one is.</p><h3 id=\"worked-examples\">Worked examples</h3>Extract a page as markdownCall<pre><code>pilotctl appstore call io.pilot.otto otto.extract '{\"url\":\"https://example.com\"}'</code></pre>→<code>{\"stdout\":\"{\\\"markdown\\\":\\\"# Example...\\\"}\",\"exit\":0}</code>List the site commands a node exposesCall<pre><code>pilotctl appstore call io.pilot.otto otto.commands '{}'</code></pre>→<code>{\"stdout\":\"[{\\\"site\\\":\\\"reddit.com\\\",\\\"command\\\":\\\"getPosts\\\"}]\",\"exit\":0}</code>Run a registered site commandCall<pre><code>pilotctl appstore call io.pilot.otto otto.test '{\"site\":\"reddit.com\",\"command\":\"getPosts\",\"payload\":\"{\\\"limit\\\":10}\"}'</code></pre>→<code>{\"stdout\":\"{\\\"posts\\\":[...]}\",\"exit\":0}</code><p>payload is a JSON object STRING (use {} for none).</p>Screenshot a page (base64 PNG in the envelope)Call<pre><code>pilotctl appstore call io.pilot.otto otto.screenshot '{\"url\":\"https://example.com\"}'</code></pre>→<code>{\"stdout\":\"{\\\"image_base64\\\":\\\"iVBOR...\\\"}\",\"exit\":0}</code>Extract in a specific formatCall<pre><code>pilotctl appstore call io.pilot.otto otto.extract.format '{\"url\":\"https://example.com\",\"format\":\"clean_html\"}'</code></pre>→<code>{\"stdout\":\"{\\\"clean_html\\\":\\\"&lt;article&gt;...\\\"}\",\"exit\":0}</code><h3 id=\"good-to-know\">Good to know</h3><ul><li>Preflight with otto.status — an empty nodes list means no Chrome extension node is paired/online and page commands will fail.</li><li>Requires the host stack up: a running relay (otto start), Chrome with the Otto extension loaded + paired, and a logged-in controller.</li><li>otto.test payload is a JSON object STRING (use {} for none), e.g. \"{\\\"limit\\\":10}\" — not a bare object.</li><li>Page commands (extract, screenshot, test) are slow — each opens a real tab, acts, then closes it.</li><li>Free and open source (MIT) — no payment, no per-call limit.</li></ul><h3 id=\"next\">Next</h3><ul><li><code>io.pilot.otto otto.help '{}'</code></li></ul><h2 id=\"whats-new\">What’s New</h2>v0.20.0Latest—<ul><li>Released v0.20.0</li></ul><h2 id=\"platform-compatibility\">Platform Compatibility</h2>macOSApple Silicon4.6 MBSupportedmacOSIntel5.1 MBSupportedLinuxarm645.3 MBSupportedLinuxamd644.9 MBSupported"
+}

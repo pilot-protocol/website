@@ -1,0 +1,218 @@
+/* Variant D, the directory and its control tower (Figma 180:860). */
+
+/* ---------- The pills ---------- */
+
+.tower-pill {
+  position: relative;
+  background: var(--color-card);
+  transition: box-shadow 200ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tower-pill:hover {
+    box-shadow: 0 0 0 1px var(--sky-card-line), var(--shadow-tile);
+  }
+}
+.tower-pill:focus-visible {
+  outline: 2px solid var(--sky-fill);
+  outline-offset: 2px;
+}
+.tower-count {
+  position: relative;
+  background: var(--color-bg-deep);
+  color: var(--color-mute);
+}
+/* At night the pills are solid panels a step above the page, separated by a 1px hairline. */
+.dark .tower-pill {
+  background: #232322;
+  box-shadow: 0 0 0 1px rgb(242 242 236 / 0.07);
+}
+.dark .tower-count {
+  background: rgb(242 242 236 / 0.06);
+}
+
+/*
+ * Caught by the beacon: a lit copy of the count (blue, white number, drawn from data-count) and a sky hairline
+ * fade in at once and fade out slowly after the beam has passed. Only their opacity changes, so the number
+ * never loses contrast halfway through.
+ */
+.tower-count::before,
+.tower-pill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1400ms var(--ease-out);
+}
+.tower-count::before {
+  content: attr(data-count);
+  display: grid;
+  place-items: center;
+  background: var(--sky-fill);
+  color: #ffffff;
+}
+.tower-pill::after {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--sky-400) 50%, transparent);
+}
+.tower-pill[data-lit="true"]::after,
+.tower-pill[data-lit="true"] .tower-count::before {
+  opacity: 1;
+  transition-duration: 180ms;
+}
+
+/* Crisp in the middle, fading to nothing at the ends (the design's 1000px mask). */
+.tower-band {
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    rgb(0 0 0 / 0.6) 25%,
+    #000 50.5%,
+    rgb(0 0 0 / 0.6) 75%,
+    transparent
+  );
+}
+@media (max-width: 639px) {
+  .tower-band {
+    mask-image: linear-gradient(90deg, transparent, rgb(0 0 0 / 0.75) 22%, #000 50%, rgb(0 0 0 / 0.75) 78%, transparent);
+  }
+}
+
+/* Rows rest while you read them (with a mouse), and whenever the section is off screen. */
+@media (hover: hover) and (pointer: fine) {
+  .tower-band:hover .tower-track {
+    animation-play-state: paused;
+  }
+}
+.tower-stage[data-running="false"] .tower-track,
+.tower-stage[data-running="false"] .tower-beam,
+.tower-stage[data-running="false"] .tower-lamp,
+.tower-stage[data-running="false"] .tower-lamp::after {
+  animation-play-state: paused;
+}
+
+/* ---------- The beacon's sweep ---------- */
+
+/*
+ * A narrow wedge of light turning around the lamp, behind the pills, fading with distance. The sky clips it
+ * to the band (feathered at the top and bottom) so it lights the rows and nothing else.
+ */
+.tower-sky {
+  position: absolute;
+  inset: -20px 0;
+  overflow: hidden;
+  pointer-events: none;
+  mask-image: linear-gradient(transparent, #000 20px, #000 calc(100% - 28px), transparent);
+}
+.tower-beam {
+  --beam: rgb(90 169 255 / 0.2);
+  position: absolute;
+  top: calc(20px - 1px);
+  left: 50%;
+  width: 1400px;
+  height: 1400px;
+  margin: -700px 0 0 -700px;
+  background: conic-gradient(
+    from -9deg,
+    transparent 0deg,
+    var(--beam) 6deg,
+    var(--beam) 12deg,
+    transparent 18deg,
+    transparent 360deg
+  );
+  mask-image: radial-gradient(circle closest-side, #000 0%, rgb(0 0 0 / 0.7) 40%, transparent 88%);
+  animation: tower-sweep 11s linear infinite;
+  will-change: transform;
+}
+.dark .tower-beam {
+  --beam: rgb(142 193 255 / 0.16);
+  mix-blend-mode: plus-lighter;
+}
+@keyframes tower-sweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- The tower ---------- */
+
+/* The tower is lavender clay on paper; at night it steps back a little so the beacon leads. */
+.dark .tower-img {
+  filter: brightness(0.86) saturate(1.05);
+}
+
+/* At night the cab is lit: the window glass (cut out of the image as a mask) glows sky blue from above. */
+.tower-cab {
+  position: absolute;
+  inset: 0;
+  display: none;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(142 193 255 / 0.5) 18%, rgb(90 169 255 / 0.26) 32%, rgb(47 107 255 / 0.12) 40%);
+  mask: url("/v4/tower-windows.webp") 0 0 / 100% 100% no-repeat;
+  mix-blend-mode: screen;
+}
+.dark .tower-cab {
+  display: block;
+}
+
+/* The red obstruction light on the mast, blinking slowly (its centre is at 50.25% / 2.29% of the image). */
+.tower-lamp {
+  position: absolute;
+  left: 50.25%;
+  top: 2.29%;
+  width: 5px;
+  height: 5px;
+  translate: -50% -50%;
+  border-radius: 9999px;
+  background: #ff4a62;
+  box-shadow: 0 0 2px 0.5px rgb(255 74 98 / 0.9);
+  animation: tower-lamp 2.6s var(--ease-in-out) infinite;
+}
+.tower-lamp::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: inherit;
+  background: radial-gradient(circle, rgb(255 51 102 / 0.55), rgb(255 51 102 / 0.18) 45%, transparent 70%);
+  animation: tower-halo 2.6s var(--ease-in-out) infinite;
+}
+.dark .tower-lamp::after {
+  inset: -12px;
+  background: radial-gradient(circle, rgb(255 51 102 / 0.7), rgb(255 51 102 / 0.22) 45%, transparent 70%);
+}
+@keyframes tower-lamp {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  12%,
+  30% {
+    opacity: 1;
+  }
+}
+@keyframes tower-halo {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.7);
+  }
+  12%,
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tower-beam {
+    display: none;
+  }
+  .tower-lamp,
+  .tower-lamp::after {
+    animation: none;
+    opacity: 1;
+  }
+}

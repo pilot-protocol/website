@@ -1,0 +1,69 @@
+/* Isometric stack palette. Faces are shaded as if lit from above; the dark theme lifts the tops off the page. */
+.sec-iso {
+  --iso-top: #ffffff;
+  --iso-left: #ecece6;
+  --iso-right: #dcdcd5;
+  --iso-line: rgb(20 20 18 / 0.1);
+  --iso-grid: rgb(20 20 18 / 0.07);
+  --iso-glass: rgb(20 20 18 / 0.035);
+  --iso-glass-side: rgb(20 20 18 / 0.07);
+  --iso-glass-line: rgb(20 20 18 / 0.2);
+  --iso-lime-top: #c6f24e;
+  --iso-lime-left: #b3dd3d;
+  --iso-lime-right: #9cc42f;
+  --iso-lime-line: rgb(11 11 10 / 0.14);
+}
+.dark .sec-iso {
+  --iso-top: #2b2b29;
+  --iso-left: #232322;
+  --iso-right: #1d1d1c;
+  --iso-line: rgb(242 242 236 / 0.1);
+  --iso-grid: rgb(242 242 236 / 0.06);
+  --iso-glass: rgb(242 242 236 / 0.035);
+  --iso-glass-side: rgb(242 242 236 / 0.06);
+  --iso-glass-line: rgb(242 242 236 / 0.22);
+}
+
+.sec-iso .iso-block {
+  transition: transform 500ms var(--ease-out);
+}
+.sec-iso .iso-block[data-active="true"] {
+  transform: translateY(-10px);
+}
+.sec-iso .iso-block .iso-top {
+  transition: fill 300ms ease;
+}
+.sec-iso .iso-block .iso-label {
+  transition: fill 300ms ease;
+}
+
+.sec-iso .iso-upper .iso-block {
+  transition:
+    transform 500ms var(--ease-out),
+    opacity 500ms var(--ease-out);
+}
+.sec-iso .iso-upper[data-ghost="true"] .iso-block {
+  opacity: 0.16;
+}
+.sec-iso .iso-upper .iso-label {
+  transition: opacity 300ms ease;
+}
+.sec-iso .iso-upper[data-ghost="true"] .iso-label {
+  opacity: 0;
+}
+
+/* The top layer rests close to the base, then lifts once the section is on screen. */
+.sec-iso .iso-upper {
+  transform: translateY(64px);
+  transition: transform 1100ms var(--ease-out) 150ms;
+}
+.sec-iso[data-open="true"] .iso-upper {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sec-iso .iso-upper,
+  .sec-iso .iso-block {
+    transition: none;
+  }
+}

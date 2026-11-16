@@ -1,0 +1,76 @@
+{
+ "kind": "app",
+ "slug": "io.pilot.rentahuman",
+ "name": "Rent A Human",
+ "seoTitle": "Rent A Human: Agent App Methods & Install | Pilot Protocol",
+ "description": "Hire a real person for a physical-world task, in plain language, and talk to ops until it is done. See setup and usage details.",
+ "headText": [
+  "Rent A Human",
+  "Rent A Human",
+  "·",
+  "io.pilot.rentahuman",
+  "Hire a real person for a physical-world task, in plain language, and talk to ops until it is done.",
+  "Work & Research",
+  "Live on catalogue",
+  "Install",
+  "Copy",
+  "pilotctl appstore install",
+  "io.pilot.rentahuman"
+ ],
+ "metrics": {
+  "version": "v0.2.0",
+  "methods": "5",
+  "size": "—",
+  "permissions": "4 declared",
+  "platforms": "macOS · Linux"
+ },
+ "icon": "/appicons/optimized/io.pilot.rentahuman-240.webp",
+ "related": [
+  "io.pilot.generallegal",
+  "com.comos-federation.connector",
+  "io.pilot.kinetic"
+ ],
+ "toc": [
+  {
+   "id": "about-rent-a-human",
+   "text": "About Rent A Human",
+   "level": 2
+  },
+  {
+   "id": "methods-5",
+   "text": "Methods · 5",
+   "level": 2
+  },
+  {
+   "id": "full-usage-demo",
+   "text": "Full usage demo",
+   "level": 2
+  },
+  {
+   "id": "worked-examples",
+   "text": "Worked examples",
+   "level": 3
+  },
+  {
+   "id": "good-to-know",
+   "text": "Good to know",
+   "level": 3
+  },
+  {
+   "id": "next",
+   "text": "Next",
+   "level": 3
+  },
+  {
+   "id": "whats-new",
+   "text": "What’s New",
+   "level": 2
+  },
+  {
+   "id": "platform-compatibility",
+   "text": "Platform Compatibility",
+   "level": 2
+  }
+ ],
+ "html": "<h2 id=\"about-rent-a-human\">About Rent A Human</h2><p>Rent A Human gives an agent hands in the physical world. Describe a task the way a person would — \"deep clean a 2-bedroom apartment in the Mission by Friday, budget $150\" — and a human ops coordinator at RentAHuman sources and vets a real person to do it. Everything after that happens on a message thread your agent polls.</p><p><b>This is the Partner API, not the marketplace.</b> There is no account for your user to create, no profile to browse, and no escrow for your agent to manage. One call creates a request; ops does the sourcing, vetting and scheduling; your agent reads status and messages and answers questions. When work is priced, a payment link comes back for your agent to relay.</p><p><b>Your agent is the only channel.</b> RentAHuman never contacts your end customer. Quotes, questions, status changes and payment links are all addressed to your agent, even when the wording reads like \"tell the customer…\". You decide whether, when and how to relay each one. Nothing reaches your customer unless your agent sends it.</p><p><b>The loop.</b> <code>create_request</code> returns a <code>requestId</code>. Poll <code>get_request</code> and branch on <code>status</code>: <code>received</code> means ops has not replied yet; <code>needs_info</code> means they asked a question and progress is <b>blocked</b> until you answer with <code>send_message</code>; <code>quoted</code> means a price and usually a payment link are waiting to be relayed; then <code>scheduled</code>, <code>in_progress</code>, <code>completed</code>. <code>list_requests</code> shows everything in flight.</p><p><b>Edge cases.</b> <code>task</code> and <code>details</code> are moderated, so rejected text returns 400 with an explanation and should be rewritten rather than retried. <code>requesterPhoneNumber</code> must be E.164 and is customer PII. <code>budgetUsd</code> is the budget before fees. A <code>requestId</code> you do not own returns 404, exactly like one that does not exist, so ids cannot be enumerated. <code>list_bounties</code> needs the referrals capability and otherwise returns 403.</p><h2 id=\"methods-5\">Methods · 5</h2><code>rentahuman.create_request</code>START HERE. Ask for a human to do something in the physical world, in plain language. A real ops coordinator reads it, sources and vets a person, and replies on a message thread you poll with get_request. Returns {requestId, status:\"received\", request}. Keep the requestId — every other method hangs off it. task and details pass a content-moderation check; rejected text returns 400 with an explanation, so rewrite rather than retry. The more context you give (access notes, preferences, constraints) the fewer needs_info round-trips.<code>rentahuman.get_request</code>Read one request: its current status and the full message thread with the ops coordinator. THIS IS THE POLL TARGET after create_request. Branch on status, not on success: received (logged, ops has not replied — tell the customer it is in, nothing else) | needs_info (ops asked a question and progress is BLOCKED until you answer via send_message) | quoted (a price, usually with paymentLinks[].url, is waiting — relay it verbatim) | scheduled (booked) | in_progress (someone is on it) | completed (terminal) | cancelled (terminal, read the final message for the reason). A requestId you do not own returns 404, identical to one that does not exist.<code>rentahuman.send_message</code>Send a follow-up message to the ops coordinator on a request — answer their question, or relay your customer's decision. This is the way out of a needs_info status. The message goes to OPS, not to your customer: nothing here is seen by the person who asked. Max 5,000 characters, moderated.<code>rentahuman.list_requests</code>List your requests, newest first, so an agent can see everything in flight at once. Cursor-paginated: pass the previous response's nextCursor, which is null on the last page. There is no server-side status filter — read the status field on each item and act on the ones that block, which are needs_info and quoted.<code>rentahuman.list_bounties</code>List open marketplace bounties, each with a tracked referral URL, for agents that want to surface paid real-world work rather than commission it. Requires the referrals capability on the account; without it this returns 403, which is a permission fact rather than a transient error.<h2 id=\"full-usage-demo\">Full usage demo</h2><p>When a task needs hands in the physical world — a clean, a pickup, an errand, an on-site check — and your agent needs a real person to do it and report back.</p>Run this first — Ask for a human to do something, in plain languageCall<pre><code>pilotctl appstore call io.pilot.rentahuman rentahuman.create_request '{\"task\":\"Deep clean a 2-bedroom apartment\",\"externalChatId\":\"thread-9f2a41c7\",\"requesterPhoneNumber\":\"+14155550100\",\"budgetUsd\":150,\"location\":\"Mission District, San Francisco, CA\"}'</code></pre>→<code>{\"success\":true,\"requestId\":\"8FQxJ0N2VvR5aYc31TZk\",\"status\":\"received\",\"request\":{...}}</code><p>A human ops coordinator picks this up and sources a vetted person. Keep the requestId — everything else hangs off it.</p><h3 id=\"worked-examples\">Worked examples</h3>Poll the request and read the threadCall<pre><code>pilotctl appstore call io.pilot.rentahuman rentahuman.get_request '{\"requestId\":\"8FQxJ0N2VvR5aYc31TZk\"}'</code></pre>→<code>{\"success\":true,\"request\":{\"status\":\"quoted\",\"paymentLinks\":[{\"url\":\"https://...\"}]}}</code><p>received -&gt; needs_info -&gt; quoted -&gt; scheduled -&gt; in_progress -&gt; completed. needs_info BLOCKS until you answer; quoted means relay the price and payment link.</p>Answer an ops questionCall<pre><code>pilotctl appstore call io.pilot.rentahuman rentahuman.send_message '{\"requestId\":\"8FQxJ0N2VvR5aYc31TZk\",\"message\":\"Customer confirms 8pm tomorrow works, and there is a cat.\"}'</code></pre>→<code>{\"success\":true,\"messageId\":\"3NcVb8sDf1gHj6kQw0Pz\"}</code><p>This goes to the ops coordinator, not to your customer. Nothing you send here reaches them.</p>See everything in flightCall<pre><code>pilotctl appstore call io.pilot.rentahuman rentahuman.list_requests '{\"limit\":20}'</code></pre>→<code>{\"success\":true,\"requests\":[{\"requestId\":\"...\",\"status\":\"quoted\"}],\"nextCursor\":null}</code><p>Newest first, cursor-paginated. No server-side status filter — read status per item.</p><h3 id=\"good-to-know\">Good to know</h3><ul><li>Nothing reaches your customer unless YOU send it. Ops replies, quotes and payment links are all addressed to your agent.</li><li>Branch on status, not success. needs_info blocks progress until you answer; quoted means a price and link are waiting.</li><li>requesterPhoneNumber is customer PII — keep it server-side, out of logs and URLs.</li><li>task and details are moderated. A 400 means rewrite, not retry.</li><li>budgetUsd is before fees (1-100000). Always pass dueBy if the customer gave a deadline.</li></ul><h3 id=\"next\">Next</h3><ul><li><code>io.pilot.rentahuman rentahuman.help '{}'</code></li></ul><h2 id=\"whats-new\">What’s New</h2>v0.2.0Latest—<ul><li>First release on the Pilot app store.</li></ul><h2 id=\"platform-compatibility\">Platform Compatibility</h2>macOSApple SiliconSupportedmacOSIntelSupportedLinuxarm64SupportedLinuxamd64Supported"
+}

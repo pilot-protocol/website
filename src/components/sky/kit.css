@@ -1,0 +1,204 @@
+/*
+ * The sky site's kit (Figma 233:1195, "update, 13 Nov"): the pieces every section is built from.
+ *
+ * - .sky-hatch: the showcase panel. A flat, slightly sunken surface (the paper's deeper tone) inside a 1px square
+ *   frame, and a fading hairline running the full width of the window along its top and bottom. (The design hatched
+ *   it at 45°; a plain surface lets the cards and diagrams on it read first.)
+ * - .sky-hatch-bg: the surface alone, for one half of a split section.
+ * - .sky-rule: a full-width fading hairline on its own.
+ * - .sky-card: a flat white card with a hairline border (no shadow), 12px corners.
+ * - .sky-seg: the segmented tabs (a quiet track, the chosen tab in ink).
+ * - .sky-step: the numbered stepper heads.
+ */
+
+/* In the components layer, so Tailwind utilities on the same element (radius, borders, hover) win. */
+@layer components {
+/*
+ * The panel becomes the page for whatever sits on it: --color-bg is the panel's tone inside, so the solid fills that
+ * match "the page" (tracks, rims, ghost tiles) match the panel instead, and anything sunken goes one step deeper.
+ */
+.sky-hatch,
+.sky-hatch-bg {
+  --color-bg: #efefe9;
+  --color-bg-deep: #e8e8e2;
+  background-color: var(--color-bg);
+}
+.dark .sky-hatch,
+.dark .sky-hatch-bg {
+  --color-bg: #141414;
+  --color-bg-deep: #0f0f0f;
+}
+.sky-hatch {
+  position: relative;
+  border: 1px solid var(--sky-frame);
+}
+.sky-frame {
+  border-color: var(--sky-frame);
+}
+
+/* The full-width hairlines: on the panel's top and bottom edges, fading out towards both sides of the window. */
+.sky-hatch[data-rules="true"]::before,
+.sky-hatch[data-rules="true"]::after,
+.sky-rule {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 100vw;
+  height: 1px;
+  translate: -50% 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--sky-rule-ink) 25%,
+    var(--sky-rule-ink-mid) 50%,
+    var(--sky-rule-ink) 75%,
+    transparent
+  );
+  pointer-events: none;
+}
+.sky-hatch[data-rules="true"]::before {
+  top: -1px;
+}
+.sky-hatch[data-rules="true"]::after {
+  bottom: -1px;
+}
+.sky-rule {
+  position: relative;
+  display: block;
+  left: 50%;
+}
+
+:root {
+  --sky-frame: rgb(17 17 17 / 0.1);
+  --sky-rule-ink: rgb(26 26 26 / 0.16);
+  --sky-rule-ink-mid: rgb(26 26 26 / 0.2);
+  --sky-card-line: rgb(26 26 26 / 0.1);
+}
+.dark {
+  --sky-frame: rgb(255 255 255 / 0.1);
+  --sky-rule-ink: rgb(255 255 255 / 0.1);
+  --sky-rule-ink-mid: rgb(255 255 255 / 0.14);
+  --sky-card-line: rgb(255 255 255 / 0.09);
+}
+
+.sky-card {
+  background: var(--color-card);
+  border: 1px solid var(--sky-card-line);
+  border-radius: 12px;
+}
+
+/* ---------- Segmented tabs ---------- */
+.sky-seg {
+  display: inline-flex;
+  max-width: 100%;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 8px;
+  /* Solid (the paper with 5% ink mixed in), so a hatched panel never shows through the track. */
+  background: color-mix(in srgb, #1a1a1a 5%, var(--color-bg));
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sky-seg::-webkit-scrollbar {
+  display: none;
+}
+.dark .sky-seg {
+  background: color-mix(in srgb, #ffffff 6%, var(--color-bg));
+}
+.sky-seg-tab {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 3px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 24px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  color: #222222;
+  transition:
+    color 200ms ease,
+    background-color 200ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.dark .sky-seg-tab {
+  color: rgb(242 242 236 / 0.82);
+}
+.sky-seg-tab:focus-visible {
+  outline: 2px solid var(--sky-accent);
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .sky-seg-tab:not([data-on="true"]):hover {
+    background: rgb(26 26 26 / 0.05);
+  }
+  .dark .sky-seg-tab:not([data-on="true"]):hover {
+    background: rgb(255 255 255 / 0.06);
+  }
+}
+.sky-seg-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  background: #1a1a1a;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.12),
+    0 0 0 1px rgb(15 16 83 / 0.08);
+}
+.dark .sky-seg-pill {
+  background: #f2f2ec;
+}
+.sky-seg-tab[data-on="true"] {
+  color: #ffffff;
+}
+.dark .sky-seg-tab[data-on="true"] {
+  color: #141413;
+}
+.sky-seg-num {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--color-dim);
+}
+.sky-seg-tab[data-on="true"] .sky-seg-num {
+  color: currentColor;
+  opacity: 0.6;
+}
+.sky-seg-label {
+  position: relative;
+}
+
+/* ---------- Stepper heads ---------- */
+.sky-step-dot {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 18px;
+  /* Solid, so a hatched panel doesn't show through it. */
+  background: color-mix(in srgb, var(--color-fg) 6%, var(--color-bg));
+  color: var(--color-fg);
+  transition:
+    background-color 300ms ease,
+    color 300ms ease;
+}
+.dark .sky-step-dot {
+  background: color-mix(in srgb, var(--color-fg) 9%, var(--color-bg));
+}
+.sky-step-dot[data-on="true"] {
+  background: var(--sky-fill);
+  color: #ffffff;
+}
+.sky-step-line {
+  height: 1px;
+  background: rgb(26 26 26 / 0.1);
+}
+.dark .sky-step-line {
+  background: rgb(255 255 255 / 0.1);
+}
+}

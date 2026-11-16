@@ -1,0 +1,643 @@
+/*
+ * Variant D hero (Figma 180:37): the sky, the passport stamps, the orbit of agents and the live toasts.
+ * The scene is the design's 1680×1050 canvas, scaled to the width (--s) and anchored under the copy.
+ */
+
+.hero-d {
+  background: var(--sky-hero);
+  container-type: inline-size;
+  /* Canvas scale: 1 at 1680 and up, the width ÷ 1680 below that, never under 0.7 (the sides crop instead). */
+  --s: clamp(0.7, tan(atan2(100cqw, 1680px)), 1);
+  /* When the sides crop, the toast stacks slide in so they stay whole. */
+  --stack-shift: max(0px, 750px - (50cqw - 16px) / var(--s));
+  /* The canvas row the scene hangs from: the bottom of the copy in the design. */
+  --oy: 443px;
+}
+@media (max-width: 1023.98px) {
+  /* Phones and tablets: a closer crop of the scene, so the agents stay legible. */
+  .hero-d {
+    --s: clamp(0.64, tan(atan2(100cqw, 1080px)), 0.8);
+    --oy: 516px;
+    /* The radar's and the routes' agents sit left of centre in the design; centre them on narrow screens. */
+    --radar-dx: 133px;
+    --routes-dx: 35px;
+    --routes-scale: 0.92;
+  }
+}
+
+/* ---------- Clouds ---------- */
+.hero-d-clouds {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1680px;
+  height: 1050px;
+  margin-left: -840px;
+  transform-origin: 840px 0;
+  scale: max(var(--s), 0.7);
+  pointer-events: none;
+}
+.hero-d-cloud {
+  position: absolute;
+  opacity: 0.2;
+  animation: hero-d-drift 70s ease-in-out infinite alternate;
+}
+.hero-d-cloud > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(var(--blur, 10px));
+}
+@keyframes hero-d-drift {
+  to {
+    translate: 48px 0;
+  }
+}
+.dark .hero-d-cloud {
+  opacity: 0.09;
+}
+
+/* ---------- Scene ---------- */
+.hero-d-scene {
+  height: calc((1050px - var(--oy)) * var(--s));
+}
+.hero-d-stage {
+  position: absolute;
+  top: calc(var(--oy) * -1);
+  left: 50%;
+  width: 1680px;
+  height: 1050px;
+  margin-left: -840px;
+  transform-origin: 840px var(--oy);
+  scale: var(--s);
+}
+
+/* ---------- Views: the three scenes crossfade in the same box ---------- */
+/* The incoming view arrives a little slower than the outgoing one leaves; a 2px blur on the way out keeps the
+   two from reading as separate pictures while they overlap. filter ends at none, so the radar's glass still sees the sky. */
+.hero-d-view {
+  filter: none;
+  transition:
+    opacity 600ms var(--ease-out),
+    translate 600ms var(--ease-out),
+    filter 600ms var(--ease-out),
+    visibility 0s linear 0s;
+}
+.hero-d-view[data-active="false"] {
+  opacity: 0;
+  translate: 0 12px;
+  filter: blur(2px);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 380ms var(--ease-out),
+    translate 380ms var(--ease-out),
+    filter 380ms var(--ease-out),
+    visibility 0s linear 380ms;
+}
+.hero-d-view[data-active="false"] * {
+  animation-play-state: paused !important;
+}
+
+/* ---------- Radar (160:947) ---------- */
+.hero-d-radar {
+  transform-origin: 840px 454px;
+  transform: translate(var(--radar-dx, 0px), 38px) scale(0.9);
+}
+.hero-d-radar-mask {
+  mask-image: url("/v4/radar-mask.svg");
+  mask-size: 1369px 684.5px;
+  mask-repeat: no-repeat;
+  mask-mode: alpha;
+}
+/* The design's background-blur wedge trailing the sweep. */
+.hero-d-glass {
+  clip-path: path(
+    "M772.081 63.6777C644.895 4.61375 502.637 -13.9616 364.549 10.4641C226.461 34.8899 99.2073 101.138 0 200.248L483.776 684.501L772.081 63.6777Z"
+  );
+  backdrop-filter: blur(21.25px);
+}
+@media (max-width: 1023.98px) {
+  .hero-d-glass {
+    backdrop-filter: none;
+  }
+}
+.hero-d-radar-tile {
+  border-width: 1.054px;
+}
+.hero-d-lit {
+  animation: hero-d-lit 3.2s ease-in-out infinite alternate;
+}
+@keyframes hero-d-lit {
+  from {
+    opacity: 0.35;
+  }
+}
+.dark .hero-d-radar-mask {
+  opacity: 0.75;
+}
+
+/* ---------- Routes (166:3261) ---------- */
+.hero-d-routes {
+  transform-origin: 840px 466px;
+  transform: translate(var(--routes-dx, 0px), 22px) scale(var(--routes-scale, 1));
+}
+.hero-d-dots {
+  mask-image: url("/v4/routes-dots.webp");
+  mask-position: -165px -36px;
+  mask-size: 1473.839px 1054px;
+  mask-repeat: no-repeat;
+  mask-mode: alpha;
+}
+.hero-d-frame {
+  border: 1px solid rgb(255 255 255 / 0.2);
+}
+.hero-d .hero-d-routes-tile {
+  border: 0;
+  box-shadow: 0 11.8px 14.16px rgb(0 0 0 / 0.07);
+}
+/* The agent names stay readable when the canvas is scaled down. */
+.hero-d-label {
+  font-size: max(12px, calc(9.5px / var(--s)));
+}
+
+/* Chips on the radar and the routes. */
+.hero-d-chip {
+  --toast-bg: #ffffff;
+  background: #ffffff;
+  box-shadow: 0 6px 16px -8px rgb(10 42 156 / 0.35);
+}
+.hero-d-chip-label {
+  color: rgb(26 26 26 / 0.6);
+}
+.hero-d-ok-text {
+  color: #296852;
+}
+.hero-d-host {
+  color: #1a1a1a;
+  animation: hero-d-host-in 320ms var(--ease-out) both;
+}
+@keyframes hero-d-host-in {
+  from {
+    opacity: 0;
+    translate: 0 3px;
+    filter: blur(2px);
+  }
+}
+.dark .hero-d-chip {
+  --toast-bg: #0d1838;
+  background: #0d1838;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.08),
+    0 10px 24px -12px rgb(0 0 0 / 0.7);
+}
+.dark .hero-d-chip-label {
+  color: rgb(242 242 236 / 0.6);
+}
+.dark .hero-d-ok-text {
+  color: #7fd3a9;
+}
+.dark .hero-d-host {
+  color: #f2f2ec;
+}
+
+/* ---------- Flights (variant A's network, over the sky) ---------- */
+.hero-d-fdash {
+  stroke: rgb(255 255 255 / 0.42);
+}
+.hero-d-froute {
+  stroke: rgb(255 255 255 / 0.85);
+  transition:
+    stroke-dashoffset 1000ms var(--ease-out),
+    opacity 600ms var(--ease-out);
+}
+.dark .hero-d-froute {
+  stroke: #b9dcff;
+}
+.hero-d-plane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 30px;
+  height: 33px;
+  offset-rotate: auto;
+  offset-anchor: center;
+  opacity: 0;
+  filter: drop-shadow(0 3px 4px rgb(10 42 156 / 0.4));
+  pointer-events: none;
+}
+.hero-d-plane > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* A short contrail from the tail. */
+.hero-d-plane::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 86%;
+  width: 40px;
+  height: 2px;
+  translate: 0 -50%;
+  border-radius: 1px;
+  background: linear-gradient(to left, rgb(255 255 255 / 0.85), transparent);
+}
+.dark .hero-d-plane {
+  filter: drop-shadow(0 3px 5px rgb(0 0 0 / 0.5));
+}
+.hero-d-fchip {
+  --toast-bg: #ffffff;
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgb(10 42 156 / 0.1),
+    0 10px 24px -12px rgb(10 42 156 / 0.42);
+}
+.dark .hero-d-fchip {
+  --toast-bg: #0f1d4d;
+  background: #0f1d4d;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.1),
+    0 10px 24px -12px rgb(0 0 0 / 0.7);
+}
+.hero-d-fchip-dot {
+  background: rgb(31 91 255 / 0.14);
+}
+.hero-d-ink {
+  color: #1a1a1a;
+}
+.dark .hero-d-ink {
+  color: #f2f2ec;
+}
+/* Every approval card: the Flights card's navy lift off the sky. */
+.hero-d-toast.hero-d-acard {
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.04),
+    0 18px 40px -16px rgb(10 42 156 / 0.5);
+}
+.dark .hero-d-toast.hero-d-acard {
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.08),
+    0 18px 40px -16px rgb(0 0 0 / 0.75);
+}
+/*
+ * Cards placed inside a scene are drawn at Orbit's size: the radar is drawn at 0.9 and the routes at --routes-scale,
+ * so their cards scale back up by the same amount (from their top-left corner, where they're placed). A new one pops in.
+ */
+.hero-d-scard {
+  transform-origin: 0 0;
+  animation: hero-d-toast-in 360ms var(--ease-out) both;
+}
+.hero-d-radar .hero-d-scard {
+  scale: calc(1 / 0.9);
+}
+.hero-d-routes .hero-d-scard {
+  scale: calc(1 / var(--routes-scale, 1));
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-d-scard {
+    animation: none;
+  }
+}
+
+/* Flights' card appears beside the airport on its own, so it enters and leaves. */
+.hero-d-ftoast {
+  animation: hero-d-toast-in 360ms var(--ease-out) both;
+}
+.hero-d-ftoast[data-phase="out"] {
+  animation: hero-d-toast-out 220ms var(--ease-out) both;
+}
+@keyframes hero-d-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+    filter: blur(4px);
+  }
+}
+@keyframes hero-d-toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+    filter: blur(3px);
+  }
+}
+.hero-d-ftoast-icon,
+.hero-d-reject {
+  background: rgb(26 26 26 / 0.06);
+}
+.hero-d-reject {
+  color: rgb(26 26 26 / 0.55);
+}
+.dark .hero-d-ftoast-icon,
+.dark .hero-d-reject {
+  background: rgb(255 255 255 / 0.08);
+}
+.dark .hero-d-reject {
+  color: rgb(242 242 236 / 0.6);
+}
+/* Approve is pressed just before the request flips to trusted. */
+.hero-d-fapprove {
+  background: #141413;
+  color: #ffffff;
+  transition: scale 160ms var(--ease-out);
+}
+.hero-d-fapprove[data-press="true"] {
+  scale: 0.9;
+}
+.dark .hero-d-fapprove {
+  background: #f2f2ec;
+  color: #141413;
+}
+.hero-d-spin {
+  border-color: rgb(26 26 26 / 0.15);
+  border-top-color: rgb(26 26 26 / 0.7);
+  animation: hero-d-spin 800ms linear infinite;
+}
+.dark .hero-d-spin {
+  border-color: rgb(242 242 236 / 0.2);
+  border-top-color: #f2f2ec;
+}
+@keyframes hero-d-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* The paper glow the orbit rises out of. At night it's a faint haze, and the bottom fades to the page. */
+.dark .hero-d-glow {
+  opacity: 0.13;
+}
+.hero-d-night-fade {
+  display: none;
+}
+.dark .hero-d-night-fade {
+  display: block;
+  background: linear-gradient(to bottom, transparent, var(--color-bg));
+}
+.hero-d-arc-stop {
+  stop-color: #f6f6f1;
+}
+.dark .hero-d-arc {
+  opacity: 0.6;
+}
+
+/* Packets riding the arcs. */
+.hero-d-packet {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 5px;
+  border-radius: 2px;
+  background: var(--sky-fill);
+  box-shadow:
+    0 0 0 1.5px rgb(255 255 255 / 0.9),
+    0 0 14px 3px rgb(255 255 255 / 0.55);
+  offset-rotate: auto;
+  offset-anchor: center;
+  opacity: 0;
+  will-change: offset-distance, opacity;
+}
+.dark .hero-d-packet {
+  background: #9cc8ff;
+  box-shadow:
+    0 0 0 1.5px rgb(255 255 255 / 0.85),
+    0 0 14px 3px rgb(90 169 255 / 0.6);
+}
+
+/* Agent tiles hover over their ring; the ring pings when a packet lands. */
+.hero-d-float {
+  animation: hero-d-float 5.6s ease-in-out infinite alternate both;
+  animation-delay: var(--float-delay, 0s);
+}
+@keyframes hero-d-float {
+  from {
+    translate: 0 2px;
+  }
+  to {
+    translate: 0 -3px;
+  }
+}
+.hero-d-tile {
+  border: 0;
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgb(10 42 156 / 0.12),
+    0 10px 24px -10px rgb(10 42 156 / 0.45);
+}
+.dark .hero-d-tile {
+  background: #f2f2ec;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.3),
+    0 12px 28px -12px rgb(0 0 0 / 0.7);
+}
+.hero-d-ring {
+  border: 1.5px solid rgb(255 255 255 / 0.8);
+  opacity: 0;
+}
+
+/* ---------- Toast stacks ---------- */
+/* The design's mask: the stack fades out at its edges (toast-mask.svg, Figma 180:178). */
+.hero-d-stack {
+  mask-image: url("/v4/toast-mask.svg");
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  mask-mode: alpha;
+}
+.hero-d-stack[data-mask="routes"] {
+  mask-image: url("/v4/routes-toast-mask.svg");
+}
+.hero-d-stack[data-side="left"] {
+  translate: var(--stack-shift) 0;
+}
+.hero-d-stack[data-side="right"] {
+  translate: calc(var(--stack-shift) * -1) 0;
+}
+/* The stack rolls: movement on screen, so ease-in-out; the fade keeps the ease-out. */
+.hero-d-slot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  translate: var(--x) var(--y);
+  opacity: var(--o);
+  transition:
+    translate 800ms var(--ease-in-out),
+    opacity 700ms var(--ease-out);
+}
+
+/* The design's toast: white, 8px radius, and its six-layer hairline shadow. */
+.hero-d-toast {
+  background: #ffffff;
+  color: #000000;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.02),
+    0 1px 1px 0.5px rgb(0 0 0 / 0.02),
+    0 3px 3px 1.5px rgb(0 0 0 / 0.02),
+    0 6px 6px -3px rgb(0 0 0 / 0.02),
+    0 12px 12px -6px rgb(0 0 0 / 0.02),
+    0 24px 24px -12px rgb(0 0 0 / 0.02);
+  --toast-bg: #ffffff;
+  --toast-sub: rgb(0 0 0 / 0.56);
+}
+.dark .hero-d-toast {
+  background: #0f1d4d;
+  color: #f2f2ec;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.07),
+    0 16px 36px -16px rgb(0 0 0 / 0.65);
+  --toast-bg: #0f1d4d;
+  --toast-sub: rgb(242 242 236 / 0.6);
+}
+.hero-d-sub {
+  color: var(--toast-sub);
+}
+
+/* The status disc: grey while the handshake is out, the design's green check once approved. */
+.hero-d-wait {
+  background: rgb(26 26 26 / 0.1);
+}
+.dark .hero-d-wait {
+  background: rgb(255 255 255 / 0.08);
+}
+.hero-d-ok {
+  background: rgb(41 104 82 / 0.1);
+  color: #296852;
+}
+.dark .hero-d-ok {
+  background: rgb(110 205 160 / 0.14);
+  color: #7fd3a9;
+}
+.hero-d-blink {
+  animation: hero-d-blink 1.1s ease-in-out infinite alternate;
+}
+@keyframes hero-d-blink {
+  from {
+    opacity: 0.25;
+    scale: 0.8;
+  }
+}
+
+.hero-d-swap {
+  transition:
+    opacity 240ms var(--ease-out),
+    scale 240ms var(--ease-out),
+    filter 240ms var(--ease-out);
+}
+.hero-d-swap[data-on="false"] {
+  opacity: 0;
+  scale: 0.6;
+  filter: blur(2px);
+}
+.hero-d-swap-text {
+  transition:
+    opacity 240ms var(--ease-out),
+    translate 240ms var(--ease-out),
+    filter 240ms var(--ease-out);
+}
+.hero-d-swap-text[data-on="false"] {
+  opacity: 0;
+  translate: 0 4px;
+  filter: blur(2px);
+}
+
+/* ---------- Passport stamps ---------- */
+/* Cards shuffling one place down the pile move on screen: ease-in-out. The landing (below) is an entrance: ease-out. */
+.hero-d-stamp {
+  translate: calc(var(--x) - 50%) calc(var(--y) - 50%);
+  rotate: var(--r);
+  transition:
+    translate 500ms var(--ease-in-out),
+    rotate 500ms var(--ease-in-out);
+}
+.hero-d-stamp[data-enter="true"] {
+  animation: hero-d-stamp-land 560ms var(--ease-out) both;
+  animation-delay: var(--delay, 0ms);
+}
+@keyframes hero-d-stamp-land {
+  0% {
+    opacity: 0;
+    scale: 1.6;
+    transform: translateY(-0.12em) rotate(9deg);
+  }
+  55% {
+    opacity: 1;
+    scale: 0.94;
+    transform: none;
+  }
+  100% {
+    opacity: 1;
+    scale: 1;
+    transform: none;
+  }
+}
+
+/* ---------- Pill, buttons, switch: press feedback everywhere, hover only with a real pointer ---------- */
+.hero-d-pill,
+.hero-d-seg {
+  transition:
+    background-color 200ms ease,
+    color 200ms ease,
+    scale 160ms var(--ease-out);
+}
+.hero-d-pill:active,
+.hero-d-seg:active {
+  scale: 0.97;
+}
+.hero-d-pill-arrow {
+  transition: translate 240ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .hero-d-pill:hover,
+  .hero-d-ghost:hover {
+    background-color: rgb(255 255 255 / 0.15);
+  }
+  .hero-d-pill:hover .hero-d-pill-arrow {
+    translate: 2px 0;
+  }
+  .hero-d-solid:hover {
+    background-color: rgb(255 255 255 / 0.9);
+  }
+  .hero-d-seg:hover {
+    color: #ffffff;
+  }
+}
+
+/* ---------- Off-screen and reduced motion ---------- */
+.hero-d[data-live="false"] :is(.hero-d-float, .hero-d-cloud, .hero-d-blink, .hero-d-lit, .hero-d-spin) {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-d-float,
+  .hero-d-cloud,
+  .hero-d-blink,
+  .hero-d-lit,
+  .hero-d-host,
+  .hero-d-spin,
+  .hero-d-fapprove,
+  .hero-d-toast.hero-d-ftoast,
+  .hero-d-stamp[data-enter="true"] {
+    animation: none;
+  }
+  .hero-d-froute {
+    transition: none;
+  }
+  .hero-d-slot,
+  .hero-d-stamp {
+    transition: none;
+  }
+  /* Views still crossfade, without the drift or the blur. */
+  .hero-d-view,
+  .hero-d-view[data-active="false"] {
+    translate: none;
+    filter: none;
+    transition:
+      opacity 200ms ease,
+      visibility 0s linear 200ms;
+  }
+  .hero-d-view[data-active="true"] {
+    transition: opacity 200ms ease;
+  }
+  .hero-d-pill-arrow {
+    transition: none;
+  }
+}

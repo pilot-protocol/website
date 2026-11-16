@@ -1,0 +1,78 @@
+{
+ "kind": "app",
+ "slug": "io.pilot.upfile",
+ "name": "Upfile",
+ "seoTitle": "Upfile: Agent App Methods & Install | Pilot Protocol",
+ "description": "Upload a file, get a permanent URL. One call to sign up, one to upload. Review its methods, setup, runtime requirements, and typed agent interface.",
+ "headText": [
+  "Upfile",
+  "Upfile",
+  "·",
+  "io.pilot.upfile",
+  "Upload a file, get a permanent URL. One call to sign up, one to upload.",
+  "Infrastructure",
+  "Live on catalogue",
+  "Install",
+  "Copy",
+  "pilotctl appstore install",
+  "io.pilot.upfile"
+ ],
+ "metrics": {
+  "version": "v0.2.3",
+  "methods": "10",
+  "size": "—",
+  "permissions": "5 declared",
+  "platforms": "macOS · Linux"
+ },
+ "icon": "/appicons/optimized/io.pilot.upfile-240.webp",
+ "related": [
+  "io.pilot.smol",
+  "io.pilot.miren",
+  "io.pilot.docker",
+  "io.pilot.tldr",
+  "io.pilot.insforge"
+ ],
+ "toc": [
+  {
+   "id": "about-upfile",
+   "text": "About Upfile",
+   "level": 2
+  },
+  {
+   "id": "methods-10",
+   "text": "Methods · 10",
+   "level": 2
+  },
+  {
+   "id": "full-usage-demo",
+   "text": "Full usage demo",
+   "level": 2
+  },
+  {
+   "id": "worked-examples",
+   "text": "Worked examples",
+   "level": 3
+  },
+  {
+   "id": "good-to-know",
+   "text": "Good to know",
+   "level": 3
+  },
+  {
+   "id": "next",
+   "text": "Next",
+   "level": 3
+  },
+  {
+   "id": "whats-new",
+   "text": "What’s New",
+   "level": 2
+  },
+  {
+   "id": "platform-compatibility",
+   "text": "Platform Compatibility",
+   "level": 2
+  }
+ ],
+ "html": "<h2 id=\"about-upfile\">About Upfile</h2><p>Upfile turns a file on the host into a URL an agent can hand to a human or another service. There is no dashboard and no browser step anywhere in the loop: <code>upfile.signup</code> creates an account and saves the key locally, and from then on <code>upfile.upload</code> returns a live, permanent link.</p><p><b>Everything returns JSON.</b> The upload methods emit <code>{id, url, visibility, size, type, expires_at, storage_used, storage_limit}</code>, so an agent reads <code>.url</code> rather than scraping console output.</p><p><b>Three shapes of link.</b> A plain upload is public and permanent — an unauthenticated URL that keeps working. <code>upload_private</code> puts it behind authentication. <code>upload_expiring</code> gives it a TTL in seconds, which is the right choice for build logs, debug dumps, and anything you would rather not leave permanently reachable.</p><p><b>Housekeeping.</b> <code>status</code> shows tier and quota, <code>list</code> enumerates what is stored with each file's id, and <code>remove</code> deletes one by id and reclaims the space. The free tier is 1GB total across all files.</p><p>The CLI ships with the app as a per-platform binary verified by sha256 at install, so there is no Node install and no package manager involved on the host.</p><h2 id=\"methods-10\">Methods · 10</h2><code>upfile.signup</code>START HERE if this host has no API key. Creates an Upfile account and saves the key to the local CLI config, so every later call authenticates automatically. No browser, no dashboard, no verification step. The account starts on the free tier: 1GB of storage. Everything else fails with No API key until this has been run.<code>upfile.upload</code>Upload a file from this host and get back a permanent, immediately-live URL. Returns JSON: {id, url, visibility, size, type, originalName, expires_at, created_at, storage_used, storage_limit}. Read .url. Public by default, which means an unauthenticated permanent link, so use upfile.upload_private or upfile.upload_expiring for anything you would not want to stay reachable.<code>upfile.upload_private</code>Upload a file as private, so the returned URL requires authentication rather than being open to anyone holding the link. Same JSON shape as upfile.upload, with visibility private.<code>upfile.upload_expiring</code>Upload a file with a time-to-live, so the link stops working on its own. Use this for build logs, debug dumps, and anything you would rather not have permanently indexed. Same JSON shape as upfile.upload, with expires_at set.<code>upfile.status</code>Show the account tier and how much of the storage quota is used, e.g. Tier: free  Storage: 0.01GB / 1GB. Also the quickest way to tell whether this host has a key at all: without one it prints No API key, which means run upfile.signup first.<code>upfile.list</code>List the files stored on this account as JSON, newest first, with each file's id and URL. The ids are what upfile.remove takes.<code>upfile.remove</code>Delete one stored file by its id, reclaiming its space against the quota. IRREVERSIBLE: the URL stops resolving immediately.<code>upfile.version</code>Print the Upfile CLI version bundled with this app.<code>upfile.cli_help</code>The Upfile CLI's own full help text, listing every subcommand and flag including any not curated as a named method here.<code>upfile.run</code>Escape hatch: run the Upfile CLI with an arbitrary argv array, for anything the named methods do not cover such as config set/get, upgrade, or stdin uploads. Payload is {args:[...]}. Prefer the named methods when one fits, because they return JSON.<h2 id=\"full-usage-demo\">Full usage demo</h2><p>When your agent has produced a file — a render, a report, a screenshot, a log — and needs a URL it can paste somewhere a human or another service will open.</p>Run this first — Get an account and an API key with one callCall<pre><code>pilotctl appstore call io.pilot.upfile upfile.signup '{\"email\":\"you@example.com\"}'</code></pre>→<code>Account created. API key: upf_... Tier: free (1GB). Key saved.</code><p>The key is written to the CLI config on this host, so every later call just works. No dashboard, no browser.</p><h3 id=\"worked-examples\">Worked examples</h3>Upload a file and get a permanent URLCall<pre><code>pilotctl appstore call io.pilot.upfile upfile.upload '{\"path\":\"/tmp/report.pdf\"}'</code></pre>→<code>{\"id\":\"tRbBqIyEiB\",\"url\":\"https://cdn.upfile.sh/tRbBqIyEiB.pdf\",\"visibility\":\"public\",\"size\":6941}</code><p>The URL is live immediately and permanent. Always JSON, so read .url straight out of it.</p>Upload something that should not live foreverCall<pre><code>pilotctl appstore call io.pilot.upfile upfile.upload_expiring '{\"path\":\"/tmp/build.log\",\"expiry\":3600}'</code></pre>→<code>{\"id\":\"...\",\"url\":\"https://cdn.upfile.sh/....log\",\"expires_at\":\"2026-08-06T17:00:00.000Z\"}</code><p>expiry is seconds. Use it for anything you would not want indexed a year from now.</p>Check what you have storedCall<pre><code>pilotctl appstore call io.pilot.upfile upfile.status '{}'</code></pre>→<code>Tier: free  Storage: 0.01GB / 1GB</code><p>Free tier is 1GB. upfile.list shows individual files; upfile.remove deletes one by id.</p><h3 id=\"good-to-know\">Good to know</h3><ul><li>Run upfile.signup once per host if there is no key. Everything else fails with No API key until you do.</li><li>Read .url from the JSON — the human-readable output is not stable.</li><li>A plain upload is a permanent, unauthenticated URL. Use upload_private or upload_expiring for anything sensitive.</li><li>expiry is in SECONDS, not minutes. 3600 is an hour.</li><li>Free tier is 1GB total, not per file. Use upfile.remove to reclaim space.</li></ul><h3 id=\"next\">Next</h3><ul><li><code>io.pilot.upfile upfile.help '{}'</code></li></ul><h2 id=\"whats-new\">What’s New</h2>v0.2.3Latest—<ul><li>First release on the Pilot app store.</li></ul><h2 id=\"platform-compatibility\">Platform Compatibility</h2>macOSApple SiliconSupportedmacOSIntelSupportedLinuxarm64SupportedLinuxamd64Supported"
+}

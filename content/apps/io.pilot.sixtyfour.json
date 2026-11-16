@@ -1,0 +1,84 @@
+{
+ "kind": "app",
+ "slug": "io.pilot.sixtyfour",
+ "name": "Sixtyfour",
+ "seoTitle": "Sixtyfour: Agent App Methods & Install | Pilot Protocol",
+ "description": "People- and company-intelligence: contact discovery, enrichment, and agentic research. Review setup, usage, and operating details.",
+ "headText": [
+  "Sixtyfour",
+  "Sixtyfour",
+  "·",
+  "io.pilot.sixtyfour",
+  "People- and company-intelligence: contact discovery, enrichment, and agentic research.",
+  "Data & Storage",
+  "Live on catalogue",
+  "Install",
+  "Copy",
+  "pilotctl appstore install",
+  "io.pilot.sixtyfour"
+ ],
+ "metrics": {
+  "version": "v0.1.0",
+  "methods": "12",
+  "size": "8.3 MB",
+  "permissions": "4 declared",
+  "platforms": "macOS · Linux"
+ },
+ "icon": "/appicons/optimized/io.pilot.sixtyfour-240.webp",
+ "related": [
+  "io.pilot.postgres",
+  "io.pilot.duckdb",
+  "io.pilot.sqlite",
+  "io.pilot.mysql",
+  "io.pilot.redis",
+  "io.pilot.orthogonal"
+ ],
+ "toc": [
+  {
+   "id": "about-sixtyfour",
+   "text": "About Sixtyfour",
+   "level": 2
+  },
+  {
+   "id": "methods-12",
+   "text": "Methods · 12",
+   "level": 2
+  },
+  {
+   "id": "full-usage-demo",
+   "text": "Full usage demo",
+   "level": 2
+  },
+  {
+   "id": "worked-examples",
+   "text": "Worked examples",
+   "level": 3
+  },
+  {
+   "id": "what-it-costs",
+   "text": "What it costs",
+   "level": 3
+  },
+  {
+   "id": "good-to-know",
+   "text": "Good to know",
+   "level": 3
+  },
+  {
+   "id": "next",
+   "text": "Next",
+   "level": 3
+  },
+  {
+   "id": "whats-new",
+   "text": "What’s New",
+   "level": 2
+  },
+  {
+   "id": "platform-compatibility",
+   "text": "Platform Compatibility",
+   "level": 2
+  }
+ ],
+ "html": "<h2 id=\"about-sixtyfour\">About Sixtyfour</h2><p>Sixtyfour is the app-store front door for the Sixtyfour people-intelligence and company-intelligence API. It gives an agent contact discovery (find email / find phone), reverse lookups from an email or phone, full person and company enrichment, and an agentic QA researcher that answers free-form questions about a person or company. All returned as clean structured JSON, every field source-backed.</p><h2 id=\"methods-12\">Methods · 12</h2><code>sixtyfour.people_intelligence</code>People Intelligence: full, source-backed enrichment of a person from seed details.<code>sixtyfour.company_intelligence</code>Company Intelligence: full, source-backed company profile, optionally with people.<code>sixtyfour.find_email</code>Contact discovery: find a verified email for a person from partial details.<code>sixtyfour.find_phone</code>Contact discovery: find a phone number for a person from partial details.<code>sixtyfour.reverse_email</code>Reverse lookup: identify the person and company behind an email address.<code>sixtyfour.reverse_phone</code>Reverse lookup: identify the person and company behind a phone number.<code>sixtyfour.enrich_linkedin</code>Enrich a person directly from their LinkedIn profile URL.<code>sixtyfour.qa</code>Agentic QA researcher: answer free-form qualification questions about a person or company, with sources.<code>sixtyfour.research_agent</code>Research agent: autonomous multi-step research over an entity, returning structured findings with sources.<code>sixtyfour.filter_search</code>Filter Search: structured field-based search across the corpus; returns matching entities.<code>sixtyfour.deep_search</code>Deep Search (agentic): start a natural-language search. Returns a task_id; results are retrieved asynchronously (see caveats).<code>sixtyfour.help</code>Discovery: every method with params, kind, and latency class.<h2 id=\"full-usage-demo\">Full usage demo</h2><p>When you need to find or verify a person's email/phone, enrich a person or company into structured JSON, or answer free-form qualification questions about them with sources.</p>Run this first — Find a verified work email from partial detailsCall<pre><code>pilotctl appstore call io.pilot.sixtyfour sixtyfour.find_email '{\"name\":\"Ada Lovelace\",\"company\":\"acme.com\"}'</code></pre>→<code>{\"email\":\"ada@acme.com\",\"confidence\":0.9,\"sources\":[...]}</code><h3 id=\"worked-examples\">Worked examples</h3>Full person enrichmentCall<pre><code>pilotctl appstore call io.pilot.sixtyfour sixtyfour.people_intelligence '{\"email\":\"ada@acme.com\"}'</code></pre>→<code>{\"name\":\"Ada Lovelace\",\"title\":\"CTO\",\"linkedin\":\"...\",\"sources\":[...]}</code>Company profileCall<pre><code>pilotctl appstore call io.pilot.sixtyfour sixtyfour.company_intelligence '{\"domain\":\"acme.com\"}'</code></pre>→<code>{\"name\":\"Acme\",\"industry\":\"...\",\"headcount\":120,\"sources\":[...]}</code>Reverse lookup from an emailCall<pre><code>pilotctl appstore call io.pilot.sixtyfour sixtyfour.reverse_email '{\"email\":\"ada@acme.com\"}'</code></pre>→<code>{\"person\":{...},\"company\":{...}}</code>Agentic QA on an entityCall<pre><code>pilotctl appstore call io.pilot.sixtyfour sixtyfour.qa '{\"company\":\"acme.com\",\"question\":\"Do they sell to enterprises?\"}'</code></pre>→<code>{\"answer\":\"...\",\"sources\":[...]}</code><h3 id=\"what-it-costs\">What it costs</h3>50 requests per Pilot userfree budget · billed in requests (50 free per Pilot user)<table><thead><tr><th>Operation</th><th>Price</th><th>Notes</th></tr></thead><tbody><tr><td><code>sixtyfour.find_email / find_phone</code></td><td>1 request</td><td>each contact-discovery call spends 1 of your 50 requests</td></tr><tr><td><code>sixtyfour.people_intelligence / company_intelligence</code></td><td>1 request</td><td>each enrichment call spends 1 request</td></tr><tr><td><code>sixtyfour.reverse_email / reverse_phone / enrich_linkedin</code></td><td>1 request</td><td>each lookup spends 1 request</td></tr><tr><td><code>sixtyfour.qa / research_agent / filter_search / deep_search</code></td><td>1 request</td><td>each agentic call spends 1 request</td></tr></tbody></table><p>Metered in requests, not dollars: this demo spends 5 of your 50 free requests. At 0 remaining, calls return 402.</p><h3 id=\"good-to-know\">Good to know</h3><ul><li>Quota is 50 REQUESTS per Pilot user, not a dollar budget — every enrichment/discovery call spends 1.</li><li>402 Payment Required means your 50 free requests are used up.</li><li>Every returned field is source-backed — inspect the sources[] before trusting a value.</li><li>deep_search is async: it returns a task_id and results are retrieved separately.</li><li>Provide as many seed details as you have (name + company, email, domain) for higher-confidence hits.</li></ul><h3 id=\"next\">Next</h3><ul><li><code>io.pilot.sixtyfour sixtyfour.help '{}'</code></li></ul><h2 id=\"whats-new\">What’s New</h2>v0.1.0Latest—<ul><li>Sixtyfour is the app-store front door for the Sixtyfour people-intelligence and company-intelligence API. It gives an agent contact discovery (find email / find phone), reverse lookups from an email or phone, full person and company enrichment, and an agentic QA researcher that answers free-form questions about a person or company. All returned as clean structured JSON, every field source-backed.</li></ul><h2 id=\"platform-compatibility\">Platform Compatibility</h2>macOSApple Silicon4.7 MBSupportedmacOSIntel5.0 MBSupportedLinuxarm644.3 MBSupportedLinuxamd644.3 MBSupported"
+}

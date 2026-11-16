@@ -1,0 +1,239 @@
+---
+title: "Audit Log & Export"
+description: "Audit logging for Pilot Protocol - structured events, SIEM export (Splunk HEC, CEF, JSON), webhooks, dead-letter queues, and Prometheus metrics."
+---
+
+Structured audit events, SIEM export, webhooks, and dead-letter queues.
+
+**Self-hosted registry.** Reading the audit log and configuring export need the registry admin token, so they apply to a registry you run. See [Self-hosting the registry](/docs/enterprise). The audit log records registry events; retention and any regulatory requirements are yours to meet in the systems you export to.
+
+## Overview [#overview]
+
+Every state change in the registry generates a structured audit event. Events are emitted via `slog` as SIEM-ingestible JSON, stored in an in-memory ring buffer for API queries, and optionally forwarded to external systems through the audit export pipeline.
+
+The audit system runs at the registry level - it captures events across all networks, not just enterprise ones. Enterprise features add more event types (RBAC changes, policy updates, directory sync) but the core audit infrastructure is always active.
+
+## Audit events [#events]
+
+Each audit event contains:
+
+| Field | Description |
+| --- | --- |
+| `timestamp` | RFC 3339 timestamp of the event |
+| `action` | Event type (e.g., `node.registered`, `member.promoted`) |
+| `node_id` | The agent involved (when applicable) |
+| `network_id` | The network involved (when applicable) |
+| Context fields | Action-specific data: old/new values, role names, hostnames, etc. |
+
+Events that modify state include **enriched context** with both old and new values. For example, a `hostname.changed` event includes `old_hostname` and `new_hostname`; a `member.promoted` event includes `old_role` and `new_role`.
+
+## Event types [#event-types]
+
+| Action | Emitted when |
+| --- | --- |
+| `node.registered` | A new agent registers with the registry |
+| `node.re_registered` | An existing agent re-registers (reclaim, key update, or existing identity) |
+| `node.deregistered` | An agent deregisters from the registry |
+| `node.reaped` | An agent is removed due to stale heartbeat |
+| `network.created` | A new network is created |
+| `network.deleted` | A network is deleted |
+| `network.renamed` | A network is renamed |
+| `network.joined` | An agent joins a network |
+| `network.left` | An agent leaves a network |
+| `network.enterprise_changed` | Enterprise mode is toggled on a network |
+| `network.ownership_transferred` | Network ownership is transferred to a new owner |
+| `network.policy_changed` | Network policy is updated |
+| `network.provisioned` | A network is provisioned via blueprint |
+| `network.owner_lost` | Network owner deregistered - network has no owner |
+| `member.promoted` | A member is promoted (member → admin) |
+| `member.demoted` | An admin is demoted (admin → member) |
+| `member.kicked` | A member is kicked from a network |
+| `invite.created` | An invitation is sent to an agent |
+| `invite.responded` | An agent accepts or rejects an invitation |
+| `invite.expired_cleanup` | Expired invitations are pruned from an inbox |
+| `trust.created` | Mutual trust is established between two agents |
+| `trust.revoked` | Trust is revoked between two agents |
+| `visibility.changed` | An agent changes between public and private |
+| `hostname.changed` | An agent changes its hostname |
+| `tags.changed` | An agent updates its tags |
+| `handshake.relayed` | A handshake request is relayed through the registry |
+| `handshake.responded` | An agent responds to a handshake (accept/reject) |
+| `key.rotated` | An agent rotates its Ed25519 key |
+| `key.expiry_set` | A key expiry date is set |
+| `key.expiry_cleared` | A key expiry date is cleared |
+| `key.expired_heartbeat_blocked` | An agent with an expired key is blocked from heartbeating |
+| `identity.external_id_set` | An external ID is set or changed |
+| `idp.configured` | An identity provider is configured |
+| `directory.synced` | A directory sync operation completes |
+| `audit_export.configured` | An audit export endpoint is configured |
+| `beacon.registered` | A beacon server registers with the registry |
+
+## Querying the log [#querying]
+
+The registry maintains an in-memory ring buffer of the most recent **1,000** audit entries. Query it with the `get_audit_log` command:
+
+```bash
+# Get all audit entries (newest first)
+pilotctl extras audit
+
+# Filter by network
+pilotctl extras audit --network <network_id>
+```
+
+Protocol command:
+
+```json
+{
+  "type": "get_audit_log",
+  "network_id": 1,
+  "admin_token": "your-admin-token"
+}
+```
+
+Returns: `entries` (array of audit events, newest first). The `network_id` filter is optional - omit it (or set to 0) to get all events.
+
+The in-memory ring buffer is included in the registry snapshot, so it survives restarts when snapshot persistence (`-store`) is enabled; for durable external trails, use [audit export](#export).
+
+## Audit export [#export]
+
+Audit export forwards events to external systems in real time. Configure an export endpoint with `pilotctl extras audit-export set --format <json|splunk_hec|syslog_cef> --endpoint <URL>` (plus `--splunk-token`, `--index`, `--source` for Splunk), the `set_audit_export` protocol command, or a [blueprint](/docs/enterprise-blueprints). `audit-export get` shows the current setting and `audit-export disable` turns it off.
+
+```json
+{
+  "type": "set_audit_export",
+  "format": "splunk_hec",
+  "endpoint": "https://splunk.example.com:8088/services/collector",
+  "token": "your-hec-token",
+  "admin_token": "your-admin-token"
+}
+```
+
+Three export formats are supported:
+
+| Format | Value | Target system |
+| --- | --- | --- |
+| **Splunk HEC** | `splunk_hec` | Splunk HTTP Event Collector |
+| **CEF / Syslog** | `syslog_cef` | ArcSight, QRadar, any CEF-compatible SIEM |
+| **JSON** | `json` | Any HTTP endpoint accepting JSON payloads |
+
+### Delivery guarantees [#delivery-guarantees]
+
+| Parameter | Value |
+| --- | --- |
+| Buffer size | 1,024 events |
+| Retry attempts | 3 |
+| Retry strategy | Exponential backoff |
+| Delivery | Asynchronous (non-blocking) |
+
+Events are buffered and delivered asynchronously. If the export endpoint is temporarily unavailable, events are retried with exponential backoff up to 3 times. Events that exceed the retry limit are dropped (they remain in the in-memory ring buffer for API queries).
+
+## Splunk HEC [#splunk]
+
+Splunk HEC (HTTP Event Collector) integration sends events in Splunk’s native format:
+
+```json
+{
+  "type": "set_audit_export",
+  "format": "splunk_hec",
+  "endpoint": "https://splunk.example.com:8088/services/collector",
+  "token": "your-hec-token",
+  "admin_token": "your-admin-token"
+}
+```
+
+Events are formatted as Splunk HEC JSON payloads with the `event` field containing the audit data. The HEC token is sent in the `Authorization` header.
+
+## CEF / Syslog [#cef]
+
+Common Event Format (CEF) output is compatible with ArcSight, QRadar, and other SIEM systems that accept CEF-formatted syslog:
+
+```json
+{
+  "type": "set_audit_export",
+  "format": "syslog_cef",
+  "endpoint": "https://siem.example.com/api/events",
+  "admin_token": "your-admin-token"
+}
+```
+
+Events are formatted as CEF strings with the Pilot Protocol vendor and product identifiers, severity mapping, and extension fields containing the audit context.
+
+## JSON export [#json-export]
+
+Generic JSON export sends the raw audit event as a JSON POST to any HTTP endpoint:
+
+```json
+{
+  "type": "set_audit_export",
+  "format": "json",
+  "endpoint": "https://logs.example.com/ingest",
+  "admin_token": "your-admin-token"
+}
+```
+
+The exported JSON payload is the full audit `Entry`, including the `prev_hash`/`hash` chain fields — a superset of what `get_audit_log` returns (which omits those). Use this for custom integrations, log aggregators, or data pipelines.
+
+### Inspect the export config [#inspect-the-export-config]
+
+Read back the current export configuration with the `get_audit_export` command:
+
+```json
+{
+  "type": "get_audit_export",
+  "admin_token": "your-admin-token"
+}
+```
+
+Returns `enabled` (bool), and when enabled the `format` and `endpoint`, plus running `exported` / `dropped` counters.
+
+## Webhooks & DLQ [#webhooks]
+
+Webhooks deliver audit events to HTTP endpoints with delivery guarantees. Each webhook invocation includes a unique **event ID** for deduplication.
+
+### Retry behavior [#retry-behavior]
+
+Failed webhook deliveries are retried with exponential backoff. After all retries are exhausted, the event is moved to a **dead-letter queue** (DLQ) for manual inspection. There is no automatic replay, and DLQ entries have their details redacted.
+
+### Query the DLQ [#query-the-dlq]
+
+```json
+{
+  "type": "get_webhook_dlq",
+  "admin_token": "your-admin-token"
+}
+```
+
+Returns: `events` (array of failed webhook events: `event_id`, `action`, `timestamp`, redacted `details`) plus `count`.
+
+### Configure webhooks [#configure-webhooks]
+
+Webhooks are configured via the `set_webhook` command (or the `webhooks` field in a [blueprint](/docs/enterprise-blueprints)); `set_audit_export` configures the audit exporter, not webhooks.
+
+### Query webhook status [#query-webhook-status]
+
+Read the current webhook wiring and health with the `get_webhook` command:
+
+```json
+{
+  "type": "get_webhook",
+  "admin_token": "your-admin-token"
+}
+```
+
+Returns `enabled` (bool), the configured `url`, delivery counters (`delivered`, `failed`, `dropped`), and DLQ health (`dlq_size`, `dlq_dropped`).
+
+## Metrics [#metrics]
+
+The registry exposes Prometheus metrics for monitoring audit and webhook health:
+
+| Metric | Type | Description |
+| --- | --- | --- |
+| `pilot_audit_events_total` | Counter | Total audit events emitted, by action |
+| `pilot_audit_exports_total` | Counter | Audit export attempts |
+| `pilot_audit_export_errors_total` | Counter | Export delivery failures, by format |
+| `pilot_webhook_deliveries_total` | Counter | Total webhook delivery attempts |
+| `pilot_audit_action_total` | Counter | Audit events, labeled by action |
+
+Scrape these from the registry’s metrics endpoint to set up alerts for delivery failures or DLQ growth.
+
+**See also:** [Blueprints](/docs/enterprise-blueprints) - configure audit export declaratively. [Webhooks](/docs/webhooks) - general webhook concepts. [← Network Policies](/docs/enterprise-policies)[Blueprints →](/docs/enterprise-blueprints)

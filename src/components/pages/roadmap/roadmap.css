@@ -1,0 +1,95 @@
+/* Roadmap: dashed tracks for work in progress, flowing downward (towards "later"). */
+.roadmap-dash {
+  background-image: repeating-linear-gradient(to bottom, color-mix(in srgb, var(--color-lime-ink) 60%, transparent) 0 4px, transparent 4px 9px);
+  background-size: 1px 9px;
+  animation: roadmap-flow 1.1s linear infinite;
+}
+.roadmap-fade {
+  -webkit-mask-image: linear-gradient(to bottom, #000, transparent);
+  mask-image: linear-gradient(to bottom, #000, transparent);
+}
+@keyframes roadmap-flow {
+  to {
+    background-position: 0 9px;
+  }
+}
+
+/* The filters: a packet crosses four gates; each gate lights as it passes. */
+@keyframes roadmap-pass-x {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  6%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    left: calc(100% - 8px);
+    opacity: 0;
+  }
+}
+@keyframes roadmap-pass-y {
+  0% {
+    top: 0;
+    opacity: 0;
+  }
+  6%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    top: calc(100% - 8px);
+    opacity: 0;
+  }
+}
+@keyframes roadmap-gate {
+  0%,
+  100% {
+    background-color: var(--color-edge-3);
+  }
+  3%,
+  14% {
+    background-color: var(--color-lime);
+  }
+  30% {
+    background-color: var(--color-edge-3);
+  }
+}
+/* The sky site: the gate lights in the sky's blue. */
+@keyframes roadmap-gate-sky {
+  0%,
+  100% {
+    background-color: var(--color-edge-3);
+  }
+  3%,
+  14% {
+    background-color: var(--sky-600);
+  }
+  30% {
+    background-color: var(--color-edge-3);
+  }
+}
+/* The sky site's filters: the gates' number badges (see filters.tsx; the beam is the shared one). */
+.roadmap-run {
+  /* The kit's dot tint, made opaque so the hatching doesn't show through it. */
+  --rm-dot: color-mix(in srgb, rgb(26 26 26) 6%, var(--color-bg));
+}
+.dark .roadmap-run {
+  --rm-dot: color-mix(in srgb, rgb(255 255 255) 9%, var(--color-bg));
+}
+.roadmap-run .rm-dot {
+  background-color: var(--rm-dot);
+}
+.roadmap-run [data-anim] {
+  animation-play-state: paused;
+}
+.roadmap-run[data-on="true"] [data-anim] {
+  animation-play-state: running;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-dash {
+    animation: none;
+  }
+}

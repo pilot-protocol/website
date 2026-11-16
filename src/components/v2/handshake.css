@@ -1,0 +1,198 @@
+/* Variant B handshake: the switches, the tunnel between the two agents, and the lock. */
+
+/* iOS-style switch: the knob travels, and stretches a little while it's held down. */
+.hs-knob {
+  transition:
+    transform 320ms cubic-bezier(0.34, 1.36, 0.64, 1),
+    width 200ms var(--ease-out);
+}
+.hs-switch[data-on="true"] .hs-knob {
+  transform: translateX(26px);
+}
+.hs-switch:active .hs-knob {
+  width: 38px;
+}
+.hs-switch[data-on="true"]:active .hs-knob {
+  transform: translateX(20px);
+}
+
+/* Each side's half of the pipe. Vertical on phones, horizontal from lg up. */
+.hs-fill {
+  transition: transform 700ms var(--ease-out);
+}
+.hs-fill-a {
+  inset: 0 0 50% 0;
+  transform-origin: top;
+  transform: scaleY(0);
+}
+.hs-fill-b {
+  inset: 50% 0 0 0;
+  transform-origin: bottom;
+  transform: scaleY(0);
+}
+.hs-fill[data-on="true"] {
+  transform: scaleY(1);
+}
+@media (min-width: 1024px) {
+  .hs-fill-a {
+    inset: 0 50% 0 0;
+    transform-origin: left;
+    transform: scaleX(0);
+  }
+  .hs-fill-b {
+    inset: 0 0 0 50%;
+    transform-origin: right;
+    transform: scaleX(0);
+  }
+  .hs-fill[data-on="true"] {
+    transform: scaleX(1);
+  }
+}
+
+/* Packets riding the open tunnel, both ways. */
+.hs-packet {
+  position: absolute;
+  left: calc(50% - 4px);
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--color-ink);
+  opacity: 0;
+  animation: hs-run-y 1.7s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+.hs-packet-back {
+  animation-name: hs-run-y-back;
+}
+@keyframes hs-run-y {
+  0% {
+    top: 6px;
+    opacity: 0;
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    top: calc(100% - 14px);
+    opacity: 0;
+  }
+}
+@keyframes hs-run-y-back {
+  0% {
+    top: calc(100% - 14px);
+    opacity: 0;
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    top: 6px;
+    opacity: 0;
+  }
+}
+@media (min-width: 1024px) {
+  .hs-packet {
+    top: calc(50% - 4px);
+    left: auto;
+    animation-name: hs-run-x;
+  }
+  .hs-packet-back {
+    animation-name: hs-run-x-back;
+  }
+}
+@keyframes hs-run-x {
+  0% {
+    left: 8px;
+    opacity: 0;
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    left: calc(100% - 16px);
+    opacity: 0;
+  }
+}
+@keyframes hs-run-x-back {
+  0% {
+    left: calc(100% - 16px);
+    opacity: 0;
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    left: 8px;
+    opacity: 0;
+  }
+}
+
+/* The lock: shackle up while private, drops and clicks shut once both sides approve. */
+.hs-shackle {
+  transform: translateY(-3.5px);
+  transition: transform 260ms var(--ease-out);
+}
+.hs-shackle[data-closed="true"] {
+  transform: none;
+  transition: transform 220ms cubic-bezier(0.34, 1.5, 0.64, 1) 380ms;
+}
+.hs-lock[data-closed="true"] {
+  animation: hs-click 520ms var(--ease-out) 420ms both;
+}
+@keyframes hs-click {
+  0%,
+  100% {
+    scale: 1;
+  }
+  35% {
+    scale: 1.12;
+  }
+}
+
+/* State swaps: the chip on each card and the status line. */
+.hs-chip,
+.hs-status {
+  animation: hs-swap 360ms var(--ease-out) both;
+}
+@keyframes hs-swap {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+    transform: translateY(2px);
+  }
+}
+
+/* "Waiting": a small spinner in the chip. */
+.hs-dots {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+  animation: hs-spin 800ms linear infinite;
+}
+@keyframes hs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-knob,
+  .hs-fill,
+  .hs-shackle,
+  .hs-shackle[data-closed="true"] {
+    transition-duration: 1ms;
+    transition-delay: 0ms;
+  }
+  .hs-lock[data-closed="true"],
+  .hs-chip,
+  .hs-status,
+  .hs-dots {
+    animation: none;
+  }
+}

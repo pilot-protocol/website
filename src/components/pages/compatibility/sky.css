@@ -1,0 +1,65 @@
+/*
+ * Sky-site pieces for the compatibility and peer-to-peer diagrams. Names are prefixed `cpx-`.
+ * Only used on the sky branch (SITE_VARIANT === "sky"), so nothing here touches the green site.
+ */
+
+/* Diagram nodes are flat cards, as in the kit (src/components/sky/kit.css): white with a hairline edge, no shadow. */
+.cpx-node {
+  stroke: var(--sky-card-line);
+}
+
+/* A dot that rides to the middle of its path, waits there (a broker's queue), then carries on. */
+@keyframes cpx-hold {
+  42%,
+  60% {
+    stroke-dashoffset: -50;
+  }
+  100% {
+    stroke-dashoffset: -101;
+  }
+}
+
+/* A closed port in a wall that opens partway through a sequence. */
+@keyframes cpx-open {
+  to {
+    opacity: 0;
+  }
+}
+.cpx-open {
+  animation: cpx-open 260ms var(--ease-out) both;
+}
+
+/* The scenario timer: a rounded line that fills while its step plays. */
+@keyframes cpx-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cpx-open {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* Phones: hatch panels run to the screen's edges, as the kit's split sections do, so diagrams and tabs get the room. */
+@media (max-width: 639px) {
+  .sky-hatch.cpx-bleed {
+    margin-inline: -20px;
+    border-inline-width: 0;
+  }
+  .cpx-seg-tight .sky-seg-tab {
+    gap: 8px;
+    padding: 0 9px;
+    font-size: 14px;
+  }
+}
+
+/* A long segmented filter scrolls in its own full-width strip on phones instead of clipping at the column. */
+.cpx-seg-scroll .sky-seg {
+  max-width: none;
+}

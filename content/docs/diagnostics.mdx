@@ -1,0 +1,122 @@
+---
+title: "Diagnostics"
+description: "Ping, traceroute, bench, connections, and peer inspection for Pilot Protocol. Read configuration and operating guidance."
+---
+
+Tools for measuring latency, throughput, and inspecting network state.
+
+## health [#health]
+
+Quick check on daemon vitals:
+
+```bash
+pilotctl health
+```
+
+Returns: `status`, `uptime_seconds`, `connections`, `peers`, `bytes_sent`, `bytes_recv`
+
+```bash
+# Example output
+● pilot-daemon ok
+  uptime 01:23:45 · 3 connection(s)
+  peers 5 (4 encrypted, 1 via relay)
+  traffic ↑ 1.2 MB  ↓ 842 KB
+```
+
+## ping [#ping]
+
+Send echo probes to measure round-trip time:
+
+```bash
+pilotctl ping other-agent
+pilotctl ping other-agent --count 10
+pilotctl ping 0:0000.0000.0005 --timeout 30s
+```
+
+Uses the built-in echo service (port 7). Default: 4 pings.
+
+Returns: `target`, `results` \[\{`seq`, `bytes`, `rtt_ms`, `error`\}\], `timeout` (bool)
+
+```bash
+# Example output
+PING 0:0000.0000.4008
+seq=0 bytes=6 time=42.1ms  [dial=8.3ms echo=33.8ms]
+seq=1 bytes=6 time=39.7ms  [dial=7.9ms echo=31.8ms]
+seq=2 bytes=6 time=41.0ms  [dial=8.1ms echo=32.9ms]
+```
+
+## traceroute [#traceroute]
+
+Measure connection setup time and RTT samples:
+
+```bash
+pilotctl traceroute 0:0000.0000.0005
+```
+
+Returns: `target`, `setup_ms`, `rtt_samples` \[\{`rtt_ms`, `bytes`\}\]
+
+## bench [#bench]
+
+Measure throughput by sending data through the echo service:
+
+```bash
+pilotctl bench other-agent          # 1 MB (default)
+pilotctl bench other-agent 10       # 10 MB
+pilotctl bench other-agent 50
+```
+
+Returns: `target`, `sent_bytes`, `recv_bytes`, `send_duration_ms`, `total_duration_ms`, `send_mbps`, `total_mbps`
+
+```yaml
+# Example output
+BENCH 0:0000.0000.037D - sending 1.0 MB via echo port
+  Sent:     1.0 MB in 3.7s (0.3 MB/s)
+  Echoed:   1.0 MB in 12.6s (0.1 MB/s round-trip)
+```
+
+## peers [#peers]
+
+List connected peers:
+
+```bash
+pilotctl peers
+pilotctl peers --search 4008  # filter connected peers by node-ID substring
+```
+
+Returns: `peers` \[\{`node_id`, `encrypted`, `authenticated`, `relay` (bool)\}\], `total`, `encrypted` (count). Real endpoints are stripped by the pilotctl client before display.
+
+## connections [#connections]
+
+List active connections with transport stats:
+
+```bash
+pilotctl connections
+```
+
+Returns detailed per-connection information: connection ID, local/remote port, state, bytes sent/received, segments, retransmissions, and transport diagnostics - CWND (congestion window: TCP send rate limit), SRTT (smoothed round-trip time), and SACK (selective acknowledgements) stats.
+
+## info [#info]
+
+Full daemon status - everything at a glance:
+
+```bash
+pilotctl info
+```
+
+Returns: `node_id`, `address`, `hostname`, `uptime_secs`, `connections`, `ports`, `peers`, `encrypt`, `bytes_sent`, `bytes_recv`, per-connection stats, peer list with encryption status.
+
+## disconnect [#disconnect]
+
+Close a specific connection by ID:
+
+```bash
+# Find the connection ID first
+pilotctl connections
+
+# Close it
+pilotctl disconnect 42
+```
+
+Returns: `conn_id`
+
+[← Firewalls & Compat Mode](/docs/firewalls)[Configuration →](/docs/configuration)

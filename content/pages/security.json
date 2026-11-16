@@ -1,0 +1,140 @@
+{
+ "kind": "page",
+ "slug": "security",
+ "title": "What Pilot secures, and what it doesn’t.",
+ "seoTitle": "Pilot Protocol Security: Controls, Limits and Reporting",
+ "description": "The security controls that ship in Pilot Protocol, what the public backbone can see, what your application still owns, and how to report a vulnerability.",
+ "toc": [
+  {
+   "id": "what-pilot-secures-and-what-it-doesnt",
+   "text": "What Pilot secures, and what it doesn’t.",
+   "level": 2
+  },
+  {
+   "id": "in-the-code-you-can-read",
+   "text": "In the code you can read.",
+   "level": 2
+  },
+  {
+   "id": "ed25519-identity",
+   "text": "Ed25519 identity",
+   "level": 3
+  },
+  {
+   "id": "encrypted-tunnels",
+   "text": "Encrypted tunnels",
+   "level": 3
+  },
+  {
+   "id": "mutual-trust-handshakes",
+   "text": "Mutual trust handshakes",
+   "level": 3
+  },
+  {
+   "id": "private-by-default",
+   "text": "Private by default",
+   "level": 3
+  },
+  {
+   "id": "package-signing-and-pinning",
+   "text": "Package signing and pinning",
+   "level": 3
+  },
+  {
+   "id": "pre-trust-hardening",
+   "text": "Pre-trust hardening",
+   "level": 3
+  },
+  {
+   "id": "peer-traffic-separate-coordination",
+   "text": "Peer traffic. Separate coordination.",
+   "level": 2
+  },
+  {
+   "id": "what-the-backbone-can-see",
+   "text": "What the backbone can see.",
+   "level": 2
+  },
+  {
+   "id": "connectivity-is-not-permission-to-act",
+   "text": "Connectivity is not permission to act.",
+   "level": 2
+  },
+  {
+   "id": "checked-packages-ordinary-processes",
+   "text": "Checked packages. Ordinary processes.",
+   "level": 2
+  },
+  {
+   "id": "what-exists-stated-plainly",
+   "text": "What exists, stated plainly.",
+   "level": 2
+  },
+  {
+   "id": "the-documents-a-reviewer-asks-for",
+   "text": "The documents a reviewer asks for.",
+   "level": 2
+  },
+  {
+   "id": "privacy-policy",
+   "text": "Privacy policy",
+   "level": 3
+  },
+  {
+   "id": "sub-processors",
+   "text": "Sub-processors",
+   "level": 3
+  },
+  {
+   "id": "government-data-requests",
+   "text": "Government data requests",
+   "level": 3
+  },
+  {
+   "id": "terms-of-service",
+   "text": "Terms of Service",
+   "level": 3
+  },
+  {
+   "id": "cookie-policy",
+   "text": "Cookie policy",
+   "level": 3
+  },
+  {
+   "id": "vulnerability-disclosure",
+   "text": "Vulnerability disclosure",
+   "level": 3
+  },
+  {
+   "id": "what-we-hold-and-for-how-long",
+   "text": "What we hold, and for how long.",
+   "level": 2
+  },
+  {
+   "id": "what-the-live-counters-count",
+   "text": "What the live counters count.",
+   "level": 2
+  },
+  {
+   "id": "registered-addresses-all-time",
+   "text": "Registered addresses (all time)",
+   "level": 3
+  },
+  {
+   "id": "daemons-seen-in-the-last-30-minutes",
+   "text": "Daemons seen in the last 30 minutes",
+   "level": 3
+  },
+  {
+   "id": "registry-requests-per-second",
+   "text": "Registry requests per second",
+   "level": 3
+  },
+  {
+   "id": "found-something-tell-us-privately",
+   "text": "Found something? Tell us privately.",
+   "level": 2
+  }
+ ],
+ "html": "Security<h2 id=\"what-pilot-secures-and-what-it-doesnt\">What Pilot secures,<br/> <em>and what it doesn’t.</em></h2><p>How Pilot handles identity, encryption, trust and reachability, what the public backbone can see, and which decisions stay with your application. All of it can be checked against the source.</p><a href=\"/security/disclosure\">Report a vulnerability →</a><a href=\"/docs/security\">Security documentation</a><a href=\"https://github.com/pilot-protocol\">Inspect the source</a><a href=\"#metrics\">Metric definitions</a>Source<strong>AGPL-3.0</strong>The daemon, pilotctl, registry and beacon are public.Default<strong>Private</strong>A daemon’s endpoint stays hidden from peers it doesn’t trust.Tunnels<strong>X25519 + AES-256-GCM</strong>A key per pair of peers. Relays carry ciphertext only.Certification<strong>None</strong>Pilot has no SOC 2 report or other independent certification.Controls that ship<h2 id=\"in-the-code-you-can-read\">In the code<br/> <em>you can read.</em></h2><p>These run in every daemon by default. The last card lists the stricter checks operators can turn on; they are off by default so older clients keep working.</p><a href=\"/docs/security\">Daemon · default<h3 id=\"ed25519-identity\">Ed25519 identity</h3><p>Each daemon has a persistent Ed25519 key pair. Trust handshakes and identity-changing registry operations, such as key rotation, are signed with it.</p></a><a href=\"/docs/security\">Daemon · default<h3 id=\"encrypted-tunnels\">Encrypted tunnels</h3><p>X25519 key agreement gives each pair of peers its own secret. AES-256-GCM encrypts and authenticates every tunnel packet. Encryption is on unless a daemon is started with <code>--no-encrypt</code>.</p></a><a href=\"/docs/trust\">Daemon · default<h3 id=\"mutual-trust-handshakes\">Mutual trust handshakes</h3><p>A private node accepts streams and datagrams only from peers it trusts or shares a network with. A handshake has to be approved, and trust can be rejected or revoked with <code>pilotctl untrust</code>.</p></a><a href=\"/docs/trust\">Daemon · default<h3 id=\"private-by-default\">Private by default</h3><p>Daemons start private. Directory lookups don’t hand a private node’s endpoint to untrusted peers. Some metadata, such as a hostname you set, stays visible in the directory.</p></a><a href=\"/docs/app-store\">App Store<h3 id=\"package-signing-and-pinning\">Package signing and pinning</h3><p>Catalogue apps are reviewed, signature-verified and SHA-256 pinned before they install. An app declares its grants in its manifest and you accept them at install.</p></a><a href=\"/self-hosting/#hardening\">Operator flags · off by default<h3 id=\"pre-trust-hardening\">Pre-trust hardening</h3><p>Flags on the daemon, registry and beacon extend trust checks to key exchange, directory lookups, registration and hole punching. They are off by default; whoever runs each component turns them on.</p></a>Architecture<h2 id=\"peer-traffic-separate-coordination\">Peer traffic.<br/> <em>Separate coordination.</em></h2><p>Agent traffic runs in encrypted tunnels between peers. The registry and beacon only help peers find and reach each other: registration, discovery, NAT traversal and relay fallback.</p>Endpoint<strong>Agent A</strong>Ed25519 identityCoordination<strong>Registry + beacon</strong>Discovery, public keys, endpoint exchange, NAT traversalRun by Vulture Labs on the public backbone · or run your ownPayload<strong>Encrypted peer tunnel</strong>X25519 key exchange · AES-256-GCM tunnelDirect when possible · encrypted relay through the beacon when notEndpoint<strong>Agent B</strong>Ed25519 identity<b>The registry</b>Issues addresses, stores public keys, answers lookups, holds network membership and records which nodes trust each other.<b>The beacon</b>Tells a daemon its public address (STUN), coordinates hole punching, and relays encrypted packets when a direct path fails.<b>What you can change</b>Registry and beacon addresses are settings (<code>--registry</code>, <code>--beacon</code>). Both servers are open source, so you can <a href=\"/self-hosting/\">run your own</a>.Metadata<h2 id=\"what-the-backbone-can-see\">What the backbone<br/> <em>can see.</em></h2><p>On the public backbone, Vulture Labs runs the registry and beacon. This is what each part of the system handles in the clear.</p>PartRun byWhat it sees<b>Registry</b>Vulture Labs<p>Node ID, public key, version, hostname and tags if you set them, public or private flag, advertised endpoints, network membership, which nodes trust each other, heartbeat times, and the email you gave for key recovery, if any.</p><b>Beacon</b>Vulture Labs<p>Your public IP and port, hole-punch requests, and the timing and size of relayed packets. Relayed payloads are ciphertext; the beacon has no tunnel keys.</p><b>Peer tunnel</b>The two endpoints<p>Only the two peers can read the payload. Neither the registry nor the beacon receives the keys.</p><b>Data service agents</b>Vulture Labs<p>The <a href=\"/service-agents/\">agent you query</a> sees your query and calls its upstream data source. <code>/summary</code> and free-text queries are also sent to Google Gemini.</p><b>App Store broker</b>Vulture Labs<p>Some apps route calls through Pilot’s broker. The broker processes those request contents and forwards them to the provider named in the app’s listing.</p><b>Usage events</b>Vulture Labs<p><code>pilotctl</code> sends signed events for App Store catalogue views, app views, installs and reviews. Turn them off with <code>{\"consent\": {\"telemetry\": false}}</code> in <code>~/.pilot/config.json</code>; see <a href=\"/docs/consent\">consent</a>.</p>Responsibility split<h2 id=\"connectivity-is-not-permission-to-act\">Connectivity is not<br/> <em>permission to act.</em></h2><p>Pilot decides whether two endpoints can talk. Whether an agent may read data, spend money or make a commitment is decided by your application.</p>Pilot handles<b>Identity and reachability</b><ul><li>Daemon identity and signed handshakes</li><li>Encrypted tunnels between peers</li><li>Who can reach a private node: trust and network membership</li><li>Rejecting and revoking trust</li><li>NAT traversal and relay fallback</li><li>On a registry you run: roles, network policy and audit export</li></ul>Your application owns<b>What an agent may do</b><ul><li>Which tasks, tools and methods an agent may use</li><li>Spending, order and counterparty limits</li><li>Human approval for consequential actions</li><li>What data an agent may read, share or keep</li><li>Prompt, model and tool safety</li><li>Legal, regulatory and contractual compliance</li></ul><ol><li>01<b>Identify</b><p>The daemon proves its Ed25519 identity in the handshake.</p></li><li>02<b>Admit</b><p>A private node checks peer trust or shared network membership.</p></li><li>03<b>Constrain</b><p>A network with a port policy drops traffic to unlisted ports.</p></li><li>04<b>Authorize</b><p>Your application checks scope, data, budget and approvals.</p></li><li>05<b>Record</b><p>Your own logs, plus the registry’s audit export if you run the registry.</p></li></ol>!<p><b>A trusted connection only means two endpoints may exchange packets.</b> It does not authorize a purchase, a payment, a data disclosure or a contract. Put those checks in the application, with human approval where the consequence warrants it.</p>App Store<h2 id=\"checked-packages-ordinary-processes\">Checked packages.<br/> <em>Ordinary processes.</em></h2><p>Apps in the App Store are made by their publishers. Before a catalogue app installs, the daemon checks its signature and its SHA-256 pin.</p><ul><li>Review answers whether a listing meets the catalogue’s requirements.</li><li>Grants say what an app asks the daemon to do for it. The daemon checks them on calls it brokers.</li><li>Apps are not OS-sandboxed. An installed app runs as a normal process with your user’s permissions.</li><li>Most apps run locally and are free. Some call their publisher’s hosted service, and a few are metered against a per-user budget.</li></ul><a href=\"/docs/app-store\">Read the App Store model →</a>Current status<h2 id=\"what-exists-stated-plainly\">What exists,<br/> <em>stated plainly.</em></h2><p>The open-source registry also has private networks, owner, admin and member roles, OIDC/JWT validation, directory sync, network policy, audit export and blueprints. They need the registry admin token, so on the public backbone only its operators can use them. To use them yourself, <a href=\"/self-hosting/\">run your own registry</a>; nobody runs one for you.</p>TopicStatusPrecise statement<b>Protocol implementation</b>Open source<p>The daemon, pilotctl, registry and beacon are published under AGPL-3.0 and can be inspected, modified and redistributed under that license.</p><b>Wire specification</b>Published<p>Message types, addressing, transport, encryption and the trust model are documented alongside the implementation.</p><b>Pre-trust hardening</b>Operator flags<p>Strict checks on key exchange, directory lookups, registration and hole punching. Off by default; whoever runs the daemon, registry and beacon turns them on.</p><b>Registry controls</b>Self-hosted<p>Roles, identity-provider validation, policy, audit export and blueprints ship in the open-source registry and work on a registry you run.</p><b>App isolation</b>Not implemented<p>Apps run as ordinary processes. The daemon checks grants on brokered calls, but there is no OS-level sandbox.</p><b>Security certification</b>None<p>Pilot has no SOC 2 report or other independent certification. Evaluate the controls on this page against your own requirements.</p><b>Business-process governance</b>Your application<p>Pilot governs agent connectivity. Application authorization, approval flows and legal authority are set up by whoever deploys the agents.</p>Policies<h2 id=\"the-documents-a-reviewer-asks-for\">The documents a<br/> <em>reviewer asks for.</em></h2><p>Pilot Protocol is operated by Vulture Labs, Inc. The legal policies, the sub-processor list and the data-request process are published here.</p><a href=\"/privacy\">Policy<h3 id=\"privacy-policy\">Privacy policy</h3><p>What the daemon, website and registry collect, the legal basis for processing, and your GDPR and CCPA rights.</p></a><a href=\"/privacy#subprocessors\">Policy<h3 id=\"sub-processors\">Sub-processors</h3><p>The third parties that process data on our behalf, what each one does, and where the data is processed.</p></a><a href=\"/privacy#legal-requests\">Policy<h3 id=\"government-data-requests\">Government data requests</h3><p>We disclose user data only under valid legal process, narrow overbroad requests, and notify affected users unless the law prohibits it.</p></a><a href=\"/terms\">Policy<h3 id=\"terms-of-service\">Terms of Service</h3><p>The terms governing use of the Pilot Protocol daemon, website and Pilot-operated services.</p></a><a href=\"/cookies\">Policy<h3 id=\"cookie-policy\">Cookie policy</h3><p>The cookies set on pilotprotocol.network. Analytics and advertising cookies load only after you consent.</p></a><a href=\"/security/disclosure\">Reporting<h3 id=\"vulnerability-disclosure\">Vulnerability disclosure</h3><p>How to report a security issue, privacy concern or bug privately, and what to include.</p></a>Data handling<h2 id=\"what-we-hold-and-for-how-long\">What we hold,<br/> <em>and for how long.</em></h2><p>A summary of the commitments in our <a href=\"/privacy\">privacy policy</a>. Where the two differ, the privacy policy governs.</p>TopicSummaryPrecise statement<b>Hosting</b>United States<p>The registry and Pilot-operated agents run on Google Cloud Platform, with data at rest in <code>us-central1</code>. The website is served by Cloudflare’s global edge network.</p><b>Payload visibility</b>End-to-end<p>Peer-to-peer tunnel traffic is end-to-end encrypted, and we do not hold the keys. Relayed traffic stays encrypted; we see only routing metadata. Brokered App Store calls are the exception: our broker processes their request contents and forwards them to the provider named in the listing.</p><b>Encryption</b>In transit & at rest<p>TLS 1.2 or higher for control-plane traffic, AES-256-GCM for peer tunnels, and AES-256 encryption at rest.</p><b>Retention</b>Time-limited<p>Registration data is deleted after an agent has been offline for 30 consecutive days. Server access logs are deleted after 30 days. See <a href=\"/privacy#retention\">the full retention schedule</a>.</p><b>Breach notification</b>As required by law<p>If a data breach occurs, we notify affected users and the relevant authorities as applicable law requires.</p><b>Legal requests</b>Process required<p>We disclose user data only under valid, legally binding process, and we notify affected users first unless the law prohibits it. See <a href=\"/privacy#legal-requests\">the full policy</a>.</p>Metric definitions<h2 id=\"what-the-live-counters-count\">What the live<br/> <em>counters count.</em></h2><p>Network figures on this site come from the public registry’s telemetry endpoint. Each label below says exactly what its counter measures.</p><code>total_nodes</code><h3 id=\"registered-addresses-all-time\">Registered addresses (all time)</h3><p>Every address the public registry has issued. It is not a count of people, organizations, customers or agents online.</p><code>active_nodes</code><h3 id=\"daemons-seen-in-the-last-30-minutes\">Daemons seen in the last 30 minutes</h3><p>Daemons that sent the registry a heartbeat within its 30-minute stale threshold. One machine can run several daemons, and a daemon is not necessarily an AI agent.</p><code>requests_per_sec</code><h3 id=\"registry-requests-per-second\">Registry requests per second</h3><p>The rate of requests the public registry handles, such as heartbeats, lookups and registrations. It is not traffic between agents, which never passes through the registry.</p><p>Source: <a href=\"https://polo.pilotprotocol.network/api/public-stats\">public network telemetry JSON</a>. Where a page shows requests per hour, it is <code>requests_per_sec</code> × 3,600. Build-time values are used when the endpoint can’t be reached. These counters have not been independently audited.</p>Report a vulnerability<h2 id=\"found-something-tell-us-privately\">Found something?<br/> <em>Tell us privately.</em></h2><p>Send security issues, privacy concerns and bugs through the disclosure form, or email <a href=\"mailto:founders@pilotprotocol.network?subject=Pilot%20Protocol%20disclosure\">founders@pilotprotocol.network?subject=Pilot%20Protocol%20disclosure</a>. The channel supports coordinated disclosure; it does not promise a bounty, safe harbor or a fixed response time.</p><a href=\"/security/disclosure\">Report a vulnerability →</a><a href=\"/.well-known/security.txt\">security.txt</a><a href=\"/docs/security\">Security documentation</a>"
+}

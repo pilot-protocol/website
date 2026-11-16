@@ -1,0 +1,104 @@
+{
+ "kind": "app",
+ "slug": "io.pilot.sqlite",
+ "name": "SQLite",
+ "seoTitle": "SQLite: Agent App Methods & Install | Pilot Protocol",
+ "description": "Run SQLite from an agent — zero-server, single-file transactional SQL, no provisioning. Review setup, usage, and operating details.",
+ "headText": [
+  "SQLite",
+  "Pilot Protocol",
+  "·",
+  "io.pilot.sqlite",
+  "Run SQLite from an agent — zero-server, single-file transactional SQL, no provisioning.",
+  "Data & Storage",
+  "Live on catalogue",
+  "Install",
+  "Copy",
+  "pilotctl appstore install",
+  "io.pilot.sqlite"
+ ],
+ "metrics": {
+  "version": "v3.45.2",
+  "methods": "8",
+  "size": "9.2 MB",
+  "permissions": "None declared",
+  "platforms": "macOS · Linux"
+ },
+ "icon": "",
+ "related": [
+  "io.pilot.postgres",
+  "io.pilot.duckdb",
+  "io.pilot.mysql",
+  "io.pilot.redis",
+  "io.pilot.sixtyfour",
+  "io.pilot.orthogonal"
+ ],
+ "toc": [
+  {
+   "id": "about-sqlite",
+   "text": "About SQLite",
+   "level": 2
+  },
+  {
+   "id": "why-an-agent-wants-this",
+   "text": "Why an agent wants this",
+   "level": 3
+  },
+  {
+   "id": "methods",
+   "text": "Methods",
+   "level": 3
+  },
+  {
+   "id": "how-to-use-it",
+   "text": "How to use it",
+   "level": 3
+  },
+  {
+   "id": "configuration",
+   "text": "Configuration",
+   "level": 3
+  },
+  {
+   "id": "good-to-know",
+   "text": "Good to know",
+   "level": 3
+  },
+  {
+   "id": "methods-8",
+   "text": "Methods · 8",
+   "level": 2
+  },
+  {
+   "id": "full-usage-demo",
+   "text": "Full usage demo",
+   "level": 2
+  },
+  {
+   "id": "worked-examples",
+   "text": "Worked examples",
+   "level": 3
+  },
+  {
+   "id": "good-to-know-1",
+   "text": "Good to know",
+   "level": 3
+  },
+  {
+   "id": "next",
+   "text": "Next",
+   "level": 3
+  },
+  {
+   "id": "whats-new",
+   "text": "What’s New",
+   "level": 2
+  },
+  {
+   "id": "platform-compatibility",
+   "text": "Platform Compatibility",
+   "level": 2
+  }
+ ],
+ "html": "<h2 id=\"about-sqlite\">About SQLite</h2><p>This app installs the official <b>SQLite 3.45.2</b> command-line shell (<code>sqlite3</code>) on the host and fronts it as typed methods. The bundle is the upstream sqlite3 CLI binary (sha-pinned per OS/arch, fetched from the Pilot artifact registry at install) plus a tiny wrapper that serves a clean, complete <code>--help</code>.</p><p>SQLite is a <b>zero-server, single-file, transactional (OLTP)</b> SQL engine — the most widely deployed database in the world. There is <b>no server, no daemon, no port, no auth, and nothing to provision</b>: an agent opens an in-memory database (<code>:memory:</code>) or a single <code>.db</code> file like any other file. It is the durable, on-disk complement to <b>DuckDB's in-memory analytics</b> (<a href=\"/\">io.pilot.duckdb</a>) — real transactional SQL and durable agent memory, locally, with no cloud account.</p><h3 id=\"why-an-agent-wants-this\">Why an agent wants this</h3><p>- <b>Zero provisioning.</b> No server lifecycle, no credentials, no \"is the daemon up?\" state. Open <code>:memory:</code>   or a file and run SQL. - <b>Durable, transactional storage — the killer feature.</b> A single <code>.db</code> file *is* the database: ACID   transactions, real constraints, indexes, triggers, and full-text search, all persisted to one file the   agent can copy, back up, or hand off. The right home for durable agent memory and structured state. - <b>Universal + rock-solid.</b> SQLite is public-domain, exhaustively tested, and backward-compatible — the   format your data will still open in decades from now. - <b>Agent-friendly output.</b> <code>sqlite.query</code> returns rows as <b>JSON</b>; other shapes (CSV, table, Markdown,   line, HTML) are one <code>sqlite.exec</code> away. - <b>Full SQL.</b> Window functions, CTEs, JSON1, generated columns, upserts, FTS5, and a rich function library. - <b>Self-contained + offline.</b> One binary, no dependencies, no network.</p><h3 id=\"methods\">Methods</h3><p>- <code>sqlite.query</code> — run SQL, get rows back as a <b>JSON</b> array. In-memory or against a file. - <code>sqlite.script</code> — run a multi-statement SQL script (DDL + DML + a trailing SELECT) in one call. - <code>sqlite.schema</code> — print the <code>CREATE</code> DDL for every object in the database (<code>.schema</code>). - <code>sqlite.tables</code> — list the tables in the database (<code>.tables</code>). - <code>sqlite.exec</code> — run the CLI with a verbatim argv (+ optional stdin) for any flag, output mode, or   dot-command the curated methods don't cover (<code>.dump</code>, <code>.import</code>, <code>.backup</code>, <code>.clone</code>, <code>.read</code>, <code>-csv</code>, …). - <code>sqlite.cli_help</code> — the complete CLI help: every option <b>and</b> every dot-command, as clean text. - <code>sqlite.version</code> — the delivered SQLite version. <code>sqlite.help</code> — the self-describing method list.</p><h3 id=\"how-to-use-it\">How to use it</h3><p>1. <b>Quick query (no setup):</b> <code>sqlite.query</code> <code>{ \"database\": \":memory:\", \"sql\": \"SELECT 42 AS answer\" }</code>. 2. <b>Persistent database:</b> point <code>database</code> at a file path (<code>/work/app.db</code>); it's created on first use and    persists. The same file holds many tables, indexes, and views. 3. <b>Set up a schema:</b> <code>sqlite.script</code> <code>{ \"database\": \"/work/app.db\", \"sql\": \"CREATE TABLE notes(id INTEGER PRIMARY KEY, body TEXT); INSERT INTO notes(body) VALUES ('hello');\" }</code>. 4. <b>Anything else:</b> <code>sqlite.exec</code> <code>{ \"args\": [\"/work/app.db\", \"-cmd\", \".mode csv\", \"-cmd\", \".import /data/in.csv t\", \"SELECT count(*) FROM t\"] }</code>.</p><h3 id=\"configuration\">Configuration</h3><p>- <b><code>database</code></b> — <code>:memory:</code> (ephemeral, no provisioning) or an absolute path to a <code>.db</code>/<code>.sqlite</code> file   (created on first use, persists, holds many tables). - <b>Output mode</b> — <code>sqlite.query</code> returns JSON; choose any other mode via <code>sqlite.exec</code> (<code>-csv</code>, <code>-table</code>,   <code>-markdown</code>, <code>-line</code>, <code>-html</code>, <code>-box</code>, <code>-ascii</code>). - <b>Read-only</b> — open a database without write access via <code>sqlite.exec</code> (<code>-readonly</code>).</p><h3 id=\"good-to-know\">Good to know</h3><p>- On a non-zero exit (SQL error) the reply is <code>{stdout, stderr, exit}</code> so the caller sees everything the   CLI produced. - Runs on <b>macOS and Linux</b> (arm64 + amd64); the binary is fetched from the Pilot artifact registry and   sha-pinned on install. SQLite is in the <b>public domain</b> (the \"blessing\" license). - <code>sqlite.help</code> lists every method with its latency class — the self-describing discovery contract.</p><p>## SQLite CLI help (<code>sqlite.cli_help</code>) ``` SQLite CLI (sqlite3) — command-line options and meta-commands =============================================================</p><p>SQLite is a zero-server, single-file, transactional SQL database engine. The sqlite3 CLI runs SQL against a database file (created if it does not exist) or an in-memory database (use ':memory:' or omit the filename).</p><p>USAGE: sqlite3 [OPTIONS] [FILENAME] [SQL]</p><p>FILENAME is an SQLite database file; ':memory:' is an ephemeral in-memory DB. A trailing SQL string is executed (may contain multiple ;-separated statements).</p><p>------------------------------------------------------------------------------ COMMAND-LINE OPTIONS  (sqlite3 -help) ------------------------------------------------------------------------------    --                   treat no subsequent arguments as options    -append              append the database to the end of the file    -ascii               set output mode to 'ascii'    -bail                stop after hitting an error    -batch               force batch I/O    -box                 set output mode to 'box'    -column              set output mode to 'column'    -cmd COMMAND         run \"COMMAND\" before reading stdin    -csv                 set output mode to 'csv'    -deserialize         open the database using sqlite3_deserialize()    -echo                print inputs before execution    -init FILENAME       read/process named file    -[no]header          turn headers on or off    -help                show this message    -html                set output mode to HTML    -interactive         force interactive I/O    -json                set output mode to 'json'    -line                set output mode to 'line'    -list                set output mode to 'list'    -lookaside SIZE N    use N entries of SZ bytes for lookaside memory    -markdown            set output mode to 'markdown'    -maxsize N           maximum size for a --deserialize database    -memtrace            trace all memory allocations and deallocations    -mmap N              default mmap size set to N    -newline SEP         set output row separator. Default: '\\n'    -nofollow            refuse to open symbolic links to database files    -nonce STRING        set the safe-mode escape nonce    -nullvalue TEXT      set text string for NULL values. Default ''    -pagecache SIZE N    use N slots of SZ bytes each for page cache memory    -pcachetrace         trace all page cache operations    -quote               set output mode to 'quote'    -readonly            open the database read-only    -safe                enable safe-mode    -separator SEP       set output column separator. Default: '|'    -stats               print memory stats before each finalize    -table               set output mode to 'table'    -tabs                set output mode to 'tabs'    -unsafe-testing      allow unsafe commands and modes for testing    -version             show SQLite version    -vfs NAME            use NAME as the default VFS</p><p>------------------------------------------------------------------------------ DOT-COMMANDS  (meta-commands; usable inside the shell or via -cmd \"...\") ------------------------------------------------------------------------------ .auth ON|OFF             Show authorizer callbacks .backup ?DB? FILE        Backup DB (default \"main\") to FILE .bail on|off             Stop after hitting an error.  Default OFF .cd DIRECTORY            Change the working directory to DIRECTORY .changes on|off          Show number of rows changed by SQL .check GLOB              Fail if output since .testcase does not match .clone NEWDB             Clone data into NEWDB from the existing database .connection [close] [#]  Open or close an auxiliary database connection .databases               List names and files of attached databases .dbconfig ?op? ?val?     List or change sqlite3_db_config() options .dump ?OBJECTS?          Render database content as SQL .echo on|off             Turn command echo on or off .eqp on|off|full|...     Enable or disable automatic EXPLAIN QUERY PLAN .excel                   Display the output of next command in spreadsheet .exit ?CODE?             Exit this program with return-code CODE .expert                  EXPERIMENTAL. Suggest indexes for queries .explain ?on|off|auto?   Change the EXPLAIN formatting mode.  Default: auto .filectrl CMD ...        Run various sqlite3_file_control() operations .fullschema ?--indent?   Show schema and the content of sqlite_stat tables .headers on|off          Turn display of headers on or off .help ?-all? ?PATTERN?   Show help text for PATTERN .import FILE TABLE       Import data from FILE into TABLE .indexes ?TABLE?         Show names of indexes .limit ?LIMIT? ?VAL?     Display or change the value of an SQLITE_LIMIT .lint OPTIONS            Report potential schema issues. .load FILE ?ENTRY?       Load an extension library .log FILE|on|off         Turn logging on or off.  FILE can be stderr/stdout .mode MODE ?OPTIONS?     Set output mode .nonce STRING            Suspend safe mode for one command if nonce matches .nullvalue STRING        Use STRING in place of NULL values .once ?OPTIONS? ?FILE?   Output for the next SQL command only to FILE .open ?OPTIONS? ?FILE?   Close existing database and reopen FILE .output ?FILE?           Send output to FILE or stdout if FILE is omitted .parameter CMD ...       Manage SQL parameter bindings .print STRING...         Print literal STRING .progress N              Invoke progress handler after every N opcodes .prompt MAIN CONTINUE    Replace the standard prompts .quit                    Stop interpreting input stream, exit if primary. .read FILE               Read input from FILE or command output .restore ?DB? FILE       Restore content of DB (default \"main\") from FILE .save ?OPTIONS? FILE     Write database to FILE (an alias for .backup ...) .scanstats on|off|est    Turn sqlite3_stmt_scanstatus() metrics on or off .schema ?PATTERN?        Show the CREATE statements matching PATTERN .separator COL ?ROW?     Change the column and row separators .sha3sum ...             Compute a SHA3 hash of database content .shell CMD ARGS...       Run CMD ARGS... in a system shell .show                    Show the current values for various settings .stats ?ARG?             Show stats or turn stats on or off .system CMD ARGS...      Run CMD ARGS... in a system shell .tables ?TABLE?          List names of tables matching LIKE pattern TABLE .timeout MS              Try opening locked tables for MS milliseconds .timer on|off            Turn SQL timer on or off .trace ?OPTIONS?         Output each SQL statement as it is run .version                 Show source, library and compiler versions .vfsinfo ?AUX?           Information about the top-level VFS .vfslist                 List all available VFSes .vfsname ?AUX?           Print the name of the VFS stack .width NUM1 NUM2 ...     Set minimum column widths for columnar output</p><p>```</p><h2 id=\"methods-8\">Methods · 8</h2><code>sqlite.query</code>Run a SQL statement (or `;`-separated batch) against a database file (or `:memory:`) and return the rows as a JSON array of row objects — the most directly machine-parseable output. This is `sqlite3 -json <database> <sql>`.<code>sqlite.script</code>Run a multi-statement SQL script against a database file and return whatever the statements print. Ideal for schema setup, migrations, seed data, or an ETL batch: DDL + DML + a trailing SELECT in one call. This is `sqlite3 <database> <sql>` (SQLite executes every `;`-separated statement in order). For very large scripts or piping a file, use `sqlite.exec` with a `stdin` payload.<code>sqlite.schema</code>Print the `CREATE` statements (DDL) for every table, index, view, and trigger in the database — via SQLite's `.schema` meta-command. This is `sqlite3 <database> .schema`.<code>sqlite.tables</code>List the names of the tables (and views) in the database — via SQLite's `.tables` meta-command. This is `sqlite3 <database> .tables`.<code>sqlite.exec</code>Run the sqlite3 CLI with a verbatim argv — the full surface beyond the curated methods. Payload is {\"args\":[...]} (the args passed straight to `sqlite3`) plus optional {\"stdin\":\"...\"} piped to the process. Use it for any flag, output mode, or dot-command the curated methods don't cover: a different output mode (`-csv`, `-table`, `-markdown`, `-line`, `-html`, `-box`), `.dump`/`.import`/`.backup`/`.clone`/`.read` via `-cmd`, or a multi-statement session piped over stdin. Examples: {\"args\":[\":memory:\",\"-csv\",\"SELECT 1 AS a, 2 AS b\"]}; {\"args\":[\"/data/app.db\",\"-cmd\",\".mode csv\",\"-cmd\",\".import /data/in.csv t\",\"SELECT count(*) FROM t\"]}; {\"args\":[\"/data/app.db\"],\"stdin\":\"CREATE TABLE t(x);\\nINSERT INTO t VALUES (1),(2);\\nSELECT sum(x) FROM t;\"}.<code>sqlite.cli_help</code>Return the complete sqlite3 CLI help — every command-line option AND every dot-command (`.dump`, `.import`, `.backup`, `.clone`, `.mode`, `.schema`, `.tables`, `.read`, …) — captured verbatim from the delivered binary and rendered as clean, color-free text. The full reference for what sqlite.query / sqlite.exec accept.<code>sqlite.version</code>Print the delivered SQLite version, e.g. \"3.45.2 2024-03-12 …\". Needs no database. This is `sqlite3 -version`.<code>sqlite.help</code>Discovery: every method with its params, kind, and latency class — the self-describing contract.<h2 id=\"full-usage-demo\">Full usage demo</h2><p>When you need a zero-config embedded relational database in a single file (or :memory:) for local structured data with SQL — not a networked server and not high-concurrency writes.</p>Run this first — Run your first query (in-memory, no file)Call<pre><code>pilotctl appstore call io.pilot.sqlite sqlite.query '{\"database\":\":memory:\",\"sql\":\"SELECT 42 AS answer\"}'</code></pre>→<code>JSON rows: [{\"answer\":42}]</code><h3 id=\"worked-examples\">Worked examples</h3>Create a table and insert rowsCall<pre><code>pilotctl appstore call io.pilot.sqlite sqlite.script '{\"database\":\"/work/app.db\",\"sql\":\"CREATE TABLE users(id INTEGER PRIMARY KEY, name TEXT); INSERT INTO users(name) VALUES ('ada'),('lin');\"}'</code></pre>→<code>no rows; the users table now persists in /work/app.db</code>Query the rows backCall<pre><code>pilotctl appstore call io.pilot.sqlite sqlite.query '{\"database\":\"/work/app.db\",\"sql\":\"SELECT id, name FROM users ORDER BY id\"}'</code></pre>→<code>[{\"id\":1,\"name\":\"ada\"},{\"id\":2,\"name\":\"lin\"}]</code>List tablesCall<pre><code>pilotctl appstore call io.pilot.sqlite sqlite.tables '{\"database\":\"/work/app.db\"}'</code></pre>→<code>table/view names, e.g. users</code>Dump the schema (DDL)Call<pre><code>pilotctl appstore call io.pilot.sqlite sqlite.schema '{\"database\":\"/work/app.db\"}'</code></pre>→<code>CREATE TABLE users(id INTEGER PRIMARY KEY, name TEXT);</code><h3 id=\"good-to-know-1\">Good to know</h3><ul><li>Database file paths resolve inside the app sandbox, not your shell CWD.</li><li>:memory: is ephemeral — it vanishes when the call returns; use an absolute .db path to persist.</li><li>A file `database` is created automatically if it does not exist.</li><li>sqlite.query returns rows as JSON objects keyed by column name.</li></ul><h3 id=\"next\">Next</h3><ul><li><code>io.pilot.sqlite sqlite.help '{}'</code></li></ul><h2 id=\"whats-new\">What’s New</h2>v3.45.2Latest—<ul><li>Released v3.45.2</li></ul><h2 id=\"platform-compatibility\">Platform Compatibility</h2>macOSApple Silicon5.4 MBSupportedmacOSIntel5.6 MBSupportedLinuxarm645.2 MBSupportedLinuxamd644.8 MBSupported"
+}

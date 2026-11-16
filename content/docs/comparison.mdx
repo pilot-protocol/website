@@ -1,0 +1,151 @@
+---
+title: "vs MCP / A2A / ACP"
+description: "Compare Pilot Protocol with MCP, Google A2A, and ACP. Understand the differences in architecture, security, and use cases for AI agent communication."
+---
+
+Four protocols, different layers. Understand what each does, where they overlap, and when to use them together.
+
+## Overview [#overview]
+
+The AI agent ecosystem has multiple protocols addressing different communication needs. They operate at different layers of the stack and are often complementary rather than competing:
+
+- **Pilot Protocol** - A network-layer overlay that gives each agent a permanent virtual address, encrypted UDP tunnels, NAT traversal, and a trust model. Think of it as the "TCP/IP for agents."
+- **MCP (Model Context Protocol)** - Anthropic's protocol for connecting LLMs to tools and data sources. It defines how a model calls external functions and retrieves context.
+- **A2A (Agent-to-Agent)** - Google's protocol for agent interoperability. It defines agent cards, task lifecycle, and message exchange between agents.
+- **ACP (Agent Communication Protocol)** - BeeAI's open protocol for agent interoperability. It defines how agents discover each other, exchange messages, and coordinate tasks across frameworks over a RESTful API.
+
+## vs MCP (Model Context Protocol) [#vs-mcp]
+
+MCP connects an LLM to tools and data sources - it answers "how does my model call this function?" Pilot Protocol connects agents to each other - it answers "how does my agent reach that agent?"
+
+|  | Pilot Protocol | MCP |
+| --- | --- | --- |
+| **Layer** | Network (L3/L4) | Application (L7) |
+| **Purpose** | Agent-to-agent connectivity | Model-to-tool connectivity |
+| **Transport** | Encrypted UDP tunnels | stdio, Streamable HTTP |
+| **Addressing** | 48-bit virtual addresses | Named tool endpoints |
+| **NAT traversal** | Built-in (STUN + relay) | Not applicable |
+| **Trust model** | Mutual handshake + crypto | Local process, or OAuth for HTTP |
+| **Discovery** | Registry + tags + DNS | Tool manifests |
+| **Multi-agent** | Native (any-to-any) | Hub-and-spoke (host ↔ server) |
+
+**Key difference:** MCP connects a model to tools and data via servers (local over stdio, or remote over Streamable HTTP). Pilot Protocol is designed for distributed agents communicating across networks. An MCP server could run *on top of* a Pilot tunnel to expose tools to remote agents.
+
+Read more: [MCP + Pilot: Tools and Network](/blog/mcp-plus-pilot-tools-and-network)
+
+## vs A2A (Agent-to-Agent) [#vs-a2a]
+
+A2A defines the application-level contract between agents - agent cards, task lifecycle, and message schemas. Pilot Protocol provides the network-level connectivity that gets those messages from one agent to another.
+
+|  | Pilot Protocol | A2A |
+| --- | --- | --- |
+| **Layer** | Network (L3/L4) | Application (L7) |
+| **Purpose** | Connectivity + encryption + trust | Task lifecycle + interop |
+| **Transport** | Encrypted UDP tunnels | HTTP/JSON-RPC |
+| **Discovery** | Registry + tags + DNS | Agent cards (/.well-known/agent-card.json) |
+| **NAT traversal** | Built-in (STUN + relay) | Requires public endpoints or VPN |
+| **Security** | X25519+AES-256-GCM per tunnel | Delegated to HTTP/TLS |
+| **Addressing** | Permanent virtual addresses | URLs |
+| **Offline support** | Inbox queuing | Polling / push notifications |
+
+**Key difference:** A2A assumes agents are reachable via HTTP URLs. Pilot Protocol makes agents reachable even behind NATs, firewalls, or without public IPs. A2A agent cards can advertise Pilot addresses, and A2A JSON-RPC messages can travel over Pilot tunnels.
+
+Read more: [A2A Agent Cards over Pilot Tunnels](/blog/a2a-agent-cards-over-pilot-tunnels)
+
+## vs ACP (Agent Communication Protocol) [#vs-acp]
+
+ACP is an application-layer protocol for agent interoperability over REST - how agents discover peers, exchange messages, and coordinate workflows across frameworks. Pilot Protocol focuses on the network layer beneath.
+
+|  | Pilot Protocol | ACP |
+| --- | --- | --- |
+| **Layer** | Network (L3/L4) | Application / Runtime (L7) |
+| **Purpose** | Cross-network connectivity | Cross-framework agent interop (REST) |
+| **Scope** | Internet-scale (any network) | Application layer (any HTTP endpoint) |
+| **Transport** | Encrypted UDP tunnels | HTTP/REST |
+| **Discovery** | Global registry + tags | Online and offline agent discovery |
+| **Trust** | Mutual handshake + crypto identity | Application-defined (over HTTPS) |
+| **NAT traversal** | Built-in | None (needs reachable HTTP endpoints) |
+
+**Key difference:** ACP defines how agents talk (REST messages, discovery, task lifecycle) but assumes reachable HTTP endpoints. Pilot Protocol provides the encrypted transport and addressing beneath, so ACP agents can reach each other across different machines, networks, and organizations.
+
+## Feature matrix [#matrix]
+
+| Feature | Pilot | MCP | A2A | ACP |
+| --- | --- | --- | --- | --- |
+| Permanent agent identity | Yes | No | Agent cards | — |
+| Virtual addressing | 48-bit | No | No | No |
+| End-to-end encryption | X25519+AES-256-GCM | No | TLS | TLS |
+| NAT traversal | STUN+relay | N/A | No | No |
+| Mutual trust model | Yes | No | No | No |
+| Peer discovery | Registry+tags | Tool manifest | Agent cards | Directory |
+| Pub/Sub | Built-in | No | No | No |
+| Task delegation | App-level (via service agents) | No | Yes | Yes |
+| Tool calling | Via services | Yes | No | No |
+| Streaming | Yes | SSE | SSE | Yes |
+| Offline/async | Inbox | No | Polling | Yes |
+| Dependencies | Small (pure Go) | SDK | HTTP stack | Runtime |
+| Transport | UDP | stdio/HTTP | HTTP | HTTP |
+
+## When to use what [#when]
+
+### Use Pilot Protocol when you need: [#use-pilot-protocol-when-you-need]
+
+- Agents communicating across networks, NATs, or organizations
+- Permanent agent identity that survives restarts and migrations
+- End-to-end encryption without relying on TLS termination
+- A trust model where agents explicitly approve peers
+- Lightweight networking with minimal infrastructure (no HTTP server, no cloud platform to manage)
+
+### Use MCP when you need: [#use-mcp-when-you-need]
+
+- An LLM to call external tools (databases, APIs, file systems)
+- Local tool integration within a single application
+- Standardized tool discovery and invocation
+
+### Use A2A when you need: [#use-a2a-when-you-need]
+
+- Interoperability between agents from different vendors
+- Structured task lifecycle (submit, progress, complete)
+- Agent capability discovery via agent cards
+
+### Use ACP when you need: [#use-acp-when-you-need]
+
+- Cross-framework agent orchestration over REST
+- Local agent coordination and workflow management
+- Framework-agnostic agent interop over HTTP
+
+## Using them together [#together]
+
+These protocols are designed for different layers and combine naturally:
+
+### Pilot + MCP [#pilot-mcp]
+
+Run an MCP server on one machine. Expose it over a Pilot tunnel. Remote agents connect to the MCP server's Pilot address - no public IP needed, encrypted end-to-end, trust-gated access.
+
+```bash
+# Agent A runs an MCP server, exposed on Pilot port 80
+# Agent B connects from across the internet
+pilotctl connect <agent-a-address> 80
+# MCP JSON-RPC flows over the encrypted Pilot tunnel
+```
+
+### Pilot + A2A [#pilot-a2a]
+
+Agents advertise A2A agent cards with their Pilot address. Task requests and responses travel over Pilot tunnels instead of public HTTP endpoints. NAT traversal, encryption, and trust come for free.
+
+```bash
+# Agent card includes Pilot address instead of URL
+{
+  "name": "research-agent",
+  "pilot_address": "1:0001.0000.0042",
+  "skills": [{"name": "web-research"}]
+}
+```
+
+### Pilot + ACP [#pilot-acp]
+
+ACP runtimes on different machines connect via Pilot tunnels. Agents in runtime A can discover and communicate with agents in runtime B as if they were local - the Pilot tunnel handles routing, encryption, and NAT traversal.
+
+**The short version:** MCP, A2A, and ACP define *what* agents say. Pilot Protocol defines *how* they reach each other. Use the right protocol at the right layer.
+
+[← Troubleshooting](/docs/troubleshooting)[vs Tailscale / ZeroTier / Nebula →](/docs/comparison-networking)

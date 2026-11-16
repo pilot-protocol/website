@@ -1,0 +1,122 @@
+/*
+ * Variant D, "Sky": the flight design (Figma "On progress - 12 Nov", desktop 158:302).
+ * Loaded only on /v4. Sky blues replace lime as the accent; paper and ink stay.
+ */
+
+.v4-page {
+  /* The palette from the design. */
+  --sky-900: #0a2a9c;
+  --sky-800: #0b2ca0;
+  --sky-600: #1f5bff;
+  --sky-400: #5aa9ff;
+  --sky-200: #b9dcff;
+  --sky-50: #eaf3ff;
+
+  /* Roles. accent = text and icons on the page, fill = solid blue surfaces. */
+  --sky-accent: #0b2ca0;
+  --sky-fill: #1f5bff;
+  --sky-deep: #0b2ca0;
+  --sky-tint: rgb(31 91 255 / 0.08);
+  --sky-tile: rgb(26 26 26 / 0.05);
+  --sky-hero: linear-gradient(180deg, #0a2a9c 0%, #1f5bff 38%, #5aa9ff 72%, #b9dcff 92.308%, var(--color-bg) 100%);
+
+  /* Shared components (LiveDot, Command, Packet…) pick up the sky accent here. */
+  --color-lime-ink: var(--sky-accent);
+  --color-packet: var(--sky-fill);
+}
+
+/* Dark theme: the same flight at night. */
+.dark .v4-page {
+  --sky-accent: #8ec1ff;
+  --sky-fill: #2f6bff;
+  --sky-deep: #1438b8;
+  --sky-tint: rgb(90 169 255 / 0.12);
+  --sky-tile: rgb(242 242 236 / 0.05);
+  --sky-hero: linear-gradient(180deg, #030a2a 0%, #0a2a9c 42%, #1d4fd6 72%, #23314f 92%, var(--color-bg) 100%);
+}
+
+/* The hero runs up under the transparent header (64px plus its 1px bottom border). */
+.v4-under-header {
+  margin-top: -65px;
+  padding-top: 65px;
+}
+
+/* The page brings its own footer (Figma 160:838). */
+body:has(.v4-page) [data-site-footer] {
+  display: none;
+}
+
+/* ---------- Header on the sky ---------- */
+
+/* Thin dividers between the nav links, as in the design. */
+header[data-sky="true"] nav > ul > li + li::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 1px;
+  height: 24px;
+  translate: 0 -50%;
+  background: var(--color-edge-2);
+}
+
+/* At the top of the page: white on blue, transparent. Only the bar itself turns white; the
+   dropdown panel and the mobile menu keep the theme's own colours. */
+header[data-sky="true"][data-scrolled="false"] {
+  border-bottom-color: transparent;
+}
+header[data-sky="true"][data-scrolled="false"] > nav {
+  --color-fg: #ffffff;
+  --color-soft: rgb(255 255 255 / 0.85);
+  --color-mute: rgb(255 255 255 / 0.75);
+  --color-edge: rgb(255 255 255 / 0.12);
+  --color-edge-2: rgb(255 255 255 / 0.22);
+}
+header[data-sky="true"][data-scrolled="false"] > nav > a,
+header[data-sky="true"][data-scrolled="false"] > nav > ul > li > a,
+header[data-sky="true"][data-scrolled="false"] > nav > div > a:not([href="#get-started"]),
+header[data-sky="true"][data-scrolled="false"] > nav > div > button {
+  color: rgb(255 255 255 / 0.88);
+}
+@media (hover: hover) and (pointer: fine) {
+  header[data-sky="true"][data-scrolled="false"] > nav > ul > li > a:hover,
+  header[data-sky="true"][data-scrolled="false"] > nav > div > a:not([href="#get-started"]):hover {
+    color: #ffffff;
+  }
+}
+/* The Protocol dropdown is a card on the page: give it the theme's colours back. */
+header[data-sky="true"] > nav > ul > li > div {
+  --color-fg: #141413;
+  --color-soft: #2f2f2c;
+  --color-mute: #696962;
+  --color-edge: rgb(20 20 18 / 0.08);
+  --color-edge-2: rgb(20 20 18 / 0.13);
+}
+.dark header[data-sky="true"] > nav > ul > li > div {
+  --color-fg: #f2f2ec;
+  --color-soft: #cfcfc8;
+  --color-mute: #9b9b93;
+  --color-edge: rgb(242 242 236 / 0.09);
+  --color-edge-2: rgb(242 242 236 / 0.16);
+}
+/* Install stays the design's white button with ink text. */
+header[data-sky="true"][data-scrolled="false"] > nav a[href="#get-started"] {
+  background: #ffffff;
+  color: #0d1117;
+  box-shadow:
+    0 0 0 1px rgb(13 17 23 / 0.08),
+    inset 0 -1px 0 rgb(13 17 23 / 0.14);
+}
+
+/*
+ * Section panels: one flat, slightly sunken surface in both themes (the client chose it over the
+ * sky-to-peach gradients). Covers the shared .lived-sky surface, the passport and the get-started stage.
+ */
+html .lived-sky,
+html.dark .lived-sky,
+html .board-stage,
+html.dark .board-stage,
+html .pp-panel,
+html.dark .pp-panel {
+  background: var(--color-bg-deep);
+}

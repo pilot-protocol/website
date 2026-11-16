@@ -1,0 +1,81 @@
+{
+ "kind": "app",
+ "slug": "io.pilot.kinetic",
+ "name": "Kinetic Pricing",
+ "seoTitle": "Kinetic Pricing Agent App: Features & Setup | Pilot Protocol",
+ "description": "Decide what to charge, using answers from your own customers rather than a guess. Review setup, usage, and operating details.",
+ "headText": [
+  "Kinetic Pricing",
+  "Kinetic Pricing",
+  "·",
+  "io.pilot.kinetic",
+  "Decide what to charge, using answers from your own customers rather than a guess.",
+  "Work & Research",
+  "Live on catalogue",
+  "Install",
+  "Copy",
+  "pilotctl appstore install",
+  "io.pilot.kinetic"
+ ],
+ "metrics": {
+  "version": "v1.0.0",
+  "methods": "27",
+  "size": "—",
+  "permissions": "4 declared",
+  "platforms": "macOS · Linux"
+ },
+ "icon": "/appicons/optimized/io.pilot.kinetic-240.webp",
+ "related": [
+  "io.pilot.generallegal",
+  "com.comos-federation.connector",
+  "io.pilot.rentahuman"
+ ],
+ "toc": [
+  {
+   "id": "about-kinetic-pricing",
+   "text": "About Kinetic Pricing",
+   "level": 2
+  },
+  {
+   "id": "methods-27",
+   "text": "Methods · 27",
+   "level": 2
+  },
+  {
+   "id": "full-usage-demo",
+   "text": "Full usage demo",
+   "level": 2
+  },
+  {
+   "id": "worked-examples",
+   "text": "Worked examples",
+   "level": 3
+  },
+  {
+   "id": "what-it-costs",
+   "text": "What it costs",
+   "level": 3
+  },
+  {
+   "id": "good-to-know",
+   "text": "Good to know",
+   "level": 3
+  },
+  {
+   "id": "next",
+   "text": "Next",
+   "level": 3
+  },
+  {
+   "id": "whats-new",
+   "text": "What’s New",
+   "level": 2
+  },
+  {
+   "id": "platform-compatibility",
+   "text": "Platform Compatibility",
+   "level": 2
+  }
+ ],
+ "html": "<h2 id=\"about-kinetic-pricing\">About Kinetic Pricing</h2><p>Kinetic Pricing runs real pricing research end to end: choose the method that fits the decision, draft and preview the survey, send a link to your own customers, and read results computed by an analysis engine rather than asserted by a model.</p><p><b>Pick the right method or the answer is worthless.</b> <code>method_recommend</code> takes the decision in plain language and returns the method that answers it. Van Westendorp finds an acceptable price *range*; Gabor-Granger tests specific price *points* and produces a demand curve; MaxDiff ranks which features carry value; choice-based conjoint models trade-offs. Asking the wrong one produces a confident, useless number.</p><p><b>Everything up to launch is free.</b> Drafting, editing, regenerating the survey and previewing it cost nothing, and preview stores no respondent evidence. Launching costs $149-$199 depending on method, and that fee is paid by a human on Stripe's hosted page rather than out of an agent's budget. <code>study_checkout_create</code> returns the link and explicitly does not complete the purchase.</p><p><b>You supply the respondents.</b> Kinetic has no panel. <code>respondent_link_get</code> gives a link to send to your own customers or prospects, so the quality of the answer depends on who you send it to.</p><p><b>The numbers are computed, not narrated.</b> <code>results_get</code> returns what the analysis engine calculated, <code>evidence_get</code> traces a number back to the answers behind it, and <code>narrative_generate</code> writes an explanation *from* those results. Check <code>study_quality_get</code> before believing any of it, since speeders and straight-liners produce clean-looking nonsense, and check <code>study_progress_get</code> against the method's recommended minimum sample.</p><p>Also included: pricing-page teardowns, Kinetic's published research, and CSV export.</p><h2 id=\"methods-27\">Methods · 27</h2><code>kinetic.method_list</code>List the pricing-research methods available, with each one's server-owned launch price in cents, methodology version, and sample-size guidance. Van Westendorp finds an acceptable price RANGE, Gabor-Granger tests exact price POINTS, MaxDiff ranks feature value, choice-based conjoint models trade-offs. Free, and the right first call when you do not yet know which study to run.<code>kinetic.method_recommend</code>Describe the pricing decision in plain language and get back the method that fits it, with reasoning. Free. Use this instead of guessing between Van Westendorp and Gabor-Granger: they answer different questions, and the wrong one produces a confident, useless number.<code>kinetic.study_create</code>START HERE once you know the decision. Creates a draft study. You do NOT pick the method: Kinetic derives the methodology from decision_type (first_time and new_tier map to Van Westendorp today) and returns it on the study along with price_cents. Free — a draft costs nothing and is not launched. Returns {id, methodology, status:\"draft\", price_cents}.<code>kinetic.study_prefill</code>Generate a draft study filled in from a description of your product and audience, so you edit a sensible starting point rather than an empty form. Free.<code>kinetic.study_get</code>Read one study: its configuration, state, and position in the lifecycle. Free.<code>kinetic.study_list</code>List your studies with their states. Free.<code>kinetic.study_update</code>Edit a draft study: name, prices, features, audience and question configuration. Only the fields you send change. Free, and only valid before launch.<code>kinetic.study_duplicate</code>Copy an existing study into a new draft, to run the same design against a different audience or set of prices. Free.<code>kinetic.survey_regenerate</code>Regenerate the respondent-facing survey from the study's current configuration after editing it. Free.<code>kinetic.survey_preview</code>Read the survey exactly as a respondent will see it, WITHOUT storing any respondent evidence. Free. Always preview before launching: once a study is live the questions are fixed, and a bad question wastes the whole sample.<code>kinetic.study_launch</code>Take a draft live so it can collect responses. COSTS MONEY: the launch price comes from kinetic.method_list (currently $149-$199 by method) and must be paid first via kinetic.study_checkout_create. Confirm with your human before calling. Once live the questions are fixed.<code>kinetic.respondent_link_get</code>Get the link to send to your customers or prospects. THEY are the respondents: Kinetic supplies no panel, so the quality of the answer depends on who you send this to. Free.<code>kinetic.study_progress_get</code>How many responses have arrived against the recommended sample size. Free. Poll after launch; results are only meaningful once you clear the method's recommended minimum.<code>kinetic.study_quality_get</code>Response-quality signals: speeders, straight-liners, and other patterns meaning a response should not be trusted. Free. Check this before believing the results.<code>kinetic.study_close</code>Stop collecting responses and finalize the study so results can be computed. Free.<code>kinetic.results_get</code>The deterministic results: numbers Kinetic's analysis engine computed from the responses, not a model's opinion of them. Free. This is the output you act on.<code>kinetic.evidence_get</code>The structured respondent evidence behind the results, so a number can be traced to the answers that produced it. Free.<code>kinetic.narrative_generate</code>Generate a written explanation of the results. The narrative is written FROM the deterministic results, so it explains the computed numbers rather than inventing them. Free.<code>kinetic.narrative_get</code>Read a previously generated narrative. Free.<code>kinetic.results_export_csv</code>Export results and responses as CSV for analysis elsewhere. Free.<code>kinetic.offer_list</code>List what is purchasable and what it costs: one-time study prices and Kinetic Pro plans. Free, and the honest place to check a price before committing to a spend.<code>kinetic.study_checkout_create</code>Start payment for a draft study. Returns {checkout_url, study_id, amount_cents} and does NOT complete the purchase. A human must open checkout_url and pay on Stripe's hosted page; hand them the link and stop. Once paid, kinetic.study_launch will work. Confirm the amount with your human first.<code>kinetic.teardown_create</code>Run a teardown of a public pricing page and get a structured read of how it is constructed. Free.<code>kinetic.teardown_get</code>Read a completed teardown. Free.<code>kinetic.research_list</code>Browse Kinetic's published pricing research. Free.<code>kinetic.research_get</code>Read one published research piece. Free.<code>kinetic.task_get</code>Poll a long-running task (prefill, teardown, export) for completion. Free.<h2 id=\"full-usage-demo\">Full usage demo</h2><p>When you need to know what to charge and want it grounded in your own customers' answers: a price range, a specific price point, or which features carry the value.</p>Run this first — Find out which study answers your question$0.00 (read)Call<pre><code>pilotctl appstore call io.pilot.kinetic kinetic.method_recommend '{\"decision\":\"What should we charge for our Pro tier?\"}'</code></pre>→<code>{\"study_type\":\"van_westendorp\",\"reason\":\"You need a price RANGE, not specific points.\"}</code><p>Free. The two methods answer different questions, and the wrong one gives a confident useless number.</p><h3 id=\"worked-examples\">Worked examples</h3>Draft a study and preview it$0.00 (draft, free)Call<pre><code>pilotctl appstore call io.pilot.kinetic kinetic.study_create '{\"Idempotency-Key\":\"&lt;uuid&gt;\",\"name\":\"Pro tier\",\"product_desc\":\"SaaS analytics for small teams\",\"segment_desc\":\"Founders at 5-50 person startups\",\"decision_type\":\"first_time\",\"currency\":\"USD\"}'</code></pre>→<code>{\"id\":\"3572c965-...\",\"methodology\":\"van_westendorp\",\"status\":\"draft\",\"price_cents\":14900}</code><p>decision_type picks the methodology for you. Every mutating call needs an Idempotency-Key.</p>Check the price before spending$0.00 (read)Call<pre><code>pilotctl appstore call io.pilot.kinetic kinetic.offer_list '{}'</code></pre>→<code>{\"offers\":[{\"study_type\":\"van_westendorp\",\"price_cents\":14900}]}</code><p>Launching costs $149-$199, far above the $5 budget, so a human pays on Stripe.</p>Read computed results, not guesses$0.00 (read)Call<pre><code>pilotctl appstore call io.pilot.kinetic kinetic.results_get '{\"id\":\"stu_abc123\"}'</code></pre>→<code>{\"optimal_price_point\":42,\"acceptable_range\":{\"low\":34,\"high\":58},\"n\":31}</code><p>Call study_quality_get first: speeders make a clean number worthless.</p><h3 id=\"what-it-costs\">What it costs</h3>$5.00 per Pilot userfree budget · billed in micro-USD (1000000 = $1.00)<table><thead><tr><th>Operation</th><th>Price</th><th>Notes</th></tr></thead><tbody><tr><td><code>all research methods</code></td><td>free</td><td>discovery, drafting, preview, progress, quality, results, evidence, narrative, export and teardowns cost nothing against the Pilot budget</td></tr><tr><td><code>kinetic.study_checkout_create</code></td><td>free</td><td>returns a Stripe link; the $149-$199 charge happens on Stripe and is paid by the human who opens it, not from your Pilot budget</td></tr></tbody></table><p>$0.00 against the Pilot budget. The research loop is free; the study fee is paid by a human on Stripe.</p><h3 id=\"good-to-know\">Good to know</h3><ul><li>Everything except launching is free. The $149-$199 fee is paid by a human on Stripe, not your budget.</li><li>Every mutating call needs an Idempotency-Key header; a retry with the same key is safe.</li><li>study_checkout_create returns a link and does NOT pay. Hand the URL to your human and stop.</li><li>Preview before launch — once live, questions are fixed.</li><li>You supply the respondents; Kinetic has no panel.</li><li>Check study_quality_get and progress before trusting a result.</li></ul><h3 id=\"next\">Next</h3><ul><li><code>io.pilot.kinetic kinetic.balance '{}'</code></li><li><code>io.pilot.kinetic kinetic.help '{}'</code></li></ul><h2 id=\"whats-new\">What’s New</h2>v1.0.0Latest—<ul><li>First release on the Pilot app store.</li></ul><h2 id=\"platform-compatibility\">Platform Compatibility</h2>macOSApple SiliconSupportedmacOSIntelSupportedLinuxarm64SupportedLinuxamd64Supported"
+}

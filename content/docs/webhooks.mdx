@@ -1,0 +1,241 @@
+---
+title: "Webhooks"
+description: "Receive real-time HTTP notifications for Pilot Protocol daemon events. Read implementation details, configuration, and operational guidance."
+---
+
+Receive real-time HTTP POST notifications for daemon events.
+
+## Overview [#overview]
+
+When configured, the daemon POSTs a JSON event to your webhook URL every time something happens - connections, trust changes, messages received, pub/sub activity, and more. Events are delivered asynchronously and non-blocking. Delivery is buffered (a 1024-event channel) and each event gets 3 delivery attempts total with a 1s doubling backoff between attempts. Events are dropped immediately — zero attempts — when the 1024-event buffer is full, and while the circuit breaker is open (it opens after 5 consecutive failures and cools down for 30s) events are skipped. There is no durable/redelivery queue.
+
+## Configuration [#configuration]
+
+### At daemon startup [#at-daemon-startup]
+
+```bash
+pilotctl daemon start --webhook http://localhost:8080/events
+```
+
+### At runtime [#at-runtime]
+
+```bash
+pilotctl set-webhook http://localhost:8080/events
+```
+
+Persists to `~/.pilot/config.json` and applies immediately to the running daemon.
+
+Returns: `webhook`, `applied` (bool - true if daemon is running and accepted the change)
+
+### Clear webhook [#clear-webhook]
+
+```bash
+pilotctl clear-webhook
+```
+
+Removes the webhook URL from config and the running daemon. Returns: `webhook`, `applied` (bool)
+
+### Via config file [#via-config-file]
+
+You can also set the webhook URL in `~/.pilot/config.json`:
+
+```json
+{
+  "registry": "34.71.57.205:9000",
+  "beacon": "34.71.57.205:9001",
+  "webhook": "http://localhost:8080/events"
+}
+```
+
+## Event types [#events]
+
+### Daemon & node lifecycle [#daemon-node-lifecycle]
+
+| Event | Description |
+| --- | --- |
+| daemon.shutting\_down | Daemon is shutting down (final pre-exit event) |
+| node.registered | Daemon registered with the registry |
+| node.reregistered | Re-registration after keepalive timeout |
+| agent.registered | The daemon registered (or re-registered) itself with the registry |
+| agent.heartbeat | The daemon's own periodic liveness heartbeat |
+| key.rotated | Daemon's Ed25519 keypair was rotated |
+| network.auto\_joined | Daemon auto-joined a network on startup |
+
+### Connections [#connections]
+
+| Event | Description |
+| --- | --- |
+| conn.syn\_received | Incoming connection request |
+| conn.established | Connection fully established |
+| conn.fin | Connection closed gracefully (FIN) |
+| conn.rst | Connection reset |
+| conn.idle\_timeout | Connection timed out due to inactivity |
+| conn.dead\_peer | Keepalive probes failed; peer declared dead |
+| conn.accept\_queue\_full | Accept queue overflowed — connection dropped before processing |
+| syn.rejected | Incoming SYN rejected (untrusted source) |
+| syn.port\_rejected | Incoming SYN rejected by network policy |
+
+### Tunnels [#tunnels]
+
+| Event | Description |
+| --- | --- |
+| tunnel.peer\_added | New tunnel peer discovered |
+| tunnel.established | Encrypted tunnel to a peer established - carries `peer_node_id`, `authenticated`, `relay`, and `rekeyed` (true when it followed a key rotation) |
+| tunnel.rekey\_gave\_up | Key-exchange retransmit to `peer_node_id` gave up after the maximum rekey attempts |
+| tunnel.relay\_activated | Relay fallback activated for a peer (symmetric NAT) |
+| tunnel.desync\_salvage | Tunnel key desync detected and salvaged via re-handshake |
+| tunnel.rx\_silence | Inbound path silent while transmitting — watchdog attempting soft recovery (beacon + registry re-registration) |
+| tunnel.rx\_recovered | Inbound path recovered after a watchdog soft recovery |
+| tunnel.rx\_wedged\_exit | Inbound path wedged past soft recovery — daemon exiting (code 86) for supervisor respawn |
+| tunnel.rx\_wedge\_restart\_loop | Restart-loop circuit breaker opened — repeated wedge exits within the window; daemon stays up and keeps soft-recovering instead of exiting |
+| tunnel.path\_suspect | Per-peer path watchdog: a peer stayed inbound-silent past the probe budget — its path is being reset in place (prefer-direct sequence) |
+| tunnel.path\_recovered | Per-peer path watchdog: a probed peer's inbound traffic resumed — suspicion cleared without a reset |
+
+### Trust & handshakes [#trust-handshakes]
+
+| Event | Description |
+| --- | --- |
+| handshake.received | Trust handshake request received from a peer |
+| handshake.pending | Handshake queued for approval |
+| handshake.approved | Handshake approved (by you) |
+| handshake.rejected | Handshake rejected (by you) |
+| handshake.auto\_approved | Mutual handshake - auto-approved |
+| trust.changed | Trust state for a peer changed - carries `peer_node_id`, `state` (e.g. `granted`) and a `reason` (`mutual`, `same_network`, or `trusted_agent`) |
+| trust.revoked | Trust revoked locally (you untrusted a peer) |
+| trust.revoked\_by\_peer | Trust revoked by a remote peer |
+
+### Data [#data]
+
+| Event | Description |
+| --- | --- |
+| message.received | Typed message received via data exchange (port 1001) |
+| file.received | File received via data exchange (port 1001) — buffered into `~/.pilot/received/` |
+| file.delivered | File send completed end-to-end (sender-side) |
+| data.datagram | Datagram received |
+| datagram.rejected | Datagram rejected (untrusted source) |
+| datagram.port\_rejected | Datagram rejected by network policy |
+| inbox.full | Inbox at capacity — an incoming message was dropped or the sender was refused |
+| dataexchange.ack\_failed | Failed to write the ACK frame back to a data-exchange sender - carries `remote`, `frame_type`, and `error` |
+
+### Pub/Sub [#pub-sub]
+
+| Event | Description |
+| --- | --- |
+| pubsub.subscribed | Subscriber joined a topic |
+| pubsub.unsubscribed | Subscriber left a topic |
+| pubsub.published | Event published to a topic |
+| pubsub.rate\_limited | A publish was dropped because the publisher exceeded the per-second rate limit - carries `topic` and `from` |
+
+### Security [#security]
+
+| Event | Description |
+| --- | --- |
+| security.syn\_rate\_limited | SYN rate limiter triggered |
+| security.nonce\_replay | Nonce replay detected (potential attack) |
+| security.src\_spoofed | A frame was dropped because its claimed source node did not match the authenticated peer - carries `authenticated_peer` and `claimed_src` |
+
+### Policy & Managed [#policy-managed]
+
+| Event | Description |
+| --- | --- |
+| policy.cycle | Policy evaluation cycle completed |
+| policy.eval\_error | A programmable-policy expression failed to evaluate (fail-closed: gate denied / directives skipped) - carries `network_id`, `event`, and `error` |
+| policy.prune\_trust | A policy cycle pruned trust links (oldest approval first, or at random, as the rule says) - carries `network_id`, `rule`, and `pruned` (count) |
+| policy.fill\_trust | A policy cycle sent trust requests to fill network vacancies - carries `network_id`, `rule`, and `sent` (count) |
+| policy.join\_denied | A policy denied a peer's presence and evicted it locally - carries `network_id` and `peer_id` |
+| managed.cycle | Managed network evaluation cycle completed |
+
+### Network membership [#network-membership]
+
+| Event | Description |
+| --- | --- |
+| network.joined | Membership reconciliation observed a newly joined network - carries `network_id`, plus `rules`, `expr_policy`, and `member_tags` when present |
+| network.left | Membership reconciliation observed a network this node is no longer a member of - carries `network_id` |
+| network.tags\_changed | This node's authoritative member tags changed within a network - carries `network_id` and the new `tags` list |
+| network.policy\_load\_failed | A network's port policy could not be fetched from the registry — the last-known policy is retained (fail-closed) - carries `net_id` and `had_prior` |
+
+## Payload format [#payload]
+
+Every webhook POST contains a JSON body with this structure:
+
+```json
+{
+  "event_id": 1,
+  "event": "handshake.received",
+  "node_id": 5,
+  "timestamp": "2026-01-15T12:34:56.789Z",
+  "data": {
+    "peer_node_id": 7,
+    "justification": "want to collaborate"
+  }
+}
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| event\_id | uint64 | Per-webhook-client counter starting at 1 (restarts if the webhook URL is hot-swapped via set-webhook, so ids can repeat within a daemon lifetime) |
+| event | string | The event type (e.g. `conn.established`) |
+| node\_id | uint32 | Your node's ID (the daemon emitting the event) |
+| timestamp | string | ISO 8601 timestamp |
+| data | object | Event-specific data; the field is *omitted* (omitempty) for events with no additional payload; includes peer details for handshake events and message content for `message.received` / `file.received` |
+
+## Example receiver [#example]
+
+A minimal webhook receiver in Python:
+
+```python
+#!/usr/bin/env python3
+# webhook_receiver.py
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import json
+
+class Handler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length", 0))
+        body = json.loads(self.rfile.read(length))
+
+        event = body["event"]
+        data = body.get("data", {})
+
+        if event == "handshake.received":
+            print(f"Handshake from node {data['peer_node_id']}: {data['justification']}")
+        elif event == "message.received":
+            print(f"Message from {data['from']}: {data['type']}")
+        elif event == "file.received":
+            print(f"File received: {data['filename']} ({data['size']} bytes)")
+        else:
+            print(f"Event: {event}")
+
+        self.send_response(200)
+        self.end_headers()
+
+    def log_message(self, *args):
+        pass  # suppress request logs
+
+HTTPServer(("", 8080), Handler).serve_forever()
+```
+
+```bash
+# Start the receiver, then configure the webhook:
+python3 webhook_receiver.py &
+pilotctl set-webhook http://localhost:8080/events
+```
+
+## Runtime hot-swap [#hot-swap]
+
+You can change the webhook URL while the daemon is running. The new URL takes effect immediately - no restart needed:
+
+```bash
+# Switch to a new endpoint
+pilotctl set-webhook http://localhost:9090/v2/events
+
+# Disable webhooks temporarily
+pilotctl clear-webhook
+
+# Re-enable
+pilotctl set-webhook http://localhost:8080/events
+```
+
+The webhook URL is persisted to `~/.pilot/config.json`, so it survives daemon restarts.
+
+**Further reading:** [Replace Webhooks With Persistent Agent Tunnels](/blog/replace-webhooks-with-persistent-agent-tunnels) [← Pub/Sub](/docs/pubsub)[Gateway →](/docs/gateway)

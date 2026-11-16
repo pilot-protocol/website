@@ -1,0 +1,909 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+
+/* Phones held sideways and other short screens. */
+@custom-variant short {
+  @media (max-height: 520px) {
+    @slot;
+  }
+}
+
+/* Theme switch: `.dark` on <html> (set before paint by the script in the layout). */
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant light (&:where(:root:not(.dark), :root:not(.dark) *));
+/* The sky site (NEXT_PUBLIC_SITE_VARIANT=sky puts `.site-sky` on <html>): `sky:` classes do nothing on the green site. */
+@custom-variant sky (&:where(.site-sky, .site-sky *));
+
+@theme {
+  --color-bg: #1a1a1a;
+  --color-bg-deep: #141414;
+  --color-raised: #202020;
+  --color-card: #1f1f1e;
+  --color-card-2: #262625;
+  --color-fg: #f2f2ec;
+  --color-soft: #cfcfc8;
+  --color-mute: #9b9b93;
+  --color-dim: #8a8a83;
+  --color-faint: #5d5d57;
+  --color-graphite: #3a3a37;
+  --color-lime: #c6f24e;
+  --color-lime-hi: #d4f76e;
+  --color-lime-ink: #c6f24e;
+  --color-packet: #c6f24e;
+  --color-ink: #0b0b0a;
+  --color-paper: #f2f2ec;
+  --color-edge: rgb(242 242 236 / 0.09);
+  --color-edge-2: rgb(242 242 236 / 0.16);
+  --color-edge-3: rgb(242 242 236 / 0.24);
+
+  /* Shadows read runtime variables so the themes (and the sky site's scale) reach the utilities. */
+  --shadow-card: var(--pp-shadow-card);
+  --shadow-float: var(--pp-shadow-float);
+  --shadow-tile: var(--pp-shadow-tile);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Shadow scale, dark by default; the themes below override the --pp-shadow-* values. */
+:root {
+  --pp-shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.045), 0 1px 2px rgb(0 0 0 / 0.35), 0 16px 40px -18px rgb(0 0 0 / 0.7);
+  --pp-shadow-float: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 2px 6px rgb(0 0 0 / 0.35), 0 28px 60px -20px rgb(0 0 0 / 0.75);
+  --pp-shadow-tile: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 24px -10px rgb(0 0 0 / 0.6);
+}
+
+/* Light theme, and the inverted bands inside the dark one. Lime stays a fill; text accents use lime-ink. */
+:root:not(.dark),
+.dark .pp-invert {
+  --color-bg: #f6f6f1;
+  --color-bg-deep: #efefe9;
+  --color-raised: #ffffff;
+  --color-card: #ffffff;
+  --color-card-2: #fafaf7;
+  --color-fg: #141413;
+  --color-soft: #2f2f2c;
+  --color-mute: #696962;
+  --color-dim: #7f7f78;
+  --color-faint: #b3b3ab;
+  --color-graphite: #dcdcd5;
+  --color-lime-ink: #4f7300;
+  --color-packet: #9fd11f;
+  --color-edge: rgb(20 20 18 / 0.08);
+  --color-edge-2: rgb(20 20 18 / 0.13);
+  --color-edge-3: rgb(20 20 18 / 0.22);
+  --pp-shadow-card: 0 0 0 1px rgb(20 20 18 / 0.06), 0 1px 2px rgb(20 20 18 / 0.05), 0 12px 32px -14px rgb(20 20 18 / 0.16);
+  --shadow-card: var(--pp-shadow-card);
+  --pp-shadow-float: 0 0 0 1px rgb(20 20 18 / 0.06), 0 2px 6px rgb(20 20 18 / 0.06), 0 30px 60px -24px rgb(20 20 18 / 0.28);
+  --shadow-float: var(--pp-shadow-float);
+  --pp-shadow-tile: 0 0 0 1px rgb(20 20 18 / 0.06), 0 1px 2px rgb(20 20 18 / 0.08), 0 8px 18px -8px rgb(20 20 18 / 0.22);
+  --shadow-tile: var(--pp-shadow-tile);
+  color-scheme: light;
+}
+.dark .pp-invert {
+  --color-bg: #ffffff;
+}
+
+/* Dark bands inside the light theme. */
+:root:not(.dark) .pp-invert {
+  --color-bg: #1a1a1a;
+  --color-bg-deep: #141414;
+  --color-raised: #202020;
+  --color-card: #1f1f1e;
+  --color-card-2: #262625;
+  --color-fg: #f2f2ec;
+  --color-soft: #cfcfc8;
+  --color-mute: #9b9b93;
+  --color-dim: #8a8a83;
+  --color-faint: #5d5d57;
+  --color-graphite: #3a3a37;
+  --color-lime-ink: #c6f24e;
+  --color-packet: #c6f24e;
+  --color-edge: rgb(242 242 236 / 0.09);
+  --color-edge-2: rgb(242 242 236 / 0.16);
+  --color-edge-3: rgb(242 242 236 / 0.24);
+  --pp-shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.045), 0 1px 2px rgb(0 0 0 / 0.35), 0 16px 40px -18px rgb(0 0 0 / 0.7);
+  --shadow-card: var(--pp-shadow-card);
+  --pp-shadow-float: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 2px 6px rgb(0 0 0 / 0.35), 0 28px 60px -20px rgb(0 0 0 / 0.75);
+  --shadow-float: var(--pp-shadow-float);
+  --pp-shadow-tile: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 24px -10px rgb(0 0 0 / 0.6);
+  --shadow-tile: var(--pp-shadow-tile);
+  color-scheme: dark;
+}
+.pp-invert {
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
+
+/*
+ * The sky site (NEXT_PUBLIC_SITE_VARIANT=sky): the lime accent becomes sky blue on every page.
+ * lime = fills with ink text on them (a light sky), lime-ink = accent text and icons, packet = small marks.
+ */
+:root.site-sky {
+  --color-lime: #b9dcff;
+  --color-lime-hi: #cfe6ff;
+  --color-lime-ink: #0b2ca0;
+  --color-packet: #1f5bff;
+  --color-fd-primary: #0b2ca0;
+  --color-fd-ring: #0b2ca0;
+
+  /* The sky palette from the home page (src/components/v4/v4.css), for inner pages. */
+  --sky-900: #0a2a9c;
+  --sky-800: #0b2ca0;
+  --sky-600: #1f5bff;
+  --sky-400: #5aa9ff;
+  --sky-200: #b9dcff;
+  --sky-50: #eaf3ff;
+  --sky-accent: #0b2ca0;
+  --sky-fill: #1f5bff;
+  --sky-deep: #0b2ca0;
+  --sky-tint: rgb(31 91 255 / 0.08);
+  /* The deep band's colour where it ends, so a band that closes a page runs straight into the footer's night. */
+  --sky-band-end: #0b2ca0;
+}
+:root.site-sky.dark {
+  --sky-accent: #8ec1ff;
+  --sky-fill: #2f6bff;
+  --sky-deep: #1438b8;
+  --sky-tint: rgb(90 169 255 / 0.12);
+  --sky-band-end: #0b2a8f;
+}
+/* The sky site at night: a hairline edge and a soft, short shadow instead of heavy black halos. */
+:root.site-sky.dark,
+.dark .v4-page {
+  --pp-shadow-tile: 0 0 0 1px rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.25), 0 6px 14px -8px rgb(0 0 0 / 0.4);
+  --shadow-tile: var(--pp-shadow-tile);
+  --pp-shadow-card: 0 0 0 1px rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.25), 0 14px 30px -16px rgb(0 0 0 / 0.5);
+  --shadow-card: var(--pp-shadow-card);
+  --pp-shadow-float: 0 0 0 1px rgb(255 255 255 / 0.07), 0 2px 6px rgb(0 0 0 / 0.25), 0 24px 48px -22px rgb(0 0 0 / 0.55);
+  --shadow-float: var(--pp-shadow-float);
+}
+/* One soft shadow scale for the sky site, tinted with the sky's navy instead of grey. */
+:root.site-sky:not(.dark),
+:root:not(.dark) .v4-page {
+  /* Small labels and captions: dark enough for 4.5:1 on paper and white (the green site's #7f7f78 is 3.7:1). */
+  --color-dim: #6e6e68;
+  --pp-shadow-tile: 0 0 0 1px rgb(11 44 160 / 0.04), 0 1px 2px rgb(11 44 160 / 0.06), 0 4px 10px -4px rgb(11 44 160 / 0.1);
+  --shadow-tile: var(--pp-shadow-tile);
+  --pp-shadow-card: 0 0 0 1px rgb(11 44 160 / 0.05), 0 1px 2px rgb(11 44 160 / 0.05), 0 10px 28px -12px rgb(11 44 160 / 0.14);
+  --shadow-card: var(--pp-shadow-card);
+  --pp-shadow-float: 0 0 0 1px rgb(11 44 160 / 0.05), 0 2px 6px rgb(11 44 160 / 0.06), 0 24px 48px -20px rgb(11 44 160 / 0.2);
+  --shadow-float: var(--pp-shadow-float);
+}
+:root.site-sky.dark {
+  --color-lime: #8ec1ff;
+  --color-lime-hi: #a9d0ff;
+  --color-lime-ink: #8ec1ff;
+  --color-packet: #4f86ff;
+  --color-fd-primary: #8ec1ff;
+  --color-fd-primary-foreground: #0b0b0a;
+  --color-fd-ring: #8ec1ff;
+}
+/*
+ * Contrast bands on the sky site: one flat deep sky blue in both themes (the home page's Pilot Cloud pass),
+ * white type, light sky accents. A slightly deeper blue at night so the band doesn't glow on charcoal.
+ */
+:root.site-sky .pp-invert {
+  --color-bg: #0b2ca0;
+  --color-bg-deep: #08237f;
+  --color-raised: #1236ad;
+  --color-card: #1236ad;
+  --color-card-2: #173cb5;
+  --color-fg: #ffffff;
+  --color-soft: #e3ebff;
+  --color-mute: #b8c8f2;
+  --color-dim: #a3b6ea;
+  --color-faint: #6f88d4;
+  --color-graphite: #3a58c0;
+  --color-lime: #b9dcff;
+  --color-lime-hi: #cfe6ff;
+  --color-lime-ink: #b9dcff;
+  --color-packet: #8ec1ff;
+  --color-edge: rgb(255 255 255 / 0.12);
+  --color-edge-2: rgb(255 255 255 / 0.2);
+  --color-edge-3: rgb(255 255 255 / 0.3);
+  --pp-shadow-tile: 0 0 0 1px rgb(255 255 255 / 0.08), 0 1px 2px rgb(2 10 48 / 0.2), 0 6px 14px -6px rgb(2 10 48 / 0.35);
+  --shadow-tile: var(--pp-shadow-tile);
+  --pp-shadow-card: 0 0 0 1px rgb(255 255 255 / 0.08), 0 1px 2px rgb(2 10 48 / 0.18), 0 14px 32px -14px rgb(2 10 48 / 0.45);
+  --shadow-card: var(--pp-shadow-card);
+  --pp-shadow-float: 0 0 0 1px rgb(255 255 255 / 0.08), 0 2px 6px rgb(2 10 48 / 0.2), 0 28px 56px -22px rgb(2 10 48 / 0.55);
+  --shadow-float: var(--pp-shadow-float);
+  background: var(--sky-band-end);
+  color: var(--color-fg);
+  color-scheme: dark;
+}
+:root.site-sky.dark .pp-invert {
+  --color-bg: #0b2a8f;
+  --color-bg-deep: #081f6c;
+  --color-raised: #11319c;
+  --color-card: #11319c;
+  --color-card-2: #1637a6;
+  background: var(--sky-band-end);
+}
+/*
+ * A page doesn't end on a band on the sky site. Its closing call to action sits on the page itself, after a
+ * hairline, and the footer's sky rises out of it (as on /service-agents), instead of the band running into the
+ * footer's blue and reading as part of it. Every token the band set goes back to the page's own.
+ */
+:root.site-sky main > .pp-invert:last-child {
+  --color-bg: inherit;
+  --color-bg-deep: inherit;
+  --color-raised: inherit;
+  --color-card: inherit;
+  --color-card-2: inherit;
+  --color-fg: inherit;
+  --color-soft: inherit;
+  --color-mute: inherit;
+  --color-dim: inherit;
+  --color-faint: inherit;
+  --color-graphite: inherit;
+  --color-lime: inherit;
+  --color-lime-hi: inherit;
+  --color-lime-ink: inherit;
+  --color-packet: inherit;
+  --color-edge: inherit;
+  --color-edge-2: inherit;
+  --color-edge-3: inherit;
+  --pp-shadow-tile: inherit;
+  --pp-shadow-card: inherit;
+  --pp-shadow-float: inherit;
+  --shadow-tile: var(--pp-shadow-tile);
+  --shadow-card: var(--pp-shadow-card);
+  --shadow-float: var(--pp-shadow-float);
+  background: var(--color-bg);
+  color: var(--color-fg);
+  color-scheme: inherit;
+  border-top: 1px solid var(--color-edge);
+}
+/* The announcement strip (site-header.tsx): the deep sky, the top of the home page's hero. */
+.site-banner-sky {
+  background: var(--sky-800);
+}
+.dark .site-banner-sky {
+  background: #0a2685;
+}
+/* On the sky home page the strip is the top of the hero's sky, set off by a hairline. */
+.site-banner-sky.site-banner-home {
+  background: #0a2a9c;
+  box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.1);
+}
+.dark .site-banner-sky.site-banner-home {
+  background: #030a2a;
+  box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.08);
+}
+:root.site-sky ::selection {
+  background: rgb(31 91 255 / 0.28);
+  color: inherit;
+}
+
+/* Fumadocs (docs) in the site's palette, in both themes. */
+:root {
+  --color-fd-background: #f6f6f1;
+  --color-fd-foreground: #141413;
+  --color-fd-muted: #efefe9;
+  --color-fd-muted-foreground: #696962;
+  --color-fd-popover: #ffffff;
+  --color-fd-popover-foreground: #141413;
+  --color-fd-card: #ffffff;
+  --color-fd-card-foreground: #141413;
+  --color-fd-border: rgb(20 20 18 / 0.09);
+  --color-fd-primary: #4f7300;
+  --color-fd-primary-foreground: #ffffff;
+  --color-fd-secondary: #efefe9;
+  --color-fd-secondary-foreground: #141413;
+  --color-fd-accent: rgb(20 20 18 / 0.05);
+  --color-fd-accent-foreground: #141413;
+  --color-fd-ring: #4f7300;
+  --color-fd-overlay: rgb(20 20 18 / 0.3);
+}
+.dark {
+  --color-fd-background: #1a1a1a;
+  --color-fd-foreground: #f2f2ec;
+  --color-fd-muted: #202020;
+  --color-fd-muted-foreground: #9b9b93;
+  --color-fd-popover: #161616;
+  --color-fd-popover-foreground: #f2f2ec;
+  --color-fd-card: #1d1d1c;
+  --color-fd-card-foreground: #f2f2ec;
+  --color-fd-border: rgb(242 242 236 / 0.09);
+  --color-fd-primary: #c6f24e;
+  --color-fd-primary-foreground: #0b0b0a;
+  --color-fd-secondary: #202020;
+  --color-fd-secondary-foreground: #f2f2ec;
+  --color-fd-accent: rgb(242 242 236 / 0.06);
+  --color-fd-accent-foreground: #f2f2ec;
+  --color-fd-ring: #c6f24e;
+  --color-fd-overlay: rgb(0 0 0 / 0.5);
+}
+
+/* The theme switch reveals the new palette as a circle from the button (see theme-toggle.tsx). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+html {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  color-scheme: light;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-padding-top: 88px;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: rgb(198 242 78 / 0.85);
+  color: var(--color-ink);
+}
+
+/* Full-width hairlines (src/components/sky/kit.css) reach the window's edges without a sideways scroll. */
+html,
+body {
+  overflow-x: clip;
+}
+
+@layer base {
+  :focus-visible {
+    outline: 1.5px solid var(--color-lime-ink);
+    outline-offset: 3px;
+  }
+}
+
+/*
+ * On the sky itself (the home hero and the header over it, the CTA and the night footer) the deep-blue ring
+ * would vanish: focus is white there. Unlayered, so it wins over per-element outline colours.
+ */
+.site-sky .hero-d :focus-visible,
+.site-sky header[data-sky="true"][data-scrolled="false"] :focus-visible,
+.site-sky .cta-stage :focus-visible,
+.site-sky .footer-d :focus-visible {
+  outline-color: #ffffff;
+}
+
+/* One width for every section, so edges line up all the way down the page. */
+@utility wrap {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1248px;
+  padding-inline: 20px;
+  @media (min-width: 640px) {
+    padding-inline: 24px;
+  }
+}
+
+/* ---------- Dark islands ----------
+   Terminals and code keep the dark palette in both themes. On the light page they read as a device
+   sitting on the paper, so they get a deeper shadow there. */
+.pp-island {
+  --color-bg: #1a1a1a;
+  --color-bg-deep: #141414;
+  --color-raised: #202020;
+  --color-card: #1f1f1e;
+  --color-card-2: #262625;
+  --color-fg: #f2f2ec;
+  --color-soft: #cfcfc8;
+  --color-mute: #9b9b93;
+  --color-dim: #8a8a83;
+  --color-faint: #5d5d57;
+  --color-graphite: #3a3a37;
+  --color-lime-ink: #c6f24e;
+  --color-edge: rgb(242 242 236 / 0.09);
+  --color-edge-2: rgb(242 242 236 / 0.16);
+  --color-edge-3: rgb(242 242 236 / 0.24);
+  overflow: hidden;
+  border: 1px solid rgb(242 242 236 / 0.1);
+  border-radius: 14px;
+  background: var(--color-bg-deep);
+  color: var(--color-fg);
+  color-scheme: dark;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 30px 60px -30px rgb(0 0 0 / 0.8);
+}
+:root:not(.dark) .pp-island {
+  border-color: #141414;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    0 2px 4px rgb(20 20 18 / 0.08),
+    0 30px 60px -28px rgb(20 20 18 / 0.45);
+}
+
+/* ---------- Press feedback ---------- */
+.pressable {
+  transition:
+    transform 160ms var(--ease-out),
+    background-color 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease;
+}
+.pressable:active {
+  transform: scale(0.97);
+}
+
+/* ---------- Reveal on scroll ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  filter: blur(6px);
+  transition:
+    opacity 700ms var(--ease-out),
+    transform 900ms var(--ease-out),
+    filter 700ms var(--ease-out);
+  transition-delay: var(--delay, 0ms);
+}
+[data-in-view="true"] .reveal,
+.reveal[data-in-view="true"] {
+  opacity: 1;
+  transform: none;
+  filter: blur(0);
+}
+
+/* ---------- Hero entrance (runs once, on load) ---------- */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(8px);
+  }
+}
+.rise-in {
+  animation: rise-in 900ms var(--ease-out) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes caret-blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
+.caret-blink {
+  animation: caret-blink 1.05s steps(1, end) infinite;
+}
+
+@keyframes live-ping {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+/* Dashed connectors marching in the direction of travel. */
+@keyframes march {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+/* Endless horizontal ticker; the track holds two copies of its content. */
+@keyframes ticker {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+@keyframes ticker-y {
+  to {
+    transform: translate3d(0, -50%, 0);
+  }
+}
+
+@keyframes blink-soft {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* A short lime segment riding a path (paths use pathLength=100). */
+/* Offsets overshoot both ends so round caps never peek out while parked. */
+@keyframes edge-run {
+  from {
+    stroke-dasharray: 30 300;
+    stroke-dashoffset: 70;
+  }
+  to {
+    stroke-dasharray: 30 300;
+    stroke-dashoffset: -140;
+  }
+}
+@keyframes ring-run {
+  from {
+    stroke-dasharray: 22 300;
+    stroke-dashoffset: 30;
+  }
+  to {
+    stroke-dasharray: 22 300;
+    stroke-dashoffset: -110;
+  }
+}
+@keyframes dash-run {
+  0% {
+    stroke-dashoffset: 14;
+  }
+  40%,
+  100% {
+    stroke-dashoffset: -100;
+  }
+}
+@keyframes node-flash {
+  0%,
+  66%,
+  100% {
+    fill: #f2f2ec;
+  }
+  72%,
+  82% {
+    fill: #c6f24e;
+  }
+}
+@keyframes row-run {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  22% {
+    opacity: 1;
+    transform: translateX(100%);
+  }
+  23%,
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+@keyframes wire {
+  from {
+    stroke-dashoffset: 22;
+  }
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+@keyframes wire-back {
+  from {
+    stroke-dashoffset: -100;
+  }
+  to {
+    stroke-dashoffset: 22;
+  }
+}
+@keyframes rail {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Packets crossing a container whose width we don't know: animate `left`, it's one 8px square. */
+@keyframes slide-x {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  10%,
+  90% {
+    opacity: 1;
+  }
+  100% {
+    left: calc(100% - 8px);
+    opacity: 0;
+  }
+}
+@keyframes slide-x-back {
+  0% {
+    left: calc(100% - 8px);
+    opacity: 0;
+  }
+  10%,
+  90% {
+    opacity: 1;
+  }
+  100% {
+    left: 0;
+    opacity: 0;
+  }
+}
+@keyframes knock {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  60% {
+    left: calc(50% - 22px);
+    opacity: 1;
+  }
+  100% {
+    left: calc(50% - 22px);
+    opacity: 0;
+  }
+}
+@keyframes knock-back {
+  0% {
+    right: 0;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  60% {
+    right: calc(50% - 22px);
+    opacity: 1;
+  }
+  100% {
+    right: calc(50% - 22px);
+    opacity: 0;
+  }
+}
+
+@keyframes type-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(3px);
+  }
+}
+
+/* ---------- Long-form content (migrated docs, articles, legal) ---------- */
+.pp-prose {
+  color: var(--color-soft);
+  font-size: 17px;
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+.pp-prose > * + * {
+  margin-top: 1.15em;
+}
+.pp-prose h2,
+.pp-prose h3,
+.pp-prose h4,
+.pp-prose h5 {
+  color: var(--color-fg);
+  font-weight: 500;
+  scroll-margin-top: 96px;
+  text-wrap: balance;
+}
+.pp-prose h2 {
+  margin-top: 2.6em;
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+.pp-prose h3 {
+  margin-top: 2em;
+  font-size: 20px;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+.pp-prose h4,
+.pp-prose h5 {
+  margin-top: 1.8em;
+  font-size: 17px;
+}
+.pp-prose h2 + *,
+.pp-prose h3 + *,
+.pp-prose h4 + * {
+  margin-top: 0.7em;
+}
+.pp-prose > :first-child {
+  margin-top: 0;
+}
+.pp-prose strong,
+.pp-prose b {
+  color: var(--color-fg);
+  font-weight: 500;
+}
+.pp-prose a {
+  color: var(--color-fg);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-lime-ink) 55%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 200ms ease, color 200ms ease;
+}
+.pp-prose a:hover {
+  text-decoration-color: var(--color-lime-ink);
+}
+.pp-prose :not(pre) > code {
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-fg) 7%, transparent);
+  padding: 0.12em 0.36em;
+  color: var(--color-fg);
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+}
+.pp-prose pre {
+  position: relative;
+  overflow-x: auto;
+  border: 1px solid var(--color-edge-2);
+  border-radius: 10px;
+  background: var(--color-bg-deep);
+  padding: 18px 20px;
+  color: var(--color-soft);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.65;
+  scrollbar-width: thin;
+}
+.pp-prose pre code {
+  white-space: pre;
+}
+.pp-prose ul,
+.pp-prose ol {
+  padding-left: 1.4em;
+}
+.pp-prose li + li {
+  margin-top: 0.45em;
+}
+.pp-prose ul > li {
+  position: relative;
+  list-style: none;
+}
+.pp-prose ul > li::before {
+  content: "";
+  position: absolute;
+  top: 0.72em;
+  left: -1.15em;
+  width: 6px;
+  height: 6px;
+  background: var(--color-lime);
+}
+.pp-prose ol {
+  list-style: decimal;
+}
+.pp-prose ol > li::marker {
+  color: var(--color-dim);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+.pp-prose blockquote {
+  border-left: 2px solid var(--color-lime);
+  background: color-mix(in srgb, var(--color-lime) 7%, transparent);
+  padding: 14px 20px;
+  color: var(--color-fg);
+}
+.pp-prose blockquote > * + * {
+  margin-top: 0.7em;
+}
+.pp-prose hr {
+  margin-block: 2.6em;
+  border: 0;
+  border-top: 1px solid var(--color-edge);
+}
+.pp-prose img {
+  border: 1px solid var(--color-edge);
+  border-radius: 10px;
+}
+.pp-prose table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 14.5px;
+  line-height: 1.5;
+  scrollbar-width: thin;
+}
+.pp-prose th,
+.pp-prose td {
+  border-bottom: 1px solid var(--color-edge);
+  padding: 10px 14px;
+  text-align: left;
+  vertical-align: top;
+}
+.pp-prose th {
+  border-bottom-color: var(--color-edge-2);
+  color: var(--color-fg);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pp-prose tr > :first-child {
+  padding-left: 0;
+}
+.pp-prose details {
+  border-top: 1px solid var(--color-edge);
+  padding-top: 0.9em;
+}
+.pp-prose summary {
+  cursor: pointer;
+  color: var(--color-fg);
+  font-weight: 500;
+}
+.pp-prose dt {
+  color: var(--color-fg);
+  font-weight: 500;
+}
+.pp-prose dd {
+  margin-left: 1.2em;
+}
+/* The sky site: round sky bullets (the home page's dots instead of lime packets) and softer quotes. */
+:root.site-sky .pp-prose ul > li::before {
+  top: 0.68em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sky-400);
+}
+:root.site-sky .pp-prose blockquote {
+  border-left-color: var(--sky-400);
+  border-radius: 0 12px 12px 0;
+  background: var(--sky-tint);
+}
+:root.site-sky .pp-prose pre {
+  border-radius: 14px;
+}
+:root.site-sky .pp-prose img {
+  border-radius: 14px;
+}
+
+/* Grain keeps the flat charcoal from banding on large screens. */
+.grain {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size: 160px 160px;
+}
+
+/* Hide scrollbars on horizontally scrolling rails without losing the scroll. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    transform: none;
+    filter: none;
+    transition: opacity 400ms ease;
+  }
+  .rise-in {
+    animation-name: fade-only;
+    animation-duration: 400ms;
+  }
+  .caret-blink {
+    animation: none;
+  }
+  @keyframes fade-only {
+    from {
+      opacity: 0;
+    }
+  }
+}
+
+/* Dark code islands on the sky site: sky accents instead of lime. */
+:root.site-sky .pp-island {
+  --color-lime: #8ec1ff;
+  --color-lime-ink: #8ec1ff;
+  --color-packet: #4f86ff;
+}

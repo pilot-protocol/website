@@ -1,0 +1,79 @@
+/*
+ * Get started (#get-started). The steps come in one after another; each step's result lands a beat
+ * after its card. Transform and opacity only; reduced motion keeps the fades and drops the movement.
+ */
+
+/* Each step's UI sits straight on the hatching under its stepper head; there are no card frames. */
+
+.board-step {
+  opacity: 0;
+}
+[data-in="true"] .board-step {
+  animation: board-step-in 560ms var(--ease-out) both;
+  animation-delay: calc(var(--i) * 90ms);
+}
+@keyframes board-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The result of the last step (the agent's pass, the connected tools) arrives after its card. */
+[data-in="true"] .board-step:last-child .board-result {
+  animation: board-result-in 520ms var(--ease-out) both;
+  animation-delay: 380ms;
+}
+@keyframes board-result-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Small swaps inside a step (Claude / ChatGPT) and the links under the steps. */
+.board-swap,
+[data-in="true"] .board-next {
+  animation: board-fade 260ms var(--ease-out) both;
+}
+[data-in="true"] .board-next {
+  animation-delay: 300ms;
+}
+.board-next {
+  opacity: 0;
+}
+@keyframes board-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-in="true"] .board-step,
+  [data-in="true"] .board-step:last-child .board-result,
+  .board-swap,
+  [data-in="true"] .board-next {
+    animation-name: board-fade-only;
+  }
+}
+@keyframes board-fade-only {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

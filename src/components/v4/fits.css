@@ -1,0 +1,304 @@
+/*
+ * How it fits together (sky home, Figma 160:1771): your agent → its daemon → encrypted tunnels → other agents, with
+ * the backbone underneath. The picture sits straight on the section's hatched panel: flat white cards with a hairline
+ * border (12px corners, the daemon 20px), the one in play outlined in blue, messages crossing the wires as the shared
+ * beam one step at a time. Your agent and its daemon sit inside one frame, your machine. Vertical on phones,
+ * horizontal from 1024px on the Figma's grid (216 / 172 / 296 / 172 / 248 at full width).
+ */
+
+.fitd {
+  --fitd-node-bg: var(--color-card);
+  --fitd-line: var(--color-edge-3);
+  --fitd-lit: var(--sky-fill);
+  --fitd-packet: var(--sky-fill);
+  --fitd-active: var(--sky-fill);
+}
+.dark .fitd {
+  --fitd-lit: #5b8fff;
+  --fitd-packet: #8ec1ff;
+  --fitd-active: #5b8fff;
+}
+
+/* ---------- Layout ---------- */
+
+.fitd-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "mlab" "agent" "w1" "daemon" "w2" "others" "bb" "cap";
+  justify-items: center;
+}
+/* On phones the caption rides along at the foot of the screen while the picture scrolls past, on a solid card. */
+.fitd-cap {
+  position: sticky;
+  bottom: 12px;
+  z-index: 2;
+  grid-area: cap;
+  width: 100%;
+  max-width: 380px;
+  margin-top: 24px;
+  padding: 8px 16px 14px;
+  border: 1px solid var(--sky-card-line);
+  border-radius: 12px;
+  background: var(--fitd-node-bg);
+  box-shadow: 0 10px 24px -14px rgb(20 20 18 / 0.22);
+  text-align: center;
+}
+.dark .fitd-cap {
+  box-shadow: 0 10px 24px -14px rgb(0 0 0 / 0.6);
+}
+.fitd-cell {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: 380px;
+  align-items: center;
+  justify-content: center;
+}
+.fitd-bb {
+  grid-area: bb;
+  width: 100%;
+  max-width: 380px;
+  margin-top: 40px;
+}
+/* Your machine: one solid frame around your agent and its daemon (the local IPC wire runs inside it), with its name
+ * on the top edge. */
+.fitd-machine {
+  position: relative;
+  grid-row: agent-start / daemon-end;
+  grid-column: agent-start / daemon-end;
+  justify-self: stretch;
+  margin: -18px -12px -16px;
+  border: 1px solid var(--sky-card-line);
+  border-radius: 24px;
+  background: var(--color-bg);
+}
+.fitd-legend {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  translate: -50% -50%;
+  padding: 0 10px;
+  background: var(--color-bg);
+  white-space: nowrap;
+}
+@media (min-width: 1024px) {
+  .fitd-machine {
+    /* The top edge lines up with the "Other machines" label beside it. */
+    margin: -28px -20px -20px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .fitd-grid {
+    grid-template-columns: 216px minmax(64px, 1fr) 296px minmax(88px, 1fr) 248px;
+    grid-template-areas:
+      "mlab mlab mlab . olab"
+      "agent w1 daemon w2 others"
+      "cap cap bb bb bb";
+    justify-items: stretch;
+  }
+  .fitd-cap,
+  .dark .fitd-cap {
+    position: static;
+    max-width: none;
+    margin-top: 56px;
+    padding: 0 40px 0 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    align-self: center;
+    text-align: left;
+  }
+  .fitd-cell {
+    max-width: none;
+    align-self: stretch;
+  }
+  .fitd-bb {
+    max-width: none;
+    margin-top: 56px;
+  }
+}
+
+/* ---------- Nodes ---------- */
+
+/* The kit's flat card (.sky-card): white, a hairline border, 12px corners, no shadow. In play, the hairline turns blue. */
+.fitd-node {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  border: 1px solid var(--sky-card-line);
+  border-radius: 12px;
+  background: var(--fitd-node-bg);
+  transition: border-color 320ms var(--ease-out);
+}
+.fitd-node[data-active="true"] {
+  border-color: var(--fitd-active);
+}
+/* The daemon is the picture's focal object: the focal card's 20px corners. */
+.fitd-focal {
+  border-radius: 20px;
+}
+
+/* A row or half of a node lighting up while the packet is there. */
+.fitd-hl {
+  transition:
+    background-color 300ms ease,
+    color 300ms ease;
+}
+.fitd-hl[data-active="true"] {
+  background-color: var(--sky-tint);
+}
+
+/* ---------- Wires ---------- */
+
+.fitd-wire {
+  position: relative;
+  width: 1px;
+  height: 64px;
+}
+.fitd-line,
+.fitd-lit {
+  position: absolute;
+  inset: 0;
+}
+.fitd-line {
+  background: var(--fitd-line);
+}
+.fitd-lit {
+  background: var(--fitd-lit);
+  transform-origin: top;
+  transition:
+    transform 700ms var(--ease-out),
+    opacity 400ms ease;
+}
+.fitd-lit[data-on="false"] {
+  transform: scaleY(0);
+  opacity: 0;
+}
+.fitd-label {
+  position: absolute;
+  top: 50%;
+  left: 18px;
+  translate: 0 -50%;
+  white-space: nowrap;
+}
+
+/* Small laptops and tablets in landscape (1024–1279): narrower cards, so the wires keep room for their labels.
+ * The caption column is narrow there too, so it keeps room for three lines and the bars above it never shift. */
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  .fitd-grid {
+    grid-template-columns: 192px minmax(64px, 1fr) 272px minmax(140px, 1fr) 232px;
+  }
+  /* The tunnel's label needs its whole column here, so the machine's frame stops close to the daemon. */
+  .fitd-machine {
+    margin-right: -8px;
+  }
+  .fitd-cap .fitd-swap {
+    min-height: 78px;
+  }
+}
+
+/* The backbone drops: from the daemon and from the other agent down to the backbone (wide screens only). */
+.fitd-drop {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .fitd-wire {
+    width: auto;
+    height: 1px;
+    align-self: center;
+  }
+  .fitd-lit {
+    transform-origin: left;
+  }
+  .fitd-lit[data-on="false"] {
+    transform: scaleX(0);
+  }
+  .fitd-label {
+    top: auto;
+    bottom: 14px;
+    left: 50%;
+    translate: -50% 0;
+  }
+  .fitd-drop {
+    display: block;
+    position: absolute;
+    top: 50%;
+    bottom: -56px;
+    left: 50%;
+    width: 1px;
+    background: var(--fitd-line);
+  }
+}
+
+/* ---------- Steps ---------- */
+
+.fitd-fill {
+  transform-origin: left;
+}
+.fitd-fill[data-state="done"] {
+  transform: scaleX(1);
+}
+.fitd-fill[data-state="todo"] {
+  transform: scaleX(0);
+}
+.fitd-fill[data-state="now"] {
+  animation: fitd-fill var(--fitd-ms, 1500ms) linear both;
+}
+.fitd-fill[data-state="held"] {
+  transform: scaleX(1);
+}
+@keyframes fitd-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes fitd-swap {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+    filter: blur(3px);
+  }
+}
+.fitd-swap {
+  animation: fitd-swap 420ms var(--ease-out) both;
+}
+.fitd-pop {
+  transition:
+    opacity 260ms var(--ease-out),
+    transform 360ms var(--ease-out);
+}
+.fitd-pop[data-on="false"] {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+/* ---------- Reduced motion: no travelling beams (Beam draws nothing); highlights still change, as fades ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .fitd-lit {
+    transition: opacity 300ms ease;
+  }
+  .fitd-lit[data-on="false"] {
+    transform: none;
+  }
+  .fitd-fill[data-state="now"] {
+    animation: none;
+    transform: scaleX(1);
+  }
+  .fitd-swap {
+    animation: none;
+  }
+  .fitd-pop {
+    transition: opacity 260ms ease;
+  }
+  .fitd-pop[data-on="false"] {
+    transform: none;
+  }
+}

@@ -1,0 +1,54 @@
+---
+title: "Swift SDK"
+description: "End-to-end-encrypted P2P messaging for iOS and macOS apps — an embedded Pilot daemon inside an XCFramework, no separate process."
+---
+
+A real Pilot node inside your iOS or macOS app — embedded daemon, no separate process, sandbox-clean.
+
+## What you get [#what]
+
+- Ed25519 identity, generated on first launch and persisted to your app's `dataDir`
+- Registration with the Pilot registry and the mutual-trust handshake
+- Encrypted UDP tunnels (X25519 + AES-256-GCM), NAT-traversed via beacons
+- Application-level `send` / `receive` — the same wire protocol the desktop `pilot-daemon` speaks
+
+The daemon is compiled to a static library inside an `XCFramework`; your app links it and calls a Swift API. Requires iOS 14+ or macOS 12+, Swift 5.9+.
+
+## Install [#install]
+
+```yaml
+dependencies: [
+    .package(url: "https://github.com/pilot-protocol/sdk-swift.git", from: "1.13.0"),
+],
+targets: [
+    .target(name: "YourApp", dependencies: [
+        .product(name: "Pilot", package: "sdk-swift"),
+    ]),
+]
+```
+
+Or in Xcode: **File → Add Package Dependencies…** and paste the repo URL.
+
+## Quick start [#quickstart]
+
+```python
+import Pilot
+
+// Start the embedded daemon (no separate process needed).
+let pilot = try Pilot.start(.init(
+    dataDir: dataDir,
+    socketPath: "p.sock",
+    trustAutoApprove: true,
+    keepaliveSeconds: 30
+))
+print("address=\(pilot.start.address)")
+
+// Handshake, then send once trusted:
+try pilot.handshake(peerID: 12345, justification: "hello")
+_ = try pilot.waitForTrust(peerID: 12345, timeoutMs: 30_000)
+try pilot.send(to: "0:0000.0000.AAAA", port: 7777, data: Data("hi".utf8))
+```
+
+Full API and examples: [pilot-protocol/sdk-swift](https://github.com/pilot-protocol/sdk-swift). Where the three SDKs differ, see [SDK Parity](/docs/sdk-parity).
+
+[← Node.js SDK](/docs/node-sdk)[SDK Parity →](/docs/sdk-parity)

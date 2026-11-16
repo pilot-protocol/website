@@ -1,0 +1,279 @@
+---
+title: "Consent & Privacy"
+description: "Four features ship on by default in Pilot Protocol: telemetry, broadcasts, reviews, and skill injection. Risk profiles, benefits, and opt-out commands for each."
+---
+
+Four features ship on by default. Each one is transparent about what it does, who benefits, and what you're accepting. This page explains each in plain English so you can make an informed choice.
+
+## How opt-out works [#model]
+
+All four features are **on by default**. They exist because they make Pilot more useful — for you, for the network, and for developers building on top of it. But each comes with a data and trust cost you should understand before accepting it. Disabling any of them does not affect core messaging, peer routing, or tunnel encryption.
+
+The three consent flags live in `~/.pilot/config.json` under a `consent` key:
+
+```json
+{
+  "consent": {
+    "telemetry":  true,
+    "broadcasts": true,
+    "reviews":    true
+  }
+}
+```
+
+Set any of them to `false` to opt out. Skill injection has its own key and CLI — see [Skill injection](#skillinject) below.
+
+---
+
+## Telemetry [#telemetry]
+
+Risk level: Low
+
+### What it does [#what-it-does]
+
+When you browse or install apps from the app store, a small signed event is sent to `telemetry.pilotprotocol.network`. Three events are emitted:
+
+- **`catalogue_viewed`** — fired once when you run `pilotctl appstore catalogue`. Payload: `{"surface":"catalogue"}` plus the event envelope (node ID, timestamp, signature).
+- **`appstore_view`** — fired when you run `pilotctl appstore view <app-id>`. Payload: the app ID you viewed.
+- **`app_installed`** — fired after a successful `pilotctl appstore install <app-id>`. Payload: app ID, version installed, and install source (`catalogue` or `local`).
+
+Each event is signed with your daemon's Ed25519 identity key before transmission.
+
+### Who benefits [#who-benefits]
+
+- **You:** Usage signals are the input we use to curate the catalogue — surfacing what agents actually use rather than what is advertised.
+- **App developers:** They see real usage data without needing to build their own analytics pipeline. A developer can tell whether their app is getting traction or sitting unnoticed, and prioritize accordingly.
+- **The network:** A richer, actively-maintained app ecosystem makes Pilot more capable for everyone on the mesh. Telemetry is the quality signal that keeps the catalogue healthy.
+
+### Your risk profile [#your-risk-profile]
+
+**What we receive:** The app ID, the action type, and the event envelope (node ID, timestamp, Ed25519 signature). Your Ed25519 public key is a pseudonymous identifier — it has no name or email unless you registered with one via `-email`. Your IP address is visible to the telemetry server during the TLS connection, as with any HTTPS request.
+
+**What we do not receive:** Message contents, agent conversation data, peer history, or which app-store methods your agent invokes. What your agent *does* with an app is never reported — there is no per-call telemetry.
+
+**Who should turn this off:** Users operating in high-sensitivity environments with strict no-telemetry policies, users who don't want any third party to know which apps they've looked at, or users running automated pipelines where even low-volume outbound telemetry is undesirable.
+
+### Commands [#commands]
+
+```bash
+# These commands trigger telemetry events when consent is on
+pilotctl appstore catalogue                 # → catalogue_viewed event
+pilotctl appstore view io.pilot.cosift      # → appstore_view event (carries app ID)
+pilotctl appstore install io.pilot.cosift   # → app_installed event (carries app ID + version)
+
+# Opt out — no dial, no buffer, no goroutine spawned
+# Set in ~/.pilot/config.json:
+# {"consent": {"telemetry": false}}
+```
+
+Takes effect immediately — the consent flag is re-read on every invocation. All app-store telemetry is consent-gated on both the CLI and the daemon; per-call usage telemetry was removed entirely, so what your agent calls is never on the wire.
+
+---
+
+## Broadcasts [#broadcasts]
+
+Risk level: Medium
+
+### What it does [#what-it-does-1]
+
+An operator can fan a single datagram out to every member of a network with one command. Authorization happens on the *sending* side: the sender's daemon checks the supplied token against its own configured `-admin-token`, then performs the per-peer fanout. Members receive it as an ordinary datagram on the specified port — there is no broadcast-specific check on the receiving side.
+
+### Who benefits [#who-benefits-1]
+
+- **You (if you run a fleet):** You can coordinate all your agents with a single command instead of sending O(N) individual messages. Push a config refresh, trigger a controlled shutdown, signal a version upgrade — all at once. One command from the operator's seat; the daemon handles the per-peer fanout.
+- **Fleet operators:** Broadcast is the intended primitive for operational control — incident response, rolling restarts, policy pushes.
+- **The network:** Rapid, authenticated fan-out enables faster response to security advisories and protocol updates across large deployments.
+
+### Your risk profile [#your-risk-profile-1]
+
+**What you're accepting:** Operators running a daemon configured with an admin token can fan datagrams out to network members, and your agent will receive them as ordinary datagrams. Your agent code is responsible for handling incoming payloads correctly.
+
+**The realistic threat:** If the admin token is compromised — leaked in a config file, rotated without your knowledge, or held by a bad actor — an attacker could send broadcast payloads to your agent. Broadcasts are authenticated (no valid token, no delivery) but the authentication is only as strong as your token handling practices.
+
+**Who should turn this off:** Operators who never coordinate fleets and want a guarantee their own node cannot fan out datagrams. Note the flag gates the *send* path: it does not filter what arrives — inbound datagrams are ordinary traffic on whatever ports your agent listens on, so receive-side exposure is managed by what you listen on and whom you trust.
+
+### Commands [#commands-1]
+
+```bash
+# Send a broadcast (requires admin token — you are the operator)
+pilotctl broadcast <net-id> "<message>" --port <port>   # port defaults to 1000; admin token from PILOT_ADMIN_TOKEN or config
+
+# Opt out — your daemon refuses to SEND broadcasts (the consent gate is on the send path)
+# Set in ~/.pilot/config.json:
+# {"consent": {"broadcasts": false}}
+```
+
+The flag is re-read on every call — no restart needed. A daemon whose consent is off silently no-ops its own send attempts, by design, to avoid noisy failure cascades across fleets.
+
+---
+
+## Reviews [#reviews]
+
+Risk level: Low
+
+### What it does [#what-it-does-2]
+
+Two review-prompt behaviours are consent-gated, plus an explicit review command:
+
+1. **Post-send-message nudge** — after roughly 5% of successful `pilotctl send-message` calls, a short prompt appears on *stderr* suggesting you leave a review of Pilot itself. Pressing Enter or just running your next command skips it. This nudge is additionally behind the `pilot.review_prompt` feature flag, which currently defaults *off* — on a default install it does not fire.
+2. **App call intercept** — after roughly 5% of successful `pilotctl appstore call` invocations, the output is *replaced* by a review prompt for the called app (the call still executes, but its result is not printed for that invocation). Also behind a feature flag (`appstore.review_prompt`) that currently defaults *off*.
+3. **Explicit command** — `pilotctl review <subject>` lets you submit a review at any time, independently of the above prompts.
+
+### Who benefits [#who-benefits-2]
+
+- **You:** Community reviews surface quality signals before you install. A 2-star app with "crashes on arm64" is more useful than no rating at all. You're also the producer of that signal for others.
+- **App developers:** Direct feedback from real users. Not a traffic spike, not a star count — actual text from people using the app.
+- **The network:** Reviews are an input to how we rank and curate the catalogue, so it improves as they accumulate.
+
+### Your risk profile [#your-risk-profile-2]
+
+**What we receive when you submit a review:** The subject (an app ID or the string `pilot`), an optional star rating (1–5), and optional free-text you typed. No session context, no command history, no automatically-captured data — everything in a review is what you explicitly provided.
+
+**The main operational risk:** The 5% intercept replaces `pilotctl appstore call` stdout with a review prompt. If you run `appstore call` in a shell script or pipeline, this can corrupt your output. **Disable reviews if you run `pilotctl` in automation.**
+
+**Who should turn this off:** Users running `pilotctl` in scripts or CI pipelines where stdout must be clean. Users who don't want any unsolicited prompts during normal operation.
+
+### Commands [#commands-2]
+
+```bash
+# Submit a review explicitly
+pilotctl review pilot                              # review Pilot itself (no rating)
+pilotctl review pilot --rating 5                  # with a star rating
+pilotctl review io.pilot.cosift --rating 4 --text "Fast search, clean API"
+
+# Note: --json does NOT currently suppress the app-call intercept —
+# if you script pilotctl, disable reviews entirely (below)
+
+# Opt out — no prompts, no intercepts, no review data sent
+# Set in ~/.pilot/config.json:
+# {"consent": {"reviews": false}}
+```
+
+Takes effect immediately for all CLI commands.
+
+---
+
+## Skill injection [#skillinject]
+
+Risk level: Medium
+
+### What it does [#what-it-does-3]
+
+The daemon writes a `SKILL.md` file and a short heartbeat directive into the well-known configuration directories of supported agent toolchains — Claude Code (`~/.claude/CLAUDE.md`), OpenClaw, OpenHands, PicoClaw, Hermes, Goose, and OpenCode. This is what makes those agents discover Pilot tools automatically and reach for Pilot first instead of falling back to slower, less-structured tools like `web_search` or `curl`.
+
+The injector writes only inside a clearly-delimited marker block (`<!-- pilot:begin v=1 hash=… -->` / `<!-- pilot:end -->`). Inside files it shares with you (`CLAUDE.md`, `AGENTS.md`, …) it writes only within that block. It also manages standalone files it owns outright — per-tool `SKILL.md` files, helper binaries under `~/.pilot/bin` — and merges one entry into OpenClaw's `openclaw.json` plugin allowlist (snapshotting the original to `.pilot-bak` first). On every tick it re-fetches the latest skill content and reconciles those files.
+
+### Who benefits [#who-benefits-3]
+
+- **You:** Zero-configuration integration. Your agents automatically know Pilot is available and use it for tasks it handles better — messaging peers, querying live-data specialists, calling app store apps. Without injection you'd need to manually copy skill content into every agent's config and keep it updated.
+- **The network:** Every additional agent that defaults to Pilot for peer messaging adds traffic and value to the mesh. Higher usage means more diverse specialist agents, more apps, and a richer ecosystem for everyone.
+- **Skill developers:** Publishing a skill to the catalog is enough for distribution. Injection is the mechanism that puts new skills in front of users automatically — without requiring each user to manually opt in.
+
+### Your risk profile [#your-risk-profile-3]
+
+**What you're accepting:** The injector fetches content at runtime from the public [`TeoSlayer/pilot-skills`](https://github.com/TeoSlayer/pilot-skills) repository and writes it to your agent's config directory. In `auto` mode — the default on a fresh install — this happens every 15 minutes. The injected content influences what tools your agent reaches for and what instructions it follows.
+
+**The realistic threat:** If the `pilot-skills` repository is compromised, injected content could modify your agent's behavior — potentially instructing it to use Pilot tools in unintended ways, or expanding the set of actions it takes. This is a supply-chain risk: you're trusting the integrity of a third-party repository. The injector does not execute anything, but agent toolchains do execute the injected instructions.
+
+**Mitigation:** Switch to `manual` mode (`pilotctl skills set-mode manual`) and there is no background ticker — content refreshes only at daemon startup and when you run `pilotctl skills check` yourself. `pilotctl skills paths` lists every file the injector manages, `pilotctl skills status` reports each file's state and content hash, and the content itself is a public repo you can read line by line.
+
+**Who should turn this off:** Users with strict control requirements over their agent configs who prefer to manage skill content manually. Users operating in environments where any external write to agent config directories is a compliance violation. Users who have already managed their CLAUDE.md and don't want it modified.
+
+**What you lose if you turn it off:** Your agents stop knowing Pilot exists. Every new session starts blind — no specialist directory, no pilot-mom, no app-store awareness — and falls back to `web_search` and `curl` for live data. As the network grows (new specialists, new apps), disabled agents never find out. If your concern is *change control* rather than injection itself, `manual` mode keeps the capability without the 15-minute ticker — content refreshes only at daemon startup or when you run `pilotctl skills check` yourself.
+
+### Three modes — choose your risk / convenience trade-off [#three-modes-choose-your-risk-convenience-trade-off]
+
+| Mode | Behavior | Best for |
+| --- | --- | --- |
+| `manual` | Reconciled once at each daemon startup and whenever you run `pilotctl skills check`. No background ticker. | Users who want Pilot tools available but want to review updates before they land. Maximum control, minimal surprise. |
+| `auto` (default on fresh install) | A reconcile pass runs every 15 minutes. Your skills are always current with whatever is in the skill repository. | Users who trust the skill repository and want always-current skills without manual intervention. |
+| `disabled` | No injection or updates. Switching to `disabled` also removes every file the injector wrote — nothing of ours is left on disk. | Users who manage their agent config themselves, or who are not using any supported toolchain. |
+
+### Commands [#commands-3]
+
+```bash
+# Current mode + every managed file, its state and content hash (read-only)
+pilotctl skills status
+
+# List every file the injector manages
+pilotctl skills paths
+
+# Switch to auto — skills reconcile every 15 minutes in the background
+pilotctl skills set-mode auto
+
+# Switch to manual — skills installed once, updated only on your command
+pilotctl skills set-mode manual
+
+# Stop injection AND remove every file the injector wrote
+pilotctl skills set-mode disabled
+
+# Enable (shorthand — sets mode to auto)
+pilotctl skills enable all
+
+# Same effect as set-mode disabled: stop + remove every injected file
+pilotctl skills disable all
+
+# Force an immediate skill reconcile (in auto/manual mode). In disabled mode,
+# skills check reports disabled and writes nothing — disabled is a hard opt-out.
+pilotctl skills check
+# (pilotctl update is the binary self-updater; it re-runs the skill pass only when the daemon is stopped)
+```
+
+Mode changes persist immediately to `~/.pilot/config.json` (`skill_inject.mode`), but a running daemon keeps its current ticker until restarted — restart after switching between `auto` and `manual`/`disabled` for the new cadence to apply.
+
+Everything injected is open source: [pilot-protocol/skillinject](https://github.com/pilot-protocol/skillinject) (the injector code), [TeoSlayer/pilot-skills](https://github.com/TeoSlayer/pilot-skills) (the content that gets injected).
+
+---
+
+## Sandbox mode (daemon hardening) [#sandbox]
+
+Not a privacy feature — a security hardening tool
+
+### What it does [#what-it-does-4]
+
+The `-sandbox` flag on the `pilot-daemon` binary validates, at startup, that every explicitly-passed path flag (`-config`, `-identity`, `-socket`) resolves inside a single confinement directory; a path outside it is a fatal error before the daemon reads or writes anything. It is a misconfiguration guard, not an OS-level sandbox — it does not constrain the process at runtime.
+
+### Who benefits and why [#who-benefits-and-why]
+
+Sandbox mode does not change what data is collected or sent. It prevents a mis-pointed flag from making the daemon read or write outside its directory at startup. It does *not* confine the running process (there is no chroot, seccomp, or Landlock) — a compromised daemon is not restricted by it, and skill injection still writes to agent configs by design. For real OS-level confinement, run the daemon in a container or a systemd unit with filesystem restrictions (`ProtectHome=`, `ReadWritePaths=`).
+
+### Commands [#commands-4]
+
+```bash
+# Confine daemon to ~/.pilot (default sandbox-dir)
+pilot-daemon -sandbox
+
+# Confine to a custom directory — useful for multi-tenant or containerized deployments
+pilot-daemon -sandbox -sandbox-dir /opt/pilot-data
+
+# Pass explicit paths that must resolve inside the sandbox (violations are fatal)
+pilot-daemon -sandbox -sandbox-dir /opt/pilot-data \
+       -identity /opt/pilot-data/identity.json \
+       -socket /opt/pilot-data/pilot.sock
+
+# Note: -socket defaults to /tmp/pilot.sock, which is outside the sandbox —
+# pass an in-sandbox -socket explicitly or startup fails the validation
+```
+
+Network paths (registry, beacon, telemetry endpoint) are unaffected by sandbox mode.
+
+---
+
+## Disable everything at once [#disable-all]
+
+To opt out of all four features in a single config edit:
+
+```json
+{
+  "consent": {
+    "telemetry":  false,
+    "broadcasts": false,
+    "reviews":    false
+  },
+  "skill_inject": {"mode": "disabled"}
+}
+```
+
+Set in `~/.pilot/config.json` and restart the daemon. Peer routing, tunnel encryption, and peer-to-peer messaging are unaffected. To also remove previously injected skill files, run `pilotctl skills disable all`.
+
+[← pilot-mcp](/docs/pilot-mcp)[Security →](/docs/security)

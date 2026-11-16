@@ -1,0 +1,78 @@
+{
+ "kind": "app",
+ "slug": "io.pilot.miren",
+ "name": "Miren",
+ "seoTitle": "Miren: Agent App Methods & Install | Pilot Protocol",
+ "description": "Operate the Miren PaaS from an agent: deploy apps, run the server, and debug them. Review setup, usage, and operating details.",
+ "headText": [
+  "Miren",
+  "Miren",
+  "·",
+  "io.pilot.miren",
+  "Operate the Miren PaaS from an agent: deploy apps, run the server, and debug them.",
+  "Infrastructure",
+  "Live on catalogue",
+  "Install",
+  "Copy",
+  "pilotctl appstore install",
+  "io.pilot.miren"
+ ],
+ "metrics": {
+  "version": "v0.1.0",
+  "methods": "15",
+  "size": "4.8 MB",
+  "permissions": "None declared",
+  "platforms": "macOS · Linux"
+ },
+ "icon": "/appicons/optimized/io.pilot.miren-240.webp",
+ "related": [
+  "io.pilot.upfile",
+  "io.pilot.smol",
+  "io.pilot.docker",
+  "io.pilot.tldr",
+  "io.pilot.insforge"
+ ],
+ "toc": [
+  {
+   "id": "about-miren",
+   "text": "About Miren",
+   "level": 2
+  },
+  {
+   "id": "methods-15",
+   "text": "Methods · 15",
+   "level": 2
+  },
+  {
+   "id": "full-usage-demo",
+   "text": "Full usage demo",
+   "level": 2
+  },
+  {
+   "id": "worked-examples",
+   "text": "Worked examples",
+   "level": 3
+  },
+  {
+   "id": "good-to-know",
+   "text": "Good to know",
+   "level": 3
+  },
+  {
+   "id": "next",
+   "text": "Next",
+   "level": 3
+  },
+  {
+   "id": "whats-new",
+   "text": "What’s New",
+   "level": 2
+  },
+  {
+   "id": "platform-compatibility",
+   "text": "Platform Compatibility",
+   "level": 2
+  }
+ ],
+ "html": "<h2 id=\"about-miren\">About Miren</h2><p>Miren is a deployment platform for small teams. This app is the app-store front door for the <code>miren</code> CLI, letting an agent drive a Miren PaaS over IPC.</p><p>What an agent gets: - <b>Deploy lifecycle</b> — <code>miren.deploy</code> (non-interactive build + deploy), <code>miren.deploy.analyze</code> (detect the stack/services without building), and <code>miren.rollback</code>. - <b>Inspect apps</b> — <code>miren.apps</code>, <code>miren.app</code> (status), <code>miren.app.history</code>, and <code>miren.logs</code> (JSON). - <b>Server &amp; diagnostics</b> — <code>miren.server.install</code>/<code>miren.server.status</code>, <code>miren.doctor</code>, <code>miren.whoami</code>, and <code>miren.debug.connection</code>/<code>miren.debug.advertise</code>. - <b>Full CLI surface</b> — <code>miren.exec</code> runs any verbatim <code>miren</code> argv (addon, auth, env, route, cluster, disk, sandbox, and more).</p><p>Good to know: - Structured JSON is returned wherever the CLI offers it (e.g. pass <code>--json</code>). - Discover the live surface at runtime with <code>miren.help</code> — every method, its parameters, and its latency class (fast / med / slow). - Server-side commands need a configured cluster; without one, calls return a structured error (<code>{stdout,stderr,exit}</code>) telling the agent what to do next. - Runs on macOS and Linux (arm64 + amd64); the miren CLI is staged and sha-pinned on install.</p><h2 id=\"methods-15\">Methods · 15</h2><code>miren.exec</code>Run any miren subcommand. Payload is {\"args\":[...]} — the verbatim miren argv. Use this for the full CLI surface beyond the curated methods below (addon, auth, env, route, cluster, disk, sandbox, etc.). Run `miren help` or `miren <command> --help` for the surface. Example args: [\"app\",\"list\",\"--json\"]. Note: interactive subcommands (e.g. `app run`, `login`) and long-running ones (e.g. `server start`) are not suitable over IPC.<code>miren.apps</code>List all applications on the cluster (alias for `app list`).<code>miren.app</code>Show the current status of one application. Provide the app name.<code>miren.app.history</code>Show an application's deployment history.<code>miren.logs</code>Read recent logs for an application as JSON.<code>miren.deploy</code>Build and deploy the app in the current directory (non-interactive, --force).<code>miren.deploy.analyze</code>Analyze the app's detected stack/services without building or deploying.<code>miren.rollback</code>Roll an application back to its previous deployed version.<code>miren.doctor</code>Diagnose the miren environment and connectivity.<code>miren.whoami</code>Show the current authenticated user and cluster.<code>miren.server.install</code>Install the miren server as a systemd service on this host (Linux only).<code>miren.server.status</code>Show miren server service status (Linux only).<code>miren.debug.connection</code>Test connectivity and authentication with the miren server.<code>miren.debug.advertise</code>Show which addresses the server would advertise and why.<code>miren.help</code>Discovery: every method with params, kind, and latency class.<h2 id=\"full-usage-demo\">Full usage demo</h2><p>When you need to operate a Miren PaaS from an agent — deploy or roll back apps and inspect their status, history, and logs — over IPC.</p>Run this first — List the applications on your clusterCall<pre><code>pilotctl appstore call io.pilot.miren miren.apps '{}'</code></pre>→<code>{\"stdout\":\"[{\\\"name\\\":\\\"web\\\",\\\"status\\\":\\\"running\\\"}]\",\"exit\":0}</code><p>Needs a configured cluster; if none is set up, output is a structured {stdout,stderr,exit} error telling you what to do next.</p><h3 id=\"worked-examples\">Worked examples</h3>Show one app's statusCall<pre><code>pilotctl appstore call io.pilot.miren miren.app '{\"name\":\"web\"}'</code></pre>→<code>{\"stdout\":\"...status...\",\"exit\":0}</code>Read recent logs as JSONCall<pre><code>pilotctl appstore call io.pilot.miren miren.logs '{\"app\":\"web\"}'</code></pre>→<code>{\"stdout\":\"[{\\\"ts\\\":...,\\\"msg\\\":...}]\",\"exit\":0}</code>Build + deploy the app in the current directoryCall<pre><code>pilotctl appstore call io.pilot.miren miren.deploy '{}'</code></pre>→<code>{\"stdout\":\"...deployed...\",\"exit\":0}</code><p>Non-interactive (--force); deploys the CURRENT working directory.</p>Roll back to the previous versionCall<pre><code>pilotctl appstore call io.pilot.miren miren.rollback '{}'</code></pre>→<code>{\"stdout\":\"...rolled back...\",\"exit\":0}</code>Reach any miren subcommand (passthrough)Call<pre><code>pilotctl appstore call io.pilot.miren miren.exec '{\"args\":[\"env\",\"list\",\"--app\",\"web\",\"--json\"]}'</code></pre>→<code>{\"stdout\":\"{...}\",\"exit\":0}</code><h3 id=\"good-to-know\">Good to know</h3><ul><li>Server-side commands need a configured cluster; without one they return a structured {stdout,stderr,exit} error explaining the next step — not a crash.</li><li>miren.deploy builds and deploys the app in the CURRENT directory non-interactively (--force).</li><li>Interactive/long-running subcommands (app run, login, server start) aren't usable over IPC — use the curated methods instead.</li><li>Pass --json inside miren.exec args wherever the subcommand supports it to get structured output.</li><li>server install / server status are Linux-only.</li></ul><h3 id=\"next\">Next</h3><ul><li><code>io.pilot.miren miren.help '{}'</code></li></ul><h2 id=\"whats-new\">What’s New</h2>v0.1.0Latest—<ul><li>Operate the Miren PaaS from an agent: deploy and roll back apps; inspect status, logs, and history; run the server; and diagnose connectivity — plus a passthrough exec for any miren subcommand.</li></ul><h2 id=\"platform-compatibility\">Platform Compatibility</h2>macOSApple Silicon2.9 MBSupportedmacOSIntel2.8 MBSupportedLinuxarm643.0 MBSupportedLinuxamd643.0 MBSupported"
+}

@@ -1,0 +1,76 @@
+{
+ "kind": "app",
+ "slug": "io.pilot.deadsimple",
+ "name": "Dead Simple Email",
+ "seoTitle": "Dead Simple Email: Technical: Agent App | Pilot Protocol",
+ "description": "An email identity your agent provisions for itself, then uses to send, receive, and read its own signup codes. See setup and usage details.",
+ "headText": [
+  "Dead Simple Email",
+  "Dead Simple Email",
+  "·",
+  "io.pilot.deadsimple",
+  "An email identity your agent provisions for itself, then uses to send, receive, and read its own signup codes.",
+  "Communications",
+  "Live on catalogue",
+  "Install",
+  "Copy",
+  "pilotctl appstore install",
+  "io.pilot.deadsimple"
+ ],
+ "metrics": {
+  "version": "v0.1.0",
+  "methods": "19",
+  "size": "—",
+  "permissions": "4 declared",
+  "platforms": "macOS · Linux"
+ },
+ "icon": "/appicons/optimized/io.pilot.deadsimple-240.webp",
+ "related": [
+  "io.pilot.dial",
+  "io.pilot.primitive",
+  "io.pilot.agentphone"
+ ],
+ "toc": [
+  {
+   "id": "about-dead-simple-email",
+   "text": "About Dead Simple Email",
+   "level": 2
+  },
+  {
+   "id": "methods-19",
+   "text": "Methods · 19",
+   "level": 2
+  },
+  {
+   "id": "full-usage-demo",
+   "text": "Full usage demo",
+   "level": 2
+  },
+  {
+   "id": "worked-examples",
+   "text": "Worked examples",
+   "level": 3
+  },
+  {
+   "id": "good-to-know",
+   "text": "Good to know",
+   "level": 3
+  },
+  {
+   "id": "next",
+   "text": "Next",
+   "level": 3
+  },
+  {
+   "id": "whats-new",
+   "text": "What’s New",
+   "level": 2
+  },
+  {
+   "id": "platform-compatibility",
+   "text": "Platform Compatibility",
+   "level": 2
+  }
+ ],
+ "html": "<h2 id=\"about-dead-simple-email\">About Dead Simple Email</h2><p>Dead Simple Email gives an agent a real, deliverable email identity — not a sandbox — and it can get one entirely on its own. A single call to <code>deadsimple.signup</code> returns an account, an API key and a live inbox. No dashboard, no verification email, no human in the loop.</p><p><b>The method agents reach for most is <code>deadsimple.get_verification_code</code>.</b> It pulls the one-time code or magic link straight out of the newest inbound message, so an agent can sign itself up for a third-party service or clear a 2FA prompt without ever parsing an email body. Filter by sender and by timestamp so a stale code is never returned. This is what turns \"the provider emails you a code\" from a dead end into a step.</p><p>From there the agent sends, replies on-thread, reply-alls, forwards, reads full messages with headers and attachments, and walks whole conversation threads over one REST API.</p><p>Underneath is real sending infrastructure: DKIM-signed egress through a dedicated MTA, bounce and complaint handling, suppression lists, and optional open and click tracking. Inbound mail can be pushed to HMAC-SHA256 signed webhooks that retry on exponential backoff. A supervisor agent can watch every inbox in a workspace at once with <code>list_all_messages</code>, and inboxes can be created in bulk, tagged, and torn down when a throwaway identity is finished.</p><p><b>Tiers.</b> A self-provisioned agent account starts on trial: 1 inbox, 10 sends an hour, 25 a day. Calling <code>deadsimple.claim</code> with an email a human controls, then <code>deadsimple.claim_verify</code>, moves it to the Free plan — 5 inboxes and 5,000 emails a month — keeping the same API key, inboxes and history. Paid plans scale to 500 inboxes, 25 custom domains, and 1,000 requests a minute.</p><p><b>Edge cases.</b> A 429 with code <code>trial_send_limit_exceeded</code> is a quota signal, not a transient failure — do not blindly retry, claim the account instead. Pagination is cursor-based. Spam is excluded from <code>list_messages</code> unless <code>include_spam</code> is true. Delete throwaway inboxes when finished so they stop counting against the quota.</p><h2 id=\"methods-19\">Methods · 19</h2><code>deadsimple.signup</code>START HERE if you have no key. Provisions a Dead Simple account, an API key and a live inbox in one call, with no human, no dashboard and no verification email. Returns {account_id, api_key, inbox}. Save api_key as the DEADSIMPLE_API_KEY secret — every other method authenticates with it. Idempotent per Idempotency-Key, so a retry after a dropped connection returns the same account rather than a second one. The account starts on the trial tier: 1 inbox, 10 sends an hour, 25 a day.<code>deadsimple.claim</code>Start lifting the trial caps by attaching an email address a human controls. Sends a 6-digit code to that address; pass it to deadsimple.claim_verify to finish. Your existing API key, inboxes and message history are untouched by the upgrade.<code>deadsimple.claim_verify</code>Confirm the code from deadsimple.claim and move the account from trial to the Free plan (5 inboxes, 5,000 emails a month). The same API key keeps working.<code>deadsimple.create_inbox</code>Create a real, deliverable email inbox in one call. Returns an inbox_id and a live address that can send and receive immediately — no SMTP setup, no DNS, no mailbox provisioning. Use this when you already have a key and want an additional identity.<code>deadsimple.list_inboxes</code>List the inboxes this key can see, newest first. Cursor-paginated: pass the cursor from the previous response for the next page.<code>deadsimple.get_inbox</code>Fetch one inbox: its address, display name, tags, status, and counters.<code>deadsimple.delete_inbox</code>Permanently delete an inbox and its stored messages. IRREVERSIBLE. Use when a throwaway identity is finished so it stops counting against the inbox quota.<code>deadsimple.send_email</code>Send an email from one of your inboxes. Plain text or HTML, cc/bcc, base64 attachments, scheduled send, and optional open/click tracking. Real DKIM-signed egress, not a test harness. On the trial tier this is capped at 10 an hour and 25 a day; a 429 with code trial_send_limit_exceeded is a quota signal, not a transient failure.<code>deadsimple.get_verification_code</code>THE method agents reach for. Pulls the one-time code or magic link straight out of the newest inbound message, so a signup or 2FA prompt can be cleared without parsing an email body. Non-blocking: returns found=false if nothing has arrived, so poll every 2-3 seconds for up to a minute after triggering the mail. Set `since` to a timestamp taken BEFORE you triggered it, and `from_contains` to the sender domain, so a stale code is never returned.<code>deadsimple.list_messages</code>List messages in an inbox, newest first, with sender, subject, snippet, and labels. Spam is excluded unless include_spam is true. Cursor-paginated.<code>deadsimple.get_message</code>Get one message in full: headers, plain-text and HTML bodies, and attachment metadata.<code>deadsimple.reply</code>Reply to the sender of a message. Threading headers are set automatically so the reply lands in the same conversation — never hand-build In-Reply-To.<code>deadsimple.reply_all</code>Reply to the sender and every other recipient of a message, with threading headers set automatically.<code>deadsimple.forward</code>Forward a message, with its attachments, to new recipients.<code>deadsimple.list_threads</code>List conversation threads in an inbox, each with its latest message, so an agent can track ongoing exchanges instead of loose messages.<code>deadsimple.get_thread</code>Get a full conversation thread with every message in order — the context an agent needs before replying.<code>deadsimple.get_attachment</code>Get a time-limited signed download URL for an attachment. The link expires in one hour.<code>deadsimple.list_all_messages</code>List messages across every inbox this key can see, newest first. For a supervisor agent watching many identities at once — cheaper than iterating inboxes.<code>deadsimple.create_webhook</code>Register an HMAC-SHA256 signed webhook for inbound mail, bounces, and complaints, so long-running work does not have to poll list_messages in a loop. Deliveries retry on exponential backoff and every attempt is logged.<h2 id=\"full-usage-demo\">Full usage demo</h2><p>When your agent needs an email address of its own: to sign itself up for a third-party service and read the code back, or to send and receive real mail as part of a task.</p>Run this first — Get an account, an API key and a live inbox in one callCall<pre><code>pilotctl appstore call io.pilot.deadsimple deadsimple.signup '{\"label\":\"my-agent\"}'</code></pre>→<code>{\"data\":{\"account_id\":\"...\",\"api_key\":\"dse_...\",\"inbox\":{\"inbox_id\":\"...\",\"email\":\"...@box1.deadsimple.email\"},\"plan\":{\"plan\":\"trial\",\"inbox_limit\":1,\"sends_per_hour\":10}}}</code><p>Everything is under data. Save data.api_key as DEADSIMPLE_API_KEY — it is shown once. Already have a key? Skip this and call create_inbox.</p><h3 id=\"worked-examples\">Worked examples</h3>Sign up for a third-party service and read the code backCall<pre><code>pilotctl appstore call io.pilot.deadsimple deadsimple.get_verification_code '{\"inbox_id\":\"&lt;id&gt;\",\"since\":\"2026-08-06T12:00:00Z\",\"from_contains\":\"stripe.com\"}'</code></pre>→<code>{\"data\":{\"found\":true,\"code\":\"481920\",\"magic_link\":null,\"message_id\":\"...\"}}</code><p>Note the time BEFORE submitting your address, pass it as `since`, then poll every 2-3s. found=false just means it has not landed yet. Never parse the raw email yourself.</p>Send a real emailCall<pre><code>pilotctl appstore call io.pilot.deadsimple deadsimple.send_email '{\"inbox_id\":\"&lt;id&gt;\",\"to\":\"someone@example.com\",\"subject\":\"Report ready\",\"text_body\":\"The run finished.\"}'</code></pre>→<code>{\"data\":{\"message_id\":\"...\",\"status\":\"queued\"}}</code><p>DKIM-signed egress, not a sandbox. Trial caps this at 10/hour, 25/day.</p>Read a conversation before replyingCall<pre><code>pilotctl appstore call io.pilot.deadsimple deadsimple.get_thread '{\"inbox_id\":\"&lt;id&gt;\",\"thread_id\":\"&lt;tid&gt;\"}'</code></pre>→<code>{\"data\":{\"thread_id\":\"...\",\"messages\":[{\"message_id\":\"...\",\"from\":\"...\",\"subject\":\"...\"}]}}</code><p>Then reply with the message_id; threading headers are set for you.</p><h3 id=\"good-to-know\">Good to know</h3><ul><li>Every response is wrapped: the payload is under data, with meta.request_id beside it.</li><li>Call signup only when you have no key. It is idempotent per Idempotency-Key, so a retry returns the same account, not a second one.</li><li>Trial is 1 inbox, 10 sends/hour, 25/day. A 429 trial_send_limit_exceeded is a QUOTA signal, not transient — do not retry it.</li><li>Lift the caps with claim then claim_verify. Your key, inboxes and history survive.</li><li>get_verification_code needs since from BEFORE you triggered the mail, or you may read a stale code.</li></ul><h3 id=\"next\">Next</h3><ul><li><code>io.pilot.deadsimple deadsimple.help '{}'</code></li></ul><h2 id=\"whats-new\">What’s New</h2>v0.1.0Latest—<ul><li>First release on the Pilot app store.</li></ul><h2 id=\"platform-compatibility\">Platform Compatibility</h2>macOSApple SiliconSupportedmacOSIntelSupportedLinuxarm64SupportedLinuxamd64Supported"
+}

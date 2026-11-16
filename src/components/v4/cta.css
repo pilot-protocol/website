@@ -1,0 +1,85 @@
+/*
+ * CTA (Figma 160:819, keyframes 166:4104 -> 166:2943; sky 220:25121). The trail's sky runs from the page at
+ * the top to the deep blue the footer starts from. The buttons sit on the sky in both themes, so their colours
+ * are fixed rather than theme tokens.
+ */
+
+.cta-stage {
+  contain: paint;
+}
+
+/* The runway the stage pins in: about 0.8 of a screen of scroll held while the airliner crosses. */
+.cta-runway {
+  height: 180lvh;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cta-runway {
+    height: auto;
+  }
+}
+
+.cta-layer {
+  will-change: transform;
+}
+
+/* The trail's sky: one vertical gradient over the stage (positions set per stage height in cta.tsx). */
+.cta-sky {
+  background: linear-gradient(
+    180deg,
+    #f6f6f1 var(--sky-y0),
+    #b9dcff calc(var(--sky-y0) + (var(--sky-y1) - var(--sky-y0)) * 0.077),
+    #5aa9ff calc(var(--sky-y0) + (var(--sky-y1) - var(--sky-y0)) * 0.28),
+    #1f5bff calc(var(--sky-y0) + (var(--sky-y1) - var(--sky-y0)) * 0.62),
+    #1240d4 calc(var(--sky-y0) + (var(--sky-y1) - var(--sky-y0)) * 0.8),
+    #0b2ca2 calc(var(--sky-y0) + (var(--sky-y1) - var(--sky-y0)) * 0.94),
+    #0a2a9c var(--sky-y1)
+  );
+}
+.dark .cta-sky {
+  background: linear-gradient(
+    180deg,
+    #1a1a1a var(--sky-y0),
+    #141e3e calc(var(--sky-y0) + (var(--sky-y1) - var(--sky-y0)) * 0.077),
+    #14309a calc(var(--sky-y0) + (var(--sky-y1) - var(--sky-y0)) * 0.28),
+    #1d4fd6 calc(var(--sky-y0) + (var(--sky-y1) - var(--sky-y0)) * 0.62),
+    #0a2a9c var(--sky-y1)
+  );
+}
+
+/* The two ways in: white cards on the sky, a soft navy lift so they sit off the blue. */
+.cta-way {
+  box-shadow:
+    0 0 0 1px rgb(11 44 160 / 0.08),
+    0 1px 2px rgb(11 44 160 / 0.1),
+    0 18px 40px -18px rgb(6 18 80 / 0.45);
+}
+
+.cta-install {
+  background: #ffffff;
+  color: #0d1117;
+  box-shadow:
+    0 0 0 1px rgb(13 17 23 / 0.08),
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    inset 0 -1px 0 rgb(13 17 23 / 0.14);
+}
+
+
+.cta-cloud {
+  background: rgb(255 255 255 / 0.1);
+  color: #ffffff;
+  box-shadow: inset 0 -1px 0 rgb(13 17 23 / 0.14);
+}
+@media (hover: hover) and (pointer: fine) {
+  .cta-install:hover {
+    background: #eef3ff;
+  }
+  .cta-cloud:hover {
+    background: rgb(255 255 255 / 0.18);
+  }
+}
+
+.cta-install:focus-visible,
+.cta-cloud:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}

@@ -1,0 +1,216 @@
+/*
+ * Routes section (variant D): one flight card under one arc. Keyframes are prefixed `rt-`.
+ * Colours come from the theme and the variant's sky tokens.
+ */
+
+.rt {
+  --rt-sky: linear-gradient(180deg, #cde1fd 0%, #e2ecfc 46%, #f2f1ee 100%);
+  --rt-arc: color-mix(in srgb, var(--sky-fill) 26%, transparent);
+  --rt-route: var(--sky-fill);
+  --rt-card-shadow: 0 1px 2px rgb(10 24 70 / 0.06), 0 28px 56px -28px rgb(10 24 70 / 0.32);
+}
+.dark .rt {
+  --rt-sky: linear-gradient(180deg, #091640 0%, #0f1c48 50%, #171c2c 100%);
+  --rt-arc: color-mix(in srgb, var(--sky-accent) 26%, transparent);
+  --rt-route: var(--sky-accent);
+  --rt-card-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 28px 56px -28px rgb(0 0 0 / 0.7);
+}
+
+.rt-surface {
+  background: var(--rt-sky);
+}
+
+/* ---------- The sky and the route ---------- */
+
+.rt-sky {
+  height: clamp(118px, 26vw, 220px);
+}
+.rt-arc,
+.rt-trail {
+  fill: none;
+  stroke-linecap: round;
+}
+.rt-arc {
+  stroke: var(--rt-arc);
+  stroke-width: 1.5px;
+}
+.rt-trail {
+  stroke: var(--rt-route);
+  stroke-width: 2.25px;
+}
+
+.rt-end {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  translate: -50% -50%;
+  border-radius: 999px;
+  background: var(--color-card);
+  box-shadow:
+    inset 0 0 0 3px var(--rt-route),
+    0 2px 6px rgb(10 30 90 / 0.18);
+}
+
+.rt-beacon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  transition: opacity 300ms var(--ease-out);
+}
+.rt-beacon[data-on="true"] {
+  opacity: 1;
+}
+.rt-beacon .rt-end {
+  top: 0;
+  left: 0;
+}
+.rt-beacon-label {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  translate: -50% 0;
+  font-size: 12.5px;
+  line-height: 16px;
+  color: var(--color-mute);
+  white-space: nowrap;
+}
+
+.rt-plane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  color: var(--rt-route);
+  opacity: 0;
+  filter: drop-shadow(0 2px 3px rgb(10 30 90 / 0.22));
+  will-change: transform;
+}
+
+/* ---------- The card ---------- */
+
+.rt-card {
+  box-shadow: var(--rt-card-shadow);
+}
+.rt-card-line {
+  background: color-mix(in srgb, var(--color-fg) 14%, transparent);
+}
+
+.rt-switch {
+  background: var(--sky-tile);
+}
+.rt-switch-pill {
+  background: var(--color-card);
+  box-shadow:
+    0 1px 2px rgb(10 24 70 / 0.12),
+    0 0 0 0.5px rgb(10 24 70 / 0.06);
+  transition: transform 260ms var(--ease-out);
+}
+.dark .rt-switch-pill {
+  background: color-mix(in srgb, var(--color-fg) 14%, var(--color-card));
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+}
+.rt-switch-pill[data-mode="relay"] {
+  transform: translateX(100%);
+}
+.rt-switch-btn {
+  color: var(--color-mute);
+  transition:
+    color 200ms ease,
+    transform 160ms var(--ease-out);
+}
+.rt-switch-btn[aria-pressed="true"] {
+  color: var(--color-fg);
+}
+.rt-switch-btn:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .rt-switch-btn:hover {
+    color: var(--color-fg);
+  }
+}
+
+/* The timeline: each step lights up as the connection gets there. */
+.rt-steps {
+  display: grid;
+  gap: 18px;
+}
+.rt-step {
+  position: relative;
+  padding-left: 30px;
+}
+.rt-step::before,
+.rt-step::after {
+  content: "";
+  position: absolute;
+  top: 19px;
+  bottom: -15px;
+  left: 6.25px;
+  width: 1.5px;
+  border-radius: 1px;
+}
+.rt-step::before {
+  background: var(--color-edge-2);
+}
+.rt-step::after {
+  background: var(--rt-route);
+  transform: scaleY(0);
+  transform-origin: 50% 0;
+  transition: transform 500ms var(--ease-in-out);
+}
+.rt-step:last-child::before,
+.rt-step:last-child::after {
+  display: none;
+}
+.rt-step:has(+ .rt-step[data-lit="true"])::after {
+  transform: scaleY(1);
+}
+.rt-step-dot {
+  position: absolute;
+  top: 5px;
+  left: 1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--color-card);
+  box-shadow: inset 0 0 0 1.5px var(--color-edge-3);
+  transition:
+    box-shadow 300ms var(--ease-out),
+    background-color 300ms var(--ease-out);
+}
+.rt-step > p {
+  transition:
+    color 300ms ease,
+    opacity 300ms ease;
+}
+.rt-step > p:first-of-type {
+  color: var(--color-dim);
+}
+.rt-step > p:last-of-type {
+  opacity: 0.6;
+}
+.rt-step[data-lit="true"] .rt-step-dot {
+  background: var(--rt-route);
+  box-shadow:
+    inset 0 0 0 1.5px var(--rt-route),
+    0 0 0 4px var(--sky-tint);
+}
+.rt-step[data-lit="true"] > p:first-of-type {
+  color: var(--color-fg);
+}
+.rt-step[data-lit="true"] > p:last-of-type {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rt-switch-pill,
+  .rt-step::after {
+    transition: none;
+  }
+}

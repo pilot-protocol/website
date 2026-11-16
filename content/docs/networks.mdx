@@ -1,0 +1,199 @@
+---
+title: "Networks"
+description: "Private networks in Pilot Protocol - group-level connectivity, membership permissions, join rules, and the security model."
+---
+
+Private networks - group-level connectivity without bilateral trust.
+
+## Overview [#overview]
+
+Networks are the group-level access control primitive in Pilot Protocol. Where [bilateral trust](/docs/trust) requires every pair of agents to independently negotiate a handshake, a network grants connectivity to all members at once.
+
+Add 10 agents to the same network and they can discover and connect to each other without creating N² bilateral trust pairs. Membership is a group-level network grant; enterprise port policy and application authorization can further narrow the resulting access.
+
+Any node can list, join, leave and inspect networks with the `pilotctl network` commands. Creating a network needs the registry admin token. On the public backbone run by Vulture Labs only the operators hold that token, so you can join networks there only when the operators created one and gave you its token or an invite. To create and run your own networks, run your own registry: see [Self-hosting the registry](/docs/enterprise).
+
+## Networks vs. bilateral trust [#vs-trust]
+
+Pilot Protocol has two distinct access control models. They serve different purposes and can be used together.
+
+|  | Bilateral trust | Network membership |
+| --- | --- | --- |
+| **Scope** | One-to-one | Group-wide |
+| **Setup** | Handshake + approve per pair | Add to network once, connect to all members |
+| **Scaling** | O(n²) handshakes for n agents (e.g. 10 agents = 45 pairs) | O(n) adds for n agents |
+| **Discovery** | Must know address or hostname | Enumerate via `pilotctl network members` |
+| **Revocation** | Per-peer (`untrust`) | Remove from network; all access revoked at once |
+| **Use case** | Cross-org collaboration, unknown peers | Teams, fleets, same-org agents |
+| **Persistence** | Stored locally on each node | Stored in registry, survives any node restart |
+
+Bilateral trust is designed for relationships between agents that don’t share an organizational boundary - two companies collaborating, an agent reaching out to an unknown peer, or any scenario where explicit mutual consent matters.
+
+Networks are designed for agents that *should* be able to establish network connections by default - a fleet of workers, a team’s agents, or a research cluster. Membership grants connectivity; it does not independently authorize a task, tool call, data disclosure, payment, or other business action.
+
+## What network membership grants [#permissions]
+
+When two agents share a network, they get a specific set of permissions that would otherwise require bilateral trust:
+
+| Permission | Without network | With shared network |
+| --- | --- | --- |
+| **Resolve endpoints** | Reachable endpoint is withheld; some directory metadata may remain visible | Can resolve any member’s endpoint |
+| **Open connections** | Connection attempts silently dropped | Connections accepted immediately |
+| **Send datagrams** | Silently dropped | Delivered |
+| **List members** | Non-backbone networks are enumerable via the registry today (backbone \#0 is admin-gated) | Full member list via `pilotctl network members` |
+| **Handshake auto-approval** | Requires manual approve or mutual request | Network membership serves as a trust signal |
+
+### What networks do NOT grant [#what-networks-do-not-grant]
+
+- **No traffic inspection** - encryption is end-to-end between agents. The network grants connectivity, not visibility.
+- **No transitive access** - if A and B share network 1, and B and C share network 2, A cannot reach C. Each network is an independent trust domain.
+
+### Enterprise networks [#enterprise-networks]
+
+Enterprise mode adds production controls on top of standard network membership. Enable it at creation time with `pilotctl network create --name prod --enterprise` on a registry where you hold the admin token.
+
+- **[RBAC](/docs/enterprise-rbac)** - three-tier roles (owner, admin, member) with a permissions matrix. Promote, demote, kick, and transfer ownership.
+- **[Invites](/docs/enterprise-rbac#invites)** - consent-based invite flow with 30-day TTL and inbox cap.
+- **[Identity & SSO](/docs/enterprise-identity)** - OIDC/JWT validation plus external identity mapping and webhook-based bridges.
+- **[Directory sync](/docs/enterprise-identity#directory-sync)** - map external directory entries and roles to existing agents; sync does not create agents or add members.
+- **[Policies](/docs/enterprise-policies)** - membership caps, port whitelists, and network descriptions with merge-on-update semantics.
+- **[Audit log & export](/docs/enterprise-audit)** - structured audit events, SIEM export (Splunk HEC, CEF, JSON), webhooks with DLQ.
+- **[Blueprints](/docs/enterprise-blueprints)** - declarative JSON provisioning: one document, one command, full network setup.
+
+See [Self-hosting the registry](/docs/enterprise) for the full guide, or the [CLI reference](/docs/cli-reference#networks) for the network commands.
+
+### The design principle [#the-design-principle]
+
+Standard network permissions are intentionally simple: you are either a member or you are not, and membership grants network connectivity to available ports. Outside the boundary, a private agent's *endpoint* (IP:port) is withheld — though the registry may still expose some directory metadata (see the privacy note below). Enterprise networks add roles and port policies; applications retain responsibility for method, data, spend, approval, and other business authority.
+
+## The backbone (network 0) [#backbone]
+
+Every registered agent belongs to network 0 (the backbone). This is the global address space where node IDs are allocated and endpoints are registered. The backbone provides:
+
+- **Address allocation** - 32-bit node IDs assigned at registration
+- **Endpoint resolution** - public IP:port discovery via STUN
+- **NAT traversal** - hole-punching and relay coordination
+- **Handshake relay** - trust negotiation via the registry
+
+The backbone does *not* grant communication rights. Being on the backbone means you exist in the address space, not that anyone can connect to you. A private agent's endpoint is withheld from everyone except its trusted peers and network co-members; other directory metadata (hostname, tags) may still be resolvable.
+
+## Join rules [#join-rules]
+
+Whoever creates a network with `pilotctl network create` chooses a join rule that controls how new members are added:
+
+| Rule | Who can join | Use case |
+| --- | --- | --- |
+| **Open** | Any node can join without approval | Internal fleets where every owned agent should join without a per-agent invite |
+| **Invite only** | Only nodes an owner or admin invites, once they accept. Needs enterprise mode. | High-security environments where membership is tightly controlled |
+| **Token-gated** | Anyone with the shared secret token | Teams that can distribute a token out-of-band (Slack, email, config file) |
+
+The join rule is set at network creation and enforced by the registry. For token-gated networks, share the token out-of-band and agents self-join:
+
+```bash
+pilotctl network join 1 --token my-secret
+```
+
+## Network lifecycle [#lifecycle]
+
+### Create a network [#create-a-network]
+
+```bash
+pilotctl network create --name research-lab --join-rule token --token my-secret
+```
+
+This needs the registry admin token (`PILOT_ADMIN_TOKEN` or `admin_token` in `~/.pilot/config.json`). The `--join-rule` is one of `open` (the default), `invite`, or `token`; `invite` requires `--enterprise`, which enables roles, invites, directory sync and port policies. `--node-id` sets the creating node, which becomes the owner.
+
+### Add agents [#add-agents]
+
+How a node gets in depends on the join rule. On **open** and **token** networks, agents join themselves:
+
+```bash
+pilotctl network join 1
+pilotctl network join 1 --token my-secret
+```
+
+On **invite-only** networks, an owner or admin invites the agent from their own node, and the invited agent accepts. Invites expire after 30 days.
+
+```bash
+# On an owner or admin node: invite by node ID, Pilot address or hostname
+pilotctl network invite 1 1001
+pilotctl network invite 1 my-agent
+
+# On the invited node
+pilotctl network invites
+pilotctl network accept 1      # or: pilotctl network reject 1
+```
+
+With the registry admin token you can also join another node to an open or token network: `pilotctl network join 1 --node-id 1001` (add `--token` for a token network). Invite-only networks always go through the invite.
+
+| Format | Example | Where to find it |
+| --- | --- | --- |
+| Node ID | `1001` | `pilotctl info` output |
+| Pilot address | `1:0001.0000.03E9` | Daemon startup output |
+| Hostname | `my-agent` | Set at daemon start with `--hostname` |
+
+Once a node is a member, it can communicate with all other network members.
+
+### Monitor agents [#monitor-agents]
+
+List live members with `pilotctl network members <network_id>` - shows node ID, hostname, version, and public status per member in the table (JSON mode additionally includes address, real\_addr, and last\_seen).
+
+### Remove agents [#remove-agents]
+
+```bash
+pilotctl extras network kick 1 1001
+# or by hostname / pilot address
+pilotctl extras network kick 1 my-agent
+```
+
+Kicking needs the registry admin token or the network’s own admin token. A member can also leave on its own with `pilotctl network leave 1`.
+
+Access is revoked immediately - the agent can no longer resolve, connect to, or be discovered by other network members (unless they also share bilateral trust).
+
+### Delete a network [#delete-a-network]
+
+With the admin token, `pilotctl extras network delete <network_id>` deletes a network. All member associations are removed. Agents retain their backbone registration and bilateral trust relationships, but lose all network-granted permissions.
+
+## How it works under the hood [#how-it-works]
+
+Network membership is checked automatically at three points in the protocol. You don’t need to configure any of this - it happens transparently when agents communicate.
+
+### 1. Address resolution [#1-address-resolution]
+
+When agent A looks up agent B’s endpoint, the registry checks: is B public? If not, does A share a network with B, or do they have mutual trust? If neither, the *endpoint* lookup is denied. Note the denial distinguishes "private" from "not found", and the directory `lookup` still returns hostname/networks/tags for a known node — endpoint privacy is enforced, directory-metadata privacy is weaker.
+
+### 2. Connection acceptance [#2-connection-acceptance]
+
+When a connection request arrives at a private agent, the daemon checks the source against its trust list and shared network membership. If neither applies, the request is silently dropped - no response, no indication the target exists.
+
+### 3. Datagram delivery [#3-datagram-delivery]
+
+Datagrams to private agents use the same check. If the sender is not trusted and not in a shared network, the datagram is silently dropped.
+
+## Security model [#security]
+
+### Membership is the boundary [#membership-is-the-boundary]
+
+The standard network model is deliberately simple: membership grants connectivity. Standard networks do not inspect application payloads; list the members with `pilotctl network members` to review the group-level connectivity boundary. Enterprise networks layer on RBAC (owner/admin/member roles) and port-level policies. Application authorization remains separate.
+
+### Silent rejection [#silent-rejection]
+
+When a non-member tries to connect to a private network agent, the connection gate returns no response and exposes no endpoint-level signal. Directory listings or metadata can still be enumerable under some registry configurations, so this limits connectivity probing rather than promising total metadata invisibility.
+
+### Backbone isolation [#backbone-isolation]
+
+Backbone (network 0) membership does not grant any communication rights. A private agent's endpoint is hidden from everyone outside its trust and network boundaries (endpoint-level privacy; directory metadata may still be visible).
+
+### Immediate revocation [#immediate-revocation]
+
+Running `pilotctl extras network kick` revokes the agent’s access at the connection gate immediately: a kicked peer’s next connection attempt re-checks the registry and is silently dropped. Membership *metadata* is not instant everywhere, though — daemons reconcile network membership on a periodic sync loop (every 5 minutes), and resolve/policy results are cached — so listings and cached lookups can briefly lag the registry, which remains the single source of truth.
+
+### No transitive trust [#no-transitive-trust]
+
+Network membership is not transitive. If A and B share network 1, and B and C share network 2, A cannot reach C through B unless A and C also share a network or have bilateral trust. Each network is an independent trust domain.
+
+### Enterprise port policies [#enterprise-port-policies]
+
+Enterprise networks support [port-level policies](/docs/enterprise-policies) that restrict which ports members can access. With the admin token, use `pilotctl extras network policy <network_id> --allowed-ports 80,443,1001` to limit accessible ports within a network. Other settable flags: `--max-members <n>`, `--description <text>`. Without any `--<flag>` argument, `pilotctl extras network policy <network_id>` shows the current policy. See [Network Policies](/docs/enterprise-policies) for details on membership caps, port whitelists, and merge-on-update semantics.
+
+**Further reading:** [Self-hosting the registry](/docs/enterprise) · [Build a Private Agent Network for Your Company](/blog/private-agent-network-company) · [Trust & Handshakes](/docs/trust) [← Trust & Handshakes](/docs/trust)[Built-in Services →](/docs/services)

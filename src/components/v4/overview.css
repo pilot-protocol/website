@@ -1,0 +1,202 @@
+/*
+ * Overview (sky home): the whole product on one screen. Seven flat bordered cards, each with one small live visual.
+ * Everything here is transform/opacity; loops pause off-screen through [data-run="false"].
+ */
+
+/* The blue of routes, packets and wires: a touch brighter at night so it reads on the charcoal cards. */
+.ovd {
+  --ovd-blue: var(--sky-fill);
+}
+.dark .ovd {
+  --ovd-blue: #5b8fff;
+}
+
+/* ---------- The card ---------- */
+
+/* Flat and bordered (the kit's .sky-card). On hover the hairline darkens a step; nothing lifts or casts a shadow. */
+.ovd-card {
+  transition:
+    border-color 240ms ease,
+    transform 160ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .ovd-card:hover {
+    border-color: rgb(26 26 26 / 0.2);
+  }
+  .dark .ovd-card:hover {
+    border-color: rgb(255 255 255 / 0.18);
+  }
+}
+.ovd-card:active {
+  transform: scale(0.995);
+}
+.ovd-card:focus-visible {
+  outline: 2px solid var(--sky-accent);
+  outline-offset: 2px;
+}
+
+/* The jump button: nudges towards where it leads (down the page, or up and out to another page). */
+.ovd-jump {
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
+}
+.ovd-jump > svg {
+  transition: transform 300ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .ovd-card:hover .ovd-jump {
+    background-color: var(--sky-tint);
+    color: var(--sky-accent);
+  }
+  .ovd-card:hover .ovd-jump > svg {
+    transform: translateY(2px);
+  }
+  .ovd-card:hover .ovd-jump[data-away="true"] > svg {
+    transform: translate(1.5px, -1.5px);
+  }
+}
+
+/* ---------- Pilot Protocol: the route between two agents ---------- */
+
+/* A packet riding the route: the track spans the line, so 100% of its width is the line's length. */
+.ovd-track {
+  position: absolute;
+  inset: 0;
+}
+.ovd-track[data-dir="out"] {
+  animation: ovd-run 1100ms var(--ease-in-out) both;
+}
+.ovd-track[data-dir="loop-out"] {
+  animation: ovd-run 1500ms var(--ease-in-out) infinite;
+}
+.ovd-track[data-dir="loop-back"] {
+  animation: ovd-run-back 1500ms var(--ease-in-out) 750ms infinite;
+}
+@keyframes ovd-run {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  12%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+@keyframes ovd-run-back {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  12%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+}
+
+/* Approval checks land with a short press. */
+.ovd-pop {
+  transition:
+    opacity 260ms var(--ease-out),
+    transform 360ms var(--ease-out);
+}
+.ovd-pop[data-on="false"] {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+/* Status lines swap with a soft blur. */
+@keyframes ovd-swap {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+    filter: blur(3px);
+  }
+}
+.ovd-swap {
+  animation: ovd-swap 380ms var(--ease-out) both;
+}
+
+/* ---------- Data service agents: the directory scrolling past ---------- */
+
+.ovd-ticker {
+  animation: ticker-y 64s linear infinite;
+}
+[data-run="false"] .ovd-ticker {
+  animation-play-state: paused;
+}
+.ovd-fade-y {
+  mask-image: linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent);
+}
+
+/* ---------- pilot-mom: typing dots ---------- */
+
+@keyframes ovd-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+/* ---------- Pilot Cloud: requests coming down the wires ---------- */
+
+.ovd-wire {
+  stroke-dasharray: 10 100;
+  stroke-dashoffset: 10;
+  animation: ovd-wire 2.8s var(--ease-in-out) infinite;
+}
+[data-run="false"] .ovd-wire {
+  animation-play-state: paused;
+}
+@keyframes ovd-wire {
+  0% {
+    stroke-dashoffset: 10;
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    stroke-dashoffset: -100;
+    opacity: 1;
+  }
+}
+
+/* ---------- Reduced motion: the final state, still ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .ovd-track,
+  .ovd-wire {
+    display: none;
+  }
+  .ovd-ticker,
+  .ovd-swap {
+    animation: none;
+  }
+  .ovd-card {
+    transition-property: border-color;
+  }
+  .ovd-pop {
+    transition-property: opacity;
+  }
+  .ovd-card:hover,
+  .ovd-card:active,
+  .ovd-pop[data-on="false"] {
+    transform: none;
+  }
+}
