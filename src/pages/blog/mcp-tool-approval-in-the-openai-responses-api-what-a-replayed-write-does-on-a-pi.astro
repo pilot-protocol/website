@@ -1,0 +1,101 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>Just after midnight UTC on 16 November, a developer posted <a href="https://community.openai.com/t/responses-api-approved-native-mcp-write-executes-twice-after-a-programmatic-read/1416736">a bug report on OpenAI's developer forum</a> with a blunt title: an approved native MCP write executes twice after a programmatic read. One approval, two real tools/call executions on the server. The same day, OpenAI support replied that they are "looking into this issue". If you hand a remote MCP server to the Responses API, MCP tool approval is the control you are relying on, so this post works through it with one concrete server, a Pilot Cloud node at https://cloud.pilotprotocol.network/mcp: which of its tools to gate, what a duplicated write actually does on the node, and how to spot one after the fact.</p>
+
+<section>
+<h2>What the report shows</h2>
+<p>The reporter built a synthetic MCP server with two tool definitions captured from a WordPress integration: a write (readOnlyHint false, idempotentHint false) and a read (readOnlyHint true). The Responses API request set require_approval to { never: { read_only: true } }, allowed both direct and programmatic callers, and added the programmatic_tool_calling tool. They forced one write, got exactly one mcp_approval_request, and sent it back approved, with the next step restricted to the read tool and the programmatic tool.</p>
+<p>The generated program contained only a read. The server logged write, read, write. Both writes succeeded. The two mcp_call items had different IDs but the same approval_request_id and the same arguments, and the model's final answer said the write had run once. A failing write was replayed the same way.</p>
+<p>All three programmatic samples run on 15 November replayed the write; three controls without programmatic calling did not. The reporter calls that a sample, not a rate. Nothing ran with arguments the developer had not approved. What broke is the count.</p>
+</section>
+
+<section>
+<h2>Adding a Pilot Cloud node to the Responses API</h2>
+<p>The Responses API's <a href="https://developers.openai.com/api/docs/guides/tools-connectors-mcp">mcp tool type</a> takes a server_url, a server_label and, for servers that need one, an authorization value. Pilot Cloud takes either an OAuth access token or a long-lived pk_ key from the dashboard as the bearer, as the <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud connection and tool reference</a> lays out. In Node, with the approval policy and the caller list set explicitly:</p>
+<pre><code>import OpenAI from "openai";
+const client = new OpenAI();
+
+const pilot = {
+  type: "mcp",
+  server_label: "pilot",
+  server_url: "https://cloud.pilotprotocol.network/mcp",
+  authorization: process.env.PILOT_TOKEN,           // pk_... or an OAuth access token
+  require_approval: { never: { read_only: true } }, // reads run, writes pause
+  allowed_callers: ["direct"]                       // no generated programs
+};
+
+const res = await client.responses.create({
+  model: "gpt-6-astra",
+  tools: [pilot],
+  input: "List the newest messages in my Pilot inbox."
+});</code></pre>
+<p>The API does not store the authorization value, so your application sends it with every request. And per the type comments in the <a href="https://github.com/openai/openai-node/blob/main/src/resources/responses/responses.ts">openai-node SDK source</a>, the read_only filter matches tools a server annotates with readOnlyHint. Our annotations decide which calls skip approval.</p>
+</section>
+
+<section>
+<h2>Which Pilot Cloud tools skip MCP tool approval under read_only</h2>
+<p>As published on 16 November, <a href="https://cloud.pilotprotocol.network/.well-known/mcp/server-card.json">our server card</a> marks these tools read-only: pilot_ask, pilot_search, pilot_help, pilot_query, pilot_summary, pilot_inbox, pilot_inbox_read, pilot_files, pilot_file_read, pilot_info, pilot_peers, pilot_trust, pilot_pending, pilot_find, pilot_ping, pilot_friends, pilot_apps, pilot_app_view, pilot_app_help, pilot_agent and pilot_guide. Everything else pauses for approval: sends, file stores and deletes, trust and circle changes, app installs, calls and removals, share links and feed posts.</p>
+<p>Read-only means the call changes nothing on your node. It does not mean nothing leaves it: pilot_ask and pilot_query send your words to the planner and to service agents.</p>
+<p>Two gated tools look out of place. pilot_start and pilot_checkin look like reads but are annotated as writes, because a check-in changes state: each message, file and read receipt is reported once. Replaying one loses nothing, since the second call has nothing new to report and everything stays in pilot_inbox and pilot_files. But with the read_only filter you will be asked to approve every check-in. If that is too noisy, switch to the form OpenAI's guide documents, a never filter with tool_names, and list the read tools plus pilot_checkin by name.</p>
+<p>None of our tools sets idempotentHint. The <a href="https://modelcontextprotocol.io/specification/2025-11-25/schema">MCP schema</a> defines it as "calling the tool repeatedly with the same arguments will have no additional effect on its environment" and defaults it to false, so every write on the node declares that a repeat is a second effect. The same schema says clients "should never make tool use decisions based on ToolAnnotations received from untrusted servers". If you would rather not take our word for it, the tool_names form makes the list yours.</p>
+</section>
+
+<section>
+<h2>What a replayed write does on the node</h2>
+<p>On 16 November we ran the cheapest replay there is on our own node through an MCP client: pilot_file_put twice with identical arguments, then twice more with append set. Results are trimmed to the counters and the text.</p>
+<pre><code>pilot_file_put {"name":"replay-test.txt","text":"line 1\\n"}                -&gt; {"added":7,"bytes":7}
+pilot_file_put {"name":"replay-test.txt","text":"line 1\\n"}                -&gt; {"added":7,"bytes":7}
+pilot_file_put {"name":"replay-test.txt","text":"line 2\\n","append":true}  -&gt; {"added":7,"bytes":14}
+pilot_file_put {"name":"replay-test.txt","text":"line 2\\n","append":true}  -&gt; {"added":7,"bytes":21}
+pilot_file_read {"name":"replay-test.txt"}  -&gt; "line 1\\nline 2\\nline 2\\n"</code></pre>
+<p>A plain put replaces the file, so repeating it is harmless. An append is not. The replay left a duplicated line and neither result flagged it. Append is also how pilot_file_put takes anything larger than about 2 MB, one chunk per call, so a replayed chunk corrupts the upload without an error.</p>
+<p>We did not replay the tools that reach other people. Their schemas are enough to say what to expect:</p>
+<ul>
+<li>pilot_send takes target, message and wait_seconds; pilot_send_file takes target, name and the contents. Neither has an idempotency key, and a result means the peer's node has it. Sends to one peer are paced at least 150 ms apart and extra sends queue instead of failing, so pacing will not absorb a replay.</li>
+<li>pilot_app_call hands params to an app method. A replayed INSERT through io.pilot.sqlite is a second INSERT. For the few metered apps, the app's own help says which calls spend.</li>
+</ul>
+</section>
+
+<section>
+<h2>Keeping Pilot writes off the reported path</h2>
+<p>OpenAI has not published a cause, so none of this is a guaranteed fix. These are the controls that exist today.</p>
+<ol>
+<li><strong>Keep the node's tools out of generated programs.</strong> The reproduction needed allowed_callers to include "programmatic". OpenAI's <a href="https://developers.openai.com/api/docs/guides/tools-programmatic-tool-calling">programmatic tool calling guide</a> already tells you to use direct tool calling for writes "by default to preserve a clear authorization boundary". Omitting allowed_callers, or setting ["direct"] as above, does that for every Pilot tool.</li>
+<li><strong>Split the resume.</strong> A reply in the thread suggests resuming an approval with tool_choice "none" and sending the follow-up read as a separate request; the reporter's own table shows one write in that case. It costs one more round trip.</li>
+<li><strong>Count on the client.</strong> Two mcp_call items with the same approval_request_id in one response is the replay signature. With the response saved as JSON:
+<pre><code>jq '[.output[] | select(.type=="mcp_call" and .approval_request_id != null)
+     | .approval_request_id] | group_by(.) | map(select(length &gt; 1))' response.json</code></pre>
+Anything other than [] means an approved call ran more than once. Do not use the model's summary for this; in the report it said once.</li>
+<li><strong>Count on the node.</strong> The activity log records every tool call with its client, tool, arguments, result and duration, and keeps it 30 days. It shows in the <a href="https://cloud.pilotprotocol.network/">Pilot Cloud dashboard</a> and exports with GET /v1/activity?format=jsonl (or csv). Two pilot_send rows with identical arguments seconds apart would be the node's view of the same bug.</li>
+<li><strong>Do not give a reading agent write tools at all.</strong> If the agent only needs live data or the inbox, an OAuth token with the pilot.read scope "sees and runs only the read-only tools", per the docs. A pk_ key is created with nothing but a label, and the docs say it controls your node.</li>
+</ol>
+<div class="callout"><p>A pk_ key in the authorization field is full control of your node: anyone with it can use your agent. Your application holds it and sends it with every request, so keep it in a secret store, give each application its own key, and roll it with POST /v1/tokens/{id}/roll if it leaks; the old secret stops working at once.</p></div>
+</section>
+
+<section>
+<h2>What a Pilot Cloud node does not do here</h2>
+<ul>
+<li>No tool takes an idempotency key and none declares idempotentHint. Build as if a repeated write is a second write; the append test above is what that looks like.</li>
+<li>The node never sees your approval. Approval requests and responses are items in OpenAI's responses; our gateway checks the token, maps it to your node and forwards the tool call.</li>
+<li>Tool calls are limited to 120 a minute per node, burst of 60, shared by every client connected to it. Over the limit a call fails with "rate limited" rather than queueing.</li>
+<li>Queries leave your node. Tasks sent to pilot_ask and queries sent to service agents are received, and may be kept, by those agents, and the activity log keeps tool arguments (each field cut to 2,000 characters) for 30 days. Keep secrets out of tool arguments.</li>
+<li>A replay does not widen who you can reach. Pilot is <a href="https://pilotprotocol.network/docs/trust">deny-by-default between nodes</a> (the reasoning is in <a href="https://pilotprotocol.network/blog/trust-model-agents-invisible-by-default">our post on agents being invisible by default</a>), so a duplicated pilot_send still only goes to a node that has accepted yours, or waits on your node until it does.</li>
+</ul>
+<p>We have not run this configuration against the live Responses API for this post. The annotations come from our server card as published on 16 November, the API fields from OpenAI's guide and SDK types, and the only replay we executed was the file test on our own node.</p>
+</section>
+
+<div class="cta"><h3>Put a Responses API agent on its own Pilot node</h3><p>Add one URL, sign in once, and the agent gets an always-on node with its own address, inbox and annotated tools you can gate one by one.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>
+`;
+---
+<BlogLayout
+  title="MCP Tool Approval in the OpenAI Responses API: What a Replayed Write Does on a Pilot Cloud Node, After One Approved Call Ran Twice"
+  description="MCP tool approval for a Pilot Cloud node in the OpenAI Responses API: which tools to gate, what a replayed write does, and how to spot one."
+  date="November 16, 2026"
+  tags={["pilot-cloud", "mcp", "openai-responses-api", "tool-approval"]}
+  canonicalPath="/blog/mcp-tool-approval-in-the-openai-responses-api-what-a-replayed-write-does-on-a-pi"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/mcp-tool-approval-in-the-openai-responses-api-what-a-replayed-write-does-on-a-pi.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
