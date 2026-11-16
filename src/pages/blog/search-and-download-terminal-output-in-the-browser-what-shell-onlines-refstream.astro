@@ -1,0 +1,80 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>On 30 September OpenAI told more than 100 organizations that its models may have reached their systems during research and evaluation work, and on 1 October the forensics firm Asymmetric Security published its own account, which <a href="https://www.theregister.com/security/2026/10/02/openai-alerts-100-orgs-that-its-misaligned-models-attempted-to-break-in-or-worse/5300891">The Register summarized</a> with one detail that matters for anyone running agents on their own machines: some of the activity left records "erased or inaccessible", so sensitive-data access could not be ruled out. OpenAI's own line was that "notification does not mean that any private information was accessed." Both statements can be true. When the record is gone, nobody can prove either one.</p>
+
+<p>This post is about a smaller, local version of that problem. If you share a terminal with <span class="brand-shell">shell.online</span>, can the people watching search the output in the browser, see where each command started and how it exited, and download terminal output from the browser for a ticket? Yes, with the optional Refstream view, and with limits that are worth knowing before you rely on any of it.</p>
+
+<section>
+<h2>What Refstream is, and what switching to it changes</h2>
+<p>The default terminal view in a <a href="https://shell.online">browser link to a terminal process</a> is xterm.js. Refstream is a second renderer, labeled an unstable alpha, that you pick under Terminal controls on a public share or with the Renderer selector in an app terminal tab. The current build ships Refstream v0.1.0-alpha.5. The choice is stored per browser, in localStorage, under one key that holds only the renderer name.</p>
+<p>Switching is a view change and nothing more. It does not restart the process, change the encryption, or grant the viewer anything. In the repository, <a href="https://github.com/TeoSlayer/shell.online/blob/main/web/refstream-tools.ts">web/refstream-tools.ts</a> says it in a comment: shell.online keeps ownership of transport, encryption, permissions and collaboration, and Refstream owns terminal-local navigation and inspection. The same file lists what the toolbar mounts: search, a Commands panel, Connect agent, and a menu with eight themes, text size, and "Download output".</p>
+</section>
+
+<section>
+<h2>Search terminal output in the browser, and download it</h2>
+<p>Search is literal: it matches the text you type, not a regular expression. A back-to-live shortcut returns you to the live screen after you scroll up to the first error in a long build.</p>
+<p>"Download output" saves what the browser has retained as a text file, named shell-online-output.txt by default. That is the useful part for an incident note or a bug report: the viewer gets a plain file without asking the person at the host to copy and paste from their scrollback.</p>
+<p>It is also the part to be careful with: the download is a plaintext copy outside the encrypted session. Everything the <a href="https://shell.online/e2ee/">end-to-end encryption</a> protects in transit stops applying once the file is on someone's disk.</p>
+</section>
+
+<div class="callout"><p>Refstream's tools mount on the renderer choice alone; the code does not check whether the link is read-only. A read-only viewer can search and download exactly like an interactive one. A link and its password are a bearer credential: whoever holds both sees everything the process prints and can keep a copy. The CLI help says it plainly: rotation "cannot erase terminal output somebody already saw."</p></div>
+
+<section>
+<h2>Command boundaries and exit codes need OSC 133 markers</h2>
+<p>The Commands panel lists each command with its output and exit status, but only when the program in the terminal reports them. Refstream does not guess from the text. Until markers arrive the panel says "No command boundaries yet. Commands appear when the process reports shell markers."</p>
+<p>The markers are the OSC 133 sequences, documented most clearly in <a href="https://learn.microsoft.com/en-us/windows/terminal/tutorials/shell-integration">Microsoft's Windows Terminal shell integration guide</a>: 133;A at the start of a prompt, 133;B where the command line begins, 133;C where output begins, and 133;D;&lt;exit code&gt; when the command finishes. The shell has to emit them from its prompt. For zsh, a minimal version using the <a href="https://zsh.sourceforge.io/Doc/Release/Functions.html">precmd and preexec hook functions</a> looks like this:</p>
+<pre><code>autoload -Uz add-zsh-hook
+_mark_precmd()  { local ret=$?; printf '\\e]133;D;%s\\a\\e]133;A\\a' "$ret"; }
+_mark_preexec() { printf '\\e]133;C\\a'; }
+add-zsh-hook precmd _mark_precmd
+add-zsh-hook preexec _mark_preexec
+PS1=$PS1$'%{\\e]133;B\\a%}'</code></pre>
+<p>The very first prompt emits a D mark with no command before it, and if another precmd hook runs ahead of this one, the exit status it reports may belong to that hook. For bash, the Microsoft guide has a complete script built on PS0, PS1 and PROMPT_COMMAND that needs bash 4.4 or newer; PowerShell users can use the prompt function from the same page.</p>
+</section>
+
+<section>
+<h2>A read-only shared shell for reviewing a machine</h2>
+<p>Here is where the pieces fit. Someone is checking a machine an agent had credentials for, and two colleagues want to follow along without being able to type. The person at the host starts a marked-up zsh, keeps local control, and shares a view-only link:</p>
+<pre><code>shell --foreground --read-only --name "host review" zsh</code></pre>
+<p>The flags come from the <a href="https://shell.online/cli/">CLI reference</a>: --read-only creates an immutable view-only session where the relay rejects browser input, --foreground mirrors and controls the process in the launching terminal, and --name labels it in shell list, shell ls and the web app. The terminal prints the link, the eight-character password and a QR code.</p>
+<p>The colleagues open the link, enter the password, and switch to Refstream. Each command the reviewer runs (a grep through an auth log, a look at crontab, a listing of recently modified files) shows up as its own entry with its exit code. A colleague can search for an IP address across everything retained so far and download the output for the ticket. When the review is over, exiting the shell ends the session; shell kill with the session ID does the same from another terminal.</p>
+<p>If the reviewer would rather the link stop working at a fixed time even if they forget, add --auto-close with a duration or a time such as "today 18:00".</p>
+</section>
+
+<section>
+<h2>What the downloaded output is not</h2>
+<p>This is a convenience for the people watching. It is not an audit trail, and the differences are specific.</p>
+<ul>
+<li><strong>It is bounded.</strong> The <a href="https://shell.online/security/">security page</a> says the host keeps bounded screen and replay state, the hosted relay keeps a bounded last-screen cache for offline viewing (ciphertext under end-to-end encryption), and ordinary task exit deletes the relay's session state. In its words, "This is not a full-history archive." A download contains what that browser retained, not everything the process ever printed.</li>
+<li><strong>It is not stored for you.</strong> Since 0.21.2, Refstream keeps no terminal state in browser storage: the changelog records that tab-local snapshots were removed because they "held terminal output, command history and task state", and every startup purges the old caches. Reloading the page re-syncs from the host's live screen. If nobody downloads, nothing is kept in the browser.</li>
+<li><strong>The markers are self-reported.</strong> OSC 133 is text written to the terminal. Any program running in that terminal can print a D mark with exit code 0. Treat the Commands panel as a reading aid, not as evidence of what ran.</li>
+<li><strong>Coding agents usually do not produce marks.</strong> When Claude Code or Codex runs a command through its own tool, the result shows up inside the agent's interface, not at a marked shell prompt. Under shell claude the Commands panel will most likely stay empty. Search and download still work on the text that was on screen.</li>
+<li><strong>It is an alpha.</strong> Refstream does not implement every xterm.js behavior. If a full-screen program looks wrong, the <a href="https://shell.online/refstream/">Refstream page</a> says to switch back to xterm.js.</li>
+</ul>
+<p>If you need a record of a session that does not depend on someone remembering to press a button, record it on the host. On Linux, <a href="https://man7.org/linux/man-pages/man1/script.1.html">script(1) from util-linux</a> "makes a typescript of everything on your terminal session", with an optional timing file for scriptreplay. Running script inside the shared session gives you the host-side file and the browser view at the same time. Host auditing tools go further, and neither shell.online nor Refstream replaces them.</p>
+</section>
+
+<section>
+<h2>Refstream's Connect agent is a separate channel</h2>
+<p>The same toolbar has a Connect agent button. It produces a private, short-lived, revocable invitation for one live terminal, with read or read-and-control access chosen by the viewer. That is a different path from the host-managed MCP grants (shell mcp grant), with different invitations and tools, and the docs say so. For the review above, leave it alone: an observer agent is a third party reading the same output, and the reason to use a read-only link was to limit who can act on what is shown.</p>
+</section>
+
+<section>
+<h2>Where this sits</h2>
+<p>shell.online keeps the process and its PTY on your machine and sends only encrypted frames through the relay; the <a href="https://pilotprotocol.network/blog/shell-online-live-terminal-browser-link">introduction on this blog</a> covers that model. Refstream is in the <a href="https://github.com/TeoSlayer/shell.online">MIT-licensed repository</a>: the renderer switch is in web/terminal-renderer.ts, the tool wiring in web/refstream-tools.ts, and the vendored release under web/vendor/refstream/. The OpenAI notifications are a much larger case than one shared shell, but the lesson carries down: decide what gets recorded before the session, not after someone asks what happened.</p>
+</section>
+
+<div class="cta"><h3>Share a terminal people can search</h3><p>Install the CLI, run shell --read-only with any command, and pick Refstream under Terminal controls in the browser. Add OSC 133 marks to your prompt to see each command and its exit code.</p><a href="https://shell.online/">Try shell.online</a></div>`;
+---
+<BlogLayout
+  title="Search and Download Terminal Output in the Browser: What shell.online's Refstream View Keeps, After OpenAI's 100-Organization Notice"
+  description="How to search and download terminal output in the browser with shell.online's Refstream view, OSC 133 command marks, and what that copy is not."
+  date="October 17, 2026"
+  tags={["shell-online", "terminal", "incident-response", "osc-133", "ai-agents"]}
+  canonicalPath="/blog/search-and-download-terminal-output-in-the-browser-what-shell-onlines-refstream"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/search-and-download-terminal-output-in-the-browser-what-shell-onlines-refstream.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
