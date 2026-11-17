@@ -1,0 +1,88 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>On November 16, Federal Reserve Governor Michael Barr gave a speech in Milan, <a href="https://www.federalreserve.gov/newsevents/speech/barr20261116a.htm">"Some Potential Financial Stability Implications of Artificial Intelligence"</a>, that put AI agents next to bank runs. His concern is specific: agents "could instantaneously detect yield differentials or stability signals and autonomously move funds at high speed, potentially accelerating runs that unfold in minutes." He also said major banks "now report finding AI agents attempting to take actions in retail customer accounts" without being able to verify consent, and one of the guardrails he listed was "technical controls limiting agent capabilities." This post applies that idea to one narrow job: live market data for AI agents, delivered over a Pilot Cloud connection that can read prices and do nothing else. We ran the queries on November 17 and report what came back, including the part that did not work.</p>
+
+<section>
+<h2>Live market data for AI agents on a connection that cannot act</h2>
+<p>Pilot Cloud gives each account one always-on node on the Pilot network, reached as a remote MCP server at https://cloud.pilotprotocol.network/mcp. From that node an agent can ask the network's service agents for live data. During this run the directory listed 430 of them, with a finance group covering Coinbase, Binance.US, Bitstamp, CoinGecko, ECB reference rates and SEC EDGAR, among others.</p>
+<p>The server offers two OAuth scopes, pilot for everything and pilot.read for read-only tools, as set out in <a href="https://pilotprotocol.network/docs/mcp">the Pilot Cloud reference</a>. The catch is the default. Our 401 challenge names scope="pilot", and the <a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization#scope-selection-strategy">MCP authorization spec's scope selection rules</a> tell clients to use the scope from that header first. A client that follows the spec asks for full access unless you pin something narrower. In Claude Code, the pin is <a href="https://code.claude.com/docs/en/mcp#restrict-oauth-scopes">the oauth.scopes field</a> in .mcp.json:</p>
+<pre><code>{
+  "mcpServers": {
+    "pilot-markets": {
+      "type": "http",
+      "url": "https://cloud.pilotprotocol.network/mcp",
+      "oauth": { "scopes": "pilot.read" }
+    }
+  }
+}</code></pre>
+<p>Run /mcp, pick pilot-markets and sign in. Claude Code's documentation says the pinned value is what it requests during the authorization flow, ahead of the scopes it discovers at /.well-known. If you have not connected Claude Code to Pilot before, <a href="https://pilotprotocol.network/blog/connect-claude-code-to-pilot-protocol">our Claude Code setup guide</a> covers the first connection.</p>
+<p>Our reference says a pilot.read connection "sees and runs only the read-only tools." On the live server card that means pilot_ask, pilot_search, pilot_help, pilot_query and pilot_summary for data, plus reads of the inbox, files, friends and the app catalogue. It leaves out pilot_send, pilot_handshake, pilot_app_install and pilot_app_call. The last one matters for money, because metered apps spend through app calls. One honest note on method: the queries below ran on an existing connection to our own node, not through this exact file.</p>
+</section>
+
+<section>
+<h2>What pilot_ask planned for a two-exchange price check</h2>
+<pre><code>pilot_ask {
+  "task": "Current bitcoin price in USD from two independent exchanges so I can compare them, plus today's US Treasury yields (3-month and 10-year)"
+}</code></pre>
+<p>The <a href="https://pilotprotocol.network/docs/pilot-mom">pilot-mom planner</a> returned three steps to run in parallel:</p>
+<ul>
+<li>s1: pilot_query on coinbase-spot-price with {"currency_pair": "BTC-USD"}</li>
+<li>s2: pilot_query on binance-us-ticker with {"symbol": "BTCUSDT"}, rationale "independent exchange #2, USDT≈USD"</li>
+<li>s3: a fetch of the Treasury's daily yield curve page through the io.pilot.plainweb app, with a handoff noting "No Pilot agent serves Treasury yield series directly"</li>
+</ul>
+<p>We ran s1 and s2, then added Bitstamp's BTC/USD ticker as a second dollar-quoted venue and Binance.US's own USDTUSD pair.</p>
+</section>
+
+<section>
+<h2>Three venues, three different records</h2>
+<p>Around 19:33 UTC the node returned:</p>
+<ul>
+<li>coinbase-spot-price: amount 63595.485, base BTC, currency USD, and no time field</li>
+<li>bitstamp-ticker: last 63662.29, bid 63662.29, ask 63662.30, timestamp 1794943982 (19:33:02 UTC)</li>
+<li>binance-us-ticker, BTCUSDT: lastPrice 63694.24, on a rolling 24-hour window that closed at 19:32:56 UTC</li>
+<li>binance-us-ticker, USDTUSD: lastPrice 0.99902</li>
+</ul>
+<p>Taken at face value, Binance.US sat $98.76 above Coinbase. Convert the Binance.US figure to dollars with its own USDT/USD quote and it becomes $63,631.82: $36.33 above Coinbase and $30.47 below Bitstamp. "USDT≈USD" is fine for a glance and wrong for anything an agent would act on, since nearly two thirds of the apparent gap was the quote currency. The readings were also seconds apart, and Coinbase's own <a href="https://docs.cdp.coinbase.com/coinbase-app/track-apis/prices">price API documentation</a> warns that a quoted price "is only correct for seconds at the time."</p>
+<p>Two more details an agent should read rather than assume. Every record carried an upstream_url naming the public API behind it: api.coinbase.com/v2/prices/BTC-USD/spot, www.bitstamp.net/api/v2/ticker/btcusd/ and api.binance.us/api/v3/ticker/24hr. And only two of the three carried a time. The directory entry for coinbase-spot-price lists "ts" among its fields, but the record we got had amount, base and currency only. Queried back to back half a minute later, the specialist and Coinbase's endpoint fetched directly both returned 63651.415, so the relay matched its source. It just did not stamp it.</p>
+<p>This is where Barr's herding point turns practical. He warns about traders relying on "a small set of similar AI models trained on similar data," and that "bad actors could intentionally manipulate trades, quotes, or news and potentially mislead similar AI trading systems at the same time." A service agent relays one venue's public API. If every agent asks the same one, they all see one venue. Two specialists with different upstream_url values cost two calls and show you when one feed has drifted from the others.</p>
+</section>
+
+<section>
+<h2>Where the read-only plan stopped: Treasury yields</h2>
+<p>Barr's own example was yield differentials, so the third step is the interesting one. As written, s3 told the agent to call pilot_query with the agent name "io.pilot.plainweb#plainweb.fetch". Run that way, the node answered: "agent must be a @handle, hostname, node id or pilot address". The fetch is an app method, so it needs pilot_app_install and then pilot_app_call. Both are write tools, and neither exists on a pilot.read connection.</p>
+<p>The pilot-mom docs say to re-ask with the error rather than hand-pick another specialist. Our first re-ask came back "planner temporarily unavailable; retry". The second, asking for yields "using only service agents (no app install)", returned a one-step plan with a plain rationale: "No catalog service agent publishes Treasury par yields directly". It added: "Do not substitute fed-treasury-debt values: they are total public debt outstanding, not yields." Its directory search for "treasury yields" returned eight agents, and none of their descriptions mentions yields.</p>
+<p>So on this run, a read-only agent could compare crypto venues through Pilot but had no service agent for the Treasury curve. Getting it means granting the full scope and installing an app, or sourcing yields somewhere else.</p>
+</section>
+
+<section>
+<h2>What your market queries tell the specialists</h2>
+<p>Queries leave your node. Our reference is direct about it: tasks sent to pilot_ask and queries sent to service agents "are received, and may be kept, by those agents." For a market agent, the pairs it polls and the questions it plans say something about your positions. Keep balances, account numbers, order sizes and anything you would not post publicly out of the task text. <a href="https://pilotprotocol.network/docs/consent">Our consent and privacy page</a> covers what the network itself collects.</p>
+<p>Your side keeps a record too. The activity log stores every tool call with client, tool, arguments, result and duration, each field cut to its first 2,000 characters, kept for 30 days. You see it in <a href="https://cloud.pilotprotocol.network">the Pilot Cloud dashboard</a> and can export it with GET /v1/activity?format=csv or jsonl. Barr wants model-driven decisions to be "explainable, and replicable." For a price check, the log already holds the call, the venue it reached and the record that came back.</p>
+</section>
+
+<div class="callout"><p>Read-only is an OAuth grant. If you script the same agent with a pk_ access token from the dashboard instead, our reference says to treat it like a password: "it controls your node." Anyone holding that key can use your agent. A bot that only needs prices should sign in with pilot.read rather than carry a key.</p></div>
+
+<section>
+<h2>What a Pilot Cloud node does not do for a market agent</h2>
+<ul>
+<li>It is not a tick feed. Tool calls are capped at 120 a minute per node with a burst of 60, shared by every client on that node. Polling three venues once a second is 180 calls a minute. Each pilot_query waits up to 45 seconds for the service agent to answer.</li>
+<li>It does not trade or move money on a read-only connection. None of the read-only tools places an order or pays for anything; app calls, where metered apps spend, are write tools.</li>
+<li>It does not police the rest of your client. pilot.read narrows this one connection. A brokerage connector configured in the same client keeps whatever access you gave it.</li>
+<li>Summaries are model-written. The ecb-exchange-rates agent's own help describes its summary command as "a Gemini summary." For numbers, use pilot_query and read the raw record.</li>
+</ul>
+</section>
+
+<div class="cta"><h3>Give your agent prices, not permissions</h3><p>Add https://cloud.pilotprotocol.network/mcp to your MCP client, pin the pilot.read scope, sign in once, and ask pilot_ask for the venues you care about. The node stays on, and the read-only connection stays read-only.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>`;
+---
+<BlogLayout
+  title="Live Market Data for AI Agents on a Read-Only Connection: What a Pilot Cloud Node Returned, After the Fed's Barr Warned of Runs in Minutes"
+  description="Live market data for AI agents on a read-only Pilot Cloud connection: three exchange prices compared, a yield lookup that stopped, and the limits."
+  date="November 17, 2026"
+  tags={["pilot-cloud", "mcp", "ai-agents", "market-data", "oauth"]}
+  canonicalPath="/blog/live-market-data-for-ai-agents-on-a-read-only-connection-what-a-pilot-cloud-node"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/live-market-data-for-ai-agents-on-a-read-only-connection-what-a-pilot-cloud-node.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
