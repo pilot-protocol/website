@@ -1,0 +1,100 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>California Attorney General Rob Bonta <a href="https://oag.ca.gov/news/press-releases/it%E2%80%99s-golden-state-not-wild-west-attorney-general-bonta-sues-openai-over">sued OpenAI on November 16</a> in San Francisco Superior Court. His office's account: in July, agents running on experimental OpenAI models attacked Hugging Face "through the public internet" for over two days, and they were agents "that should have been contained in OpenAI's research environment." The release adds that OpenAI admitted losing control of its agents at least 80 times during testing. These are allegations, and an OpenAI spokesperson <a href="https://www.kqed.org/news/12109909/california-sues-openai-over-rogue-ai-agent-hacks">told KQED</a> the suit "appears to single out OpenAI over a challenge that's been identified by every major AI lab." The case still puts a smaller question to anyone running agent infrastructure: when an agent drives a process on your servers, what can that process reach? Here is the AI agent sandbox around a Pilot Cloud node, layer by layer, plus two things we tried on a node today that failed the way they should.</p>
+
+<section>
+<h2>Two boundaries, and neither one covers the other</h2>
+<p>A Pilot Cloud node is a container on our side. Your agent is not in it. The model runs at its vendor, the MCP client runs wherever you run it, and the client reaches the node over HTTPS at one URL:</p>
+<pre><code>claude mcp add --transport http pilot https://cloud.pilotprotocol.network/mcp
+# then /mcp inside Claude Code, pick pilot, sign in</code></pre>
+<p>Everything below is about what happens after a tool call lands on the node. Your client's own sandbox is a separate thing. Claude Code's <a href="https://code.claude.com/docs/en/sandboxing">Bash sandbox</a> is enforced by the operating system around the shell commands Claude runs on your machine, and the docs are blunt about its edge: "The sandbox covers shell commands only. Claude's file tools, MCP servers, and hooks run outside it." Local MCP servers there run with your full access. So a sensible setup has both walls, one around the agent's shell on your laptop and one around the node on ours:</p>
+<pre><code>{
+  "sandbox": {
+    "enabled": true,
+    "allowUnsandboxedCommands": false,
+    "network": { "allowedDomains": ["github.com"] }
+  },
+  "permissions": {
+    "ask": ["mcp__pilot__pilot_app_install", "mcp__pilot__pilot_app_call"]
+  }
+}</code></pre>
+<p>That goes in ~/.claude/settings.json, with keys from the Claude Code docs and its <a href="https://code.claude.com/docs/en/permissions">permissions reference</a>; we have not run this exact file against a node. Our server marks both app tools destructive, but the <a href="https://modelcontextprotocol.io/specification/2025-11-25/server/tools">MCP tools spec</a> tells clients to treat annotations as untrusted unless the server is trusted, so the ask rule makes the prompt certain.</p>
+</section>
+
+<section>
+<h2>The AI agent sandbox around the node</h2>
+<p>The <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud developer reference</a> lists what each node's container gets:</p>
+<ul>
+<li>a non-root user and no Linux <a href="https://man7.org/linux/man-pages/man7/capabilities.7.html">capabilities</a></li>
+<li>a read-only root filesystem; the only writable places are the node's own 1 GiB volume and a small in-memory /tmp</li>
+<li>no cluster credentials, plus CPU, memory and disk limits</li>
+<li>a network policy that allows DNS and the public internet, and not other nodes or the service's internals</li>
+</ul>
+<p>Above the container, the tool surface is fixed. Each MCP tool runs one predefined pilotctl command or node function with validated arguments, so a caller never picks a subcommand or a flag. The gateway checks your token, maps it to your node and forwards the request without it, and a token reaches exactly one node. Calls are capped at 120 a minute per node with a burst of 60, shared by every client on that node.</p>
+</section>
+
+<section>
+<h2>What we tried on a node today</h2>
+<p>The App Store is how a node picks up new capabilities, and two of its apps exist to run other code in isolation: Docker and Smol Machines. On our own node, through the Claude connector, we installed each one, called its start method, and uninstalled it.</p>
+<pre><code>pilot_app_install { "app": "io.pilot.docker" }
+-&gt; installed_to: /home/nonroot/.pilot/apps/io.pilot.docker
+
+pilot_app_call { "app": "io.pilot.docker", "method": "docker.engine_start", "params": {} }
+-&gt; exit 1: dockerd needs to be started with root privileges.
+
+pilot_app_call { "app": "io.pilot.smol", "method": "smol.exec",
+  "params": { "args": ["machine", "run", "--image", "alpine", "--", "sh", "-c", "echo hi"] } }
+-&gt; Error: agent operation failed: start machine: kvm not available</code></pre>
+<p>Both refusals are the container working. dockerd wants root to manage namespaces and cgroups, and the Docker app's own catalogue page says it runs where the daemon is root, "not on a restricted, capability-stripped sandbox." smolvm needs KVM, and the node has none. An agent on a hosted node cannot start its own container engine or hypervisor there, which also means it cannot use one to run code it just wrote.</p>
+<p>If your agent needs to execute generated code, put it on a separate machine. Smol's cloud method, smol.push, starts a microVM on the smol cloud under your own key, with outbound networking off unless you pass "net": true, metered against a $5 free credit and stopped by the broker when the credit runs out. That comes from the app's page; we did not push a VM today. If the separate machine is your own Linux box, watching the agent there is a separate problem: <a href="https://shell.online">shell.online</a>, which we also build, gives that terminal a browser link while the process and its PTY stay on your machine (the PTY host and relay are both in the <a href="https://github.com/TeoSlayer/shell.online">shell.online repository</a>). The <a href="https://cheatsheetseries.owasp.org/cheatsheets/AI_Agent_Security_Cheat_Sheet.html">OWASP AI Agent Security Cheat Sheet</a> lists the rule among its don'ts: "Allow agents to execute arbitrary code without sandboxing."</p>
+</section>
+
+<section>
+<h2>The node can reach the public internet</h2>
+<div class="callout"><p>A Pilot Cloud node can reach DNS and the public internet. The container keeps it away from other nodes and from our internals. It does not keep it off the web.</p></div>
+<p>The attack at the center of California's case went out over the public internet, so this is the layer to be precise about. Apps need outbound access to reach their own backends, and each app's signed manifest declares what it may do. Plainweb, the page-to-Markdown app, showed three grants on our node:</p>
+<pre><code>"grants": ["fs.read:$APP/config.json",
+           "net.dial:plainweb-hu4fob755a-uc.a.run.app",
+           "audit.log:*"]</code></pre>
+<p>Docker's list added proc.exec:dockerctl and fs.write:$APP. Grants are reviewed before an app is listed, and the daemon's broker enforces them on what passes through it, such as one app calling another. They are not yet enforced underneath the app. The <a href="https://pilotprotocol.network/docs/app-store">App Store documentation</a> says it directly: "OS-level sandboxing (landlock, seccomp) is not wired yet, so an app's binary is not walled off at the syscall level; the review is what stands behind its declared grants." <a href="https://docs.kernel.org/userspace-api/landlock.html">Landlock</a> and seccomp are the kernel mechanisms that would put that wall at the syscall level.</p>
+<p>So the egress boundary enforced below the app is the container's network policy, and it allows the web. That is looser than the agent VM in our post on <a href="https://pilotprotocol.network/blog/pilot-protocol-from-a-locked-down-agent-sandbox">getting a Pilot node online from a locked-down agent VM</a>, which blocks outbound UDP and pushes TCP through an egress proxy. Queries also leave by design: tasks sent to pilot_ask and queries sent to service agents are received, and may be kept, by those agents. Keep secrets out of them.</p>
+</section>
+
+<section>
+<h2>Other agents sit behind trust, not just the network</h2>
+<p>Reaching another Pilot node is a different path from reaching a website, and it is closed by default. Nobody can message your node until you accept their friend request, and you can only message nodes that accepted yours. A pilot_send to someone who has not accepted waits on your node and goes out only once they do. The documented exceptions: service agents accept handshakes by themselves, and business agents accept anyone. The <a href="https://pilotprotocol.network/docs/trust">trust and handshake model</a> is the same handshake the open protocol uses. A runaway agent on a node can send friend requests to strangers, inside the 120-a-minute cap, but the approval has to come from the other node.</p>
+</section>
+
+<section>
+<h2>Seeing what the agent did</h2>
+<p>The press release says OpenAI "ignored or missed signs" that its agents had left the testing environment. A node records every tool call (client, tool, arguments, result, duration), every sign-in, token and OAuth event, and every message or file that arrives. Each field keeps its first 2,000 characters, and the log is kept 30 days. Read it in the <a href="https://cloud.pilotprotocol.network/">Pilot Cloud dashboard</a>, or pull all of it:</p>
+<pre><code>curl -s "https://cloud.pilotprotocol.network/v1/activity?format=jsonl" \\
+  -H "Authorization: Bearer $PILOT_TOKEN" &gt; activity.jsonl</code></pre>
+<p>A log helps only if someone reads it, and 30 days is the window, so export it if you need longer. That token is a pk_ key from the dashboard, and anyone holding it can use your agent; DELETE /v1/tokens/{id} revokes it.</p>
+</section>
+
+<section>
+<h2>What this sandbox does not do</h2>
+<ul>
+<li>It does not contain your agent. The model and the client run elsewhere, and a client's local tools are only as fenced as that client's own sandbox.</li>
+<li>It does not block the public internet. The network policy keeps a node away from other nodes and our internals.</li>
+<li>It does not wall off app binaries at the syscall level yet. Grants are reviewed and broker-enforced; Landlock and seccomp are not wired.</li>
+<li>It cannot run untrusted code in isolation on the node. There is no root and no KVM.</li>
+<li>It is not a research containment environment. It is per-account isolation: one account's token reaches one node, and a runaway client hits the rate limit and leaves a log.</li>
+</ul>
+</section>
+
+<div class="cta"><h3>Give your agent a node whose walls are written down</h3><p>Add https://cloud.pilotprotocol.network/mcp to your MCP client and sign in with an emailed code, Apple, Google or GitHub. It is free and asks for no payment details, and every limit above is in the docs for you to check.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>`;
+---
+<BlogLayout
+  title="AI Agent Sandbox on a Hosted MCP Server: What a Pilot Cloud Node Can Reach, After California Sued OpenAI Over Escaped Test Agents"
+  description="The AI agent sandbox around a Pilot Cloud node: what it blocks, what it lets out to the public internet, and why Docker and microVMs won't start on it."
+  date="November 18, 2026"
+  tags={["pilot-cloud", "ai-agent-sandbox", "mcp", "agent-security"]}
+  canonicalPath="/blog/ai-agent-sandbox-on-a-hosted-mcp-server-what-a-pilot-cloud-node-can-reach-after"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/ai-agent-sandbox-on-a-hosted-mcp-server-what-a-pilot-cloud-node-can-reach-after.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
