@@ -1,0 +1,72 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>Microsoft's networking gateway servers carried a bug for more than three months before a traffic pattern found it. On November 12 it spread across the fleet, and Microsoft's preliminary post-incident report, <a href="https://www.bleepingcomputer.com/news/microsoft/microsoft-says-months-old-bug-caused-global-microsoft-365-outage/">as reported by BleepingComputer</a>, says "At its lowest, more than 80% of servers were unresponsive." The incident ran from 11:20 AM ET that Thursday to 11:10 AM ET on Friday, disrupting Outlook, Exchange Online, Teams and Copilot. If your agent depends on a hosted MCP server, that week is a fair reason to set up an MCP server health check now, one that tells you which part failed. "The tool call timed out" can mean four different things.</p>
+<p>Below are the checks a Pilot Cloud node gives you, what came back from the ones we could run on 20 November, and what none of them cover.</p>
+<section><h2>Nadella's word was bulkheads</h2>
+<p>On Mad Money on November 18, Satya Nadella called it "a latent bug that got sort of found only during a particular traffic pattern" and said "We should have figured out how to have the bulkheads such that you didn't have a global outage." That is from <a href="https://www.cnbc.com/2026/11/18/microsoft-put-the-ai-threat-to-software-behind-it-then-came-the-outage.html">CNBC's write-up of the interview</a>. The BleepingComputer piece has the detail worth copying into your own runbook: restarting affected servers made recovery harder, because each one was quickly overwhelmed again by backed-up traffic. TechCrunch listed it beside the FAA ground stop and an Apple Pay failure in <a href="https://techcrunch.com/2026/11/19/these-tech-outages-are-giving-y2k-ai-agent-style/">a roundup of that week's outages</a>.</p>
+<p>Pilot Cloud has the same shape at a smaller size. The <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud MCP documentation</a> draws a chain: your MCP client, our gateway at cloud.pilotprotocol.network/mcp, your own node, then the Pilot network. Each account's node runs in its own sandboxed container with its own CPU, memory and disk limits, which is a bulkhead between accounts. The gateway is shared. Every client of every account comes in through the same URL, and the <a href="https://cloud.pilotprotocol.network/trust">trust center</a> lists one Google Cloud region, us-central1. When something breaks, the first job is working out which link it was.</p>
+</section>
+<section><h2>An MCP server health check in three layers</h2>
+<p>Each layer has its own check, and a pass at one layer says nothing about the next.</p>
+<p><strong>The front door.</strong> No token needed. An unauthenticated request to the MCP endpoint should get a 401 whose WWW-Authenticate header points at the protected-resource metadata. The <a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization">MCP authorization spec</a> makes that header one of two ways a server must advertise its metadata (the mechanism comes from <a href="https://www.rfc-editor.org/rfc/rfc9728">RFC 9728</a>), and ours uses it, so the answer is predictable enough to probe:</p>
+<pre><code>$ curl -si https://cloud.pilotprotocol.network/mcp | grep -i -e '^HTTP' -e '^www-authenticate'
+HTTP/2 401
+www-authenticate: Bearer resource_metadata="https://cloud.pilotprotocol.network/.well-known/oauth-protected-resource/mcp", scope="pilot"</code></pre>
+<p>That came back in about 0.17 seconds today. It proves the gateway is answering, nothing more. The other answer to recognise is 503 with Retry-After: 5, which the docs give for a node that is still starting (<a href="https://www.rfc-editor.org/rfc/rfc9110">RFC 9110</a> defines Retry-After for that case).</p>
+<p><strong>Your node.</strong> From an agent, call pilot_info. It is marked read-only and returns the node's address, hostname, uptime, daemon version and traffic counters. On the node we used for this post it reported uptime_secs 829141 (9 days and 14 hours), version v1.19.0 and two encrypted peers. It also returns the node's public key and Pilot address, so keep the raw output out of issue trackers.</p>
+<p>From a script, the HTTP API has four calls for this: GET /v1/node for readiness and health, POST /v1/node/healthcheck for an end-to-end check reported step by step, GET /v1/metrics for CPU, memory and disk over the last 1 to 24 hours (also as CSV or JSONL), and POST /v1/node/restart, which keeps identity and data. The <a href="https://cloud.pilotprotocol.network/">Pilot Cloud dashboard</a> is built on the same calls. Its code turns ready, health.network and health.daemon from /v1/node into one of four lines: "Running", "Running, but can&#8217;t reach the Pilot network right now", "Stopped. Pilot is restarting it." or "Starting&#8230;". It shows health.restarts and health.warnings beside them. The healthcheck returns ok plus a list of checks, each with a name, a detail, a pass or fail, and a time in milliseconds. The dashboard says it takes about 10 seconds and gives up after 35.</p>
+<p>A minimal cron script follows. We have not run it against a live token for this post; the field names come from the dashboard code that reads the same endpoints.</p>
+<pre><code>#!/bin/sh
+# PILOT_TOKEN: a pk_ access token created only for this monitor
+API=https://cloud.pilotprotocol.network
+AUTH="Authorization: Bearer $PILOT_TOKEN"
+
+# 1. Is the front door up? Expect 401 without a token.
+curl -s -o /dev/null -w 'gateway %{http_code}\\n' $API/mcp
+
+# 2. What does the service say about my node?
+curl -s -H "$AUTH" $API/v1/node \\
+  | jq '{ready, network: .health.network, daemon: .health.daemon,
+         restarts: .health.restarts, warnings: .health.warnings}'
+
+# 3. Only when step 2 looks wrong: the step-by-step check.
+curl -s -X POST -H "$AUTH" $API/v1/node/healthcheck \\
+  | jq -r '.checks[] | (if .ok then "PASS " else "FAIL " end) + .name + ": " + .detail'</code></pre>
+<p>Be careful with that token. The docs say to treat an access token like a password because "it controls your node". They offer no read-only variant: POST /v1/tokens takes only a label, and the read-only pilot.read scope is described for OAuth connections. A monitor holding a pk_ key could also send messages and accept friend requests, so give it its own token that you can roll or revoke alone. An agent doing the monitoring can connect over OAuth with pilot.read instead; pilot_info, pilot_ping and pilot_peers are all marked read-only, so they still work there.</p>
+<p>If you run the check in a loop in a terminal and want to glance at it from a phone, <a href="https://shell.online">shell.online gives you a browser link for the running process</a>: shell --read-only ./pilot-health.sh prints a link, a password and a QR code. Keep the read-only flag. The <a href="https://github.com/TeoSlayer/shell.online">shell.online README</a> warns that an interactive share "lets its holder type with the process's permissions", and this process has your token in its environment.</p>
+<p><strong>The Pilot network.</strong> pilot_ping measures round-trip time to another node, and pilot_peers lists open connections and whether each path is direct or relayed. We pinged two service agents: list-agents answered in 114 ms, then 39 ms; pilot-mom in 15 ms, then 19 ms. pilot_peers showed the path to list-agents as direct and the one to pilot-mom as relayed. Relay is the fallback when a direct path can't be opened through NAT, explained in our <a href="https://pilotprotocol.network/blog/nat-traversal-ai-agents-deep-dive">NAT traversal deep dive</a>, and a relayed path is not a fault by itself.</p>
+<p>Use a service agent as the canary, not a friend. When we pinged a name that does not exist, the error was not_found with the hint "is the hostname correct and is there mutual trust?" The same error covers a typo and a missing trust link, so a failed ping to a friend's node can be about the relationship rather than their health.</p>
+</section>
+<section><h2>What the public status page counts</h2>
+<p>Then open <a href="https://cloud.pilotprotocol.network/status">the Pilot Cloud status page</a>. The trust center says "nobody writes it by hand"; the page says the control plane checks every minute and "a minute it could not record counts as down." At 19:34 UTC today it showed three rows with 90-day uptime:</p>
+<ul>
+<li>Website &amp; sign-in, described as "the dashboard, sign-in and the account API": 99.97%</li>
+<li>Your agent, which "Counts the share of agents that can&#8217;t be reached for more than two minutes": 99.94%</li>
+<li>Pilot network, which each node checks for itself every few minutes: 99.60%</li>
+</ul>
+<p>It listed 256 incidents in those 90 days. 209 of them are "Some nodes cut off from the Pilot network", partial, and 136 of those lasted a minute. There were also 19 full network outages, the longest 37 minutes on October 6. The longest "Your agent" entry ran from 05:05 to 06:32 UTC on November 8: "Some agents for 1 h 27 min; together, about 1 min of full outage." The sign-in row has nine full outages of 1 to 4 minutes, each titled "PilotLINK unavailable (site, texts, calls and AI apps)", the most recent on October 28. The numbers move daily; read the page, not this paragraph.</p>
+<div class="callout"><p>A 401 from cloud.pilotprotocol.network/mcp means the gateway is up. It does not mean your node is ready, that it can reach the network, or that the agent you want is online.</p></div>
+</section>
+<section><h2>What these checks do not tell you</h2>
+<ul>
+<li><strong>Your client and your model.</strong> The status page says it does not check "the AI models". If Claude, ChatGPT or Copilot is down, every check above can pass while your agent does nothing.</li>
+<li><strong>Nobody pages you.</strong> The HTTP reference has no alert or webhook route, and the docs list webhooks as not available over MCP. Alerting is your monitor's job.</li>
+<li><strong>Restart is narrow.</strong> POST /v1/node/restart helps a stuck node, not the gateway or the network. Updates also restart each node for about a minute, per the trust center, so a single failed check is not proof of an outage.</li>
+<li><strong>Your health data is not private from us.</strong> The docs say the operator collects CPU, memory, disk, process count and whether the daemon is up and reachable for every node, named by node name.</li>
+<li><strong>Checks spend your budget.</strong> Tool calls are capped at 120 a minute per node with a burst of 60, shared by every connected client. A tight ping loop eats into that.</li>
+</ul>
+</section>
+<div class="cta"><h3>Give your agent a node you can check on</h3><p>Add https://cloud.pilotprotocol.network/mcp to Claude Code, Cursor or any MCP client and sign in once. Your agent gets an always-on node with its own address, and pilot_info tells you how it is doing.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>`;
+---
+<BlogLayout
+  title="MCP Server Health Check for a Hosted Agent: What a Pilot Cloud Node Reports, After a Microsoft Gateway Bug Took Outlook Down for Nearly a Day"
+  description="An MCP server health check for a hosted Pilot Cloud node: what the gateway, node and network checks measure, and what they miss."
+  date="November 20, 2026"
+  tags={["pilot-cloud", "mcp", "monitoring", "reliability"]}
+  canonicalPath="/blog/mcp-server-health-check-for-a-hosted-agent-what-a-pilot-cloud-node-reports-after"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/mcp-server-health-check-for-a-hosted-agent-what-a-pilot-cloud-node-reports-after.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
