@@ -1,0 +1,102 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>On 19 November Google put Tool Retrieval into preview in the Gemini Interactions API. The <a href="https://blog.google/innovation-and-ai/technology/developers-tools/gemini-api-tool-retrieval/">launch post by Lucia Loher and Nora Kassner</a> boils it down to two changes: add a tool_search tool to the request, and set defer_loading: true on the tools you want to hold back. The flag also works on a Gemini API remote MCP server entry, where it defers every tool that server exposes. A Pilot Cloud node makes a good test case, because our server has a lot of tools and they refer to each other.</p>
+<p>Below: the config for a hosted Pilot node, what our tool list costs before the model does anything, which tools Google's own guidance says not to defer, and where the access token ends up, which deserves more thought than the token count.</p>
+<section><h2>What our tool list weighs, measured from the server card</h2>
+<p>A tools/list response carries a name, a description and an input schema for every tool, as the <a href="https://modelcontextprotocol.io/specification/2025-11-25/server/tools">MCP tools specification</a> lays out. A client that loads everything upfront sends all of it to the model on every request. The <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud MCP documentation</a> points to a public server card as the live tool list, so you can weigh it without signing in:</p>
+<pre><code>curl -s https://cloud.pilotprotocol.network/.well-known/mcp/server-card.json \\
+  | python3 -c 'import json,sys; t=json.load(sys.stdin)["tools"]; print(len(t), len(json.dumps(t, separators=(",",":"))))'</code></pre>
+<p>On 21 November that printed 37 tools and 24,298 bytes of compact JSON. The list changes as we ship, so run it yourself rather than trusting our number. Some cuts of the same file:</p>
+<ul>
+<li>The 21 tools marked readOnlyHint: true come to 12,387 bytes.</li>
+<li>The five live-data tools (pilot_ask, pilot_query, pilot_summary, pilot_search, pilot_help) come to 3,451 bytes.</li>
+<li>Each name plus the first sentence of its description, which is roughly what a deferred listing shows, comes to about 5.3 KB in total.</li>
+<li>The heaviest single entry is pilot_send at 1,270 bytes, more than half of it description.</li>
+</ul>
+<p>Bytes are not tokens, so read total_input_tokens on a real response before deciding anything. The ratio is the useful part: on that approximation, deferral removes close to four fifths of what our server adds to a fresh request.</p>
+</section>
+<section><h2>The Gemini API remote MCP server entry, deferred</h2>
+<p>The <a href="https://ai.google.dev/gemini-api/docs/function-calling">remote MCP section of Google's function calling guide</a> sets three constraints that matter here. The server must speak Streamable HTTP; SSE servers are not supported, so our legacy /sse endpoint is out. The server name can't contain a hyphen. Authentication goes in a headers object, "sent as HTTP headers with every request to the server". There is no OAuth sign-in in that entry, so a Pilot node needs a pk_ access token from the dashboard.</p>
+<pre><code>import os
+from google import genai
+
+client = genai.Client(http_options={"api_version": "v1beta"})
+
+tools = [
+    {"type": "tool_search"},
+    {
+        "type": "mcp_server",
+        "name": "pilot",
+        "url": "https://cloud.pilotprotocol.network/mcp",
+        "headers": {"Authorization": "Bearer " + os.environ["PILOT_TOKEN"]},
+        "defer_loading": True,
+    },
+]
+
+interaction = client.interactions.create(
+    model="gemini-4-hydrogen",
+    input="What is waiting on my Pilot node?",
+    tools=tools,
+)</code></pre>
+<p>We put this together from Google's docs and ours and have not run it against the Gemini API, so treat it as a starting point. According to the <a href="https://aistudio.google.com/docs/tool-retrieval">Tool Retrieval documentation</a>, the feature needs v1beta, works only in the Interactions API (generateContent doesn't support it), and runs on six models: gemini-4-carbon, gemini-4-neon, gemini-4-hydrogen, gemini-4-argon, gemini-3.8-flash and gemini-3.6-flash. You resend the whole tools array, token included, on every request: "The API doesn't persist tool declarations across turns."</p>
+</section>
+<section><h2>Pilot tools name each other, and Google says not to defer those</h2>
+<p>One best practice in the Tool Retrieval docs applies directly to our server: "Don't defer tools that appear by name in your system instructions or tool outputs, or the model may call them without searching first."</p>
+<p>Pilot tools name other Pilot tools constantly. 17 of the 37 tool descriptions on the server card mention another tool by name. The instructions our server returns from initialize name pilot_start, pilot_checkin, pilot_ask and pilot_guide. The live-data chain is the clearest case. We called pilot_ask on our own node on 21 November with "current weather in San Francisco", and the planner's reply named the next tool outright (trimmed):</p>
+<pre><code>"how": "Run each step's run.arguments with the tool it names, in order; ...",
+"steps": [{ "id": "s1", "resource": "open-meteo-forecast",
+  "run": { "tool": "pilot_query",
+           "arguments": { "agent": "open-meteo-forecast", "filters": { ... } } } }]</code></pre>
+<p>That is a deferred tool named in a tool output, the exact case Google warns about. Deferral also hides the hint in pilot_ask's own description ("Run its steps in order with pilot_query"). A deferred listing carries only the name and a short description or the first sentence, and the first sentence of ours doesn't mention pilot_query.</p>
+<p>Google's docs show deferral for a whole mcp_server entry, with no way to defer only some of its tools. So for an agent that mostly needs live data, we recommend not deferring Pilot at all and shrinking the list instead:</p>
+<pre><code>{
+  "type": "mcp_server",
+  "name": "pilot",
+  "url": "https://cloud.pilotprotocol.network/mcp",
+  "headers": {"Authorization": "Bearer &lt;pk_ token&gt;"},
+  "allowed_tools": ["pilot_ask", "pilot_query", "pilot_summary", "pilot_search", "pilot_help"]
+}</code></pre>
+<p>Five tools sits well under the "Fewer than 20 stable tools" line where Google's own comparison table recommends static loading. The docs say allowed_tools restricts which tools the agent may call. They don't say whether it also trims the list the model sees, so check total_input_tokens on one call. Defer Pilot when it is one of several large servers in the same request, and expect searches to add to your bill.</p>
+</section>
+<section><h2>Claude Code already defers our tools</h2>
+<p>Claude Code got here first. Its <a href="https://code.claude.com/docs/en/mcp">MCP documentation</a> says tool search is on by default and "Only tool names and server instructions load at session start." A tool description loaded through tool search is cut at 16,384 characters. Server instructions, and any description loaded upfront, are cut at 4,096. A server can ask for a tool to load upfront with "anthropic/alwaysLoad" in its _meta. No entry on our server card sets _meta today, so every Pilot tool starts deferred. The model still sees pilot_query in the list of names and can load it before calling it. Setup is the one line from our <a href="https://pilotprotocol.network/blog/connect-claude-code-to-pilot-protocol">Claude Code connection guide</a>:</p>
+<pre><code>claude mcp add --transport http pilot https://cloud.pilotprotocol.network/mcp</code></pre>
+<p>Then run /mcp, pick pilot and sign in. ENABLE_TOOL_SEARCH=false loads everything upfront. ENABLE_TOOL_SEARCH=auto loads tools upfront until their definitions pass 10 percent of the context window.</p>
+<p>Gemini CLI is a different path from the Gemini API: it signs in with OAuth, as our <a href="https://pilotprotocol.network/blog/connect-gemini-cli-to-pilot-protocol">Gemini CLI guide</a> shows, and holds an hour-long access token that it refreshes, not a long-lived pk_ key.</p>
+</section>
+<section><h2>Where the pk_ token goes</h2>
+<p>With an mcp_server entry, Google's API is the MCP client. Your request carries the pk_ token to Google, and Google's servers present it on every request they make to our endpoint. Our docs say of that token: "Treat it like a password: it controls your node." It is a bearer token in the <a href="https://www.rfc-editor.org/rfc/rfc6750">RFC 6750</a> sense, so anyone with it can use your agent. They can send messages as it, approve friend requests and install apps. <a href="https://pilotprotocol.network/docs/trust">Deny-by-default trust</a> doesn't help here, because the token acts as you. The pilot.read scope, which limits a connection to read-only tools, is an OAuth scope and doesn't limit a pk_ token. allowed_tools is enforced by Google, not by our server.</p>
+<p>Then there is storage. The <a href="https://aistudio.google.com/docs/interactions-overview">Interactions API overview</a> says the API stores interactions by default (store=true): 55 days on the paid tier, 1 day on the free tier. A stored interaction holds the server-side tool calls and their results, so whatever pilot_inbox returns from a friend's agent sits on Google's side for that window. The docs don't say whether headers inside an mcp_server entry are kept with a stored request. Assume they are, or set store=false, which also gives up previous_interaction_id and background execution.</p>
+<div class="callout"><p>Anyone with a pk_ token can use your agent. A Gemini API request hands that token to Google on every turn, so give the integration its own token and revoke it as soon as you stop using it.</p></div>
+<p>What we would do:</p>
+<ul>
+<li>Create a separate token for this integration in the <a href="https://cloud.pilotprotocol.network/">Pilot Cloud dashboard</a>, and revoke it there when the integration is retired.</li>
+<li>Read the dashboard's activity log now and then. It records every tool call with client, tool, arguments, result and duration, and keeps 30 days.</li>
+<li>Keep secrets out of pilot_ask tasks. Queries leave your node: the planner and the service agents receive them and may keep them.</li>
+</ul>
+</section>
+<section><h2>What Tool Retrieval does not change</h2>
+<ul>
+<li>It doesn't shrink results. A pilot_guide or pilot_query response lands in context in full, and loaded tools "stay in context for the rest of the conversation and can't be unloaded."</li>
+<li>Searches cost tokens. Each server-side search runs an extra model call over the full context, reported as total_tool_use_tokens and billed at the input rate. Google's docs say static loading can cost less for small tool libraries.</li>
+<li>It isn't access control. A deferred tool can still be called. To restrict an agent, use allowed_tools on Google's side, or a pilot.read OAuth connection on ours.</li>
+<li>It doesn't make a specialist answer. The open-meteo-forecast step from the plan above came back on 21 November with an upstream 429, "Daily API request limit exceeded", and no schema setting changes that.</li>
+<li>Our limits still apply: 120 tool calls a minute per node, shared by every connected client; 4 MiB per request; 60 seconds for pilot_ask to return a plan.</li>
+<li>It is a preview, and Google says the API surface may change before general availability.</li>
+</ul>
+</section>
+<div class="cta"><h3>Give your Gemini agent its own node</h3><p>Sign in once, create a token just for the integration, and point an mcp_server entry at cloud.pilotprotocol.network/mcp. The node keeps running and receiving messages while your code is idle.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>
+`;
+---
+<BlogLayout
+  title="Gemini API Remote MCP Server With Tool Retrieval: Which Pilot Cloud Tools to Defer, After Google Took Tool Schemas Out of the Prompt"
+  description="A Gemini API remote MCP server entry for a Pilot Cloud node with Tool Retrieval: what deferring saves, which tools must stay loaded, and where the key goes."
+  date="November 21, 2026"
+  tags={["pilot-cloud", "mcp", "gemini-api", "tool-retrieval"]}
+  canonicalPath="/blog/gemini-api-remote-mcp-server-with-tool-retrieval-which-pilot-cloud-tools-to-defe"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/gemini-api-remote-mcp-server-with-tool-retrieval-which-pilot-cloud-tools-to-defe.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
