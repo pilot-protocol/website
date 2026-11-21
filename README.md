@@ -118,22 +118,19 @@ Production gets new migrations from `npm run deploy:database`, which `npm run de
 
 This needs a Workers Paid plan: the Worker with Payload is about 9 MB gzipped. `wrangler.jsonc` has no `account_id`; Wrangler takes the account from `CLOUDFLARE_ACCOUNT_ID` or from `wrangler login`.
 
-One-time setup, on the account that holds the pilotprotocol.network zone:
+The one-time setup is done on the Vulture Labs account, which holds the pilotprotocol.network zone: the D1 database `pilot-protocol-website` (its id is in `wrangler.jsonc`), the R2 bucket `pilot-protocol-website-media`, `PAYLOAD_SECRET` on both Workers, the migrations, and the seeded posts. The production database already has an admin user, so `/admin` asks for a login rather than offering to create the first user. To set it up again elsewhere:
 
 ```sh
 npx wrangler login
-npx wrangler d1 create pilot-protocol-website
+npx wrangler d1 create pilot-protocol-website             # then put its id in every database_id in wrangler.jsonc
 npx wrangler r2 bucket create pilot-protocol-website-media
+npx wrangler secret put PAYLOAD_SECRET                    # the production Worker
+npx wrangler secret put PAYLOAD_SECRET --env green        # the green Worker
+npm run deploy:database                                   # run the migrations on the production D1
+npm run seed:production                                   # optional: import the posts
 ```
 
-Put the new database id into every `database_id` in `wrangler.jsonc` (top level, `env.green` and `env.remote`), in place of `REPLACE_WITH_D1_DATABASE_ID`. Then:
-
-```sh
-npx wrangler secret put PAYLOAD_SECRET                # the production Worker
-npx wrangler secret put PAYLOAD_SECRET --env green    # the green Worker
-npm run deploy:database                               # run the migrations on the production D1
-npm run seed:production                               # optional: import the posts
-```
+Create the first admin user before the Worker is reachable: until a user exists, anyone who opens `/admin` can create one.
 
 The deploy scripts set `NEXT_PUBLIC_SERVER_URL` for production. OpenNext compiles the values in `.env` into the Worker as fallbacks; a Worker secret overrides them.
 
@@ -146,9 +143,9 @@ npm run deploy:green   # green only; run deploy:database first if the schema cha
 
 `deploy:app` and `deploy:green` run `prebuild`, build with `opennextjs-cloudflare build` and upload with `opennextjs-cloudflare deploy`. The build runs Next.js with one worker (`experimental.cpus` in `next.config.ts`): every build worker opens the local D1, and two at once fail with `SQLITE_BUSY`.
 
-**The domain.** The production Worker's `routes` entry attaches `pilotprotocol.network` as a custom domain. Until this change the apex belonged to the Cloudflare Pages project `pilotprotocol`; remove it there before the first deploy, or the custom domain can't be attached. `workers_dev` stays on, so the Worker can be checked at its `workers.dev` address first. Responses on `*.workers.dev` carry `X-Robots-Tag: noindex` (`headers()` in `next.config.ts`).
+**The domain.** The production Worker serves `pilotprotocol.network` through the zone route `pilotprotocol.network/*` in `wrangler.jsonc`. The apex keeps the proxied DNS record left from the old Cloudflare Pages project `pilotprotocol` (the domain is no longer attached to that project); a route runs on any proxied record, while a custom domain would need that record deleted first. `workers_dev` stays on, so the Worker can be checked at its `workers.dev` address. Responses on `*.workers.dev` carry `X-Robots-Tag: noindex` (`headers()` in `next.config.ts`).
 
-**Other Workers on the zone.** The `pilot-release` Worker (pilot-protocol/release) has routes on `pilotprotocol.network/install.sh`, `/.well-known/*` and `/api/*`. Routes run in front of a custom domain, so it keeps serving the installer and `/.well-known/latest.json`. Its `/api/*` route also catches this site's `/api/search` (docs search), `/api/media/file/*` (uploads) and Payload's REST API, which the admin uses, and answers 404 for everything but `/api/changelog`. Narrow that route to `pilotprotocol.network/api/changelog` before the cutover.
+**Other Workers on the zone.** The `pilot-release` Worker (pilot-protocol/release) has routes on `pilotprotocol.network/install.sh`, `/.well-known/*` and `/api/changelog`. They are more specific than `pilotprotocol.network/*`, so it keeps serving the installer, `/.well-known/latest.json` and the changelog hook. Its route used to be `/api/*`, which would catch this site's `/api/search` (docs search), `/api/media/file/*` (uploads) and Payload's REST API, which the admin uses; keep it narrowed to `/api/changelog`.
 
 ## Deploy to Vercel
 

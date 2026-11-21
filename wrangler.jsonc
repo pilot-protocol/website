@@ -7,9 +7,10 @@
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
-  // The apex is attached to the Cloudflare Pages project "pilotprotocol" today; remove it there before the first deploy.
-  // Worker routes on the same zone (pilot-release: /install.sh, /.well-known/*, /api/*) still run in front of this Worker.
-  "routes": [{ "pattern": "pilotprotocol.network", "custom_domain": true }],
+  // A zone route, not a custom domain: the apex keeps its proxied DNS record (left from the old Pages site), which a
+  // custom domain can't take over. The more specific pilot-release routes (/install.sh, /.well-known/*,
+  // /api/changelog) still win over this one.
+  "routes": [{ "pattern": "pilotprotocol.network/*", "zone_name": "pilotprotocol.network" }],
   "preview_urls": false,
   "assets": {
     "directory": ".open-next/assets",
@@ -22,7 +23,7 @@
     {
       "binding": "D1",
       "database_name": "pilot-protocol-website",
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+      "database_id": "90a31375-c42f-47a8-8c46-a66f5abe2e3e"
     }
   ],
   "r2_buckets": [{ "binding": "R2", "bucket_name": "pilot-protocol-website-media" }],
@@ -43,7 +44,7 @@
         {
           "binding": "D1",
           "database_name": "pilot-protocol-website",
-          "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+          "database_id": "90a31375-c42f-47a8-8c46-a66f5abe2e3e"
         }
       ],
       "r2_buckets": [{ "binding": "R2", "bucket_name": "pilot-protocol-website-media" }],
@@ -52,11 +53,13 @@
     },
     // Only for running Payload against production from your machine: `npm run deploy:database`.
     "remote": {
+      // Never deployed; without this it would inherit the top-level custom domain.
+      "routes": [],
       "d1_databases": [
         {
           "binding": "D1",
           "database_name": "pilot-protocol-website",
-          "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+          "database_id": "90a31375-c42f-47a8-8c46-a66f5abe2e3e",
           "remote": true
         }
       ],
