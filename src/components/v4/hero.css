@@ -18,10 +18,6 @@
   .hero-d {
     --s: clamp(0.64, tan(atan2(100cqw, 1080px)), 0.8);
     --oy: 516px;
-    /* The radar's and the routes' agents sit left of centre in the design; centre them on narrow screens. */
-    --radar-dx: 133px;
-    --routes-dx: 35px;
-    --routes-scale: 0.92;
   }
 }
 
@@ -72,204 +68,13 @@
   scale: var(--s);
 }
 
-/* ---------- Views: the three scenes crossfade in the same box ---------- */
-/* The incoming view arrives a little slower than the outgoing one leaves; a 2px blur on the way out keeps the
-   two from reading as separate pictures while they overlap. filter ends at none, so the radar's glass still sees the sky. */
-.hero-d-view {
-  filter: none;
-  transition:
-    opacity 600ms var(--ease-out),
-    translate 600ms var(--ease-out),
-    filter 600ms var(--ease-out),
-    visibility 0s linear 0s;
-}
-.hero-d-view[data-active="false"] {
-  opacity: 0;
-  translate: 0 12px;
-  filter: blur(2px);
-  visibility: hidden;
-  pointer-events: none;
-  transition:
-    opacity 380ms var(--ease-out),
-    translate 380ms var(--ease-out),
-    filter 380ms var(--ease-out),
-    visibility 0s linear 380ms;
-}
-.hero-d-view[data-active="false"] * {
-  animation-play-state: paused !important;
-}
-
-/* ---------- Radar (160:947) ---------- */
-.hero-d-radar {
-  transform-origin: 840px 454px;
-  transform: translate(var(--radar-dx, 0px), 38px) scale(0.9);
-}
-.hero-d-radar-mask {
-  mask-image: url("/v4/radar-mask.svg");
-  mask-size: 1369px 684.5px;
-  mask-repeat: no-repeat;
-  mask-mode: alpha;
-}
-/* The design's background-blur wedge trailing the sweep. */
-.hero-d-glass {
-  clip-path: path(
-    "M772.081 63.6777C644.895 4.61375 502.637 -13.9616 364.549 10.4641C226.461 34.8899 99.2073 101.138 0 200.248L483.776 684.501L772.081 63.6777Z"
-  );
-  backdrop-filter: blur(21.25px);
-}
-@media (max-width: 1023.98px) {
-  .hero-d-glass {
-    backdrop-filter: none;
-  }
-}
-.hero-d-radar-tile {
-  border-width: 1.054px;
-}
-.hero-d-lit {
-  animation: hero-d-lit 3.2s ease-in-out infinite alternate;
-}
-@keyframes hero-d-lit {
-  from {
-    opacity: 0.35;
-  }
-}
-.dark .hero-d-radar-mask {
-  opacity: 0.75;
-}
-
-/* ---------- Routes (166:3261) ---------- */
-.hero-d-routes {
-  transform-origin: 840px 466px;
-  transform: translate(var(--routes-dx, 0px), 22px) scale(var(--routes-scale, 1));
-}
-.hero-d-dots {
-  mask-image: url("/v4/routes-dots.webp");
-  mask-position: -165px -36px;
-  mask-size: 1473.839px 1054px;
-  mask-repeat: no-repeat;
-  mask-mode: alpha;
-}
-.hero-d-frame {
-  border: 1px solid rgb(255 255 255 / 0.2);
-}
-.hero-d .hero-d-routes-tile {
-  border: 0;
-  box-shadow: 0 11.8px 14.16px rgb(0 0 0 / 0.07);
-}
-/* The agent names stay readable when the canvas is scaled down. */
-.hero-d-label {
-  font-size: max(12px, calc(9.5px / var(--s)));
-}
-
-/* Chips on the radar and the routes. */
-.hero-d-chip {
-  --toast-bg: #ffffff;
-  background: #ffffff;
-  box-shadow: 0 6px 16px -8px rgb(10 42 156 / 0.35);
-}
-.hero-d-chip-label {
-  color: rgb(26 26 26 / 0.6);
-}
 .hero-d-ok-text {
   color: #296852;
-}
-.hero-d-host {
-  color: #1a1a1a;
-  animation: hero-d-host-in 320ms var(--ease-out) both;
-}
-@keyframes hero-d-host-in {
-  from {
-    opacity: 0;
-    translate: 0 3px;
-    filter: blur(2px);
-  }
-}
-.dark .hero-d-chip {
-  --toast-bg: #0d1838;
-  background: #0d1838;
-  box-shadow:
-    inset 0 0 0 1px rgb(255 255 255 / 0.08),
-    0 10px 24px -12px rgb(0 0 0 / 0.7);
-}
-.dark .hero-d-chip-label {
-  color: rgb(242 242 236 / 0.6);
 }
 .dark .hero-d-ok-text {
   color: #7fd3a9;
 }
-.dark .hero-d-host {
-  color: #f2f2ec;
-}
-
-/* ---------- Flights (variant A's network, over the sky) ---------- */
-.hero-d-fdash {
-  stroke: rgb(255 255 255 / 0.42);
-}
-.hero-d-froute {
-  stroke: rgb(255 255 255 / 0.85);
-  transition:
-    stroke-dashoffset 1000ms var(--ease-out),
-    opacity 600ms var(--ease-out);
-}
-.dark .hero-d-froute {
-  stroke: #b9dcff;
-}
-.hero-d-plane {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 30px;
-  height: 33px;
-  offset-rotate: auto;
-  offset-anchor: center;
-  opacity: 0;
-  filter: drop-shadow(0 3px 4px rgb(10 42 156 / 0.4));
-  pointer-events: none;
-}
-.hero-d-plane > img {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-/* A short contrail from the tail. */
-.hero-d-plane::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  right: 86%;
-  width: 40px;
-  height: 2px;
-  translate: 0 -50%;
-  border-radius: 1px;
-  background: linear-gradient(to left, rgb(255 255 255 / 0.85), transparent);
-}
-.dark .hero-d-plane {
-  filter: drop-shadow(0 3px 5px rgb(0 0 0 / 0.5));
-}
-.hero-d-fchip {
-  --toast-bg: #ffffff;
-  background: #ffffff;
-  box-shadow:
-    0 1px 2px rgb(10 42 156 / 0.1),
-    0 10px 24px -12px rgb(10 42 156 / 0.42);
-}
-.dark .hero-d-fchip {
-  --toast-bg: #0f1d4d;
-  background: #0f1d4d;
-  box-shadow:
-    inset 0 0 0 1px rgb(255 255 255 / 0.1),
-    0 10px 24px -12px rgb(0 0 0 / 0.7);
-}
-.hero-d-fchip-dot {
-  background: rgb(31 91 255 / 0.14);
-}
-.hero-d-ink {
-  color: #1a1a1a;
-}
-.dark .hero-d-ink {
-  color: #f2f2ec;
-}
-/* Every approval card: the Flights card's navy lift off the sky. */
+/* Every approval card: a navy lift off the sky. */
 .hero-d-toast.hero-d-acard {
   box-shadow:
     0 0 0 1px rgb(0 0 0 / 0.04),
@@ -279,47 +84,6 @@
   box-shadow:
     inset 0 0 0 1px rgb(255 255 255 / 0.08),
     0 18px 40px -16px rgb(0 0 0 / 0.75);
-}
-/*
- * Cards placed inside a scene are drawn at Orbit's size: the radar is drawn at 0.9 and the routes at --routes-scale,
- * so their cards scale back up by the same amount (from their top-left corner, where they're placed). A new one pops in.
- */
-.hero-d-scard {
-  transform-origin: 0 0;
-  animation: hero-d-toast-in 360ms var(--ease-out) both;
-}
-.hero-d-radar .hero-d-scard {
-  scale: calc(1 / 0.9);
-}
-.hero-d-routes .hero-d-scard {
-  scale: calc(1 / var(--routes-scale, 1));
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero-d-scard {
-    animation: none;
-  }
-}
-
-/* Flights' card appears beside the airport on its own, so it enters and leaves. */
-.hero-d-ftoast {
-  animation: hero-d-toast-in 360ms var(--ease-out) both;
-}
-.hero-d-ftoast[data-phase="out"] {
-  animation: hero-d-toast-out 220ms var(--ease-out) both;
-}
-@keyframes hero-d-toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px) scale(0.96);
-    filter: blur(4px);
-  }
-}
-@keyframes hero-d-toast-out {
-  to {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.98);
-    filter: blur(3px);
-  }
 }
 .hero-d-ftoast-icon,
 .hero-d-reject {
@@ -443,9 +207,6 @@
   mask-size: 100% 100%;
   mask-repeat: no-repeat;
   mask-mode: alpha;
-}
-.hero-d-stack[data-mask="routes"] {
-  mask-image: url("/v4/routes-toast-mask.svg");
 }
 .hero-d-stack[data-side="left"] {
   translate: var(--stack-shift) 0;
@@ -571,16 +332,14 @@
   }
 }
 
-/* ---------- Pill, buttons, switch: press feedback everywhere, hover only with a real pointer ---------- */
-.hero-d-pill,
-.hero-d-seg {
+/* ---------- Pill and buttons: press feedback everywhere, hover only with a real pointer ---------- */
+.hero-d-pill {
   transition:
     background-color 200ms ease,
     color 200ms ease,
     scale 160ms var(--ease-out);
 }
-.hero-d-pill:active,
-.hero-d-seg:active {
+.hero-d-pill:active {
   scale: 0.97;
 }
 .hero-d-pill-arrow {
@@ -597,45 +356,24 @@
   .hero-d-solid:hover {
     background-color: rgb(255 255 255 / 0.9);
   }
-  .hero-d-seg:hover {
-    color: #ffffff;
-  }
 }
 
 /* ---------- Off-screen and reduced motion ---------- */
-.hero-d[data-live="false"] :is(.hero-d-float, .hero-d-cloud, .hero-d-blink, .hero-d-lit, .hero-d-spin) {
+.hero-d[data-live="false"] :is(.hero-d-float, .hero-d-cloud, .hero-d-blink, .hero-d-spin) {
   animation-play-state: paused;
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-d-float,
   .hero-d-cloud,
   .hero-d-blink,
-  .hero-d-lit,
-  .hero-d-host,
   .hero-d-spin,
   .hero-d-fapprove,
-  .hero-d-toast.hero-d-ftoast,
   .hero-d-stamp[data-enter="true"] {
     animation: none;
-  }
-  .hero-d-froute {
-    transition: none;
   }
   .hero-d-slot,
   .hero-d-stamp {
     transition: none;
-  }
-  /* Views still crossfade, without the drift or the blur. */
-  .hero-d-view,
-  .hero-d-view[data-active="false"] {
-    translate: none;
-    filter: none;
-    transition:
-      opacity 200ms ease,
-      visibility 0s linear 200ms;
-  }
-  .hero-d-view[data-active="true"] {
-    transition: opacity 200ms ease;
   }
   .hero-d-pill-arrow {
     transition: none;

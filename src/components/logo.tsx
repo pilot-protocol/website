@@ -78,11 +78,32 @@ export function PilotMarkP({ className = "h-6 w-auto", ...rest }: SVGProps<SVGSV
   );
 }
 
-/** The "P" mark with the wordmark set in Geist, as in the sky design's navigation. */
+/**
+ * The dog: Pilot's logo on the previous site, back as the brand mark in the sky navigation, the docs and the
+ * favicon. A full-colour picture, so it isn't drawn in currentColor. `size` is its rendered size in CSS pixels.
+ */
+export function DogMark({ size = 32, className = "" }: { size?: number; className?: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/img/pilot-96.webp"
+      srcSet="/img/pilot-48.webp 48w, /img/pilot-96.webp 96w, /img/pilot-240.webp 240w"
+      sizes={`${size}px`}
+      alt=""
+      width={size}
+      height={size}
+      decoding="async"
+      className={`shrink-0 ${className}`}
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
+/** The dog with the wordmark set in Geist, as in the sky design's navigation. */
 export function LogoSky({ className = "" }: { className?: string }) {
   return (
-    <span className={`flex items-center gap-3 ${className}`}>
-      <PilotMarkP className="h-6 w-auto" />
+    <span className={`flex items-center gap-2.5 ${className}`}>
+      <DogMark size={36} />
       <span className="text-[24px] leading-[1.2] font-semibold tracking-[-1px] whitespace-nowrap">Pilot Protocol</span>
     </span>
   );
