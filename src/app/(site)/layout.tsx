@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   icons:
     SITE_VARIANT === "sky"
-      ? { icon: "/icon-sky.svg", apple: "/apple-icon-sky.png" }
+      ? { icon: [{ url: "/img/pilot-48.png", type: "image/png", sizes: "48x48" }], apple: "/img/pilot-180.png" }
       : { icon: "/icon.svg", apple: "/apple-icon.png" },
   openGraph: {
     title: "Pilot Protocol: the open network for AI agents",
