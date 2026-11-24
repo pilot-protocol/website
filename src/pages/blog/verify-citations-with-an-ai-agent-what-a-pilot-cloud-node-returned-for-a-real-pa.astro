@@ -1,0 +1,100 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>On November 18 OpenAI published <a href="https://openai.com/index/research-acceleration-jagged-frontier/">Research acceleration: The jagged frontier</a>, its internal measurement of coding agents doing research work. From March to October, it says, estimated success rose from 23% to 46% on tasks that take a person two to four hours. One heading in the same report reads "Agents have poor taste in research ideas, code quality, data quality, and writing." References are the one item on that list a machine can check. This post covers that narrow job: how to verify citations with an AI agent using live bibliographic data from a Pilot Cloud node, and what came back when we ran it today on a real paper and on one we made up.</p>
+
+<p>A Columbia-led audit published in PNAS, summarised by the <a href="https://www.uef.fi/en/article/fake-references-are-not-only-a-medical-problem-new-audit-finds-them-across-physics-engineering-and">University of Eastern Finland</a>, found that about 1 in 435 science and engineering papers from early 2026 cite studies that cannot be found online, up from 1 in 1,600 in 2023. The same team's September preprint, not yet peer reviewed, found 26 language models fabricated 55% of the medical references they were asked to supply. In law, Damien Charlotin's <a href="https://www.damiencharlotin.com/hallucinations/">AI Hallucination Cases database</a> listed 2,336 cases when we opened it today, last updated 23 November 2026.</p>
+
+<section>
+<h2>The setup: one MCP server, five read-only tools</h2>
+<p>Pilot Cloud is a hosted Pilot node delivered as a remote MCP server. You add one URL to your client, sign in, and the agent gets its own always-on node. The <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud MCP reference</a> lists the setup for each client; for Claude Code it is:</p>
+<pre><code>claude mcp add --transport http pilot https://cloud.pilotprotocol.network/mcp</code></pre>
+<p>Then run /mcp, pick pilot and sign in. A citation checker needs only the live-data tools: pilot_ask (sends a plain-English task to the pilot-mom planner), pilot_search, pilot_help, pilot_query and pilot_summary. All five carry readOnlyHint true in the server card. They reach the <a href="https://pilotprotocol.network/docs/service-agents">service agents</a> on the Pilot backbone, each wrapping one public data source. A directory search for "papers" returned Crossref, OpenAlex, dblp, Europe PMC, DOAJ and Figshare agents among others.</p>
+</section>
+
+<section>
+<h2>A real paper: seven look-alikes ahead of the original</h2>
+<p>We asked pilot_ask to check "Attention Is All You Need", Vaswani et al., 2017. The plan came back as one step:</p>
+<pre><code>{"resource": "crossref-works",
+ "run": {"tool": "pilot_query",
+         "arguments": {"agent": "crossref-works",
+                       "filters": {"query_title": "Attention Is All You Need",
+                                   "query_author": "Vaswani",
+                                   "from_date": "2017-01-01"}}}}</code></pre>
+<p>Running it returned 11 records. The top seven, with relevance scores between 42.6 and 43.0, were all titled "Attention Is All You Need", all listed the original eight authors, and all were preprint-type ("posted-content") records issued in 2025 under a single DOI prefix. Across three runs of this search, the 2017 paper never appeared in any record that arrived; its arXiv DOI, 10.48550/arXiv.1706.03762, showed up only inside other papers' reference lists.</p>
+<p>The reason is registration. <a href="https://info.arxiv.org/help/doi.html">arXiv's DOI help page</a> says the metadata for its DOIs is submitted to DataCite. Crossref's /works endpoint lists content "registered with Crossref", per its <a href="https://www.crossref.org/documentation/retrieve-metadata/rest-api/">REST API documentation</a>, and asking it for the arXiv DOI directly returned 404. The same API's /works/{doi}/agency route answered "DataCite" for it. A checker that stops at "a record with this title and these authors exists" passes here, on the wrong record. One that also compares year and venue rejects all seven and keeps looking.</p>
+</section>
+
+<section>
+<h2>A fake paper: Crossref never says no</h2>
+<p>Then we invented one: Halvorsen and Okafor, 2024, "Verifiable Citation Graphs for Autonomous Research Agents", NeurIPS. This time the planner returned four parallel steps: crossref-works, a DuckDuckGo instant-answer lookup, and two fetches through the plainweb app (a dblp search page and the OpenReview search API). Its handoff said to install io.pilot.plainweb first, and ended with "Judge the verdict yourself".</p>
+<p>The Crossref step returned 19 records and more pages. None was related: "Participatory Action Research", "The Regulation of Neonatal Research in Norway", "Smart Well With Autonomous Inflow Control Valve Technology". The best score was 21.2, about the same as the eighth hit for the real paper, which was a different 2018 paper on self-attention. A search API returns its nearest neighbours, so "no match" is a conclusion your agent draws from the fields. The response never says it.</p>
+</section>
+
+<section>
+<h2>How to verify citations with an AI agent without trusting a miss</h2>
+<p>Today's run also produced several kinds of non-answer, each easy to misread as "this paper does not exist":</p>
+<ul>
+<li>openalex-works refused: "This agent calls a paid upstream service and the pilot deployment is on the free tier".</li>
+<li>dblp-publ-search returned zero items for the Vaswani paper, which dblp lists. Our own direct request to that dblp API got a "Making sure you're not a bot!" page instead of JSON.</li>
+<li>europepmc-search failed with "upstream request failed after 3 tries: ConnectError".</li>
+<li>crossref-works answered "upstream 429" twice in a row before working again.</li>
+<li>datacite-works declares no filters; it dropped our query and returned 25 unrelated records out of a total of 143,059,135. Its upstream_url field showed the bare endpoint with no query on it.</li>
+<li>Once, the planner's exact Crossref call came back with the agent's help text instead of records. The same call repeated returned data.</li>
+</ul>
+<p>So the rules we would give the agent are these:</p>
+<ol>
+<li>Report one of four verdicts per reference: confirmed (title, authors, year and venue all match one record), mismatch (a record shares the title but not the year or venue), not found in the named sources that answered, or unchecked.</li>
+<li>An error, a refusal, an empty list from a source that should have the paper, or a reply with no items is unchecked. Never not found.</li>
+<li>Read upstream_url and the record count before reading the records, so a dropped filter is caught.</li>
+<li>For a DOI, ask the registry which agency holds it before deciding which agent to query.</li>
+</ol>
+<p>The PNAS team draws the same line: its tool labelled a reference fabricated only when the cited title could not be found in online databases, and two experts then confirmed 85.8% of a sample of 400 flagged references.</p>
+</section>
+
+<section>
+<h2>Keep the connection read-only, and keep unpublished titles out</h2>
+<p>The docs say a connection granted the pilot.read scope "sees and runs only the read-only tools". Claude Code can pin that scope with oauth.scopes, which <a href="https://code.claude.com/docs/en/mcp">its MCP documentation</a> describes as the supported way to restrict a server's scopes. We did not test this exact entry through a fresh sign-in on this run:</p>
+<pre><code>{"mcpServers": {"pilot": {
+  "type": "http",
+  "url": "https://cloud.pilotprotocol.network/mcp",
+  "oauth": {"scopes": "pilot.read"}}}}</code></pre>
+<p>Since pilot_app_install is not read-only, the planner's dblp and OpenReview steps cannot run on such a connection; the agent should mark those sources unchecked. The pin covers OAuth sign-in only. A pk_ access token from the dashboard controls your node, and the docs say to treat it like a password: anyone holding it can use your agent. A checker scripted with a pk_ token is not read-only.</p>
+<div class="callout"><p>Every citation you check leaves your node. The task goes to the planner, the filters go to the service agent, and the agent passes them to the upstream API; the crossref-works reply named api.crossref.org in its upstream_url. The docs say those agents may keep them. A manuscript under double-blind review, or a brief before filing, holds titles and claims that are not public yet. Keep them out of queries.</p></div>
+<p>On your side, the activity log on the <a href="https://cloud.pilotprotocol.network/">Pilot Cloud dashboard</a> records every tool call with its arguments (each field cut to 2,000 characters, kept 30 days). Only you see it, and it doubles as a record of which references were checked against what.</p>
+</section>
+
+<section>
+<h2>The size limits a bibliography runs into</h2>
+<p>Crossref records carry abstracts and full reference lists, so they are large. Three separate limits showed up:</p>
+<ul>
+<li>The service agent caps a reply at 200,000 bytes. The title-and-author query found 24 records and delivered 12, with truncated set to true and a truncated_reason saying records were dropped from the end.</li>
+<li>The MCP server returns at most 75,000 bytes per tool result. The title-only query was 117,717 bytes and arrived cut, with a note to ask for fewer results or a narrower filter.</li>
+<li>Claude Code's default limit for MCP output is 25,000 tokens; larger results were saved to a file for the model to read instead.</li>
+</ul>
+<p>A node also allows 120 tool calls a minute, burst 60, shared by every client connected to it. A 60-reference bibliography at two or three calls each will hit that, so check in batches.</p>
+</section>
+
+<section>
+<h2>What it does not do</h2>
+<ul>
+<li>It does not check that a real source says what the citing text claims. Charlotin's database tracks "misrepresented" authority as its own category, and a registry lookup cannot catch it.</li>
+<li>It does not cover case law. A directory search for "court" returned no agents today.</li>
+<li>It gives no verdict. The planner hands the judgement back to your agent.</li>
+</ul>
+<p>If what you need is grounded web research with citations rather than a registry check, our earlier post on <a href="https://pilotprotocol.network/blog/web-search-api-for-ai-agents-grounded-research">grounded research with the cosift app</a> covers that side.</p>
+</section>
+
+<div class="cta"><h3>Give your research agent a node of its own</h3><p>Add one URL to Claude Code, Cursor, ChatGPT or any MCP client, sign in, and your agent queries Crossref and the other paper registries through its own always-on Pilot node. Free, with an activity log only you see.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>`;
+---
+<BlogLayout
+  title="Verify Citations With an AI Agent: What a Pilot Cloud Node Returned for a Real Paper and a Fake One, After OpenAI Said Agents Finish 46% of Multi-Hour Research Tasks"
+  description="How to verify citations with an AI agent: Crossref lookups through a Pilot Cloud node on a real paper and a fake one, and which misses are not misses."
+  date="November 24, 2026"
+  tags={["pilot-cloud", "citations", "research-agents", "mcp", "live-data"]}
+  canonicalPath="/blog/verify-citations-with-an-ai-agent-what-a-pilot-cloud-node-returned-for-a-real-pa"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/verify-citations-with-an-ai-agent-what-a-pilot-cloud-node-returned-for-a-real-pa.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
