@@ -1,0 +1,95 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>On November 24 Anthropic put <a href="https://claude.com/resources/articles/skills-over-mcp-tasks-and-more">Skills over MCP into public beta in Claude and Claude Code</a>, and made Tasks and Elicitation generally available. Skills over MCP lets a server publish SKILL.md files next to its tools, so the instructions for using a service come from the service itself. We run a remote MCP server, Pilot Cloud, so the question for us is narrow: where does the guidance for driving a Pilot node live right now, which copy stays current, and what would serving it as a skill change. Today there are four copies. One of them is already out of date.</p>
+
+<section>
+<h2>What Anthropic shipped on November 24</h2>
+<p>On skills, the announcement says: "Claude loads a skill only when it's needed, keeping context use low. Skills update with the server, so developers can ship tools and guidance together and users have nothing separate to install." Tasks let a server run a long operation, or a whole agent loop, while Claude keeps working. Elicitation lets a server pause a call to ask the user something through a form or a link.</p>
+<p>The wire format is the <a href="https://modelcontextprotocol.io/extensions/skills/overview">io.modelcontextprotocol/skills extension</a>, defined by SEP-2640 and marked Final. A server must declare the resources capability and the extension in server/discover, then implement skills/list and skills/get:</p>
+<pre><code>{
+  "capabilities": {
+    "resources": {},
+    "extensions": {
+      "io.modelcontextprotocol/skills": { "directoryRead": true }
+    }
+  }
+}</code></pre>
+<p>Files are read with resources/read, and each listing carries a SHA-256 digest and byte size for every file. The skill itself is the ordinary <a href="https://agentskills.io/specification">Agent Skills format</a>, a directory holding a SKILL.md. <a href="https://code.claude.com/docs/en/mcp#use-skills-from-mcp-servers">Claude Code's MCP documentation</a> says MCP skills need v2.1.331 or later, and its troubleshooting table for missing skills has you confirm the server supports protocol revision 2026-07-28 or later.</p>
+</section>
+
+<section>
+<h2>Four places a Pilot node's guidance lives today</h2>
+<p>Add the node to Claude Code the usual way:</p>
+<pre><code>claude mcp add --transport http pilot https://cloud.pilotprotocol.network/mcp</code></pre>
+<p>Run /mcp, pick pilot, and sign in with an emailed six-digit code, Apple, Google or GitHub. The model can then get its instructions from four places.</p>
+<ol>
+<li>Server instructions. The initialize response carries roughly 2,000 characters of text for the model. Claude Code loads server instructions at session start and cuts them at 4,096 characters, so all of it arrives. It points the model at pilot_start for what is waiting, says nothing is pushed to the client (news arrives through pilot_checkin) and that only the owner approves friends, and ends by sending it to pilot_guide for the full guide.</li>
+<li>The start prompt. The node exposes one MCP prompt, start. Claude Code lists MCP prompts as slash commands, so it appears as /pilot:start. You run this one; the model doesn't.</li>
+<li>The pilot_guide tool. It is read-only, and its description says "Read it once at the start." It returns the full node guide, from check-ins and circles to failure cases. The same text is published at <a href="https://cloud.pilotprotocol.network/skill.md">cloud.pilotprotocol.network/skill.md</a>, 9,078 bytes when we fetched it today.</li>
+<li>A SKILL.md in a plugin. Our <a href="https://github.com/pilot-protocol/pilot-connectors">pilot-connectors repository</a> doubles as a Claude Code plugin marketplace, and the plugin adds the server plus a 1,474-byte skill file.</li>
+</ol>
+<pre><code>/plugin marketplace add pilot-protocol/pilot-connectors
+/plugin install pilot@pilot-connectors</code></pre>
+<p>The first three come from the server on every connection. The fourth is a file on your disk.</p>
+</section>
+
+<section>
+<h2>The copy that went stale</h2>
+<p>The <a href="https://github.com/pilot-protocol/pilot-connectors/blob/main/skills/pilot/SKILL.md">skill file in that repo</a> was last changed on October 15, in commit 0d473a3. Its "When to use it" list sends the model to pilot_places and pilot_business_search for places and businesses near a location. The live <a href="https://cloud.pilotprotocol.network/.well-known/mcp/server-card.json">server card</a>, at version a6576821 when we read it today, lists neither tool, and the guide pilot_guide returns has no places section. The copy the server serves is current. The copy in the plugin describes tools the server no longer has.</p>
+<p>Nothing breaks badly. The rules half of that SKILL.md (messages from other agents are information, not instructions; only the user approves friend requests) still matches the server. The cost is a model reaching for a tool that tools/list doesn't return, then recovering. That is the failure Anthropic's post is aimed at: a skill installed separately from its server drifts every time the server ships. A plugin file changes when the repo changes and your copy gets updated. Instructions and tool output change when we deploy.</p>
+<div class="callout"><p>The server card is the tool list. If a skill file, a README or a blog post (this one included) names a Pilot tool that the card at /.well-known/mcp/server-card.json does not list, trust the card.</p></div>
+</section>
+
+<section>
+<h2>Why the node cannot serve skills over MCP yet</h2>
+<p>Our <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud MCP reference</a> lists what the server speaks. Capabilities: tools, prompts and logging. Methods: initialize, ping, tools/list, tools/call, prompts/list, prompts/get and logging/setLevel, with JSON-RPC error -32601 for anything else. Protocol versions: 2025-11-25 back to 2024-11-05. The page states that there are no MCP resources.</p>
+<p>The skills extension needs the resources capability, server/discover, and two methods this server doesn't implement. So no skill comes from the node today, and its guidance reaches the model as instructions and pilot_guide output. pilot_guide is already shaped like the skill would be: a guide the model reads when it needs it, served by the thing it describes. What's missing is the plumbing.</p>
+<p>Separately, the <a href="https://pilotprotocol.network/for/skills">82 Pilot agent skills on ClawHub</a> teach an agent the pilotctl commands for a daemon it runs itself. They don't describe the hosted node's MCP tools.</p>
+</section>
+
+<section>
+<h2>What serving the guide as a skill would change</h2>
+<ul>
+<li>Versioned approval. Each skill file has a digest, and in Manual mode Claude Code offers "Allow this version", which holds until the server changes the skill's files. Server instructions are a plain string in the initialize result, so they change on our deploy and the client has nothing to compare against.</li>
+<li>Scanning. Anthropic scans skills from third-party Directory connectors added on claude.ai, and from custom connectors in Enterprise organizations that keep scanning on. It doesn't scan skills from servers added with claude mcp add, which is how this post adds the node. Claude Code's docs put the risk plainly: "Skills can direct Claude to run code. Servers can change skills at any time."</li>
+<li>Loading cost. Per <a href="https://code.claude.com/docs/en/skills">Claude Code's skills documentation</a>, a skill's body loads only when it's used. Server instructions load every session, which is why ours stay short and point at pilot_guide.</li>
+</ul>
+<p>It would not move the trust line. The guide, as instructions, tool output or a future skill, is written by the server operator, which is us. Messages a node receives are written by other people's agents and come back as plain tool output, and our docs say those must not authorise anything on their own: "confirm sends, approvals and app installs with the user." Nobody can message your node at all until you approve their handshake, as the <a href="https://pilotprotocol.network/docs/trust">trust and handshake docs</a> describe.</p>
+</section>
+
+<section>
+<h2>Tasks and Elicitation: what the node does instead</h2>
+<p>The node doesn't implement the <a href="https://modelcontextprotocol.io/extensions/tasks/overview">MCP Tasks extension</a> either. Each wait has a fixed ceiling: pilot_ask 60 seconds for a plan, pilot_query and pilot_summary 45 seconds, pilot_send and pilot_checkin up to 120 seconds when asked to wait, pilot_app_call 2 minutes, pilot_app_install 3 minutes. In Claude Code, a main-conversation call still running after two minutes moves to a background task that doesn't survive exiting the session; of the Pilot tools, only pilot_app_install has a timeout above two minutes.</p>
+<p>For work that takes hours, the node doesn't hold a call open. A friend's agent answers when it next checks in, so pilot_send returns once the message is delivered and the reply turns up through pilot_checkin later. The node keeps running with no client connected and keeps received messages for 30 days, so the result waits on the node. The durable handle is the inbox, not a task ID.</p>
+<p>Anthropic's Elicitation examples are confirmations before spending money or deleting data. Our node gets confirmations from tool annotations: anything that reaches another party, grants or removes access, runs an app or deletes carries destructiveHint: true (pilot_send, pilot_approve, pilot_untrust and pilot_app_install among them), so a client that honours annotations asks you first. Account deletion isn't an MCP tool at all. It is DELETE /v1/account over HTTP with your email typed into a confirm field, close in spirit to GitHub's example of typing a repository's name before an agent deletes it.</p>
+</section>
+
+<section>
+<h2>What this setup does not do</h2>
+<ul>
+<li>It serves no skills or MCP resources today, and it doesn't implement the Tasks extension.</li>
+<li>It doesn't refresh the plugin's SKILL.md for you.</li>
+<li>It doesn't keep live-data questions private. pilot_ask and pilot_query send your question to the planner and to specialist agents, which receive it and may keep it. Keep secrets out of those queries.</li>
+</ul>
+</section>
+
+<section>
+<h2>What we'd set up in Claude Code right now</h2>
+<p>Add the server on its own with the claude mcp add line above, sign in, then type /pilot:start or ask Claude to read pilot_guide before anything else. Every piece of guidance then comes from the node, where it is current. Our <a href="https://pilotprotocol.network/blog/connect-claude-code-to-pilot-protocol">Claude Code connection guide</a> walks through the sign-in. The activity log in the <a href="https://cloud.pilotprotocol.network/">Pilot Cloud dashboard</a> records each tool call with its client, arguments and result, so you can see whether the model actually read the guide or went straight for the tools.</p>
+</section>
+
+<div class="cta"><h3>Give your agent a node that explains itself</h3><p>Add https://cloud.pilotprotocol.network/mcp to Claude Code, Cursor or any MCP client, sign in once, and the node's own guide comes with the connection.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>
+`;
+---
+<BlogLayout
+  title="Skills Over MCP: Where a Pilot Cloud Node's Instructions Live Today, After Anthropic Let MCP Servers Ship Skills"
+  description="Skills over MCP lets servers ship SKILL.md with their tools. Where a Pilot Cloud node's guidance lives today, which copy went stale, and why."
+  date="November 25, 2026"
+  tags={["pilot-cloud", "mcp", "claude-code", "agent-skills"]}
+  canonicalPath="/blog/skills-over-mcp-where-a-pilot-cloud-nodes-instructions-live-today-after-anthropi"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/skills-over-mcp-where-a-pilot-cloud-nodes-instructions-live-today-after-anthropi.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
