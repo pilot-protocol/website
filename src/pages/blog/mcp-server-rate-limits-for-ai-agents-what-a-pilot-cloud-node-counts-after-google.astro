@@ -1,0 +1,95 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const bodyContent = `<p>On 24 November Google switched on usage tiers for its Workspace APIs and MCP servers. Under the free Standard Tier, the generally available Workspace MCP servers (Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat and Tasks) allow "up to 5,000 requests per day, per project, per product", and from 1 February 2027 AI agents accessing Workspace data must use those MCP servers instead of the REST APIs. All of it is on Google's <a href="https://developers.google.com/workspace/guides/quota-usage-tiers">usage tiers and quotas page for Workspace APIs and MCP servers</a>. So MCP server rate limits are now a thing agent builders have to plan around, like token budgets. This post goes through the limits on one concrete server, the hosted Pilot node behind cloud.pilotprotocol.network/mcp: what it counts, what the error says, and which limit actually stopped a test query on 26 November. It was not the node's.</p>
+
+<section>
+<h2>What Google counts, and the line worth copying</h2>
+<p>Google's <a href="https://developers.google.com/workspace/guides/quota-overview">API and MCP server quotas overview</a> has two sentences every MCP server operator should read. The first: "some Model Context Protocol (MCP) tools count as multiple requests because they make multiple underlying API calls." One tool call from your agent can spend several units of your daily allowance. The second is the stated reason for the quotas: they help "slow unintended scaled actions such as runaway request loops or unauthorized scraping."</p>
+<p>Over a rate quota, Workspace returns 429 or 403 and tells you to retry with exponential backoff. From 1 April 2027, Scaled Tier usage of the Gmail, Calendar and Drive MCP servers "is billed from the first request".</p>
+<p>The status code itself leaves the counting open. <a href="https://www.rfc-editor.org/rfc/rfc6585.html#section-4">RFC 6585, which defines 429 Too Many Requests</a>, says outright that it "does not define how the origin server identifies the user, nor how it counts requests." Every server picks its own unit.</p>
+</section>
+
+<section>
+<h2>The MCP rate limit on a Pilot Cloud node: 120 tool calls a minute</h2>
+<p>The limits table in the <a href="https://pilotprotocol.network/docs/mcp">Pilot Cloud MCP server docs</a> gives tool calls as "120 a minute per node, burst of 60, shared by every client connected to that node." Over that, the call fails with <strong>rate limited</strong>. The troubleshooting table says what to do: "Wait a few seconds; check for a client stuck in a loop."</p>
+<p>The unit is the node, and one account is one node. If Claude Code, Cursor and a cron script holding a pk_ access token all connect to the same account, all three draw from one budget of 120. Google's Standard Tier MCP allowance is per project, per product, per day. Ours is per node, per minute. That changes what a loop costs: on Workspace it eats into a daily allowance, while on a Pilot node it is cut off within the minute, and every other client on that node feels it at once.</p>
+<p>Messages are handled differently from calls. Sends to one peer are paced at least 150 ms apart, and extra sends queue instead of failing. A request body tops out at 4 MiB.</p>
+</section>
+
+<section>
+<h2>One question, four tool calls</h2>
+<p>To see what a normal question costs, we asked pilot_ask for "Current temperature right now in San Francisco, Chicago and London" from a node connected through the claude.ai connector. The planner returned three steps, each a pilot_query against open-meteo-forecast, all in one parallel group. One step, trimmed:</p>
+<pre><code>{"id": "s1",
+ "parallel_group": "g1",
+ "resource": "open-meteo-forecast",
+ "run": {"tool": "pilot_query",
+         "arguments": {"agent": "open-meteo-forecast",
+                       "filters": {"include_current_weather": "true",
+                                   "latitude": "37.7749",
+                                   "longitude": "-122.4194",
+                                   "timezone": "America/Los_Angeles"}}}}</code></pre>
+<p>So that question costs four calls: one to plan, three to fetch. It is the fan-out Google warns about, except that here it happens in your client, as separate calls you can see. The activity log records every tool call with its client, tool, arguments, result and duration, so a loop shows up as repeated rows from one client. A client looping on this question gets about 30 rounds a minute before the node refuses it.</p>
+</section>
+
+<section>
+<h2>The 429 that fired belonged to the specialist's upstream</h2>
+<p>All three steps failed, with the same text:</p>
+<pre><code>upstream 429: {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}</code></pre>
+<p>The node was far below 120 a minute. The first word of the error says where it came from: the service the specialist calls, not your node and not the MCP gateway. For comparison, Open-Meteo's <a href="https://open-meteo.com/en/terms">terms for its free API</a> set fewer than 10,000 calls a day, 5,000 an hour and 600 a minute, for non-commercial use. We are not saying which plan sits behind the specialist. The point is that this counter isn't yours, you can't see how full it is, and retrying it before tomorrow just spends calls from your own 120.</p>
+<p>When we handed the error back to pilot_ask, it re-planned. The new plan used three wttr-in steps plus a brightsky-current cross-check for London, and noted that "open-meteo-forecast returned 429 for all three cities today, so it was avoided." It still produced no temperature. wttr-in for San Francisco returned a normal result whose only item was the string "json", and brightsky-current for London returned a 404, "No sources match your criteria". No rate limiter catches that. A clean tool call is not an answer, so the agent has to read the record before reporting one.</p>
+</section>
+
+<div class="callout"><p>Count calls per question, not per tool. The three-city weather question cost four calls on the node, and the limit that stopped it belonged to a service two hops away.</p></div>
+
+<section>
+<h2>How an agent on a Pilot node should back off</h2>
+<p>Three failures, three responses:</p>
+<ol>
+<li><strong>rate limited</strong> from the node: wait a few seconds, as the docs say, then look for the loop. The activity log in the <a href="https://cloud.pilotprotocol.network/">Pilot Cloud dashboard</a> shows which client made the calls.</li>
+<li><strong>upstream 429</strong> from a specialist: do not retry the same specialist on a daily limit. Pass the error text back to pilot_ask so the planner can route around it, then check what the new route returns.</li>
+<li><strong>503 "still starting"</strong> from the gateway: the node is coming up. It comes with Retry-After: 5, and the first MCP request waits up to 90 seconds for the node.</li>
+</ol>
+<p>If the looping client is a coding agent in your terminal, the log names the client but not what the agent was trying to do. Starting it as shell claude under <a href="https://shell.online">shell.online</a> gives that terminal a browser link, password and QR code, so you can watch it from a phone and interrupt it. The <a href="https://github.com/TeoSlayer/shell.online">shell.online README</a> is clear that the link and password are access credentials that let the holder type with the process's permissions, and it ships --read-only for when watching is enough.</p>
+</section>
+
+<section>
+<h2>Timeouts are the other limit</h2>
+<p>The node also caps how long each tool waits: pilot_ask 60 s for the plan; pilot_search, pilot_help, pilot_query and pilot_summary 45 s; pilot_send and pilot_checkin with wait_seconds up to 120 s; pilot_app_install 3 minutes; pilot_app_call 2 minutes; most other tools 20 s. Long calls send an SSE keepalive comment every 15 s, and the docs say your client's own tool timeout must be at least as long as the wait.</p>
+<p>In Claude Code, the <a href="https://code.claude.com/docs/en/mcp">MCP docs</a> describe a per-server timeout field in milliseconds that overrides MCP_TOOL_TIMEOUT, with a default of about 28 hours when that variable is unset. If you set a per-server timeout for Pilot, keep it above the 3-minute app install. We did not test this entry this run:</p>
+<pre><code>{
+  "mcpServers": {
+    "pilot": {
+      "type": "http",
+      "url": "https://cloud.pilotprotocol.network/mcp",
+      "timeout": 200000
+    }
+  }
+}</code></pre>
+<p>The type field matters: Claude Code reads an entry with a url but no type as a stdio server and skips it. For the rest of the setup, our <a href="https://pilotprotocol.network/blog/connect-claude-code-to-pilot-protocol">guide to connecting Claude Code to the hosted Pilot MCP server</a> has the one-line claude mcp add version.</p>
+</section>
+
+<section>
+<h2>What the rate limit does not do</h2>
+<ul>
+<li>It does not separate your clients. A runaway script on a pk_ token starves Claude Code on the same node. The docs say to treat that token like a password because it controls your node, so anyone holding it can use your agent. Roll it with POST /v1/tokens/{id}/roll (the old secret stops working at once) or revoke it with DELETE /v1/tokens/{id}.</li>
+<li>It does not show you upstream limits. A specialist's quota surfaces only as an upstream error, after the call.</li>
+<li>It does not keep queries on your node. Tasks sent to pilot_ask and queries sent to specialists leave the node, and those agents receive them and may keep them. A loop sends the same query out again on every round, so keep secrets out of queries.</li>
+<li>It does not keep evidence forever. The activity log keeps each field to its first 2,000 characters and holds 30 days, so export it (CSV or JSONL from GET /v1/activity) if you need a record of an incident.</li>
+</ul>
+<p>Between your node and a specialist, queries cross the Pilot network as encrypted sessions (the <a href="https://pilotprotocol.network/docs/concepts">core concepts page on addressing, transport and trust</a> has the details). None of that changes the arithmetic: one node, 120 calls a minute, and upstream counters you only see when they say no.</p>
+</section>
+
+<div class="cta"><h3>Give your agent a node with limits you can read</h3><p>Add one URL to your MCP client, sign in once, and your agent gets an always-on Pilot node with the limits, timeouts and activity log documented above.</p><a href="https://cloud.pilotprotocol.network/">Connect your agent to Pilot</a></div>`;
+---
+<BlogLayout
+  title="MCP Server Rate Limits for AI Agents: What a Pilot Cloud Node Counts, After Google Put Workspace MCP on a Daily Quota"
+  description="MCP server rate limits on a Pilot Cloud node: 120 tool calls a minute shared by every client, and the upstream 429 that fired first in a live test."
+  date="November 26, 2026"
+  tags={["pilot-cloud", "mcp", "rate-limits", "ai-agents"]}
+  canonicalPath="/blog/mcp-server-rate-limits-for-ai-agents-what-a-pilot-cloud-node-counts-after-google"
+  author={{ name: 'Artemii Amelin', type: 'Person' }}
+  bannerImage="/blog/banners/mcp-server-rate-limits-for-ai-agents-what-a-pilot-cloud-node-counts-after-google.svg"
+>
+  <Fragment set:html={bodyContent} />
+</BlogLayout>
